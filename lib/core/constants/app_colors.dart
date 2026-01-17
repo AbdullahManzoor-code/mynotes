@@ -139,4 +139,14 @@ class AppColors {
   static const Color shimmerHighlightLight = Color(0xFFF5F5F5);
   static const Color shimmerBaseDark = Color(0xFF2C2C2C);
   static const Color shimmerHighlightDark = Color(0xFF3C3C3C);
+
+  // UI Theme Convenience Aliases for Reflection Module
+  static const Color lightBackground = backgroundLight;
+  static const Color darkBackground = backgroundDark;
+  static const Color lightCardBackground = surfaceVariantLight;
+  static const Color darkCardBackground = surfaceVariantDark;
+  static const Color lightText = onBackgroundLight;
+  static const Color darkText = onBackgroundDark;
+  static const Color outlineColor =
+      outlineLight; // Use light as default, will adapt based on theme
 }

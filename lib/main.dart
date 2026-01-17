@@ -8,13 +8,16 @@ import 'core/services/clipboard_service.dart';
 import 'data/datasources/local_database.dart';
 import 'data/repositories/note_repository_impl.dart';
 import 'data/repositories/media_repository_impl.dart';
+import 'data/repositories/reflection_repository_impl.dart';
 import 'domain/repositories/note_repository.dart';
 import 'domain/repositories/media_repository.dart';
+import 'domain/repositories/reflection_repository.dart';
 import 'presentation/bloc/media_bloc.dart';
 import 'presentation/bloc/note_bloc.dart';
 import 'presentation/bloc/theme_bloc.dart';
 import 'presentation/bloc/theme_event.dart';
 import 'presentation/bloc/theme_state.dart';
+import 'presentation/bloc/reflection_bloc.dart';
 import 'presentation/pages/splash_screen.dart';
 
 void main() async {
@@ -47,6 +50,9 @@ class MyNotesApp extends StatelessWidget {
         RepositoryProvider<MediaRepository>(
           create: (context) => MediaRepositoryImpl(database: database),
         ),
+        RepositoryProvider<ReflectionRepository>(
+          create: (context) => ReflectionRepositoryImpl(),
+        ),
         // Provide services
         RepositoryProvider<ClipboardService>(
           create: (context) => _clipboardService,
@@ -62,6 +68,10 @@ class MyNotesApp extends StatelessWidget {
         BlocProvider<MediaBloc>(
           create: (context) =>
               MediaBloc(repository: context.read<MediaRepository>()),
+        ),
+        BlocProvider<ReflectionBloc>(
+          create: (context) =>
+              ReflectionBloc(repository: context.read<ReflectionRepository>()),
         ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
