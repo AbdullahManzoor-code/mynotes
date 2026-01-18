@@ -50,19 +50,18 @@ dependencies:
   flutter_image_compress: ^2.1.0
   video_compress: ^3.1.2
   video_player: ^2.8.1
-  record: ^5.0.4
+  record: ^6.1.2
   audioplayers: ^5.2.1
   
-  # Notifications & Alarms
-  flutter_local_notifications: ^19.5.0
-  timezone: 0.10.1
+  # Notifications & Alarms - FIXED VERSION
+  flutter_local_notifications: ^17.2.3  # ✅ UPGRADED - fixes the bigLargeIcon bug
+  timezone: ^0.9.4
   
   # PDF Generation
   pdf: ^3.10.7
   printing: ^5.11.1
   
   # File Management
-  # file_picker: ^6.1.1  # Commented out - not needed for core functionality
   share_plus: ^7.2.1
   
   # URL Launcher
