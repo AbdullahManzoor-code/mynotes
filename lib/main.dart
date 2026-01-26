@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -5,6 +7,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'core/constants/app_constants.dart';
 import 'core/themes/app_theme.dart';
 import 'core/services/clipboard_service.dart';
+import 'core/notifications/notification_service.dart';
 import 'data/datasources/local_database.dart';
 import 'data/repositories/note_repository_impl.dart';
 import 'data/repositories/media_repository_impl.dart';
@@ -18,32 +21,47 @@ import 'presentation/bloc/theme_bloc.dart';
 import 'presentation/bloc/theme_event.dart';
 import 'presentation/bloc/theme_state.dart';
 import 'presentation/bloc/reflection_bloc.dart';
+import 'presentation/bloc/alarm_bloc.dart';
+import 'presentation/bloc/todo_bloc.dart';
 import 'presentation/pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize database factory for Windows/Linux/Mac desktop
-  sqfliteFfiInit();
-  databaseFactory = databaseFactoryFfi;
+  // Initialize database factory ONLY for desktop platforms (Windows/Linux/Mac)
+  if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
+    sqfliteFfiInit();
+    databaseFactory = databaseFactoryFfi;
+  }
 
   // Initialize database
   final database = NotesDatabase();
 
-  runApp(MyNotesApp(database: database));
+  // Initialize notification service
+  final notificationService = NotificationService();
+  await notificationService.init();
+
+  runApp(
+    MyNotesApp(database: database, notificationService: notificationService),
+  );
 }
 
 class MyNotesApp extends StatelessWidget {
   final NotesDatabase database;
+  final NotificationService notificationService;
   final ClipboardService _clipboardService = ClipboardService();
 
-  MyNotesApp({Key? key, required this.database}) : super(key: key);
+  MyNotesApp({
+    super.key,
+    required this.database,
+    required this.notificationService,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        // Provide repositories
+        // Provide repositories and services
         RepositoryProvider<NoteRepository>(
           create: (context) => NoteRepositoryImpl(database: database),
         ),
@@ -53,10 +71,13 @@ class MyNotesApp extends StatelessWidget {
         RepositoryProvider<ReflectionRepository>(
           create: (context) => ReflectionRepositoryImpl(),
         ),
-        // Provide services
         RepositoryProvider<ClipboardService>(
           create: (context) => _clipboardService,
         ),
+        RepositoryProvider<NotificationService>(
+          create: (context) => notificationService,
+        ),
+
         // Provide BLoCs
         BlocProvider<ThemeBloc>(
           create: (context) => ThemeBloc()..add(const LoadThemeEvent()),
@@ -72,6 +93,16 @@ class MyNotesApp extends StatelessWidget {
         BlocProvider<ReflectionBloc>(
           create: (context) =>
               ReflectionBloc(repository: context.read<ReflectionRepository>()),
+        ),
+        BlocProvider<AlarmBloc>(
+          create: (context) => AlarmBloc(
+            noteRepository: context.read<NoteRepository>(),
+            notificationService: context.read<NotificationService>(),
+          ),
+        ),
+        BlocProvider<TodoBloc>(
+          create: (context) =>
+              TodoBloc(noteRepository: context.read<NoteRepository>()),
         ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(

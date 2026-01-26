@@ -45,13 +45,39 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>We need access to your photo library to attach images to notes</string>
+	
+	<!-- ========== CAMERA PERMISSIONS ========== -->
 	<key>NSCameraUsageDescription</key>
-	<string>We need access to your camera to take photos for notes</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>We need access to your microphone to record audio notes</string>
+	<string>This app needs access to your camera to capture photos for your notes.</string>
+	
+	<!-- ========== PHOTO LIBRARY PERMISSIONS ========== -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>This app needs access to your photo library to attach images to your notes.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>We need permission to save images to your photo library</string>
+	<string>This app needs permission to save images to your photo library.</string>
+	
+	<!-- ========== MICROPHONE PERMISSIONS ========== -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs access to your microphone for voice-to-text input and audio recordings.</string>
+	
+	<!-- ========== SPEECH RECOGNITION PERMISSIONS ========== -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>This app uses speech recognition to convert your voice into text for note-taking.</string>
+	
+	<!-- ========== BIOMETRIC AUTHENTICATION ========== -->
+	<key>NSFaceIDUsageDescription</key>
+	<string>This app uses Face ID to securely lock and unlock your notes.</string>
+	
+	<!-- ========== NOTIFICATIONS ========== -->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>This app sends notifications for reminders and alarms you set.</string>
+	
+	<!-- ========== BACKGROUND MODES ========== -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
 </dict>
 </plist>

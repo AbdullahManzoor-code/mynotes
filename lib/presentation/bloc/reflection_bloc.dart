@@ -33,7 +33,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       final answeredToday = await repository.getAnswerCountForToday();
       emit(QuestionsLoaded(questions: questions, answeredToday: answeredToday));
     } catch (e) {
-      emit(ReflectionError('Failed to initialize: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -47,7 +48,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       final answeredToday = await repository.getAnswerCountForToday();
       emit(QuestionsLoaded(questions: questions, answeredToday: answeredToday));
     } catch (e) {
-      emit(ReflectionError('Failed to load questions: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -61,9 +63,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       final answeredToday = await repository.getAnswerCountForToday();
       emit(QuestionsLoaded(questions: questions, answeredToday: answeredToday));
     } catch (e) {
-      emit(
-        ReflectionError('Failed to load category questions: ${e.toString()}'),
-      );
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -85,7 +86,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       // Reload questions after adding
       add(const LoadQuestionsEvent());
     } catch (e) {
-      emit(ReflectionError('Failed to add question: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -99,7 +101,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       // Reload questions after updating
       add(const LoadQuestionsEvent());
     } catch (e) {
-      emit(ReflectionError('Failed to update question: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -113,7 +116,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       // Reload questions after deleting
       add(const LoadQuestionsEvent());
     } catch (e) {
-      emit(ReflectionError('Failed to delete question: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -135,7 +139,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       // Reload questions to update answered count
       add(const LoadQuestionsEvent());
     } catch (e) {
-      emit(ReflectionError('Failed to save answer: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -148,7 +153,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       final answers = await repository.getAnswersByQuestion(event.questionId);
       emit(AnswersLoaded(answers));
     } catch (e) {
-      emit(ReflectionError('Failed to load answers: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -162,7 +168,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
         DraftSaved(questionId: event.questionId, draftText: event.draftText),
       );
     } catch (e) {
-      emit(ReflectionError('Failed to save draft: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -174,7 +181,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       final draft = await repository.getDraft(event.questionId);
       emit(DraftLoaded(draft));
     } catch (e) {
-      emit(ReflectionError('Failed to load draft: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 
@@ -187,7 +195,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       final answers = await repository.getAllAnswers();
       emit(AllAnswersLoaded(answers));
     } catch (e) {
-      emit(ReflectionError('Failed to load all answers: ${e.toString()}'));
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(ReflectionError(errorMsg));
     }
   }
 }

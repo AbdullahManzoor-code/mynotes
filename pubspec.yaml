@@ -17,6 +17,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
+  # sdk: ^3.10.7
 
 environment:
   sdk: ^3.8.1
@@ -73,7 +74,7 @@ dependencies:
   flutter_screenutil: ^5.9.3
   
   # Date & Time
-  intl: ^0.19.0
+  intl: ^0.20.2
   
   # UUID Generation
   uuid: ^4.2.1
@@ -86,6 +87,22 @@ dependencies:
   
   # Fonts
   google_fonts: ^6.1.0
+  
+  # Biometric Authentication
+  local_auth: ^2.2.0
+  
+  # Voice Recognition - FIXED VERSION
+  # Advanced UI Components
+  flutter_staggered_grid_view: ^0.7.0
+  carousel_slider: ^4.2.1
+  flutter_slidable: ^3.0.1
+  
+  # Charts & Analytics
+  fl_chart: ^0.66.0
+  
+  # Rich Text Editor
+  flutter_quill: ^9.0.0
+  speech_to_text: ^7.3.0
 
 dev_dependencies:
   flutter_test:

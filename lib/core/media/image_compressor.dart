@@ -27,7 +27,7 @@ class ImageCompressor {
       }
       return newPath;
     } catch (e) {
-      throw Exception('Image compression failed: $e');
+      throw Exception('Could not compress image. File may be corrupted: $e');
     }
   }
 }

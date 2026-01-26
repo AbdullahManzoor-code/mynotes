@@ -3,15 +3,16 @@ import 'package:path/path.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/todo_item.dart';
 import '../../domain/entities/media_item.dart';
+import '../../domain/entities/alarm.dart';
 
 /// Local SQLite database for notes storage
 class NotesDatabase {
   static const String _databaseName = 'notes.db';
-  static const int _databaseVersion = 1;
+  static const int _databaseVersion = 2;
 
   static const String notesTable = 'notes';
   static const String todosTable = 'todos';
-  static const String alarmsTable = 'alarms';
+  static const String alarmTable = 'alarm';
   static const String mediaTable = 'media';
 
   static Database? _database;
@@ -29,6 +30,7 @@ class NotesDatabase {
       path,
       version: _databaseVersion,
       onCreate: _createTables,
+      onUpgrade: _onUpgrade,
     );
   }
 
@@ -55,18 +57,22 @@ class NotesDatabase {
         noteId TEXT NOT NULL,
         text TEXT NOT NULL,
         completed INTEGER NOT NULL DEFAULT 0,
+        dueDate TEXT,
         FOREIGN KEY (noteId) REFERENCES $notesTable(id) ON DELETE CASCADE
       )
     ''');
 
     // Alarms table
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS $alarmsTable (
+      CREATE TABLE IF NOT EXISTS $alarmTable (
         id TEXT PRIMARY KEY,
         noteId TEXT NOT NULL,
-        dateTime TEXT NOT NULL,
+        alarmTime TEXT NOT NULL,
         repeatType TEXT NOT NULL,
-        enabled INTEGER NOT NULL DEFAULT 1,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        message TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
         FOREIGN KEY (noteId) REFERENCES $notesTable(id) ON DELETE CASCADE
       )
     ''');
@@ -99,11 +105,33 @@ class NotesDatabase {
       'CREATE INDEX IF NOT EXISTS idx_todos_noteId ON $todosTable(noteId)',
     );
     await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_alarms_noteId ON $alarmsTable(noteId)',
+      'CREATE INDEX IF NOT EXISTS idx_alarms_noteId ON $alarmTable(noteId)',
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_media_noteId ON $mediaTable(noteId)',
     );
+  }
+
+  Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // Upgrade alarms table
+      // Since it's development, we can drop and recreate or alter
+      // Let's force consistent schema by recreating for this task to be safe
+      await db.execute('DROP TABLE IF EXISTS $alarmTable');
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $alarmTable (
+          id TEXT PRIMARY KEY,
+          noteId TEXT NOT NULL,
+          alarmTime TEXT NOT NULL,
+          repeatType TEXT NOT NULL,
+          isActive INTEGER NOT NULL DEFAULT 1,
+          message TEXT,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT,
+          FOREIGN KEY (noteId) REFERENCES $notesTable(id) ON DELETE CASCADE
+        )
+      ''');
+    }
   }
 
   /// Create a new note
@@ -212,12 +240,15 @@ class NotesDatabase {
   /// Add todos to note
   Future<void> addTodos(String noteId, List<TodoItem> todos) async {
     final db = await database;
+    // Clear existing todos for this note to ensure sync
+    await db.delete(todosTable, where: 'noteId = ?', whereArgs: [noteId]);
+
     for (final todo in todos) {
       await db.insert(todosTable, {
         'id': todo.id,
         'noteId': noteId,
         'text': todo.text,
-        'completed': todo.completed ? 1 : 0,
+        'completed': todo.isCompleted ? 1 : 0,
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
@@ -236,8 +267,66 @@ class NotesDatabase {
       (i) => TodoItem(
         id: maps[i]['id'],
         text: maps[i]['text'],
-        completed: maps[i]['completed'] == 1,
+        isCompleted: maps[i]['completed'] == 1,
       ),
+    );
+  }
+
+  /// Add alarms to note
+  Future<void> updateAlarms(String noteId, List<Alarm> alarms) async {
+    final db = await database;
+    // Clear existing alarms for this note
+    await db.delete(alarmTable, where: 'noteId = ?', whereArgs: [noteId]);
+
+    for (final alarm in alarms) {
+      await db.insert(
+        alarmTable,
+        _alarmToMap(alarm),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+  }
+
+  /// Get alarms for note
+  Future<List<Alarm>> getAlarms(String noteId) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      alarmTable,
+      where: 'noteId = ?',
+      whereArgs: [noteId],
+    );
+
+    return List.generate(maps.length, (i) => _alarmFromMap(maps[i]));
+  }
+
+  Map<String, dynamic> _alarmToMap(Alarm alarm) {
+    return {
+      'id': alarm.id,
+      'noteId': alarm.noteId,
+      'alarmTime': alarm.alarmTime.toIso8601String(),
+      'repeatType': alarm.repeatType.name, // Storing enum name
+      'isActive': alarm.isActive ? 1 : 0,
+      'message': alarm.message,
+      'createdAt': alarm.createdAt.toIso8601String(),
+      'updatedAt': alarm.updatedAt?.toIso8601String(),
+    };
+  }
+
+  Alarm _alarmFromMap(Map<String, dynamic> map) {
+    return Alarm(
+      id: map['id'],
+      noteId: map['noteId'],
+      alarmTime: DateTime.parse(map['alarmTime']),
+      repeatType: AlarmRepeatType.values.firstWhere(
+        (e) => e.name == map['repeatType'],
+        orElse: () => AlarmRepeatType.none,
+      ),
+      isActive: map['isActive'] == 1,
+      message: map['message'],
+      createdAt: DateTime.parse(map['createdAt']),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : null,
     );
   }
 
@@ -245,7 +334,7 @@ class NotesDatabase {
   Future<void> clearAll() async {
     final db = await database;
     await db.delete(todosTable);
-    await db.delete(alarmsTable);
+    await db.delete(alarmTable);
     await db.delete(notesTable);
   }
 
@@ -355,4 +444,4 @@ class NotesDatabase {
       createdAt: DateTime.parse(map['createdAt']),
     );
   }
-}
+} // End class

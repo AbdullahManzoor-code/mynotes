@@ -41,7 +41,7 @@ class _TodoFocusScreenState extends State<TodoFocusScreen> {
     final newTodo = TodoItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: _newTodoController.text.trim(),
-      completed: false,
+      isCompleted: false,
     );
 
     setState(() {
@@ -86,7 +86,7 @@ class _TodoFocusScreenState extends State<TodoFocusScreen> {
     widget.onTodosChanged?.call(_todos);
   }
 
-  int get _completedCount => _todos.where((t) => t.completed).length;
+  int get _completedCount => _todos.where((t) => t.isCompleted).length;
   int get _totalCount => _todos.length;
   double get _completionPercentage =>
       _totalCount == 0 ? 0 : _completedCount / _totalCount;
@@ -241,17 +241,17 @@ class _TodoFocusScreenState extends State<TodoFocusScreen> {
         margin: const EdgeInsets.only(bottom: 12),
         child: ListTile(
           leading: Checkbox(
-            value: todo.completed,
+            value: todo.isCompleted,
             onChanged: (_) => _toggleTodo(index),
             activeColor: AppColors.successColor,
           ),
           title: Text(
             todo.text,
             style: TextStyle(
-              decoration: todo.completed
+              decoration: todo.isCompleted
                   ? TextDecoration.lineThrough
                   : TextDecoration.none,
-              color: todo.completed ? AppColors.grey600 : null,
+              color: todo.isCompleted ? AppColors.grey600 : null,
             ),
           ),
           subtitle: todo.dueDate != null

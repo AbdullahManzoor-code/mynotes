@@ -9,19 +9,41 @@ class NoteRepositoryImpl implements NoteRepository {
 
   NoteRepositoryImpl({required NotesDatabase database}) : _database = database;
 
+  Future<Note> _enrichNote(Note note) async {
+    final todos = await _database.getTodos(note.id);
+    final alarms = await _database.getAlarms(note.id);
+    final media = await _database.getMediaForNote(note.id);
+
+    return note.copyWith(
+      todos: todos,
+      alarms: alarms,
+      media: media,
+      // media handled specially if needed, but getMediaForNote returns items.
+      // note entity has media list.
+    );
+  }
+
+  Future<List<Note>> _enrichNotes(List<Note> notes) async {
+    return Future.wait(notes.map(_enrichNote));
+  }
+
   @override
   Future<List<Note>> getNotes() async {
     try {
-      return await _database.getNotes(archived: false);
+      final notes = await _database.getNotes(archived: false);
+      return await _enrichNotes(notes);
+    } on Exception {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to get notes: $e');
+      throw Exception('Unable to load notes from database: $e');
     }
   }
 
   @override
   Future<List<Note>> getAllNotes() async {
     try {
-      return await _database.getAllNotes();
+      final notes = await _database.getAllNotes();
+      return await _enrichNotes(notes);
     } catch (e) {
       throw Exception('Failed to get all notes: $e');
     }
@@ -30,27 +52,42 @@ class NoteRepositoryImpl implements NoteRepository {
   @override
   Future<Note?> getNoteById(String id) async {
     try {
-      return await _database.getNoteById(id);
+      final note = await _database.getNoteById(id);
+      if (note != null) {
+        return await _enrichNote(note);
+      }
+      return null;
+    } on Exception {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to get note: $e');
+      throw Exception('Could not find note with ID $id: $e');
     }
   }
 
   @override
   Future<void> addNote(Note note) async {
-    try {
-      await _database.createNote(note);
-    } catch (e) {
-      throw Exception('Failed to add note: $e');
-    }
+    await createNote(note); // Use createNote logic
   }
 
   @override
   Future<void> createNote(Note note) async {
     try {
       await _database.createNote(note);
+      if (note.todos != null) {
+        await _database.addTodos(note.id, note.todos!);
+      }
+      if (note.alarms != null) {
+        await _database.updateAlarms(note.id, note.alarms!);
+      }
+      // Media is usually added separately via addMediaToNote calls from Bloc
+      // but if creating full note from backup/restore:
+      for (final item in note.media) {
+        await _database.addMediaToNote(note.id, item);
+      }
+    } on Exception {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to create note: $e');
+      throw Exception('Failed to save note. Please try again: $e');
     }
   }
 
@@ -58,8 +95,21 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<void> updateNote(Note note) async {
     try {
       await _database.updateNote(note);
+      if (note.todos != null) {
+        await _database.addTodos(note.id, note.todos!);
+      }
+      if (note.alarms != null) {
+        await _database.updateAlarms(note.id, note.alarms!);
+      }
+      // Simple sync for now (inefficient but works for small number of items)
+      // Actually MediaBloc handles 'AddImageToNoteEvent' which persists to DB immediately.
+      // If we remove media in UI, we should probably call a RemoveMedia event or sync here.
+      // NoteBloc calls UpdateNoteEvent.
+      // Let's rely on NoteBloc logic.
+    } on Exception {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to update note: $e');
+      throw Exception('Failed to update note. Changes not saved: $e');
     }
   }
 
@@ -67,15 +117,17 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<void> deleteNote(String id) async {
     try {
       await _database.deleteNote(id);
+      // SQLite CASCADE deletes related entities automatically
+    } on Exception {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to delete note: $e');
+      throw Exception('Could not delete note. Please try again: $e');
     }
   }
 
   @override
   Future<String> exportNotePdf(Note note, String filePath) async {
     try {
-      // Use PdfExportService to generate actual PDF
       final outputPath = await PdfExportService.exportNoteToPdf(note);
       return outputPath;
     } catch (e) {
@@ -85,21 +137,12 @@ class NoteRepositoryImpl implements NoteRepository {
 
   @override
   Future<void> scheduleReminder(String noteId, DateTime dateTime) async {
-    try {
-      // TODO: Connect to AlarmService
-      // This will be implemented in next phase
-    } catch (e) {
-      throw Exception('Failed to schedule reminder: $e');
-    }
+    // Deprecated in favor of AlarmBloc and direct Alarm management,
+    // but kept for interface compatibility if needed.
   }
 
   @override
   Future<void> cancelReminder(String noteId) async {
-    try {
-      // TODO: Connect to AlarmService
-      // This will be implemented in next phase
-    } catch (e) {
-      throw Exception('Failed to cancel reminder: $e');
-    }
+    // Deprecated
   }
 }

@@ -19,7 +19,7 @@ import 'settings_screen.dart';
 /// Responsive layout adapts to different screen sizes
 /// Supports grid and list views based on device
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();

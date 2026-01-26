@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:local_auth/local_auth.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/services/settings_service.dart';
+import '../../core/services/biometric_auth_service.dart';
+import '../../core/utils/database_health_check.dart';
+import '../../data/datasources/local_database.dart';
 import '../bloc/theme_bloc.dart';
 import '../bloc/theme_event.dart';
 import '../bloc/theme_state.dart';
+import 'voice_settings_screen.dart';
 
 /// Settings Screen
 /// Customize app behavior, theme, notifications, and storage
@@ -18,8 +23,15 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  final BiometricAuthService _biometricService = BiometricAuthService();
+
   // Theme settings
   bool _useCustomColors = false;
+
+  // Security settings
+  bool _biometricEnabled = true;
+  bool _biometricAvailable = false;
+  List<BiometricType> _availableBiometrics = [];
 
   // Notification settings
   bool _notificationsEnabled = true;
@@ -44,10 +56,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final alarmSound = await SettingsService.getAlarmSound();
       final vibrate = await SettingsService.getVibrateEnabled();
 
+      // Load biometric settings
+      final biometricAvailable = await _biometricService.isBiometricAvailable();
+      final biometricEnabled = await _biometricService.isBiometricEnabled();
+      final availableBiometrics = await _biometricService
+          .getAvailableBiometrics();
+
       setState(() {
         _notificationsEnabled = notificationsEnabled;
         _defaultAlarmSound = alarmSound;
         _vibrate = vibrate;
+        _biometricAvailable = biometricAvailable;
+        _biometricEnabled = biometricEnabled;
+        _availableBiometrics = availableBiometrics;
         _storageUsed = '45.2 MB';
         _mediaCount = 127;
         _noteCount = 48;
@@ -87,6 +108,157 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: const Text('Custom colors'),
                 subtitle: const Text('Use personalized color scheme'),
                 activeColor: AppColors.primaryColor,
+              ),
+            ],
+          ),
+
+          const Divider(),
+
+          _buildSection(
+            title: 'Security & Privacy',
+            children: [
+              if (_biometricAvailable)
+                SwitchListTile(
+                  value: _biometricEnabled,
+                  onChanged: (value) async {
+                    try {
+                      if (value) {
+                        // Authenticate before enabling
+                        try {
+                          final authenticated = await _biometricService
+                              .authenticate(
+                                reason:
+                                    'Verify your identity to enable biometric lock',
+                              );
+
+                          if (authenticated) {
+                            await _biometricService.enableBiometric();
+                            setState(() => _biometricEnabled = true);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${_biometricService.getBiometricTypeName(_availableBiometrics)} lock enabled successfully',
+                                  ),
+                                  backgroundColor: AppColors.successColor,
+                                ),
+                              );
+                            }
+                          } else {
+                            // Authentication cancelled by user
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Authentication cancelled'),
+                                  backgroundColor: Colors.orange,
+                                ),
+                              );
+                            }
+                          }
+                        } on Exception catch (e) {
+                          // Show specific error message from service
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  e.toString().replaceAll('Exception: ', ''),
+                                ),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 4),
+                              ),
+                            );
+                          }
+                        }
+                      } else {
+                        await _biometricService.disableBiometric();
+                        setState(() => _biometricEnabled = false);
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Biometric lock disabled'),
+                            ),
+                          );
+                        }
+                      }
+                    } catch (e) {
+                      // Catch any unexpected errors
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Unexpected error: ${e.toString().replaceAll('Exception: ', '')}',
+                            ),
+                            backgroundColor: Colors.red,
+                            duration: const Duration(seconds: 4),
+                          ),
+                        );
+                      }
+                    }
+                  },
+                  title: Text(
+                    '${_biometricService.getBiometricTypeName(_availableBiometrics)} Lock',
+                  ),
+                  subtitle: Text(
+                    _biometricEnabled
+                        ? 'Authentication required to open app'
+                        : 'Toggle switch to enable biometric security',
+                  ),
+                  secondary: Icon(
+                    _availableBiometrics.contains(BiometricType.face)
+                        ? Icons.face
+                        : Icons.fingerprint,
+                    color: AppColors.primaryColor,
+                  ),
+                  activeColor: AppColors.successColor,
+                ),
+              if (!_biometricAvailable)
+                ListTile(
+                  leading: const Icon(Icons.lock_outline),
+                  title: const Text('Biometric Lock'),
+                  subtitle: const Text('Not available on this device'),
+                  enabled: false,
+                ),
+              ListTile(
+                leading: const Icon(Icons.vpn_key),
+                title: const Text('Change PIN'),
+                subtitle: const Text('Set a backup unlock PIN'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  // TODO: Implement PIN change
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text('Coming soon')));
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.privacy_tip),
+                title: const Text('Privacy Policy'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  // TODO: Show privacy policy
+                },
+              ),
+            ],
+          ),
+
+          const Divider(),
+
+          _buildSection(
+            title: 'Voice & Speech',
+            children: [
+              ListTile(
+                leading: const Icon(Icons.mic, color: AppColors.primaryColor),
+                title: const Text('Voice Settings'),
+                subtitle: const Text('Configure voice input and commands'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const VoiceSettingsScreen(),
+                    ),
+                  );
+                },
               ),
             ],
           ),
@@ -229,6 +401,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 leading: const Icon(Icons.info),
                 title: const Text('App version'),
                 subtitle: const Text(AppConstants.appVersion),
+              ),
+              ListTile(
+                leading: const Icon(Icons.health_and_safety),
+                title: const Text('Database Health'),
+                subtitle: const Text('Check database status'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _showDatabaseHealth,
               ),
               ListTile(
                 leading: const Icon(Icons.privacy_tip),
@@ -403,6 +582,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Cache cleared successfully')));
+  }
+
+  Future<void> _showDatabaseHealth() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final healthCheck = DatabaseHealthCheck(notesDb: NotesDatabase());
+      final report = await healthCheck.generateHealthReport();
+
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Database Health Report'),
+            content: SingleChildScrollView(
+              child: Text(
+                report,
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Health check failed: $e')));
+      }
+    }
   }
 
   void _showResetDialog() {

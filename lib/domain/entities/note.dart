@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'media_item.dart';
 import 'todo_item.dart';
 import 'link.dart';
+import 'alarm.dart';
 
 // Note Color Enum
 enum NoteColor {
@@ -27,7 +28,8 @@ class Note extends Equatable {
   final List<MediaItem> media; // Attached media (images, audio, video)
   final List<Link> links; // Attached website links
   final List<TodoItem>? todos; // Task list
-  final List<dynamic>? alarms; // Alarms (using dynamic to avoid import issues)
+  final List<Alarm>? alarms; // Alarms
+
   final NoteColor color;
   final bool isPinned;
   final bool isArchived;
@@ -62,7 +64,7 @@ class Note extends Equatable {
     List<MediaItem>? media,
     List<Link>? links,
     List<TodoItem>? todos,
-    List<dynamic>? alarms,
+    List<Alarm>? alarms,
     NoteColor? color,
     bool? isPinned,
     bool? isArchived,
@@ -111,21 +113,28 @@ class Note extends Equatable {
     );
   }
 
-  /// Add alarm (placeholder)
-  Note addAlarm(dynamic alarm) {
-    return copyWith(updatedAt: DateTime.now());
+  /// Add alarm
+  Note addAlarm(Alarm alarm) {
+    final updatedAlarms = List<Alarm>.from(alarms ?? []);
+    updatedAlarms.add(alarm);
+    return copyWith(alarms: updatedAlarms, updatedAt: DateTime.now());
   }
 
-  /// Remove alarm (placeholder)
+  /// Remove alarm
   Note removeAlarm(String alarmId) {
-    return copyWith(updatedAt: DateTime.now());
+    final updatedAlarms = List<Alarm>.from(alarms ?? []);
+    updatedAlarms.removeWhere((a) => a.id == alarmId);
+    return copyWith(alarms: updatedAlarms, updatedAt: DateTime.now());
   }
 
   /// Check if note has media
   bool get hasMedia => media.isNotEmpty;
 
   /// Check if note has todos
-  bool get hasTodos => false; // Simplified
+  bool get hasTodos => todos != null && todos!.isNotEmpty;
+
+  /// Check if note has alarms
+  bool get hasAlarms => alarms != null && alarms!.isNotEmpty;
 
   /// Get images count
   int get imagesCount {
@@ -145,8 +154,12 @@ class Note extends Equatable {
   /// Get link count
   int get linkCount => links.length;
 
-  /// Get completion percentage (placeholder)
-  double get completionPercentage => 0.0;
+  /// Get completion percentage
+  double get completionPercentage {
+    if (todos == null || todos!.isEmpty) return 0.0;
+    final completed = todos!.where((t) => t.isCompleted).length;
+    return (completed / todos!.length) * 100;
+  }
 
   @override
   List<Object?> get props => [

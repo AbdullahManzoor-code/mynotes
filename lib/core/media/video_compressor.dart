@@ -21,7 +21,9 @@ class VideoCompressor {
       }
       return newPath;
     } catch (e) {
-      throw Exception('Video compression failed: $e');
+      throw Exception(
+        'Could not compress video. File may be too large or corrupted: $e',
+      );
     }
   }
 }

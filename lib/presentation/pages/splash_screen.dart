@@ -5,7 +5,9 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/services/clipboard_service.dart';
-import 'home_page.dart';
+import '../../core/services/biometric_auth_service.dart';
+import 'main_home_screen.dart';
+import 'biometric_lock_screen.dart';
 import 'onboarding_screen.dart';
 
 /// Splash Screen
@@ -108,17 +110,30 @@ class _SplashScreenState extends State<SplashScreen>
       // Check if first launch
       final isFirstLaunch = await _checkFirstLaunch();
 
+      // Check if biometric is enabled
+      final biometricService = BiometricAuthService();
+      final isBiometricEnabled = await biometricService.isBiometricEnabled();
+
       // Navigate to appropriate screen
       if (!mounted) return;
 
       await _controller.reverse();
 
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) =>
-              isFirstLaunch ? const OnboardingScreen() : const HomePage(),
-        ),
-      );
+      if (isFirstLaunch) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+        );
+      } else if (isBiometricEnabled) {
+        // Show biometric lock screen (will navigate internally after auth)
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const BiometricLockScreen()),
+        );
+      } else {
+        // Go directly to main home screen
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainHomeScreen()),
+        );
+      }
     } catch (e) {
       setState(() {
         _initStatus = 'Error: ${e.toString()}';

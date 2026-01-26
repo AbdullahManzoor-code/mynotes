@@ -14,13 +14,17 @@ import '../bloc/note_state.dart';
 import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
 import '../bloc/media_state.dart';
+import '../bloc/alarm_bloc.dart';
+import '../bloc/alarm_event.dart';
+import '../widgets/alarm_bottom_sheet.dart';
 
 /// Note Editor Page
 /// Full-featured note editing with media and link support
 class NoteEditorPage extends StatefulWidget {
   final Note? note;
 
-  const NoteEditorPage({Key? key, this.note}) : super(key: key);
+  const NoteEditorPage({Key? key, this.note, String? initialContent})
+    : super(key: key);
 
   @override
   State<NoteEditorPage> createState() => _NoteEditorPageState();
@@ -33,7 +37,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   final List<TodoItem> _todos = [];
   final List<String> _mediaIds = [];
   final List<Link> _links = [];
-  Alarm? _alarm;
+  List<Alarm> _activeAlarms = [];
   bool _isRecording = false;
 
   @override
@@ -46,6 +50,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     _selectedColor = widget.note?.color ?? NoteColor.defaultColor;
     if (widget.note != null) {
       _links.addAll(widget.note!.links);
+      _activeAlarms = List.from(widget.note!.alarms ?? []);
     }
   }
 
@@ -279,18 +284,18 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
           ..._todos.map((todo) {
             return ListTile(
               leading: Checkbox(
-                value: todo.completed,
+                value: todo.isCompleted,
                 onChanged: (value) {
                   setState(() {
                     final index = _todos.indexOf(todo);
-                    _todos[index] = todo.copyWith(completed: value ?? false);
+                    _todos[index] = todo.copyWith(isCompleted: value ?? false);
                   });
                 },
               ),
               title: Text(
                 todo.text,
                 style: TextStyle(
-                  decoration: todo.completed
+                  decoration: todo.isCompleted
                       ? TextDecoration.lineThrough
                       : null,
                 ),
@@ -376,23 +381,47 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
             ),
           ],
         ),
-        if (_alarm == null)
+        if ((widget.note?.alarms == null || widget.note!.alarms!.isEmpty) &&
+            _activeAlarms.isEmpty)
           Text('No alarm set', style: TextStyle(color: AppColors.grey))
         else
-          ListTile(
-            leading: const Icon(Icons.alarm),
-            title: Text(
-              '${_alarm!.alarmTime.day}/${_alarm!.alarmTime.month}/${_alarm!.alarmTime.year} ${_alarm!.alarmTime.hour}:${_alarm!.alarmTime.minute.toString().padLeft(2, '0')}',
-            ),
-            trailing: IconButton(
-              icon: Icon(Icons.delete, size: 20.sp),
-              onPressed: () {
-                setState(() {
-                  _alarm = null;
-                });
-              },
-            ),
-          ),
+          ..._activeAlarms.map((alarm) {
+            return ListTile(
+              leading: Icon(
+                Icons.alarm,
+                color: alarm.isActive ? AppColors.primaryColor : Colors.grey,
+              ),
+              title: Text(
+                '${alarm.alarmTime.day}/${alarm.alarmTime.month}/${alarm.alarmTime.year} ${alarm.alarmTime.hour}:${alarm.alarmTime.minute.toString().padLeft(2, '0')}',
+                style: TextStyle(
+                  decoration: !alarm.isActive
+                      ? TextDecoration.lineThrough
+                      : null,
+                ),
+              ),
+              subtitle: alarm.message != null && alarm.message!.isNotEmpty
+                  ? Text(alarm.message!)
+                  : null,
+              trailing: IconButton(
+                icon: Icon(Icons.delete, size: 20.sp),
+                onPressed: () {
+                  // Cancel notification via Bloc
+                  context.read<AlarmBloc>().add(
+                    DeleteAlarmEvent(
+                      noteId: widget.note?.id ?? '',
+                      alarmId: alarm.id,
+                    ),
+                  );
+
+                  // Update local state
+                  setState(() {
+                    _activeAlarms.removeWhere((a) => a.id == alarm.id);
+                  });
+                },
+              ),
+              onTap: () => _editAlarm(alarm),
+            );
+          }).toList(),
       ],
     );
   }
@@ -450,6 +479,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         title: _titleController.text,
         content: _contentController.text,
         color: _selectedColor,
+        alarms: _activeAlarms,
         createdAt: widget.note?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -534,7 +564,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                     TodoItem(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       text: controller.text,
-                      completed: false,
+                      isCompleted: false,
                     ),
                   );
                 });
@@ -550,40 +580,60 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
 
   /// Show date/time picker for alarm
   void _showAlarmPicker() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-    );
-
-    if (date != null) {
-      final time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
-      );
-
-      if (time != null) {
-        final dateTime = DateTime(
-          date.year,
-          date.month,
-          date.day,
-          time.hour,
-          time.minute,
+    // Create a temporary note object if creating new note
+    final tempNote =
+        widget.note ??
+        Note(
+          id:
+              widget.note?.id ??
+              DateTime.now().millisecondsSinceEpoch.toString(),
+          title: _titleController.text,
+          content: _contentController.text,
+          color: _selectedColor,
         );
 
-        setState(() {
-          _alarm = Alarm(
-            id: DateTime.now().millisecondsSinceEpoch.toString(),
-            noteId:
-                widget.note?.id ??
-                DateTime.now().millisecondsSinceEpoch.toString(),
-            alarmTime: dateTime,
-            repeatType: AlarmRepeatType.none,
-            createdAt: DateTime.now(),
-          );
-        });
-      }
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AlarmBottomSheet(note: tempNote),
+    );
+
+    if (result != null && result is Alarm) {
+      setState(() {
+        _activeAlarms.add(result);
+      });
+    }
+  }
+
+  /// Edit existing alarm
+  void _editAlarm(Alarm alarm) async {
+    final tempNote =
+        widget.note ??
+        Note(
+          id:
+              widget.note?.id ??
+              DateTime.now().millisecondsSinceEpoch.toString(),
+          title: _titleController.text,
+        );
+
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) =>
+          AlarmBottomSheet(note: tempNote, existingAlarm: alarm),
+    );
+
+    if (result != null && result is Alarm) {
+      setState(() {
+        final index = _activeAlarms.indexWhere((a) => a.id == alarm.id);
+        if (index >= 0) {
+          _activeAlarms[index] = result;
+        } else {
+          _activeAlarms.add(result);
+        }
+      });
     }
   }
 

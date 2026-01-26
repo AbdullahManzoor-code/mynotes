@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/app_colors.dart';
-import 'home_page.dart';
+import 'main_home_screen.dart';
 
 /// Onboarding Screen
 /// Shows feature introduction slides for first-time users
@@ -88,9 +88,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const HomePage()));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const MainHomeScreen()),
+    );
   }
 
   @override

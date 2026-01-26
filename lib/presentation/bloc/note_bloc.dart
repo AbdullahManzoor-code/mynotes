@@ -91,10 +91,11 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
         emit(const NoteError('Note not found'));
       }
     } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
         NoteError(
-          'Failed to load note: ${e.toString()}',
-          exception: e as Exception,
+          errorMsg,
+          exception: e is Exception ? e : Exception(errorMsg),
         ),
       );
     }
@@ -113,6 +114,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
         title: event.title,
         content: event.content,
         color: event.color,
+        tags: event.tags ?? [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -120,10 +122,11 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       await _noteRepository.createNote(newNote);
       emit(NoteCreated(newNote));
     } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
         NoteError(
-          'Failed to create note: ${e.toString()}',
-          exception: e as Exception,
+          errorMsg,
+          exception: e is Exception ? e : Exception(errorMsg),
         ),
       );
     }
@@ -142,10 +145,11 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       await _noteRepository.updateNote(updatedNote);
       emit(NoteUpdated(updatedNote));
     } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
         NoteError(
-          'Failed to update note: ${e.toString()}',
-          exception: e as Exception,
+          errorMsg,
+          exception: e is Exception ? e : Exception(errorMsg),
         ),
       );
     }
@@ -160,10 +164,11 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       await _noteRepository.deleteNote(event.noteId);
       emit(NoteDeleted(event.noteId));
     } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
         NoteError(
-          'Failed to delete note: ${e.toString()}',
-          exception: e as Exception,
+          errorMsg,
+          exception: e is Exception ? e : Exception(errorMsg),
         ),
       );
     }
@@ -182,10 +187,11 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       }
       emit(NotesDeleted(event.noteIds, deletedCount));
     } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
         NoteError(
-          'Failed to delete notes: ${e.toString()}',
-          exception: e as Exception,
+          errorMsg,
+          exception: e is Exception ? e : Exception(errorMsg),
         ),
       );
     }

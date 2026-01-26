@@ -236,15 +236,24 @@ class _AnswerScreenState extends State<AnswerScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    if (_answerController.text.isNotEmpty) {
-                      context.read<ReflectionBloc>().add(
-                        SubmitAnswerEvent(
-                          questionId: widget.question.id,
-                          answerText: _answerController.text,
-                          mood: _selectedMood,
+                    if (_answerController.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Please write your reflection before saving',
+                          ),
+                          backgroundColor: Colors.orange,
                         ),
                       );
+                      return;
                     }
+                    context.read<ReflectionBloc>().add(
+                      SubmitAnswerEvent(
+                        questionId: widget.question.id,
+                        answerText: _answerController.text.trim(),
+                        mood: _selectedMood,
+                      ),
+                    );
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primaryColor,

@@ -29,15 +29,17 @@ class CreateNoteEvent extends NoteEvent {
   final String title;
   final String content;
   final NoteColor color;
+  final List<String>? tags;
 
   const CreateNoteEvent({
     required this.title,
     this.content = '',
     this.color = NoteColor.defaultColor,
+    this.tags,
   });
 
   @override
-  List<Object?> get props => [title, content, color];
+  List<Object?> get props => [title, content, color, tags];
 }
 
 /// Update existing note

@@ -28,7 +28,9 @@ class MediaRepositoryImpl implements MediaRepository {
       // Check storage permission
       final hasPermission = await PermissionService.requestPhotosPermission();
       if (!hasPermission) {
-        throw Exception('Storage permission denied');
+        throw Exception(
+          'Photo library access denied. Please enable in device settings',
+        );
       }
 
       // Pick image from gallery if path is empty
@@ -43,7 +45,7 @@ class MediaRepositoryImpl implements MediaRepository {
         );
 
         if (image == null) {
-          throw Exception('No image selected');
+          throw Exception('No image was selected');
         }
 
         finalPath = image.path;
@@ -60,8 +62,10 @@ class MediaRepositoryImpl implements MediaRepository {
       await database.addMediaToNote(noteId, mediaItem);
 
       return mediaItem;
+    } on Exception {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to add image: $e');
+      throw Exception('Failed to add image to note: $e');
     }
   }
 
@@ -84,7 +88,7 @@ class MediaRepositoryImpl implements MediaRepository {
         );
 
         if (video == null) {
-          throw Exception('No video selected');
+          throw Exception('No video was selected');
         }
 
         finalPath = video.path;
@@ -102,8 +106,10 @@ class MediaRepositoryImpl implements MediaRepository {
       await database.addMediaToNote(noteId, mediaItem);
 
       return mediaItem;
+    } on Exception {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to add video: $e');
+      throw Exception('Failed to add video to note: $e');
     }
   }
 
@@ -111,8 +117,10 @@ class MediaRepositoryImpl implements MediaRepository {
   Future<void> removeMediaFromNote(String noteId, String mediaId) async {
     try {
       await database.removeMediaFromNote(noteId, mediaId);
+    } on Exception {
+      rethrow;
     } catch (e) {
-      throw Exception('Failed to remove media: $e');
+      throw Exception('Could not remove media from note: $e');
     }
   }
 

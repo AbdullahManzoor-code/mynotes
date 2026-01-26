@@ -3,13 +3,13 @@ import 'package:equatable/equatable.dart';
 class TodoItem extends Equatable {
   final String id;
   final String text;
-  final bool completed;
+  final bool isCompleted;
   final DateTime? dueDate;
 
   const TodoItem({
     required this.id,
     required this.text,
-    this.completed = false,
+    this.isCompleted = false,
     this.dueDate,
   });
 
@@ -17,7 +17,7 @@ class TodoItem extends Equatable {
     return TodoItem(
       id: id,
       text: text,
-      completed: !completed,
+      isCompleted: !isCompleted,
       dueDate: dueDate,
     );
   }
@@ -25,24 +25,24 @@ class TodoItem extends Equatable {
   TodoItem copyWith({
     String? id,
     String? text,
-    bool? completed,
+    bool? isCompleted,
     DateTime? dueDate,
   }) {
     return TodoItem(
       id: id ?? this.id,
       text: text ?? this.text,
-      completed: completed ?? this.completed,
+      isCompleted: isCompleted ?? this.isCompleted,
       dueDate: dueDate ?? this.dueDate,
     );
   }
 
   @override
-  List<Object?> get props => [id, text, completed, dueDate];
+  List<Object?> get props => [id, text, isCompleted, dueDate];
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'text': text,
-    'completed': completed,
+    'isCompleted': isCompleted,
     'dueDate': dueDate?.toIso8601String(),
   };
 
@@ -50,7 +50,7 @@ class TodoItem extends Equatable {
     return TodoItem(
       id: json['id'] as String,
       text: json['text'] as String,
-      completed: (json['completed'] as bool?) ?? false,
+      isCompleted: (json['isCompleted'] as bool?) ?? false,
       dueDate: json['dueDate'] != null
           ? DateTime.parse(json['dueDate'] as String)
           : null,

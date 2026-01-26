@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../../core/constants/app_colors.dart';
 import '../../domain/entities/media_item.dart';
+import '../widgets/voice_message_widget.dart';
 
 /// Media Viewer Screen
 /// Full-screen viewer for images, videos, and audio
@@ -26,59 +26,24 @@ class MediaViewerScreen extends StatefulWidget {
 class _MediaViewerScreenState extends State<MediaViewerScreen> {
   late PageController _pageController;
   late int _currentIndex;
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  bool _isPlaying = false;
-  Duration _duration = Duration.zero;
-  Duration _position = Duration.zero;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
-    _setupAudioPlayer();
-  }
-
-  void _setupAudioPlayer() {
-    _audioPlayer.onDurationChanged.listen((duration) {
-      setState(() => _duration = duration);
-    });
-
-    _audioPlayer.onPositionChanged.listen((position) {
-      setState(() => _position = position);
-    });
-
-    _audioPlayer.onPlayerComplete.listen((_) {
-      setState(() {
-        _isPlaying = false;
-        _position = Duration.zero;
-      });
-    });
   }
 
   @override
   void dispose() {
     _pageController.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
   void _onPageChanged(int index) {
     setState(() {
       _currentIndex = index;
-      _isPlaying = false;
     });
-    _audioPlayer.stop();
-  }
-
-  Future<void> _toggleAudioPlayback(String filePath) async {
-    if (_isPlaying) {
-      await _audioPlayer.pause();
-      setState(() => _isPlaying = false);
-    } else {
-      await _audioPlayer.play(DeviceFileSource(filePath));
-      setState(() => _isPlaying = true);
-    }
   }
 
   void _deleteCurrentMedia() {
@@ -192,65 +157,55 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Audio icon
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                color: AppColors.audioColor.withOpacity(0.2),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.audiotrack_rounded,
-                size: 64,
-                color: AppColors.audioColor,
-              ),
+            // WhatsApp-style voice message widget
+            VoiceMessageWidget(
+              audioPath: media.filePath,
+              duration: media.durationMs > 0
+                  ? Duration(milliseconds: media.durationMs)
+                  : null,
+              isSent: true,
             ),
 
             const SizedBox(height: 32),
 
-            // Progress slider
-            if (_duration.inSeconds > 0)
-              Column(
-                children: [
-                  Slider(
-                    value: _position.inSeconds.toDouble(),
-                    max: _duration.inSeconds.toDouble(),
-                    onChanged: (value) async {
-                      final position = Duration(seconds: value.toInt());
-                      await _audioPlayer.seek(position);
-                    },
-                    activeColor: AppColors.audioColor,
-                    inactiveColor: Colors.white24,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _formatDuration(_position),
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                        Text(
-                          _formatDuration(_duration),
-                          style: const TextStyle(color: Colors.white70),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+            // Audio info
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
               ),
-
-            const SizedBox(height: 24),
-
-            // Play/Pause button
-            IconButton(
-              onPressed: () => _toggleAudioPlayback(media.filePath),
-              icon: Icon(
-                _isPlaying ? Icons.pause_circle : Icons.play_circle,
-                size: 72,
-                color: AppColors.audioColor,
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.audiotrack_rounded,
+                        color: AppColors.audioColor,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Voice Recording',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.7),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (media.durationMs > 0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _formatDuration(Duration(milliseconds: media.durationMs)),
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
           ],

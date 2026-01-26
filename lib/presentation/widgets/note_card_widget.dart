@@ -5,6 +5,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/utils/date_utils.dart';
 import '../../domain/entities/note.dart';
+import 'media_player_widget.dart';
 
 /// Note Card Widget
 /// Displays individual note in grid/list view
@@ -71,11 +72,48 @@ class NoteCardWidget extends StatelessWidget {
 
                   // Content preview
                   Expanded(
-                    child: Text(
-                      note.content,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Text content
+                        if (note.content.isNotEmpty)
+                          Text(
+                            note.content,
+                            maxLines: note.hasMedia ? 2 : 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+
+                        // Media preview
+                        if (note.hasMedia) ...[
+                          SizedBox(height: 8.h),
+                          SizedBox(
+                            height: 60.h,
+                            child: ListView.builder(
+                              scrollDirection: Axis.horizontal,
+                              itemCount: note.media.length > 3
+                                  ? 3
+                                  : note.media.length,
+                              itemBuilder: (context, index) {
+                                final mediaItem = note.media[index];
+                                return Padding(
+                                  padding: EdgeInsets.only(right: 8.w),
+                                  child: MediaPlayerWidget(
+                                    mediaPath: mediaItem.filePath,
+                                    mediaType: mediaItem.type.name,
+                                    thumbnailPath: mediaItem.thumbnailPath,
+                                    onPlay: () {
+                                      // Handle media play - could open full screen player
+                                      // For now, just trigger the card tap
+                                      onTap();
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
 
@@ -148,18 +186,51 @@ class NoteCardWidget extends StatelessWidget {
                               ),
                           ],
                         ),
+
+                      // Alarm indicator
+                      if (note.hasAlarms)
+                        Row(
+                          children: [
+                            SizedBox(width: 4.w),
+                            Tooltip(
+                              message:
+                                  '${note.alarms!.length} reminder${note.alarms!.length > 1 ? 's' : ''}',
+                              child: Icon(
+                                Icons.alarm,
+                                size: 14,
+                                color: AppColors.warningColor.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
                     ],
                   ),
 
                   // Todo progress
                   if (note.hasTodos) ...[
                     SizedBox(height: 8.h),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: note.completionPercentage / 100,
-                        minHeight: 4,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: note.completionPercentage / 100,
+                              minHeight: 4,
+                              backgroundColor: Colors.grey.withOpacity(0.2),
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                AppColors.successColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 8.w),
+                        Text(
+                          '${note.todos!.where((t) => t.isCompleted).length}/${note.todos!.length}',
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                      ],
                     ),
                   ],
                 ],

@@ -1,131 +1,100 @@
 import 'package:uuid/uuid.dart';
 
 /// Reflection Database Layer
-/// Handles all SQLite operations for reflection questions and answers
+/// Handles all SQLite operations for reflection notes
 class ReflectionDatabase {
-  static const String questionsTable = 'reflection_questions';
-  static const String answersTable = 'reflection_answers';
+  static const String reflectionNotesTable = 'reflection_notes';
 
-  // Column names for questions table
+  // Column names for reflection_notes table
   static const String columnId = 'id';
-  static const String columnQuestionText = 'question_text';
+  static const String columnPrompt = 'prompt';
+  static const String columnAnswer = 'answer';
   static const String columnCategory = 'category';
-  static const String columnIsUserCreated = 'is_user_created';
-  static const String columnFrequency = 'frequency';
-  static const String columnCreatedAt = 'created_at';
-
-  // Column names for answers table
-  static const String columnQuestionId = 'question_id';
-  static const String columnAnswerText = 'answer_text';
+  static const String columnIsCustomPrompt = 'is_custom_prompt';
   static const String columnMood = 'mood';
-  static const String columnDraft = 'draft';
+  static const String columnCreatedAt = 'created_at';
+  static const String columnUpdatedAt = 'updated_at';
+  static const String columnIsDraft = 'is_draft';
 
-  // Preset questions as JSON maps for database insertion
-  static final List<Map<String, dynamic>> presetQuestions = [
-    // Life & Purpose (3 questions)
+  // Preset prompts as a list (not inserted into DB, used for daily rotation)
+  static final List<Map<String, String>> presetPrompts = [
+    // Life & Purpose
     {
-      columnId: 'q1',
-      columnQuestionText: 'What is the main goal of my life right now?',
-      columnCategory: 'life',
-      columnIsUserCreated: 0,
-      columnFrequency: 'weekly',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What is the main goal of my life right now?',
+      'category': 'life',
+      'frequency': 'weekly',
     },
     {
-      columnId: 'q2',
-      columnQuestionText: 'Why am I doing what I am doing?',
-      columnCategory: 'life',
-      columnIsUserCreated: 0,
-      columnFrequency: 'weekly',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'Why am I doing what I am doing?',
+      'category': 'life',
+      'frequency': 'weekly',
     },
     {
-      columnId: 'q3',
-      columnQuestionText: 'What kind of person do I want to become?',
-      columnCategory: 'life',
-      columnIsUserCreated: 0,
-      columnFrequency: 'monthly',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What kind of person do I want to become?',
+      'category': 'life',
+      'frequency': 'monthly',
     },
 
-    // Daily Reflection (3 questions)
+    // Daily Reflection
     {
-      columnId: 'q4',
-      columnQuestionText: 'What did I do well today?',
-      columnCategory: 'daily',
-      columnIsUserCreated: 0,
-      columnFrequency: 'daily',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What did I do well today?',
+      'category': 'daily',
+      'frequency': 'daily',
     },
     {
-      columnId: 'q5',
-      columnQuestionText: 'What could I improve tomorrow?',
-      columnCategory: 'daily',
-      columnIsUserCreated: 0,
-      columnFrequency: 'daily',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What could I improve tomorrow?',
+      'category': 'daily',
+      'frequency': 'daily',
     },
     {
-      columnId: 'q6',
-      columnQuestionText: 'What drained my energy today?',
-      columnCategory: 'daily',
-      columnIsUserCreated: 0,
-      columnFrequency: 'daily',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What drained my energy today?',
+      'category': 'daily',
+      'frequency': 'daily',
     },
 
-    // Career & Study (3 questions)
+    // Career & Study
     {
-      columnId: 'q7',
-      columnQuestionText: 'Am I learning the right skills?',
-      columnCategory: 'career',
-      columnIsUserCreated: 0,
-      columnFrequency: 'weekly',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'Am I learning the right skills?',
+      'category': 'career',
+      'frequency': 'weekly',
     },
     {
-      columnId: 'q8',
-      columnQuestionText: 'What is blocking my progress?',
-      columnCategory: 'career',
-      columnIsUserCreated: 0,
-      columnFrequency: 'weekly',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What is blocking my progress?',
+      'category': 'career',
+      'frequency': 'weekly',
     },
     {
-      columnId: 'q9',
-      columnQuestionText: 'What small step can I take today?',
-      columnCategory: 'career',
-      columnIsUserCreated: 0,
-      columnFrequency: 'daily',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What small step can I take today?',
+      'category': 'career',
+      'frequency': 'daily',
     },
 
-    // Mental Health (3 questions)
+    // Mental Health
     {
-      columnId: 'q10',
-      columnQuestionText: 'What am I feeling right now?',
-      columnCategory: 'mental_health',
-      columnIsUserCreated: 0,
-      columnFrequency: 'daily',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What am I feeling right now?',
+      'category': 'mental_health',
+      'frequency': 'daily',
     },
     {
-      columnId: 'q11',
-      columnQuestionText: 'What am I worried about?',
-      columnCategory: 'mental_health',
-      columnIsUserCreated: 0,
-      columnFrequency: 'weekly',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What am I worried about?',
+      'category': 'mental_health',
+      'frequency': 'weekly',
     },
     {
-      columnId: 'q12',
-      columnQuestionText: 'What helped me feel calm today?',
-      columnCategory: 'mental_health',
-      columnIsUserCreated: 0,
-      columnFrequency: 'daily',
-      columnCreatedAt: DateTime.now().toIso8601String(),
+      'prompt': 'What helped me feel calm today?',
+      'category': 'mental_health',
+      'frequency': 'daily',
     },
   ];
 
   static String generateId() => const Uuid().v4();
+
+  /// Get a daily rotating prompt based on current date
+  static Map<String, String> getDailyPrompt() {
+    final dayOfYear = DateTime.now()
+        .difference(DateTime(DateTime.now().year, 1, 1))
+        .inDays;
+    final index = dayOfYear % presetPrompts.length;
+    return presetPrompts[index];
+  }
 }
