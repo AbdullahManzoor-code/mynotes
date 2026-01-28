@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
-import '../../core/constants/app_colors.dart';
 import '../../core/services/speech_service.dart';
 import '../../domain/entities/note.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
-import '../widgets/empty_state_widget.dart';
+import '../design_system/design_system.dart';
 import '../widgets/voice_input_button.dart';
+import '../widgets/empty_state_widget.dart';
 import 'todo_focus_screen.dart';
 import 'settings_screen.dart';
+import 'note_editor_page.dart';
 
 /// Todos List Screen - Display all notes tagged as todos
 /// Features: Quick voice entry, checkbox completion, filtering
@@ -105,25 +105,10 @@ class _TodosListScreenState extends State<TodosListScreen>
   }
 
   void _openFocusMode(Note? note) {
-    if (note == null) {
-      // Create a dummy note for focus mode without a specific todo
-      final dummyNote = Note(
-        id: 'temp',
-        title: 'Focus Session',
-        content: '',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => TodoFocusScreen(note: dummyNote)),
-      );
-    } else {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => TodoFocusScreen(note: note)),
-      );
-    }
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => NoteEditorPage(note: note)),
+    );
   }
 
   void _openSettings() {
@@ -136,279 +121,353 @@ class _TodosListScreenState extends State<TodosListScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<NotesBloc, NoteState>(
       listener: (context, state) {
-        // Auto-refresh todos when notes change
         if (state is NoteCreated ||
             state is NoteUpdated ||
             state is NoteDeleted) {
           _loadTodos();
         }
       },
-      child: _buildContent(isDark),
-    );
-  }
-
-  Widget _buildContent(bool isDark) {
-    return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.darkBackground
-          : AppColors.lightBackground,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'My Todos',
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontSize: 24.sp,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.timer_outlined,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-            tooltip: 'Focus Mode (Pomodoro)',
-            onPressed: () => _openFocusMode(null),
-          ),
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.filter_list,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-            onSelected: (value) {
-              setState(() => _filterBy = value);
-              _loadTodos();
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'all', child: Text('All Todos')),
-              const PopupMenuItem(value: 'active', child: Text('Active')),
-              const PopupMenuItem(value: 'completed', child: Text('Completed')),
-            ],
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.settings_outlined,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-            onPressed: _openSettings,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Quick Add Todo with Voice
-          Container(
-            padding: EdgeInsets.all(16.w),
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _todoController,
-                    decoration: InputDecoration(
-                      hintText: 'Add a new todo...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                      prefixIcon: const Icon(
-                        Icons.add_task,
-                        color: Colors.grey,
-                      ),
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkBackground
-                          : Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 12.h,
-                      ),
-                    ),
-                    onSubmitted: (_) => _addQuickTodo(),
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                VoiceInputButton(
-                  isListening: _isListening,
-                  onPressed: _isListening ? _stopVoiceInput : _startVoiceInput,
-                  size: 48.w,
-                ),
-                SizedBox(width: 8.w),
-                IconButton(
-                  icon: const Icon(Icons.send, color: AppColors.primaryColor),
-                  onPressed: _addQuickTodo,
-                  iconSize: 28.sp,
-                ),
-              ],
-            ),
-          ),
-
-          // Todos List
-          Expanded(
-            child: BlocBuilder<NotesBloc, NoteState>(
-              builder: (context, state) {
-                if (state is NoteLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (state is NoteError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64.sp,
-                          color: Colors.red,
-                        ),
-                        SizedBox(height: 16.h),
-                        Text(
-                          'Error loading todos',
-                          style: TextStyle(fontSize: 16.sp),
-                        ),
-                        SizedBox(height: 24.h),
-                        ElevatedButton(
-                          onPressed: _loadTodos,
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (state is NotesLoaded) {
-                  final todos = state.notes
-                      .where((note) => note.tags.contains('todo'))
-                      .toList();
-                  final filtered = _filterTodos(todos);
-
-                  if (filtered.isEmpty) {
-                    return EmptyStateWidget(
-                      icon: Icons.check_box_outlined,
-                      title: _filterBy == 'all'
-                          ? 'No todos yet'
-                          : 'No $_filterBy todos',
-                      subtitle: _filterBy == 'all'
-                          ? 'Add your first todo above or use voice input'
-                          : 'Create some todos to see them here',
-                    );
-                  }
-
-                  return RefreshIndicator(
-                    onRefresh: () async => _loadTodos(),
-                    child: ListView.builder(
-                      padding: EdgeInsets.all(16.w),
-                      itemCount: filtered.length,
-                      itemBuilder: (context, index) {
-                        return _buildTodoCard(filtered[index], isDark);
-                      },
-                    ),
-                  );
-                }
-
-                return const SizedBox();
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  List<Note> _filterTodos(List<Note> todos) {
-    List<Note> filtered = todos;
-
-    // Apply filter - use isArchived as completion status
-    if (_filterBy == 'active') {
-      filtered = todos.where((todo) => !todo.isArchived).toList();
-    } else if (_filterBy == 'completed') {
-      filtered = todos.where((todo) => todo.isArchived).toList();
-    }
-
-    // Sort by created date (default)
-    filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-    return filtered;
-  }
-
-  Widget _buildTodoCard(Note todo, bool isDark) {
-    final isCompleted = todo.isArchived; // Use isArchived as completion status
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        leading: Checkbox(
-          value: isCompleted,
-          onChanged: (value) {
-            final updatedNote = todo.copyWith(
-              isArchived: value ?? false,
-              updatedAt: DateTime.now(),
-            );
-            context.read<NotesBloc>().add(UpdateNoteEvent(updatedNote));
-          },
-          activeColor: AppColors.successColor,
-        ),
-        title: Text(
-          todo.title,
-          style: TextStyle(
-            fontSize: 16.sp,
-            fontWeight: FontWeight.w500,
-            decoration: isCompleted
-                ? TextDecoration.lineThrough
-                : TextDecoration.none,
-            color: isCompleted
-                ? Colors.grey
-                : (isDark ? Colors.white : Colors.black),
-          ),
-        ),
-        subtitle: todo.content.isNotEmpty
-            ? Padding(
-                padding: EdgeInsets.only(top: 4.h),
-                child: Text(
-                  todo.content,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 14.sp, color: Colors.grey),
-                ),
-              )
-            : null,
-        trailing: PopupMenuButton<String>(
-          icon: Icon(
-            Icons.more_vert,
-            color: isDark ? Colors.white : Colors.black,
-          ),
-          onSelected: (value) {
-            if (value == 'delete') {
-              context.read<NotesBloc>().add(DeleteNoteEvent(todo.id));
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(value: 'edit', child: Text('Edit')),
-            const PopupMenuItem(value: 'delete', child: Text('Delete')),
+      child: AppScaffold(
+        body: CustomScrollView(
+          slivers: [
+            _buildSliverAppBar(),
+            _buildInputSection(),
+            _buildFilterSection(),
+            _buildTodoListSection(),
+            SliverToBoxAdapter(child: SizedBox(height: 100.r)),
           ],
         ),
       ),
     );
   }
-}
 
+  Widget _buildSliverAppBar() {
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.xl,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      sliver: SliverToBoxAdapter(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Tasks',
+                  style: AppTypography.displayLarge(
+                    context,
+                    null,
+                    FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'Stay focused and productive',
+                  style: AppTypography.bodySmall(
+                    context,
+                    AppColors.textSecondary(context),
+                  ),
+                ),
+              ],
+            ),
+            AppIconButton(
+              icon: Icons.timer_outlined,
+              onPressed: () => _openFocusMode(null),
+              tooltip: 'Focus Mode',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInputSection() {
+    return SliverPadding(
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      sliver: SliverToBoxAdapter(
+        child: CardContainer(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.xs,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _todoController,
+                  style: AppTypography.bodyMedium(context),
+                  decoration: InputDecoration(
+                    hintText: 'Add a new task...',
+                    hintStyle: AppTypography.bodyMedium(
+                      context,
+                      AppColors.textSecondary(context).withOpacity(0.5),
+                    ),
+                    border: InputBorder.none,
+                  ),
+                  onSubmitted: (_) => _addQuickTodo(),
+                ),
+              ),
+              VoiceInputButton(
+                isListening: _isListening,
+                onPressed: _isListening ? _stopVoiceInput : _startVoiceInput,
+                size: 40.r,
+              ),
+              SizedBox(width: AppSpacing.xs),
+              AppIconButton(
+                icon: Icons.add_circle,
+                onPressed: _addQuickTodo,
+                iconColor: AppColors.primaryColor,
+                size: 32.r,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterSection() {
+    final filters = [
+      {'id': 'all', 'label': 'All'},
+      {'id': 'active', 'label': 'Active'},
+      {'id': 'completed', 'label': 'Done'},
+    ];
+
+    return SliverPadding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.lg,
+        AppSpacing.md,
+      ),
+      sliver: SliverToBoxAdapter(
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: filters.map((f) {
+              final isSelected = _filterBy == f['id'];
+              return GestureDetector(
+                onTap: () => setState(() => _filterBy = f['id']!),
+                child: Container(
+                  margin: EdgeInsets.only(right: AppSpacing.sm),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                    vertical: AppSpacing.sm,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primaryColor
+                        : AppColors.surface(context),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
+                    border: Border.all(
+                      color: isSelected
+                          ? AppColors.primaryColor
+                          : AppColors.divider(context),
+                    ),
+                  ),
+                  child: Text(
+                    f['label']!,
+                    style: AppTypography.captionSmall(
+                      context,
+                      isSelected
+                          ? Colors.white
+                          : AppColors.textPrimary(context),
+                      isSelected ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTodoListSection() {
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        if (state is NoteLoading) {
+          return const SliverFillRemaining(
+            child: Center(child: AppLoadingIndicator()),
+          );
+        }
+        if (state is NotesLoaded) {
+          final todos = state.notes
+              .where((n) => n.tags.contains('todo'))
+              .toList();
+          final filtered = _filterTodos(todos);
+
+          if (filtered.isEmpty) {
+            return SliverFillRemaining(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 100.h),
+                child: EmptyStateWidget(
+                  icon: Icons.check_circle_outline,
+                  title: 'All caught up!',
+                  subtitle: 'No tasks to show for this filter.',
+                ),
+              ),
+            );
+          }
+
+          return SliverPadding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) => _buildTodoItem(filtered[index]),
+                childCount: filtered.length,
+              ),
+            ),
+          );
+        }
+        return const SliverFillRemaining(
+          child: Center(child: Text('Error loading tasks')),
+        );
+      },
+    );
+  }
+
+  Widget _buildTodoItem(Note todo) {
+    final isCompleted = todo.tags.contains('completed');
+    return CardContainer(
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      onTap: () => _openFocusMode(todo),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => _toggleTodoStatus(todo),
+            child: Container(
+              width: 24.r,
+              height: 24.r,
+              decoration: BoxDecoration(
+                color: isCompleted
+                    ? AppColors.successColor
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(6.r),
+                border: Border.all(
+                  color: isCompleted
+                      ? AppColors.successColor
+                      : AppColors.divider(context),
+                  width: 2,
+                ),
+              ),
+              child: isCompleted
+                  ? Icon(Icons.check, size: 16.r, color: Colors.white)
+                  : null,
+            ),
+          ),
+          SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              todo.title,
+              style:
+                  AppTypography.bodyMedium(
+                    context,
+                    isCompleted
+                        ? AppColors.textSecondary(context)
+                        : AppColors.textPrimary(context),
+                  ).copyWith(
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  ),
+            ),
+          ),
+          AppIconButton(icon: Icons.more_vert, onPressed: () {}, size: 20),
+        ],
+      ),
+    );
+  }
+
+  void _toggleTodoStatus(Note todo) {
+    final tags = List<String>.from(todo.tags);
+    if (tags.contains('completed')) {
+      tags.remove('completed');
+    } else {
+      tags.add('completed');
+    }
+    context.read<NotesBloc>().add(UpdateNoteEvent(todo.copyWith(tags: tags)));
+  }
+
+  List<Note> _filterTodos(List<Note> notes) {
+    if (_filterBy == 'all') return notes;
+    if (_filterBy == 'completed') {
+      return notes.where((n) => n.tags.contains('completed')).toList();
+    }
+    // active (not completed)
+    return notes.where((n) => !n.tags.contains('completed')).toList();
+  }
+
+  Widget _buildTodoCard(Note note) {
+    final isCompleted = note.isArchived;
+
+    return CardContainer(
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      onTap: () => _openFocusMode(note),
+      child: Row(
+        children: [
+          Checkbox(
+            value: isCompleted,
+            onChanged: (value) {
+              final updatedNote = note.copyWith(
+                isArchived: value ?? false,
+                updatedAt: DateTime.now(),
+              );
+              context.read<NotesBloc>().add(UpdateNoteEvent(updatedNote));
+            },
+            activeColor: AppColors.successColor,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  note.title,
+                  style:
+                      AppTypography.heading4(
+                        context,
+                        isCompleted ? AppColors.textSecondary(context) : null,
+                      ).copyWith(
+                        decoration: isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                ),
+                if (note.content.isNotEmpty)
+                  Text(
+                    note.content,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.captionSmall(context),
+                  ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            icon: Icon(
+              Icons.more_vert,
+              color: AppColors.textSecondary(context),
+            ),
+            onSelected: (value) {
+              if (value == 'delete') {
+                context.read<NotesBloc>().add(DeleteNoteEvent(note.id));
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'delete', child: Text('Delete')),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}

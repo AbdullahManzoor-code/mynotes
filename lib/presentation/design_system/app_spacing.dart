@@ -153,6 +153,9 @@ class AppSpacing {
   /// Border radius (large) - 12px
   static double get radiusLarge => 12.r;
 
+  /// Border radius (full) - 999px
+  static double get radiusFull => 999.r;
+
   /// Border radius (extra large) - 16px
   static double get radiusXLarge => 16.r;
 
@@ -235,6 +238,9 @@ class AppSpacing {
 
   /// Card padding (all sides)
   static EdgeInsets get cardPaddingAll => EdgeInsets.all(cardPadding);
+
+  /// Medium edge insets (12px)
+  static EdgeInsets get edgeInsetsMd => EdgeInsets.all(md);
 
   /// Card padding (large, all sides)
   static EdgeInsets get cardPaddingLargeAll => EdgeInsets.all(cardPaddingLarge);
@@ -451,4 +457,3 @@ extension AppSpacingExtensions on num {
   /// Create BorderRadius.circular
   BorderRadius get borderRadius => BorderRadius.circular(toDouble());
 }
-

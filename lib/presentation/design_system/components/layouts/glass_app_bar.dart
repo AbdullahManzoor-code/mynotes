@@ -18,6 +18,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double elevation;
   final bool centerTitle;
   final double? height;
+  final PreferredSizeWidget? bottom;
   final SystemUiOverlayStyle? systemOverlayStyle;
 
   const GlassAppBar({
@@ -31,11 +32,13 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.elevation = 0,
     this.centerTitle = false,
     this.height,
+    this.bottom,
     this.systemOverlayStyle,
   }) : super(key: key);
 
   @override
-  Size get preferredSize => Size.fromHeight(height ?? 56.h);
+  Size get preferredSize =>
+      Size.fromHeight((height ?? 56.h) + (bottom?.preferredSize.height ?? 0));
 
   @override
   Widget build(BuildContext context) {
@@ -60,31 +63,35 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
             ),
             child: SafeArea(
               bottom: false,
-              child: Row(
+              child: Column(
                 children: [
-                  if (leading != null)
-                    leading!
-                  else if (automaticallyImplyLeading &&
-                      Navigator.canPop(context))
-                    IconButton(
-                      icon: Icon(
-                        Icons.arrow_back,
-                        color: AppColors.textPrimary(context),
-                      ),
-                      onPressed: () => Navigator.pop(context),
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (leading != null)
+                          leading!
+                        else if (automaticallyImplyLeading &&
+                            Navigator.canPop(context))
+                          IconButton(
+                            icon: Icon(
+                              Icons.arrow_back,
+                              color: AppColors.textPrimary(context),
+                            ),
+                            onPressed: () => Navigator.pop(context),
+                          ),
+                        if (centerTitle) const Spacer(),
+                        if (titleWidget != null)
+                          titleWidget!
+                        else if (title != null)
+                          Text(title!, style: AppTypography.heading3()),
+                        if (centerTitle) const Spacer(),
+                        if (!centerTitle) const Spacer(),
+                        if (actions != null) ...actions!,
+                        SizedBox(width: AppSpacing.xs.w),
+                      ],
                     ),
-                  if (centerTitle) const Spacer(),
-                  if (titleWidget != null)
-                    titleWidget!
-                  else if (title != null)
-                    Text(
-                      title!,
-                      style: AppTypography.heading3(context: context),
-                    ),
-                  if (centerTitle) const Spacer(),
-                  if (!centerTitle) const Spacer(),
-                  if (actions != null) ...actions!,
-                  SizedBox(width: AppSpacing.xs.w),
+                  ),
+                  if (bottom != null) bottom!,
                 ],
               ),
             ),
@@ -166,8 +173,6 @@ class CollapsibleGlassAppBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return SliverAppBar(
       expandedHeight: expandedHeight.h,
       pinned: pinned,
@@ -194,10 +199,7 @@ class CollapsibleGlassAppBar extends StatelessWidget {
               ),
             ),
             child: FlexibleSpaceBar(
-              title: Text(
-                title,
-                style: AppTypography.heading3(context: context),
-              ),
+              title: Text(title, style: AppTypography.heading3()),
               centerTitle: false,
               titlePadding: EdgeInsets.only(
                 left: AppSpacing.lg.w,
@@ -249,7 +251,7 @@ class SimpleAppBar extends StatelessWidget implements PreferredSizeWidget {
       title:
           titleWidget ??
           (title != null
-              ? Text(title!, style: AppTypography.heading3(context: context))
+              ? Text(title!, style: AppTypography.heading3())
               : null),
       actions: actions,
     );

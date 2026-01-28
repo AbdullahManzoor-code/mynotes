@@ -4,26 +4,31 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+import 'core/routes/app_routes.dart';
+import 'core/routes/app_router.dart';
+import 'core/notifications/notification_service.dart';
+import 'core/services/clipboard_service.dart';
 import 'core/constants/app_constants.dart';
 import 'core/themes/app_theme.dart';
-import 'core/services/clipboard_service.dart';
-import 'core/notifications/notification_service.dart';
+
+import 'domain/repositories/note_repository.dart';
+import 'domain/repositories/media_repository.dart';
+import 'domain/repositories/reflection_repository.dart';
+
 import 'data/datasources/local_database.dart';
 import 'data/repositories/note_repository_impl.dart';
 import 'data/repositories/media_repository_impl.dart';
 import 'data/repositories/reflection_repository_impl.dart';
-import 'domain/repositories/note_repository.dart';
-import 'domain/repositories/media_repository.dart';
-import 'domain/repositories/reflection_repository.dart';
-import 'presentation/bloc/media_bloc.dart';
-import 'presentation/bloc/note_bloc.dart';
+
 import 'presentation/bloc/theme_bloc.dart';
 import 'presentation/bloc/theme_event.dart';
 import 'presentation/bloc/theme_state.dart';
+import 'presentation/bloc/note_bloc.dart';
+import 'presentation/bloc/media_bloc.dart';
 import 'presentation/bloc/reflection_bloc.dart';
 import 'presentation/bloc/alarm_bloc.dart';
 import 'presentation/bloc/todo_bloc.dart';
-import 'presentation/pages/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -118,7 +123,8 @@ class MyNotesApp extends StatelessWidget {
                 theme: AppTheme.lightTheme,
                 darkTheme: AppTheme.darkTheme,
                 themeMode: themeState.themeMode,
-                home: SplashScreen(clipboardService: _clipboardService),
+                initialRoute: AppRoutes.splash,
+                onGenerateRoute: AppRouter.onGenerateRoute,
               );
             },
           );
@@ -127,4 +133,3 @@ class MyNotesApp extends StatelessWidget {
     );
   }
 }
-

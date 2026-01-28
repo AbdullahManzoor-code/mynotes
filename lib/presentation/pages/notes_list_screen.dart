@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
+import 'dart:ui';
 import '../../core/services/speech_service.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/note_template.dart';
@@ -8,8 +9,10 @@ import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
 import '../design_system/design_system.dart';
+import '../widgets/note_card_widget.dart';
 import '../widgets/voice_input_button.dart';
 import '../widgets/template_selector_sheet.dart';
+import '../../core/routes/app_routes.dart';
 import 'note_editor_page.dart';
 import 'settings_screen.dart';
 import 'global_search_screen.dart';
@@ -97,46 +100,25 @@ class _NotesListScreenState extends State<NotesListScreen>
     setState(() => _isListening = false);
   }
 
-  void _createNewNote() async {
-    final template = await showModalBottomSheet<NoteTemplate>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => SizedBox(
-        height: MediaQuery.of(context).size.height * 0.7,
-        child: const TemplateSelectorSheet(),
-      ),
-    );
-
-    if (!mounted) return;
-
+  void _createFromTemplate(NoteTemplate template) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => NoteEditorPage(initialContent: template?.content),
+        builder: (_) => NoteEditorPage(initialContent: template.content),
       ),
     );
   }
 
+  void _editNote(Note note) {
+    _openNote(note);
+  }
+
   void _openNote(Note note) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => NoteEditorPage(note: note)),
-    );
+    Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: note);
   }
 
   void _openSearch() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const GlobalSearchScreen()),
-    );
-  }
-
-  void _openSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
+    Navigator.pushNamed(context, AppRoutes.search);
   }
 
   @override
@@ -145,7 +127,6 @@ class _NotesListScreenState extends State<NotesListScreen>
 
     return BlocListener<NotesBloc, NoteState>(
       listener: (context, state) {
-        // Auto-refresh when note is created, updated, or deleted
         if (state is NoteCreated ||
             state is NoteUpdated ||
             state is NoteDeleted) {
@@ -153,102 +134,25 @@ class _NotesListScreenState extends State<NotesListScreen>
         }
       },
       child: AppScaffold(
-        appBar: GlassAppBar(
-          title: 'My Notes',
-          actions: [
-            AppIconButton(
-              icon: _isListView ? Icons.grid_view : Icons.view_list,
-              onPressed: () => setState(() => _isListView = !_isListView),
-              tooltip: _isListView ? 'Grid View' : 'List View',
-            ),
-            AppIconButton(
-              icon: Icons.search,
-              onPressed: _openSearch,
-              tooltip: 'Search',
-            ),
-            AppIconButton(
-              icon: Icons.settings_outlined,
-              onPressed: _openSettings,
-              tooltip: 'Settings',
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // Search Bar with Voice Input
-            PageContainer(
-              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: SearchTextField(
-                      controller: _searchController,
-                      hintText: 'Search notes...',
-                      onChanged: (value) {
-                        // Search is handled by listener
-                      },
-                    ),
-                  ),
-                  SizedBox(width: AppSpacing.md),
-                  VoiceInputButton(
-                    isListening: _isListening,
-                    onPressed: _isListening
-                        ? _stopVoiceSearch
-                        : _startVoiceSearch,
-                    size: 48,
-                  ),
-                ],
+        body: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            _buildSliverAppBar(),
+            SliverToBoxAdapter(child: SizedBox(height: AppSpacing.md)),
+            _buildTemplatesSection(),
+            SliverToBoxAdapter(
+              child: SectionHeader(
+                title: 'Recent Notes',
+                padding: EdgeInsets.fromLTRB(
+                  AppSpacing.screenPaddingHorizontal,
+                  AppSpacing.xl,
+                  AppSpacing.screenPaddingHorizontal,
+                  AppSpacing.md,
+                ),
               ),
             ),
-
-            // Notes List/Grid
-            Expanded(
-              child: BlocBuilder<NotesBloc, NoteState>(
-                builder: (context, state) {
-                  if (state is NoteLoading) {
-                    return const AppLoadingIndicator();
-                  }
-
-                  if (state is NoteError) {
-                    return ErrorState(
-                      title: 'Error loading notes',
-                      message: state.message,
-                      actionText: 'Retry',
-                      onActionPressed: _loadNotes,
-                    );
-                  }
-
-                  if (state is NotesLoaded) {
-                    if (state.notes.isEmpty) {
-                      return EmptyStateCard(
-                        icon: Icons.note_outlined,
-                        title: _searchController.text.isNotEmpty
-                            ? 'No notes found'
-                            : 'No notes yet',
-                        message: _searchController.text.isNotEmpty
-                            ? 'Try a different search term'
-                            : 'Tap the + button to create your first note',
-                        actionText: _searchController.text.isEmpty
-                            ? 'Create Note'
-                            : null,
-                        onActionPressed: _searchController.text.isEmpty
-                            ? _createNewNote
-                            : null,
-                      );
-                    }
-
-                    return RefreshIndicator(
-                      onRefresh: () async => _loadNotes(),
-                      child: _isListView
-                          ? _buildListView(state.notes)
-                          : _buildGridView(state.notes),
-                    );
-                  }
-
-                  return const SizedBox();
-                },
-              ),
-            ),
+            _buildNotesSection(),
+            SliverToBoxAdapter(child: SizedBox(height: 100.h)),
           ],
         ),
         floatingActionButton: AppFAB(
@@ -260,50 +164,150 @@ class _NotesListScreenState extends State<NotesListScreen>
     );
   }
 
-  Widget _buildGridView(List<Note> notes) {
-    return GridView.builder(
-      padding: EdgeInsets.all(AppSpacing.lg),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: AppSpacing.md,
-        mainAxisSpacing: AppSpacing.md,
-        childAspectRatio: 0.85,
+  Widget _buildSliverAppBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return SliverAppBar(
+      floating: true,
+      snap: true,
+      elevation: 0,
+      backgroundColor: isDark
+          ? AppColors.darkBackground.withOpacity(0.8)
+          : AppColors.lightBackground.withOpacity(0.8),
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: Container(color: Colors.transparent),
+        ),
       ),
-      itemCount: notes.length,
-      itemBuilder: (context, index) {
-        final note = notes[index];
-        return NoteCard(
-          title: note.title,
-          content: note.content,
-          category: note.tags.isNotEmpty ? note.tags.first : null,
-          categoryColor: AppColors.getNoteColor(context, note.color),
-          createdAt: note.createdAt,
-          isPinned: note.isPinned,
-          onTap: () => _openNote(note),
-          margin: EdgeInsets.zero,
-        );
+      title: Text(
+        'My Notes',
+        style: AppTypography.heading1(context, null, FontWeight.w700),
+      ),
+      actions: [
+        AppIconButton(icon: Icons.search, onPressed: _openSearch),
+        SizedBox(width: 8.w),
+      ],
+    );
+  }
+
+  Widget _buildTemplatesSection() {
+    final templates = [
+      const NoteTemplate(
+        id: 'meeting',
+        name: 'Meeting Notes',
+        type: 'meeting',
+        content:
+            '**Date:** \n**Attendees:** \n**Topics:** \n\n**Action Items:**\n- ',
+        tags: ['work', 'meeting'],
+      ),
+      const NoteTemplate(
+        id: 'shopping',
+        name: 'Shopping List',
+        type: 'shopping',
+        content: '**Shopping List**\n\n- \n- \n- ',
+        tags: ['personal', 'shopping'],
+      ),
+      const NoteTemplate(
+        id: 'journal',
+        name: 'Daily Journal',
+        type: 'journal',
+        content:
+            '**Date:** \n\n**Mood:** \n\n**What I\'m grateful for:**\n- \n\n**Today\'s highlights:**\n- ',
+        tags: ['journal', 'reflection'],
+      ),
+      const NoteTemplate(
+        id: 'brainstorm',
+        name: 'Brainstorm',
+        type: 'brainstorm',
+        content: '**Topic:** \n\n**Ideas:**\n- \n- \n- \n\n**Next Steps:**\n- ',
+        tags: ['ideas', 'brainstorm'],
+      ),
+    ];
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: EdgeInsets.only(top: 8.h),
+        child: TemplatePicker(
+          templates: templates,
+          onTemplateSelected: _createFromTemplate,
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.screenPaddingHorizontal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesSection() {
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        if (state is NoteLoading) {
+          return const SliverFillRemaining(
+            child: Center(child: AppLoadingIndicator()),
+          );
+        }
+
+        if (state is NotesLoaded) {
+          if (state.notes.isEmpty) {
+            return SliverFillRemaining(
+              child: EmptyStateNotes(onCreateNote: _createNewNote),
+            );
+          }
+
+          if (_isListView) {
+            return SliverPadding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenPaddingHorizontal,
+              ),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final note = state.notes[index];
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: 12.h),
+                    child: NoteCardWidget(
+                      note: note,
+                      onTap: () => _openNote(note),
+                      onLongPress: () {},
+                    ),
+                  );
+                }, childCount: state.notes.length),
+              ),
+            );
+          } else {
+            return SliverPadding(
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSpacing.screenPaddingHorizontal,
+              ),
+              sliver: SliverGrid(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12.w,
+                  mainAxisSpacing: 12.h,
+                  childAspectRatio: 0.8,
+                ),
+                delegate: SliverChildBuilderDelegate((context, index) {
+                  final note = state.notes[index];
+                  return NoteCardWidget(
+                    note: note,
+                    onTap: () => _openNote(note),
+                    onLongPress: () {},
+                  );
+                }, childCount: state.notes.length),
+              ),
+            );
+          }
+        }
+
+        return const SliverToBoxAdapter(child: SizedBox());
       },
     );
   }
 
-  Widget _buildListView(List<Note> notes) {
-    return ListView.builder(
-      padding: EdgeInsets.all(AppSpacing.lg),
-      itemCount: notes.length,
-      itemBuilder: (context, index) {
-        final note = notes[index];
-        return NoteCard(
-          title: note.title,
-          content: note.content,
-          category: note.tags.isNotEmpty ? note.tags.first : null,
-          categoryColor: AppColors.getNoteColor(context, note.color),
-          createdAt: note.createdAt,
-          isPinned: note.isPinned,
-          onTap: () => _openNote(note),
-          margin: EdgeInsets.only(bottom: AppSpacing.md),
-        );
-      },
+  void _createNewNote() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NoteEditorPage()),
     );
   }
 }
-

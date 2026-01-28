@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/constants/app_colors.dart';
-import 'main_home_screen.dart';
+import '../design_system/design_system.dart';
+import '../../core/routes/app_routes.dart';
 
 /// Onboarding Screen
 /// Shows feature introduction slides for first-time users
@@ -16,41 +17,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _pageController = PageController();
   int _currentPage = 0;
 
-  final List<OnboardingPage> _pages = [
-    OnboardingPage(
-      icon: Icons.note_add_rounded,
-      title: 'Create Rich Notes',
+  final List<OnboardingPageModel> _pages = [
+    OnboardingPageModel(
+      icon: Icons.spa_rounded,
+      title: 'Welcome to Calm Productivity',
       description:
-          'Write beautiful notes with text, images, audio, and video. Everything in one place.',
+          'A simpler way to capture notes, tasks, and reflections without the noise.',
       color: AppColors.primaryColor,
     ),
-    OnboardingPage(
-      icon: Icons.photo_camera_rounded,
-      title: 'Add Media',
+    OnboardingPageModel(
+      icon: Icons.security_rounded,
+      title: 'Privacy by Design',
       description:
-          'Capture moments with photos and videos. Record voice memos. All automatically compressed.',
-      color: AppColors.secondaryColor,
+          'Your data is private and remains on your device. Secure it with your fingerprint.',
+      color: AppColors.primaryColor,
     ),
-    OnboardingPage(
-      icon: Icons.checklist_rounded,
-      title: 'Manage Tasks',
+    OnboardingPageModel(
+      icon: Icons.auto_awesome_rounded,
+      title: 'Smart Capture',
       description:
-          'Create to-do lists within notes. Track progress and stay organized.',
-      color: AppColors.tertiaryColor,
-    ),
-    OnboardingPage(
-      icon: Icons.alarm_rounded,
-      title: 'Set Reminders',
-      description:
-          'Never forget important notes. Schedule alarms and get notified on time.',
-      color: AppColors.accentColor,
-    ),
-    OnboardingPage(
-      icon: Icons.picture_as_pdf_rounded,
-      title: 'Export & Share',
-      description:
-          'Export notes as PDF with embedded media. Share anywhere, anytime.',
-      color: AppColors.successColor,
+          'Quickly add anything with smart inputs and voice extraction. Organized automatically.',
+      color: AppColors.primaryColor,
     ),
   ];
 
@@ -82,33 +69,33 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 
   void _finishOnboarding() async {
-    // Set first launch flag to false in SharedPreferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('first_launch', false);
 
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainHomeScreen()),
-    );
+    Navigator.of(context).pushReplacementNamed(AppRoutes.home);
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
       body: SafeArea(
         child: Column(
           children: [
             // Skip button
             Align(
               alignment: Alignment.topRight,
-              child: TextButton(
-                onPressed: _skipOnboarding,
-                child: Text(
-                  'Skip',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.primaryColor,
-                    fontWeight: FontWeight.w600,
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: TextButton(
+                  onPressed: _skipOnboarding,
+                  child: Text(
+                    'Skip',
+                    style: AppTypography.bodySmall(context).copyWith(
+                      color: AppColors.textSecondary(context),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -129,80 +116,78 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             // Page indicator
             _buildPageIndicator(),
 
-            const SizedBox(height: 32),
+            SizedBox(height: AppSpacing.xl),
 
             // Next/Get Started button
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: _nextPage,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _pages[_currentPage].color,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 4,
-                  ),
-                  child: Text(
-                    _currentPage == _pages.length - 1 ? 'Get Started' : 'Next',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+              child: PrimaryButton(
+                text: _currentPage == _pages.length - 1
+                    ? 'Get Started'
+                    : 'Next',
+                onPressed: _nextPage,
+                isFullWidth: true,
               ),
             ),
 
-            const SizedBox(height: 32),
+            // Sign in option (as seen in templates)
+            if (_currentPage == 0) ...[
+              SizedBox(height: AppSpacing.md),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+                child: SecondaryButton(
+                  text: 'Sign In',
+                  onPressed: () {
+                    // Navigate to sign in (TBD)
+                  },
+                  isFullWidth: true,
+                ),
+              ),
+            ],
+
+            SizedBox(height: AppSpacing.xl),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildPage(OnboardingPage page) {
+  Widget _buildPage(OnboardingPageModel page) {
     return Padding(
-      padding: const EdgeInsets.all(32),
+      padding: EdgeInsets.symmetric(horizontal: AppSpacing.xl),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon
+          // Icon/Illustration placeholder
           Container(
-            width: 150,
-            height: 150,
+            width: 200.w,
+            height: 200.w,
             decoration: BoxDecoration(
-              color: page.color.withOpacity(0.1),
+              color: AppColors.primaryColor.withOpacity(0.05),
               shape: BoxShape.circle,
             ),
-            child: Icon(page.icon, size: 80, color: page.color),
+            child: Icon(page.icon, size: 100.sp, color: AppColors.primaryColor),
           ),
 
-          const SizedBox(height: 48),
+          SizedBox(height: 48.h),
 
           // Title
           Text(
             page.title,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: page.color,
-            ),
+            style: AppTypography.displayLarge(
+              context,
+            ).copyWith(fontWeight: FontWeight.bold, fontSize: 28.sp),
             textAlign: TextAlign.center,
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: AppSpacing.md),
 
           // Description
           Text(
             page.description,
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.grey[600],
-              height: 1.5,
-            ),
+            style: AppTypography.bodyMedium(
+              context,
+            ).copyWith(color: AppColors.textSecondary(context), height: 1.5),
             textAlign: TextAlign.center,
           ),
         ],
@@ -218,12 +203,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         (index) => AnimatedContainer(
           duration: const Duration(milliseconds: 300),
           margin: const EdgeInsets.symmetric(horizontal: 4),
-          width: _currentPage == index ? 32 : 8,
+          width: _currentPage == index ? 24 : 8,
           height: 8,
           decoration: BoxDecoration(
             color: _currentPage == index
-                ? _pages[index].color
-                : Colors.grey[300],
+                ? AppColors.primaryColor
+                : AppColors.primaryColor.withOpacity(0.2),
             borderRadius: BorderRadius.circular(4),
           ),
         ),
@@ -233,17 +218,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 }
 
 /// Onboarding Page Model
-class OnboardingPage {
+class OnboardingPageModel {
   final IconData icon;
   final String title;
   final String description;
   final Color color;
 
-  OnboardingPage({
+  OnboardingPageModel({
     required this.icon,
     required this.title,
     required this.description,
     required this.color,
   });
 }
-

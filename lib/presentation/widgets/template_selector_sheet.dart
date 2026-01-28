@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../core/constants/app_colors.dart';
+import '../design_system/design_system.dart';
 import '../../domain/entities/note_template.dart';
 
 /// Template Selector Bottom Sheet
@@ -10,54 +10,47 @@ class TemplateSelectorSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: EdgeInsets.all(20.w),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-      ),
+    return BottomSheetContainer(
+      title: 'Note Templates',
+      showCloseButton: true,
+      padding: EdgeInsets.zero,
       child: Column(
         mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Row(
-            children: [
-              Text(
-                'Choose Template',
-                style: TextStyle(
-                  fontSize: 20.sp,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
+          Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.sm,
+            ),
+            child: Text(
+              'Choose a template to jumpstart your creativity. Each template includes specialized structure and helpful prompts.',
+              style: AppTypography.bodySmall(
+                context,
+                AppColors.textSecondary(context),
               ),
-              const Spacer(),
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
-              ),
-            ],
+              textAlign: TextAlign.center,
+            ),
           ),
-          SizedBox(height: 16.h),
-
-          // Template Grid
-          Expanded(
+          SizedBox(height: AppSpacing.md),
+          Flexible(
             child: GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.all(AppSpacing.md),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
-                crossAxisSpacing: 12.w,
-                mainAxisSpacing: 12.h,
-                childAspectRatio: 1.2,
+                crossAxisSpacing: AppSpacing.md,
+                mainAxisSpacing: AppSpacing.md,
+                childAspectRatio: 1.1,
               ),
               itemCount: NoteTemplateType.values.length,
               itemBuilder: (context, index) {
                 final templateType = NoteTemplateType.values[index];
-                return _buildTemplateCard(context, templateType, isDark);
+                return _buildTemplateCard(context, templateType);
               },
             ),
           ),
+          SizedBox(height: AppSpacing.xl),
         ],
       ),
     );
@@ -66,40 +59,47 @@ class TemplateSelectorSheet extends StatelessWidget {
   Widget _buildTemplateCard(
     BuildContext context,
     NoteTemplateType templateType,
-    bool isDark,
   ) {
     return InkWell(
       onTap: () {
         Navigator.pop(context, NoteTemplate.fromType(templateType));
       },
-      borderRadius: BorderRadius.circular(12.r),
+      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
       child: Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(AppSpacing.md),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkBackground : Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
-          ),
+          color: AppColors.surface(context).withOpacity(0.5),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
+          border: Border.all(color: AppColors.divider(context), width: 1),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Icon
-            Text(templateType.icon, style: TextStyle(fontSize: 32.sp)),
-            SizedBox(height: 8.h),
+            // Icon Background
+            Container(
+              padding: EdgeInsets.all(AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Text(templateType.icon, style: TextStyle(fontSize: 28.sp)),
+            ),
+            SizedBox(height: AppSpacing.sm),
 
             // Name
             Text(
               templateType.displayName,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : Colors.black,
-              ),
-              maxLines: 2,
+              style: AppTypography.titleMedium(context, null, FontWeight.bold),
+              maxLines: 1,
               overflow: TextOverflow.ellipsis,
+            ),
+            SizedBox(height: 2.h),
+
+            // Description or small tag
+            Text(
+              'Select',
+              style: AppTypography.bodySmall(context, AppColors.primaryColor),
             ),
           ],
         ),
@@ -107,4 +107,3 @@ class TemplateSelectorSheet extends StatelessWidget {
     );
   }
 }
-

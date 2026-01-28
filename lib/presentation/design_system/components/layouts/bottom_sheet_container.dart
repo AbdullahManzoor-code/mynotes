@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../app_colors.dart';
 import '../../app_spacing.dart';
 import '../../app_typography.dart';
-import '../../app_animations.dart';
 
 /// Bottom sheet container with glass effect
 /// Used for modals, action sheets, and overlays
@@ -77,10 +76,7 @@ class BottomSheetContainer extends StatelessWidget {
                     children: [
                       if (title != null)
                         Expanded(
-                          child: Text(
-                            title!,
-                            style: AppTypography.heading3(context: context),
-                          ),
+                          child: Text(title!, style: AppTypography.heading3()),
                         ),
                       if (showCloseButton)
                         IconButton(
@@ -246,7 +242,7 @@ class _ActionSheetTile extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: AppTypography.body1(context: context).copyWith(color: color),
+                style: AppTypography.body1().copyWith(color: color),
               ),
             ),
           ],
@@ -275,4 +271,3 @@ Future<T?> showActionSheet<T>({
     ),
   );
 }
-

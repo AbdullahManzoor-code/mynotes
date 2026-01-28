@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../app_colors.dart';
 import '../../app_spacing.dart';
 import '../../app_typography.dart';
-import '../../app_animations.dart';
 
 /// Note card with glass effect
 class NoteCard extends StatelessWidget {
@@ -660,4 +659,3 @@ class EmptyStateCard extends StatelessWidget {
     );
   }
 }
-

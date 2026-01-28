@@ -80,7 +80,7 @@ class AppTextField extends StatelessWidget {
       inputFormatters: inputFormatters,
       validator: validator,
       autovalidateMode: autovalidateMode,
-      style: AppTypography.body1(context: context),
+      style: AppTypography.body1(),
       decoration: InputDecoration(
         hintText: hintText,
         labelText: labelText,
@@ -323,7 +323,7 @@ class AppDropdownField<T> extends StatelessWidget {
           ),
         ),
       ),
-      style: AppTypography.body1(context: context),
+      style: AppTypography.body1(),
       dropdownColor: AppColors.surface(context),
       icon: Icon(
         Icons.keyboard_arrow_down,
@@ -429,4 +429,3 @@ class EmailTextField extends StatelessWidget {
     );
   }
 }
-

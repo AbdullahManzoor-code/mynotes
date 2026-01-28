@@ -93,6 +93,9 @@ class GradientScaffold extends StatelessWidget {
         ? AppColors.darkGradient.colors
         : AppColors.lightGradient.colors;
 
+    final List<Color> effectiveColors =
+        (gradientColors ?? defaultGradientColors).cast<Color>();
+
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value:
           systemOverlayStyle ??
@@ -106,7 +109,7 @@ class GradientScaffold extends StatelessWidget {
             gradient: LinearGradient(
               begin: gradientBegin,
               end: gradientEnd,
-              colors: gradientColors ?? defaultGradientColors,
+              colors: effectiveColors,
             ),
           ),
           child: SafeArea(

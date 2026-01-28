@@ -55,7 +55,7 @@ class CategoryChip extends StatelessWidget {
             ],
             Text(
               label,
-              style: AppTypography.label(context: context).copyWith(
+              style: AppTypography.label().copyWith(
                 color: isSelected ? Colors.white : chipColor,
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
@@ -155,7 +155,7 @@ class MoodChip extends StatelessWidget {
             SizedBox(height: AppSpacing.xxs.h),
             Text(
               label,
-              style: AppTypography.caption(context: context).copyWith(
+              style: AppTypography.caption().copyWith(
                 fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
               ),
             ),

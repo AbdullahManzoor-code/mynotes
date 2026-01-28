@@ -45,8 +45,6 @@ class GlassBottomNavBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
@@ -192,7 +190,7 @@ class _BottomNavBarItemState extends State<_BottomNavBarItem>
                 SizedBox(height: AppSpacing.xxs.h),
                 AnimatedDefaultTextStyle(
                   duration: AppAnimations.fast,
-                  style: AppTypography.caption(context: context).copyWith(
+                  style: AppTypography.caption().copyWith(
                     color: color,
                     fontWeight: widget.isSelected
                         ? FontWeight.w600
@@ -328,4 +326,3 @@ class FloatingBottomNavBar extends StatelessWidget {
     );
   }
 }
-

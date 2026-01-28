@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_constants.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/todo_item.dart';
 import '../../domain/entities/alarm.dart';
@@ -14,16 +12,17 @@ import '../bloc/note_state.dart';
 import '../bloc/media_bloc.dart';
 import '../bloc/media_event.dart';
 import '../bloc/media_state.dart';
-import '../bloc/alarm_bloc.dart';
-import '../bloc/alarm_event.dart';
+
+import '../design_system/design_system.dart';
 import '../widgets/alarm_bottom_sheet.dart';
 
 /// Note Editor Page
 /// Full-featured note editing with media and link support
 class NoteEditorPage extends StatefulWidget {
   final Note? note;
+  final String? initialContent;
 
-  const NoteEditorPage({Key? key, this.note, String? initialContent})
+  const NoteEditorPage({Key? key, this.note, this.initialContent})
     : super(key: key);
 
   @override
@@ -39,13 +38,15 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   final List<Link> _links = [];
   List<Alarm> _activeAlarms = [];
   bool _isRecording = false;
+  final FocusNode _titleFocus = FocusNode();
+  final FocusNode _contentFocus = FocusNode();
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController(text: widget.note?.title ?? '');
     _contentController = TextEditingController(
-      text: widget.note?.content ?? '',
+      text: widget.note?.content ?? widget.initialContent ?? '',
     );
     _selectedColor = widget.note?.color ?? NoteColor.defaultColor;
     if (widget.note != null) {
@@ -58,6 +59,8 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   void dispose() {
     _titleController.dispose();
     _contentController.dispose();
+    _titleFocus.dispose();
+    _contentFocus.dispose();
     super.dispose();
   }
 
@@ -68,13 +71,13 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         BlocListener<NotesBloc, NoteState>(
           listener: (context, state) {
             if (state is NoteCreated || state is NoteUpdated) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Note saved successfully')),
-              );
               Navigator.pop(context);
             } else if (state is NoteError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error: ${state.message}')),
+                SnackBar(
+                  content: Text('Error: ${state.message}'),
+                  backgroundColor: AppColors.errorColor,
+                ),
               );
             }
           },
@@ -85,12 +88,12 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
               setState(() {
                 _mediaIds.add(state.media.id);
               });
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(const SnackBar(content: Text('Media added')));
             } else if (state is MediaError) {
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Error: ${state.message}')),
+                SnackBar(
+                  content: Text('Error: ${state.message}'),
+                  backgroundColor: AppColors.errorColor,
+                ),
               );
             } else if (state is AudioRecordingState) {
               setState(() {
@@ -100,367 +103,221 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
           },
         ),
       ],
-      child: WillPopScope(
-        onWillPop: () async {
-          _saveNote();
-          return true;
-        },
-        child: Scaffold(
-          appBar: AppBar(
-            title: widget.note != null
-                ? const Text('Edit Note')
-                : const Text('New Note'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.check),
-                onPressed: () {
-                  _saveNote();
-                  Navigator.pop(context);
-                },
+      child: AppScaffold(
+        appBar: GlassAppBar(
+          title: widget.note != null ? 'Edit Note' : 'New Note',
+          actions: [
+            AppIconButton(
+              icon: Icons.check,
+              onPressed: _saveNote,
+              iconColor: AppColors.primaryColor,
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(AppSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _titleController,
+                      focusNode: _titleFocus,
+                      style: AppTypography.heading1(
+                        context,
+                      ).copyWith(fontWeight: FontWeight.bold),
+                      decoration: InputDecoration(
+                        hintText: 'Title',
+                        hintStyle: AppTypography.heading1(context).copyWith(
+                          color: AppColors.textSecondary(
+                            context,
+                          ).withOpacity(0.5),
+                          fontWeight: FontWeight.bold,
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => _contentFocus.requestFocus(),
+                    ),
+                    SizedBox(height: AppSpacing.md),
+                    _buildColorToolbar(),
+                    SizedBox(height: AppSpacing.lg),
+                    TextField(
+                      controller: _contentController,
+                      focusNode: _contentFocus,
+                      style: AppTypography.bodyLarge(context),
+                      decoration: InputDecoration(
+                        hintText: 'Start writing...',
+                        hintStyle: AppTypography.bodyLarge(context).copyWith(
+                          color: AppColors.textSecondary(
+                            context,
+                          ).withOpacity(0.5),
+                        ),
+                        border: InputBorder.none,
+                      ),
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                    ),
+                    SizedBox(height: AppSpacing.xl),
+                    if (_activeAlarms.isNotEmpty) _buildSectionHeader('Alarms'),
+                    ..._activeAlarms.map(_buildAlarmItem),
+                    if (_links.isNotEmpty) _buildSectionHeader('Links'),
+                    ..._links.map(_buildLinkItem),
+                    SizedBox(height: 100.h),
+                  ],
+                ),
               ),
-            ],
+            ),
+            _buildActionToolbar(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Text(
+        title.toUpperCase(),
+        style: AppTypography.captionSmall(context).copyWith(
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+          color: AppColors.textSecondary(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorToolbar() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: NoteColor.values.map((color) {
+          final isSelected = _selectedColor == color;
+          final uiColor = AppColors.getNoteColor(context, color);
+          return GestureDetector(
+            onTap: () => setState(() => _selectedColor = color),
+            child: Container(
+              width: 32.w,
+              height: 32.w,
+              margin: EdgeInsets.only(right: AppSpacing.sm),
+              decoration: BoxDecoration(
+                color: uiColor.withOpacity(0.15),
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: isSelected ? uiColor : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: Center(
+                child: Container(
+                  width: 16.w,
+                  height: 16.w,
+                  decoration: BoxDecoration(
+                    color: uiColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildActionToolbar() {
+    return GlassContainer(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      margin: EdgeInsets.all(AppSpacing.md),
+      borderRadius: AppSpacing.radiusLg,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _ToolbarAction(icon: Icons.image_outlined, onTap: _pickImage),
+          _ToolbarAction(
+            icon: _isRecording ? Icons.stop : Icons.mic_none,
+            onTap: _toggleAudioRecording,
+            iconColor: _isRecording ? AppColors.errorColor : null,
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+          _ToolbarAction(icon: Icons.link_outlined, onTap: _showAddLinkDialog),
+          _ToolbarAction(
+            icon: Icons.alarm_on_outlined,
+            onTap: _showAlarmPicker,
+          ),
+          _ToolbarAction(
+            icon: Icons.check_box_outlined,
+            onTap: _showAddTodoDialog,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlarmItem(Alarm alarm) {
+    return CardContainer(
+      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      onTap: () => _editAlarm(alarm),
+      child: Row(
+        children: [
+          Icon(Icons.alarm, color: AppColors.primaryColor, size: 20.sp),
+          SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              '${alarm.alarmTime.day}/${alarm.alarmTime.month} at ${alarm.alarmTime.hour}:${alarm.alarmTime.minute.toString().padLeft(2, '0')}',
+              style: AppTypography.bodySmall(context),
+            ),
+          ),
+          AppIconButton(
+            icon: Icons.close,
+            onPressed: () => setState(() => _activeAlarms.remove(alarm)),
+            size: 16,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLinkItem(Link link) {
+    return CardContainer(
+      margin: EdgeInsets.only(bottom: AppSpacing.sm),
+      onTap: () => _launchLink(link.url),
+      child: Row(
+        children: [
+          Icon(Icons.link, color: AppColors.primaryColor, size: 20.sp),
+          SizedBox(width: AppSpacing.md),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Title field
-                TextField(
-                  controller: _titleController,
-                  decoration: const InputDecoration(
-                    hintText: 'Note title...',
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
+                if (link.title != null)
+                  Text(
+                    link.title!,
+                    style: AppTypography.bodySmall(
+                      context,
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+                Text(
+                  link.url,
+                  style: AppTypography.captionSmall(
+                    context,
+                  ).copyWith(color: AppColors.textSecondary(context)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-
-                const SizedBox(height: 16),
-
-                // Color selector
-                _buildColorSelector(),
-
-                const SizedBox(height: 16),
-
-                // Content field
-                TextField(
-                  controller: _contentController,
-                  decoration: const InputDecoration(
-                    hintText: 'Start typing...',
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  maxLines: null,
-                ),
-
-                const SizedBox(height: 24),
-
-                // Media section
-                _buildMediaSection(),
-
-                const SizedBox(height: 24),
-
-                // Links section
-                _buildLinksSection(),
-
-                const SizedBox(height: 24),
-
-                // Todo section
-                _buildTodoSection(),
-
-                const SizedBox(height: 24),
-
-                // Alarm section
-                _buildAlarmSection(),
               ],
             ),
           ),
-          bottomNavigationBar: _buildMediaToolbar(),
-        ),
-      ),
-    );
-  }
-
-  /// Build color selector
-  Widget _buildColorSelector() {
-    return Wrap(
-      spacing: 8.w,
-      runSpacing: 8.h,
-      children: NoteColor.values.map((color) {
-        return GestureDetector(
-          onTap: () => setState(() => _selectedColor = color),
-          child: Container(
-            width: 40.w,
-            height: 40.h,
-            decoration: BoxDecoration(
-              color: Color(color.lightColor),
-              border: Border.all(
-                color: _selectedColor == color
-                    ? AppColors.shadow
-                    : Colors.transparent,
-                width: 2.w,
-              ),
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: _selectedColor == color
-                ? Icon(Icons.check, size: 20.sp)
-                : null,
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  /// Build media section
-  Widget _buildMediaSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Media & Attachments',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        SizedBox(height: 12.h),
-        BlocBuilder<MediaBloc, MediaState>(
-          builder: (context, state) {
-            if (state is MediaLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (_mediaIds.isEmpty) {
-              return Text(
-                'No media attached',
-                style: TextStyle(color: AppColors.grey),
-              );
-            }
-            return Wrap(
-              spacing: 8.w,
-              runSpacing: 8.h,
-              children: _mediaIds.map((id) {
-                return Chip(
-                  label: Text('Media $id'),
-                  deleteIcon: const Icon(Icons.close, size: 18),
-                  onDeleted: () {
-                    setState(() {
-                      _mediaIds.remove(id);
-                    });
-                  },
-                );
-              }).toList(),
-            );
-          },
-        ),
-      ],
-    );
-  }
-
-  /// Build todo section
-  Widget _buildTodoSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Todos',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: _showAddTodoDialog,
-            ),
-          ],
-        ),
-        if (_todos.isEmpty)
-          Text('No todos yet', style: TextStyle(color: AppColors.grey))
-        else
-          ..._todos.map((todo) {
-            return ListTile(
-              leading: Checkbox(
-                value: todo.isCompleted,
-                onChanged: (value) {
-                  setState(() {
-                    final index = _todos.indexOf(todo);
-                    _todos[index] = todo.copyWith(isCompleted: value ?? false);
-                  });
-                },
-              ),
-              title: Text(
-                todo.text,
-                style: TextStyle(
-                  decoration: todo.isCompleted
-                      ? TextDecoration.lineThrough
-                      : null,
-                ),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, size: 20),
-                onPressed: () {
-                  setState(() {
-                    _todos.remove(todo);
-                  });
-                },
-              ),
-            );
-          }).toList(),
-      ],
-    );
-  }
-
-  /// Build links section
-  Widget _buildLinksSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Links & Websites',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            IconButton(
-              icon: const Icon(Icons.link),
-              onPressed: _showAddLinkDialog,
-            ),
-          ],
-        ),
-        if (_links.isEmpty)
-          Text('No links added', style: TextStyle(color: AppColors.grey))
-        else
-          ..._links.map((link) {
-            return ListTile(
-              leading: Icon(Icons.language, size: 20.sp),
-              title: Text(link.title ?? link.url),
-              subtitle: Text(
-                link.url,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () => _launchLink(link.url),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete, size: 20),
-                onPressed: () {
-                  setState(() {
-                    _links.remove(link);
-                  });
-                },
-              ),
-            );
-          }).toList(),
-      ],
-    );
-  }
-
-  /// Build alarm section
-  Widget _buildAlarmSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Alarms & Reminders',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              onPressed: _showAlarmPicker,
-            ),
-          ],
-        ),
-        if ((widget.note?.alarms == null || widget.note!.alarms!.isEmpty) &&
-            _activeAlarms.isEmpty)
-          Text('No alarm set', style: TextStyle(color: AppColors.grey))
-        else
-          ..._activeAlarms.map((alarm) {
-            return ListTile(
-              leading: Icon(
-                Icons.alarm,
-                color: alarm.isActive ? AppColors.primaryColor : Colors.grey,
-              ),
-              title: Text(
-                '${alarm.alarmTime.day}/${alarm.alarmTime.month}/${alarm.alarmTime.year} ${alarm.alarmTime.hour}:${alarm.alarmTime.minute.toString().padLeft(2, '0')}',
-                style: TextStyle(
-                  decoration: !alarm.isActive
-                      ? TextDecoration.lineThrough
-                      : null,
-                ),
-              ),
-              subtitle: alarm.message != null && alarm.message!.isNotEmpty
-                  ? Text(alarm.message!)
-                  : null,
-              trailing: IconButton(
-                icon: Icon(Icons.delete, size: 20.sp),
-                onPressed: () {
-                  // Cancel notification via Bloc
-                  context.read<AlarmBloc>().add(
-                    DeleteAlarmEvent(
-                      noteId: widget.note?.id ?? '',
-                      alarmId: alarm.id,
-                    ),
-                  );
-
-                  // Update local state
-                  setState(() {
-                    _activeAlarms.removeWhere((a) => a.id == alarm.id);
-                  });
-                },
-              ),
-              onTap: () => _editAlarm(alarm),
-            );
-          }).toList(),
-      ],
-    );
-  }
-
-  /// Build bottom media toolbar
-  Widget _buildMediaToolbar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.defaultPadding,
-        vertical: AppConstants.smallPadding,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.image),
-            onPressed: _pickImage,
-            tooltip: 'Add Image',
-          ),
-          IconButton(
-            icon: Icon(_isRecording ? Icons.stop : Icons.mic),
-            onPressed: _toggleAudioRecording,
-            tooltip: _isRecording ? 'Stop Recording' : 'Record Audio',
-            color: _isRecording ? AppColors.errorColor : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.videocam),
-            onPressed: _pickVideo,
-            tooltip: 'Add Video',
-          ),
-          IconButton(
-            icon: const Icon(Icons.alarm),
-            onPressed: _showAlarmPicker,
-            tooltip: 'Set Reminder',
-          ),
-          IconButton(
-            icon: const Icon(Icons.check_box),
-            onPressed: _showAddTodoDialog,
-            tooltip: 'Add Todo',
+          AppIconButton(
+            icon: Icons.close,
+            onPressed: () => setState(() => _links.remove(link)),
+            size: 16,
           ),
         ],
       ),
@@ -480,15 +337,14 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
         content: _contentController.text,
         color: _selectedColor,
         alarms: _activeAlarms,
+        links: _links,
         createdAt: widget.note?.createdAt ?? DateTime.now(),
         updatedAt: DateTime.now(),
       );
 
       if (widget.note != null) {
-        // Update existing note
         context.read<NotesBloc>().add(UpdateNoteEvent(note));
       } else {
-        // Create new note
         context.read<NotesBloc>().add(
           CreateNoteEvent(
             title: note.title,
@@ -497,35 +353,22 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
           ),
         );
       }
-
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Note saved successfully'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: AppColors.errorColor,
         ),
       );
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
-  /// Pick image from gallery
   void _pickImage() {
     final noteId =
         widget.note?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
     context.read<MediaBloc>().add(AddImageToNoteEvent(noteId, ''));
   }
 
-  /// Pick video from gallery
-  void _pickVideo() {
-    final noteId =
-        widget.note?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
-    context.read<MediaBloc>().add(AddVideoToNoteEvent(noteId, ''));
-  }
-
-  /// Toggle audio recording
   void _toggleAudioRecording() {
     final noteId =
         widget.note?.id ?? DateTime.now().millisecondsSinceEpoch.toString();
@@ -536,27 +379,23 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     }
   }
 
-  /// Show dialog to add todo
   void _showAddTodoDialog() {
     final controller = TextEditingController();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Todo'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Enter todo text',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
-        ),
+        title: Text('Add Todo', style: AppTypography.heading2(context)),
+        content: SearchTextField(controller: controller, hintText: 'Todo text'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
           ),
-          ElevatedButton(
+          PrimaryButton(
+            text: 'Add',
             onPressed: () {
               if (controller.text.isNotEmpty) {
                 setState(() {
@@ -564,29 +403,27 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
                     TodoItem(
                       id: DateTime.now().millisecondsSinceEpoch.toString(),
                       text: controller.text,
-                      isCompleted: false,
                     ),
                   );
                 });
                 Navigator.pop(context);
               }
             },
-            child: const Text('Add'),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Show date/time picker for alarm
   void _showAlarmPicker() async {
-    // Create a temporary note object if creating new note
     final tempNote =
         widget.note ??
         Note(
-          id:
-              widget.note?.id ??
-              DateTime.now().millisecondsSinceEpoch.toString(),
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _titleController.text,
           content: _contentController.text,
           color: _selectedColor,
@@ -600,20 +437,15 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     );
 
     if (result != null && result is Alarm) {
-      setState(() {
-        _activeAlarms.add(result);
-      });
+      setState(() => _activeAlarms.add(result));
     }
   }
 
-  /// Edit existing alarm
   void _editAlarm(Alarm alarm) async {
     final tempNote =
         widget.note ??
         Note(
-          id:
-              widget.note?.id ??
-              DateTime.now().millisecondsSinceEpoch.toString(),
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
           title: _titleController.text,
         );
 
@@ -628,16 +460,11 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     if (result != null && result is Alarm) {
       setState(() {
         final index = _activeAlarms.indexWhere((a) => a.id == alarm.id);
-        if (index >= 0) {
-          _activeAlarms[index] = result;
-        } else {
-          _activeAlarms.add(result);
-        }
+        if (index >= 0) _activeAlarms[index] = result;
       });
     }
   }
 
-  /// Show add link dialog
   void _showAddLinkDialog() {
     final urlController = TextEditingController();
     final titleController = TextEditingController();
@@ -645,89 +472,82 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Add Link'),
+        title: Text('Add Link', style: AppTypography.heading2(context)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            TextField(
-              controller: urlController,
-              decoration: const InputDecoration(
-                hintText: 'Enter URL (https://example.com)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.link),
-              ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 16),
-            TextField(
+            SearchTextField(controller: urlController, hintText: 'URL'),
+            SizedBox(height: AppSpacing.md),
+            SearchTextField(
               controller: titleController,
-              decoration: const InputDecoration(
-                hintText: 'Link title (optional)',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.title),
-              ),
+              hintText: 'Title (optional)',
             ),
           ],
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: AppColors.textSecondary(context)),
+            ),
           ),
-          ElevatedButton(
+          PrimaryButton(
+            text: 'Add',
             onPressed: () {
               if (urlController.text.isNotEmpty) {
-                final url = Link.ensureScheme(urlController.text);
-                if (Link.isValidUrl(url)) {
-                  setState(() {
-                    _links.add(
-                      Link(
-                        id: DateTime.now().millisecondsSinceEpoch.toString(),
-                        url: url,
-                        title: titleController.text.isNotEmpty
-                            ? titleController.text
-                            : null,
-                        createdAt: DateTime.now(),
-                      ),
-                    );
-                  });
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('Link added')));
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Invalid URL format')),
+                setState(() {
+                  _links.add(
+                    Link(
+                      id: DateTime.now().millisecondsSinceEpoch.toString(),
+                      url: Link.ensureScheme(urlController.text),
+                      title: titleController.text.isNotEmpty
+                          ? titleController.text
+                          : null,
+                      createdAt: DateTime.now(),
+                    ),
                   );
-                }
+                });
+                Navigator.pop(context);
               }
             },
-            child: const Text('Add'),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
+            ),
           ),
         ],
       ),
     );
   }
 
-  /// Launch link in browser
   Future<void> _launchLink(String url) async {
     try {
       if (await canLaunchUrl(Uri.parse(url))) {
         await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Could not open link')));
-        }
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error opening link: $e')));
-      }
-    }
+    } catch (_) {}
   }
 }
 
+class _ToolbarAction extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color? iconColor;
+
+  const _ToolbarAction({
+    required this.icon,
+    required this.onTap,
+    this.iconColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AppIconButton(
+      icon: icon,
+      onPressed: onTap,
+      iconColor: iconColor ?? AppColors.textPrimary(context),
+      size: 24,
+    );
+  }
+}

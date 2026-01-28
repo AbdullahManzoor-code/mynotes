@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../core/constants/app_colors.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../design_system/design_system.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/notifications/notification_service.dart';
 import '../../core/services/clipboard_service.dart';
 import '../../core/services/biometric_auth_service.dart';
-import 'main_home_screen.dart';
-import 'biometric_lock_screen.dart';
-import 'onboarding_screen.dart';
+import '../../core/routes/app_routes.dart';
 
 /// Splash Screen
 /// Initializes app services and shows loading animation
 /// Navigates to onboarding (first launch) or home screen
 class SplashScreen extends StatefulWidget {
-  final ClipboardService? clipboardService;
-
-  const SplashScreen({Key? key, this.clipboardService}) : super(key: key);
+  const SplashScreen({Key? key}) : super(key: key);
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -51,10 +48,10 @@ class _SplashScreenState extends State<SplashScreen>
       ),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: const Interval(0.0, 0.7, curve: Curves.elasticOut),
+        curve: const Interval(0.0, 0.7, curve: Curves.easeOutBack),
       ),
     );
 
@@ -78,29 +75,21 @@ class _SplashScreenState extends State<SplashScreen>
       try {
         await NotificationService().init();
       } catch (e) {
-        print('Notification init error: $e');
+        debugPrint('Notification init error: $e');
       }
 
       // Step 3: Start clipboard monitoring
-      if (widget.clipboardService != null) {
-        await widget.clipboardService!.startMonitoring();
-      }
+      final clipboardService = RepositoryProvider.of<ClipboardService>(context);
+      await clipboardService.startMonitoring();
 
-      // Step 3: Request permissions
+      // Step 4: Request permissions
       setState(() {
         _initStatus = 'Requesting permissions...';
-        _progress = 0.6;
+        _progress = 0.7;
       });
       await Future.delayed(const Duration(milliseconds: 500));
 
-      // Step 4: Initialize database
-      setState(() {
-        _initStatus = 'Setting up database...';
-        _progress = 0.8;
-      });
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      // Step 5: Create media folders
+      // Step 5: Preparing storage
       setState(() {
         _initStatus = 'Preparing storage...';
         _progress = 1.0;
@@ -120,32 +109,24 @@ class _SplashScreenState extends State<SplashScreen>
       await _controller.reverse();
 
       if (isFirstLaunch) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-        );
+        Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
       } else if (isBiometricEnabled) {
-        // Show biometric lock screen (will navigate internally after auth)
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const BiometricLockScreen()),
-        );
+        Navigator.of(context).pushReplacementNamed(AppRoutes.biometricLock);
       } else {
-        // Go directly to main home screen
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const MainHomeScreen()),
-        );
+        Navigator.of(context).pushReplacementNamed(AppRoutes.home);
       }
     } catch (e) {
-      setState(() {
-        _initStatus = 'Error: ${e.toString()}';
-      });
+      if (mounted) {
+        setState(() {
+          _initStatus = 'Error: ${e.toString()}';
+        });
+      }
     }
   }
 
   Future<bool> _checkFirstLaunch() async {
-    // Check if this is the first launch by reading from SharedPreferences
     final prefs = await SharedPreferences.getInstance();
-    final isFirstLaunch = prefs.getBool('first_launch') ?? true;
-    return isFirstLaunch;
+    return prefs.getBool('first_launch') ?? true;
   }
 
   @override
@@ -156,87 +137,83 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.primaryColor,
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Spacer(flex: 2),
+    return AppScaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Spacer(flex: 3),
 
-              // App Logo with animations
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: _buildLogo(),
-                ),
+            // App Logo with animations
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: ScaleTransition(
+                scale: _scaleAnimation,
+                child: _buildLogo(),
               ),
+            ),
 
-              SizedBox(height: 32.h),
+            SizedBox(height: AppSpacing.xl),
 
-              // App Name
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: Text(
-                  AppConstants.appName,
-                  style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                    color: AppColors.onPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+            // App Name
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: Text(
+                AppConstants.appName,
+                style: AppTypography.displayLarge(
+                  context,
+                ).copyWith(color: AppColors.primaryColor, letterSpacing: 2),
               ),
+            ),
 
-              SizedBox(height: 8.h),
+            SizedBox(height: AppSpacing.sm),
 
-              // Tagline
-              FadeTransition(
-                opacity: _fadeAnimation,
-                child: Text(
-                  'Capture moments, memories, and ideas',
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.whiteOpacity70,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+            // Tagline
+            FadeTransition(
+              opacity: _fadeAnimation,
+              child: Text(
+                'Capture moments, memories, and ideas',
+                style: AppTypography.bodyMedium(
+                  context,
+                ).copyWith(color: AppColors.textSecondary(context)),
+                textAlign: TextAlign.center,
               ),
+            ),
 
-              const Spacer(flex: 2),
+            const Spacer(flex: 2),
 
-              // Loading indicator
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 48.w),
-                child: Column(
-                  children: [
-                    // Progress bar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(8.r),
-                      child: LinearProgressIndicator(
-                        value: _progress,
-                        backgroundColor: AppColors.whiteOpacity24,
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          AppColors.onPrimary,
-                        ),
-                        minHeight: 6.h,
+            // Loading indicator
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 48.w),
+              child: Column(
+                children: [
+                  // Progress bar
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                    child: LinearProgressIndicator(
+                      value: _progress,
+                      backgroundColor: AppColors.primaryColor.withOpacity(0.1),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.primaryColor,
                       ),
+                      minHeight: 4,
                     ),
-                    SizedBox(height: 16.h),
+                  ),
+                  SizedBox(height: AppSpacing.md),
 
-                    // Status text
-                    Text(
-                      _initStatus,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.whiteOpacity70,
-                      ),
-                    ),
-                  ],
-                ),
+                  // Status text
+                  Text(
+                    _initStatus,
+                    style: AppTypography.captionSmall(
+                      context,
+                    ).copyWith(color: AppColors.textTertiary(context)),
+                  ),
+                ],
               ),
+            ),
 
-              const Spacer(flex: 1),
-            ],
-          ),
+            const Spacer(flex: 1),
+          ],
         ),
       ),
     );
@@ -244,25 +221,17 @@ class _SplashScreenState extends State<SplashScreen>
 
   Widget _buildLogo() {
     return Container(
-      width: 120.w,
-      height: 120.h,
+      width: 100.w,
+      height: 100.h,
       decoration: BoxDecoration(
-        color: AppColors.onPrimary,
+        color: AppColors.primaryColor.withOpacity(0.1),
         shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow.withOpacity(0.2),
-            blurRadius: 20.w,
-            spreadRadius: 5.w,
-          ),
-        ],
       ),
       child: Icon(
         Icons.notes_rounded,
-        size: 64.sp,
+        size: 48.sp,
         color: AppColors.primaryColor,
       ),
     );
   }
 }
-

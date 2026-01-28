@@ -316,7 +316,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen>
                         onLongPress: () {},
                         onDelete: () {},
                         onPin: () {},
-                        onColorChange: (NoteColor p1) {},
+                        onColorChange: (val) {},
                       );
                     },
                   ),
@@ -442,4 +442,3 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
     return false;
   }
 }
-

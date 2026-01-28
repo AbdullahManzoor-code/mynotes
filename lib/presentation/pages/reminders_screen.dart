@@ -66,23 +66,17 @@ class _RemindersScreenState extends State<RemindersScreen>
         }
       },
       child: AppScaffold(
-        appBar: PreferredSize(
-          preferredSize: Size.fromHeight(AppSpacing.appBarHeight + 48.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              GlassAppBar(title: 'Reminders'),
-              TabBar(
-                controller: _tabController,
-                tabs: const [
-                  Tab(text: 'Upcoming', icon: Icon(Icons.schedule)),
-                  Tab(text: 'Calendar', icon: Icon(Icons.calendar_month)),
-                ],
-                indicatorColor: AppColors.primary,
-                labelColor: AppColors.primary,
-                unselectedLabelColor: AppColors.textSecondary(context),
-              ),
+        appBar: GlassAppBar(
+          title: 'Reminders',
+          bottom: TabBar(
+            controller: _tabController,
+            tabs: const [
+              Tab(text: 'Upcoming', icon: Icon(Icons.schedule)),
+              Tab(text: 'Calendar', icon: Icon(Icons.calendar_month)),
             ],
+            indicatorColor: AppColors.primaryColor,
+            labelColor: AppColors.primaryColor,
+            unselectedLabelColor: AppColors.textSecondary(context),
           ),
         ),
         body: TabBarView(
@@ -250,9 +244,7 @@ class _RemindersScreenState extends State<RemindersScreen>
                               note.title.isNotEmpty
                                   ? note.title
                                   : 'Untitled Note',
-                              style: AppTypography.bodyLarge(
-                                fontWeight: FontWeight.w600,
-                              ),
+                              style: AppTypography.bodyLarge(context, null, FontWeight.w600),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -273,8 +265,9 @@ class _RemindersScreenState extends State<RemindersScreen>
                               child: Text(
                                 'Active',
                                 style: AppTypography.captionSmall(
-                                  color: AppColors.successColor,
-                                  fontWeight: FontWeight.w600,
+                                  context, 
+                                  AppColors.successColor,
+                                  FontWeight.w600,
                                 ),
                               ),
                             ),
@@ -292,9 +285,8 @@ class _RemindersScreenState extends State<RemindersScreen>
                           child: Text(
                             alarm.message!,
                             style: AppTypography.bodyMedium(
-                              color: AppColors.getSecondaryTextColor(
-                                Theme.of(context).brightness,
-                              ),
+                              context,
+                              AppColors.textSecondary(context),
                             ).copyWith(fontStyle: FontStyle.italic),
                           ),
                         ),
@@ -315,17 +307,17 @@ class _RemindersScreenState extends State<RemindersScreen>
                               alarm.alarmTime,
                             ),
                             style: AppTypography.bodyMedium(
-                              color: isOverdue ? AppColors.errorColor : null,
-                              fontWeight: FontWeight.w600,
+                              context,
+                              isOverdue ? AppColors.errorColor : null,
+                              FontWeight.w600,
                             ),
                           ),
                           SizedBox(width: AppSpacing.sm),
                           Text(
                             timeUntil,
                             style: AppTypography.captionSmall(
-                              color: AppColors.getSecondaryTextColor(
-                                Theme.of(context).brightness,
-                              ),
+                              context,
+                              AppColors.textSecondary(context),
                             ),
                           ),
                         ],
@@ -344,10 +336,9 @@ class _RemindersScreenState extends State<RemindersScreen>
                             Text(
                               alarm.repeatType.displayName,
                               style: AppTypography.captionSmall(
-                                color: AppColors.getSecondaryTextColor(
-                                  Theme.of(context).brightness,
-                                ),
-                              ),
+                              context,
+                              AppColors.textSecondary(context),
+                            ),
                             ),
                           ],
                         ),

@@ -23,466 +23,439 @@ class AppTypography {
   /// Get the base text style with Inter font
   static TextStyle get baseTextStyle => GoogleFonts.inter();
 
+  static TextStyle _style({
+    required double fontSize,
+    required FontWeight fontWeight,
+    required double height,
+    double letterSpacing = 0,
+    dynamic context,
+    Color? color,
+    FontWeight? overrideFontWeight,
+    List<FontFeature>? fontFeatures,
+    TextDecoration? decoration,
+  }) {
+    final resolvedColor = _resolveColor(context, color);
+    return GoogleFonts.inter(
+      fontSize: fontSize.sp,
+      fontWeight: overrideFontWeight ?? fontWeight,
+      height: height,
+      letterSpacing: letterSpacing,
+      color: resolvedColor,
+      fontFeatures: fontFeatures,
+      decoration: decoration,
+    );
+  }
+
   // ==================== Display Text Styles (32px+) ====================
 
   /// Display Large - 32px, Bold, Tight tracking
-  /// Usage: Onboarding headlines, major section titles
-  static TextStyle displayLarge({
+  static TextStyle displayLarge([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 32.sp,
-      fontWeight: fontWeight ?? FontWeight.w700,
-      height: 1.2,
-      letterSpacing: -0.48, // -0.015em * 32
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 32,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    letterSpacing: -0.48,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   // ==================== Heading Text Styles ====================
 
-  /// Heading 1 - 24px, Bold, Tight tracking
-  /// Usage: Screen titles, main headings
-  static TextStyle heading1({
+  /// Heading 1 - 24px, Bold
+  static TextStyle heading1([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 24.sp,
-      fontWeight: fontWeight ?? FontWeight.w700,
-      height: 1.25,
-      letterSpacing: -0.36, // -0.015em * 24
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 24,
+    fontWeight: FontWeight.w700,
+    height: 1.25,
+    letterSpacing: -0.36,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
-  /// Heading 2 - 20px, Bold, Tight tracking
-  /// Usage: Card titles, dialog headers
-  static TextStyle heading2({
+  /// Heading 2 - 20px, Bold
+  static TextStyle heading2([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 20.sp,
-      fontWeight: fontWeight ?? FontWeight.w700,
-      height: 1.3,
-      letterSpacing: -0.3, // -0.015em * 20
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    height: 1.3,
+    letterSpacing: -0.3,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   /// Heading 3 - 18px, Semibold
-  /// Usage: Section headers, subheadings
-  static TextStyle heading3({
+  static TextStyle heading3([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 18.sp,
-      fontWeight: fontWeight ?? FontWeight.w600,
-      height: 1.33,
-      letterSpacing: -0.27, // -0.015em * 18
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 18,
+    fontWeight: FontWeight.w600,
+    height: 1.33,
+    letterSpacing: -0.27,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   /// Heading 4 - 16px, Semibold
-  /// Usage: List section headers
-  static TextStyle heading4({
+  static TextStyle heading4([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 16.sp,
-      fontWeight: fontWeight ?? FontWeight.w600,
-      height: 1.4,
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 16,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
+
+  // ==================== Legacy Aliases ====================
+  static TextStyle titleLarge([
+    dynamic context,
+    Color? color,
+    FontWeight? fontWeight,
+  ]) => heading1(context, color, fontWeight);
+  static TextStyle titleMedium([
+    dynamic context,
+    Color? color,
+    FontWeight? fontWeight,
+  ]) => heading2(context, color, fontWeight);
+  static TextStyle displaySmall([
+    dynamic context,
+    Color? color,
+    FontWeight? fontWeight,
+  ]) => heading1(context, color, fontWeight);
 
   // ==================== Body Text Styles ====================
 
   /// Body Large - 16px, Medium
-  /// Usage: Important body text, emphasized content
-  static TextStyle bodyLarge({
+  static TextStyle bodyLarge([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 16.sp,
-      fontWeight: fontWeight ?? FontWeight.w500,
-      height: 1.5,
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    height: 1.5,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   /// Body Medium - 14px, Regular
-  /// Usage: Default body text, descriptions
-  static TextStyle bodyMedium({
+  static TextStyle bodyMedium([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 14.sp,
-      fontWeight: fontWeight ?? FontWeight.w400,
-      height: 1.5,
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   /// Body Small - 12px, Regular
-  /// Usage: Secondary information, helper text
-  static TextStyle bodySmall({
+  static TextStyle bodySmall([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 12.sp,
-      fontWeight: fontWeight ?? FontWeight.w400,
-      height: 1.4,
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.4,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   // ==================== Label Text Styles ====================
 
   /// Label Large - 14px, Semibold
-  /// Usage: Button labels, tab labels
-  static TextStyle labelLarge({Color? color, FontWeight? fontWeight}) {
-    return GoogleFonts.inter(
-      fontSize: 14.sp,
-      fontWeight: fontWeight ?? FontWeight.w600,
-      height: 1.4,
-      color: color,
-    );
-  }
+  static TextStyle labelLarge([
+    dynamic context,
+    Color? color,
+    FontWeight? fontWeight,
+  ]) => _style(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.4,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   /// Label Medium - 12px, Semibold
-  /// Usage: Small buttons, chips, tags
-  static TextStyle labelMedium({Color? color, FontWeight? fontWeight}) {
-    return GoogleFonts.inter(
-      fontSize: 12.sp,
-      fontWeight: fontWeight ?? FontWeight.w600,
-      height: 1.3,
-      color: color,
-    );
-  }
+  static TextStyle labelMedium([
+    dynamic context,
+    Color? color,
+    FontWeight? fontWeight,
+  ]) => _style(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
-  /// Label Small - 10px, Bold, Uppercase, Wide tracking
-  /// Usage: Section headers, category labels, timestamps
-  static TextStyle labelSmall({Color? color, FontWeight? fontWeight}) {
-    return GoogleFonts.inter(
-      fontSize: 10.sp,
-      fontWeight: fontWeight ?? FontWeight.w700,
-      height: 1.2,
-      letterSpacing: 1.2, // Wide tracking
-      color: color,
-    ).copyWith(
-      // Force uppercase
-      fontFeatures: [const FontFeature.enable('c2sc')],
-    );
-  }
+  /// Label Small - 10px, Bold, Uppercase
+  static TextStyle labelSmall([
+    dynamic context,
+    Color? color,
+    FontWeight? fontWeight,
+  ]) => _style(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    letterSpacing: 1.2,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+    fontFeatures: [const FontFeature.enable('c2sc')],
+  );
 
   // ==================== Caption Text Styles ====================
 
   /// Caption Large - 12px, Medium
-  /// Usage: Timestamps, metadata
-  static TextStyle captionLarge({
+  static TextStyle captionLarge([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 12.sp,
-      fontWeight: fontWeight ?? FontWeight.w500,
-      height: 1.3,
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   /// Caption Small - 10px, Medium
-  /// Usage: Very small metadata, badges
-  static TextStyle captionSmall({
+  static TextStyle captionSmall([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 10.sp,
-      fontWeight: fontWeight ?? FontWeight.w500,
-      height: 1.2,
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 10,
+    fontWeight: FontWeight.w500,
+    height: 1.2,
+    context: context,
+    color: color,
+    overrideFontWeight: fontWeight,
+  );
 
   // ==================== Special Text Styles ====================
 
   /// Button Text - 16px, Bold
-  /// Usage: Primary button labels
-  static TextStyle buttonLarge({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 16.sp,
-      fontWeight: FontWeight.w700,
-      height: 1.25,
-      letterSpacing: 0.5,
-      color: resolvedColor,
-    );
-  }
+  static TextStyle buttonLarge([dynamic context, Color? color]) => _style(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    height: 1.25,
+    letterSpacing: 0.5,
+    context: context,
+    color: color,
+  );
 
   /// Button Text - 14px, Semibold
-  /// Usage: Secondary button labels
-  static TextStyle buttonMedium({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 14.sp,
-      fontWeight: FontWeight.w600,
-      height: 1.3,
-      letterSpacing: 0.5,
-      color: resolvedColor,
-    );
-  }
+  static TextStyle buttonMedium([dynamic context, Color? color]) => _style(
+    fontSize: 14,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    letterSpacing: 0.5,
+    context: context,
+    color: color,
+  );
 
-  /// Overline - 10px, Bold, Uppercase, Wide tracking
-  /// Usage: Section labels, category headers
-  static TextStyle overline({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 10.sp,
-      fontWeight: FontWeight.w700,
-      height: 1.6,
-      letterSpacing: 1.5,
-      color: resolvedColor,
-    );
-  }
+  /// Overline - 10px, Bold, Uppercase
+  static TextStyle overline([dynamic context, Color? color]) => _style(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    height: 1.6,
+    letterSpacing: 1.5,
+    context: context,
+    color: color,
+  );
 
   /// Number Display - 28px, Bold
-  /// Usage: Stats, metrics, large numbers
-  static TextStyle numberLarge({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 28.sp,
-      fontWeight: FontWeight.w700,
-      height: 1.2,
-      letterSpacing: -0.5,
-      color: resolvedColor,
-      fontFeatures: [const FontFeature.tabularFigures()],
-    );
-  }
+  static TextStyle numberLarge([dynamic context, Color? color]) => _style(
+    fontSize: 28,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    letterSpacing: -0.5,
+    context: context,
+    color: color,
+    fontFeatures: [const FontFeature.tabularFigures()],
+  );
 
   /// Number Display - 20px, Bold
-  /// Usage: Medium numbers, counts
-  static TextStyle numberMedium({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 20.sp,
-      fontWeight: FontWeight.w700,
-      height: 1.2,
-      letterSpacing: -0.3,
-      color: resolvedColor,
-      fontFeatures: [const FontFeature.tabularFigures()],
-    );
-  }
+  static TextStyle numberMedium([dynamic context, Color? color]) => _style(
+    fontSize: 20,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    letterSpacing: -0.3,
+    context: context,
+    color: color,
+    fontFeatures: [const FontFeature.tabularFigures()],
+  );
 
   // ==================== Interactive Text Styles ====================
 
   /// Link Text - 14px, Medium
-  /// Usage: Hyperlinks, clickable text
-  static TextStyle link({Color? color}) {
-    return GoogleFonts.inter(
-      fontSize: 14.sp,
-      fontWeight: FontWeight.w500,
-      height: 1.5,
-      decoration: TextDecoration.underline,
-      color: color,
-    );
-  }
+  static TextStyle link([dynamic context, Color? color]) => _style(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    height: 1.5,
+    decoration: TextDecoration.underline,
+    context: context,
+    color: color,
+  );
 
   /// Link Text Small - 12px, Medium
-  /// Usage: Small hyperlinks
-  static TextStyle linkSmall({Color? color}) {
-    return GoogleFonts.inter(
-      fontSize: 12.sp,
-      fontWeight: FontWeight.w500,
-      height: 1.4,
-      decoration: TextDecoration.underline,
-      color: color,
-    );
-  }
+  static TextStyle linkSmall([dynamic context, Color? color]) => _style(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+    decoration: TextDecoration.underline,
+    context: context,
+    color: color,
+  );
 
   // ==================== Input Text Styles ====================
 
   /// Input Label - 12px, Semibold
-  /// Usage: Text field labels
-  static TextStyle inputLabel({Color? color}) {
-    return GoogleFonts.inter(
-      fontSize: 12.sp,
-      fontWeight: FontWeight.w600,
-      height: 1.3,
-      color: color,
-    );
-  }
+  static TextStyle inputLabel([dynamic context, Color? color]) => _style(
+    fontSize: 12,
+    fontWeight: FontWeight.w600,
+    height: 1.3,
+    context: context,
+    color: color,
+  );
 
   /// Input Text - 16px, Regular
-  /// Usage: Text field input
-  static TextStyle inputText({Color? color}) {
-    return GoogleFonts.inter(
-      fontSize: 16.sp,
-      fontWeight: FontWeight.w400,
-      height: 1.5,
-      color: color,
-    );
-  }
+  static TextStyle inputText([dynamic context, Color? color]) => _style(
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    context: context,
+    color: color,
+  );
 
   /// Input Placeholder - 16px, Regular
-  /// Usage: Text field placeholder
-  static TextStyle inputPlaceholder({Color? color}) {
-    return GoogleFonts.inter(
-      fontSize: 16.sp,
-      fontWeight: FontWeight.w400,
-      height: 1.5,
-      color: color?.withOpacity(0.5),
-    );
-  }
+  static TextStyle inputPlaceholder([dynamic context, Color? color]) => _style(
+    fontSize: 16,
+    fontWeight: FontWeight.w400,
+    height: 1.5,
+    context: context,
+    color: color?.withOpacity(0.5),
+  );
 
   /// Input Helper - 12px, Regular
-  /// Usage: Helper text, error text
-  static TextStyle inputHelper({Color? color}) {
-    return GoogleFonts.inter(
-      fontSize: 12.sp,
-      fontWeight: FontWeight.w400,
-      height: 1.3,
-      color: color,
-    );
-  }
+  static TextStyle inputHelper([dynamic context, Color? color]) => _style(
+    fontSize: 12,
+    fontWeight: FontWeight.w400,
+    height: 1.3,
+    context: context,
+    color: color,
+  );
 
   // ==================== Context-Specific Text Styles ====================
 
   /// Note Title - 16px, Bold
-  /// Usage: Note card titles
-  static TextStyle noteTitle({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 16.sp,
-      fontWeight: FontWeight.w700,
-      height: 1.4,
-      color: resolvedColor,
-    );
-  }
+  static TextStyle noteTitle([dynamic context, Color? color]) => _style(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    height: 1.4,
+    context: context,
+    color: color,
+  );
 
-  /// Note Content - 14px, Regular, Relaxed line height
-  /// Usage: Note preview text
-  static TextStyle noteContent({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 14.sp,
-      fontWeight: FontWeight.w400,
-      height: 1.6, // Relaxed for readability
-      color: resolvedColor,
-    );
-  }
+  /// Note Content - 14px, Regular
+  static TextStyle noteContent([dynamic context, Color? color]) => _style(
+    fontSize: 14,
+    fontWeight: FontWeight.w400,
+    height: 1.6,
+    context: context,
+    color: color,
+  );
 
   /// Note Timestamp - 10px, Medium, Uppercase
-  /// Usage: Note creation/update time
-  static TextStyle noteTimestamp({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 10.sp,
-      fontWeight: FontWeight.w500,
-      height: 1.2,
-      letterSpacing: 0.8,
-      color: resolvedColor,
-    );
-  }
+  static TextStyle noteTimestamp([dynamic context, Color? color]) => _style(
+    fontSize: 10,
+    fontWeight: FontWeight.w500,
+    height: 1.2,
+    letterSpacing: 0.8,
+    context: context,
+    color: color,
+  );
 
   /// Todo Text - 14px, Medium
-  /// Usage: Todo item text
-  static TextStyle todoText({
+  static TextStyle todoText([
     dynamic context,
     Color? color,
     bool isCompleted = false,
-  }) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 14.sp,
-      fontWeight: FontWeight.w500,
-      height: 1.4,
-      decoration: isCompleted ? TextDecoration.lineThrough : null,
-      color: resolvedColor,
-    );
-  }
+  ]) => _style(
+    fontSize: 14,
+    fontWeight: FontWeight.w500,
+    height: 1.4,
+    context: context,
+    color: color,
+    decoration: isCompleted ? TextDecoration.lineThrough : null,
+  );
 
   /// Reminder Time - 12px, Medium
-  /// Usage: Reminder time display
-  static TextStyle reminderTime({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 12.sp,
-      fontWeight: FontWeight.w500,
-      height: 1.3,
-      fontFeatures: [const FontFeature.tabularFigures()],
-      color: resolvedColor,
-    );
-  }
+  static TextStyle reminderTime([dynamic context, Color? color]) => _style(
+    fontSize: 12,
+    fontWeight: FontWeight.w500,
+    height: 1.3,
+    context: context,
+    color: color,
+    fontFeatures: [const FontFeature.tabularFigures()],
+  );
 
   /// Tag Text - 10px, Bold, Uppercase
-  /// Usage: Category tags, chips
-  static TextStyle tagText({dynamic context, Color? color}) {
-    final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: 10.sp,
-      fontWeight: FontWeight.w700,
-      height: 1.2,
-      letterSpacing: 0.8,
-      color: resolvedColor,
-    );
-  }
+  static TextStyle tagText([dynamic context, Color? color]) => _style(
+    fontSize: 10,
+    fontWeight: FontWeight.w700,
+    height: 1.2,
+    letterSpacing: 0.8,
+    context: context,
+    color: color,
+  );
 
   // ==================== Text Theme Builder ====================
 
   /// Create a complete TextTheme for the app
   static TextTheme createTextTheme({required Brightness brightness}) {
     return TextTheme(
-      // Display styles
       displayLarge: displayLarge(),
       displayMedium: heading1(),
       displaySmall: heading2(),
-
-      // Headline styles
       headlineLarge: heading1(),
       headlineMedium: heading2(),
       headlineSmall: heading3(),
-
-      // Title styles
       titleLarge: heading2(),
       titleMedium: heading3(),
       titleSmall: heading4(),
-
-      // Body styles
       bodyLarge: bodyLarge(),
       bodyMedium: bodyMedium(),
       bodySmall: bodySmall(),
-
-      // Label styles
       labelLarge: labelLarge(),
       labelMedium: labelMedium(),
       labelSmall: labelSmall(),
@@ -490,51 +463,50 @@ class AppTypography {
   }
 
   // ==================== Legacy compatibility wrappers ====================
-  // Provide old method names expected by components to maintain compatibility.
-  static TextStyle button({
+  static TextStyle button([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) => buttonMedium(context: context, color: color);
+  ]) => buttonMedium(context, color);
 
-  static TextStyle caption({
+  static TextStyle caption([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) => captionSmall(context: context, color: color);
+  ]) => captionSmall(context, color, fontWeight);
 
-  static TextStyle body1({
+  static TextStyle body1([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) => bodyLarge(context: context, color: color, fontWeight: fontWeight);
+  ]) => bodyLarge(context, color, fontWeight);
 
-  static TextStyle body2({
+  static TextStyle body2([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) => bodyMedium(context: context, color: color, fontWeight: fontWeight);
+  ]) => bodyMedium(context, color, fontWeight);
 
-  static TextStyle display1({
+  static TextStyle display1([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) => displayLarge(context: context, color: color, fontWeight: fontWeight);
+  ]) => displayLarge(context, color, fontWeight);
 
-  static TextStyle label({
+  static TextStyle label([
     dynamic context,
     Color? color,
     FontWeight? fontWeight,
-  }) => labelLarge(color: color, fontWeight: fontWeight);
+  ]) => labelLarge(context, color, fontWeight);
 
-  static TextStyle todoTitle({
+  static TextStyle todoTitle([
     dynamic context,
     Color? color,
     bool isCompleted = false,
-  }) => todoText(context: context, color: color, isCompleted: isCompleted);
+  ]) => todoText(context, color, isCompleted);
 
-  static TextStyle reminderTitle({dynamic context, Color? color}) =>
-      reminderTime(context: context, color: color);
+  static TextStyle reminderTitle([dynamic context, Color? color]) =>
+      reminderTime(context, color);
 
   // ==================== Utility Functions ====================
 
@@ -620,4 +592,3 @@ extension AppTypographyExtensions on TextStyle {
     return copyWith(height: value);
   }
 }
-

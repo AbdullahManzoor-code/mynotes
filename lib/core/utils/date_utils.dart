@@ -10,6 +10,9 @@ class AppDateUtils {
     return intl.DateFormat(AppConstants.dateFormat).format(date);
   }
 
+  /// Format to compact date string
+  static String formatCompactDate(DateTime date) => formatDate(date);
+
   /// Format time to string
   static String formatTime(DateTime date) {
     return intl.DateFormat(AppConstants.timeFormat).format(date);
@@ -146,4 +149,3 @@ class AppDateUtils {
     return difference.inHours;
   }
 }
-

@@ -200,8 +200,6 @@ class AppAnimations {
     Duration? delay,
     Curve curve = Curves.easeOut,
   }) {
-    final itemDelay = delay ?? staggerDelay(index);
-
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
       duration: medium,
@@ -462,4 +460,3 @@ extension AppAnimationExtensions on Widget {
     return AnimatedSwitcher(duration: duration, child: this);
   }
 }
-

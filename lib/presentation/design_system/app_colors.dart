@@ -60,6 +60,10 @@ class AppColors {
   /// Disabled/Placeholder text
   static const Color disabledText = Color(0xFFBDBDBD);
 
+  /// Grey shades
+  static const Color grey400 = Color(0xFFBDBDBD);
+  static const Color grey500 = Color(0xFF9E9E9E);
+
   // ==================== Accent Colors ====================
 
   /// Blue accent variations
@@ -289,12 +293,28 @@ class AppColors {
   static Color textSecondary(BuildContext context) =>
       getSecondaryTextColor(Theme.of(context).brightness);
 
+  /// Returns tertiary text color for given BuildContext
+  static Color textTertiary(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.light
+      ? tertiaryText
+      : tertiaryTextAlt;
+
+  /// Divider color aliases
+  static Color divider(BuildContext context) =>
+      getBorderColor(Theme.of(context).brightness);
+  static Color dividerColor(BuildContext context) =>
+      getBorderColor(Theme.of(context).brightness);
+
   /// Returns surface color for given BuildContext
   static Color surface(BuildContext context) =>
       getSurfaceColor(Theme.of(context).brightness);
 
   /// Returns card color for given BuildContext
   static Color card(BuildContext context) =>
+      getCardColor(Theme.of(context).brightness);
+
+  /// Alias for card color
+  static Color cardBackground(BuildContext context) =>
       getCardColor(Theme.of(context).brightness);
 
   /// Returns border color for given BuildContext
@@ -391,4 +411,3 @@ extension AppColorExtensions on Color {
     return '#${(value & 0xFFFFFF).toRadixString(16).padLeft(6, '0').toUpperCase()}';
   }
 }
-

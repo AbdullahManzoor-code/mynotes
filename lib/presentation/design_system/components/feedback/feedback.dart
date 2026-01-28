@@ -100,7 +100,7 @@ class AppLoadingIndicator extends StatelessWidget {
             SizedBox(height: AppSpacing.md.h),
             Text(
               message!,
-              style: AppTypography.body2(context: context),
+              style: AppTypography.body2(),
               textAlign: TextAlign.center,
             ),
           ],
@@ -172,7 +172,7 @@ class ErrorState extends StatelessWidget {
             if (title != null) ...[
               Text(
                 title!,
-                style: AppTypography.heading2(context: context),
+                style: AppTypography.heading2(),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: AppSpacing.sm.h),
@@ -234,8 +234,8 @@ class ConfirmationDialog extends StatelessWidget {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
       ),
-      title: Text(title, style: AppTypography.heading3(context: context)),
-      content: Text(message, style: AppTypography.body1(context: context)),
+      title: Text(title, style: AppTypography.heading3()),
+      content: Text(message, style: AppTypography.body1()),
       actions: [
         TextButton(
           onPressed: () {
@@ -315,7 +315,7 @@ class AppBadge extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: AppTypography.caption(context: context).copyWith(
+        style: AppTypography.caption().copyWith(
           color: textColor ?? Colors.white,
           fontWeight: FontWeight.w600,
         ),
