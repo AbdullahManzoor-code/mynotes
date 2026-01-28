@@ -32,3 +32,4 @@ class AlarmError extends AlarmState {
   @override
   List<Object?> get props => [message];
 }
+

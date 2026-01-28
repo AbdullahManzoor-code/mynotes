@@ -42,3 +42,4 @@ class AlarmService {
     await _plugin.cancel(int.tryParse(id.hashCode.toString()) ?? 0);
   }
 }
+

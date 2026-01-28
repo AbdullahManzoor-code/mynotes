@@ -280,3 +280,4 @@ class LinkRemovedFromNote extends NoteState {
   @override
   List<Object?> get props => [note];
 }
+

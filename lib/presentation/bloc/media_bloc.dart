@@ -160,3 +160,4 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     }
   }
 }
+

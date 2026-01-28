@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Edit Daily Highlight</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cbfe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+<div class="flex items-center p-4 justify-between max-w-md mx-auto w-full">
+<div class="text-slate-400 flex size-10 shrink-0 items-center justify-start cursor-pointer">
+<span class="material-symbols-outlined">close</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-base font-semibold leading-tight tracking-tight flex-1 text-center">Edit Highlight</h2>
+<div class="flex w-10 items-center justify-end cursor-pointer">
+<p class="text-slate-400 text-sm font-medium">Cancel</p>
+</div>
+</div>
+</header>
+<main class="flex-1 max-w-md mx-auto w-full pb-32">
+<!-- Progress Bar -->
+<div class="px-4 py-4">
+<div class="flex gap-1 h-1 w-full bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden">
+<div class="bg-primary w-2/3 h-full rounded-full"></div>
+<div class="bg-slate-300 dark:bg-slate-700 w-1/3 h-full rounded-full"></div>
+</div>
+<p class="text-[10px] uppercase tracking-widest text-slate-500 mt-2 font-bold">Step 2 of 3: Reflection</p>
+</div>
+<!-- Section 1: Win 1 -->
+<section class="mb-2">
+<div class="px-4 pb-2 pt-2 flex items-center gap-2">
+<span class="flex items-center justify-center size-6 rounded-full bg-primary/20 text-primary text-xs font-bold">1</span>
+<h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">Completed project proposal</h3>
+</div>
+<div class="flex flex-wrap items-end gap-4 px-4 py-2">
+<label class="flex flex-col min-w-40 flex-1">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider pb-2 px-1">Deep Dive</p>
+<textarea class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 focus:border-primary min-h-24 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-4 text-sm font-normal leading-relaxed" placeholder="What made this a win today?">I finally managed to clear the backlog and sent the final draft to the stakeholder. Feels like a weight off my shoulders.</textarea>
+</label>
+</div>
+</section>
+<!-- Section 2: Win 2 -->
+<section class="mb-2">
+<div class="px-4 pb-2 pt-4 flex items-center gap-2">
+<span class="flex items-center justify-center size-6 rounded-full bg-primary/20 text-primary text-xs font-bold">2</span>
+<h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">Morning meditation</h3>
+</div>
+<div class="flex flex-wrap items-end gap-4 px-4 py-2">
+<label class="flex flex-col min-w-40 flex-1">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider pb-2 px-1">Reflections</p>
+<textarea class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 focus:border-primary min-h-24 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-4 text-sm font-normal leading-relaxed" placeholder="Add more detail about this win..."></textarea>
+</label>
+</div>
+</section>
+<!-- Section 3: Win 3 -->
+<section class="mb-6">
+<div class="px-4 pb-2 pt-4 flex items-center gap-2">
+<span class="flex items-center justify-center size-6 rounded-full bg-primary/20 text-primary text-xs font-bold">3</span>
+<h3 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight">Cooked a healthy dinner</h3>
+</div>
+<div class="flex flex-wrap items-end gap-4 px-4 py-2">
+<label class="flex flex-col min-w-40 flex-1">
+<p class="text-slate-500 dark:text-slate-400 text-xs font-semibold uppercase tracking-wider pb-2 px-1">Details</p>
+<textarea class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-xl text-slate-900 dark:text-white focus:outline-0 focus:ring-2 focus:ring-primary/50 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 focus:border-primary min-h-24 placeholder:text-slate-400 dark:placeholder:text-slate-600 p-4 text-sm font-normal leading-relaxed" placeholder="Add more detail about this win..."></textarea>
+</label>
+</div>
+</section>
+<!-- Mood Picker Section -->
+<section class="px-4 py-6 border-t border-slate-200 dark:border-slate-800">
+<h3 class="text-slate-900 dark:text-white text-base font-bold mb-4">How are you feeling about today?</h3>
+<div class="flex justify-between items-center bg-white dark:bg-slate-900/50 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+<button class="flex flex-col items-center gap-2 group">
+<span class="text-3xl grayscale group-hover:grayscale-0 transition-all opacity-40 group-hover:opacity-100">😔</span>
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Tired</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<span class="text-3xl grayscale group-hover:grayscale-0 transition-all opacity-40 group-hover:opacity-100">😐</span>
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Okay</span>
+</button>
+<button class="flex flex-col items-center gap-2 group relative">
+<div class="absolute -top-1 -right-1 size-2 bg-primary rounded-full ring-2 ring-white dark:ring-slate-900"></div>
+<span class="text-3xl transition-all scale-125">🙂</span>
+<span class="text-[10px] font-bold text-primary uppercase tracking-tighter">Good</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<span class="text-3xl grayscale group-hover:grayscale-0 transition-all opacity-40 group-hover:opacity-100">😊</span>
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Great</span>
+</button>
+<button class="flex flex-col items-center gap-2 group">
+<span class="text-3xl grayscale group-hover:grayscale-0 transition-all opacity-40 group-hover:opacity-100">🤩</span>
+<span class="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">Amazing</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Sticky Footer -->
+<footer class="fixed bottom-0 left-0 right-0 p-4 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 flex justify-center">
+<button class="w-full max-w-md bg-primary hover:bg-primary/90 text-slate-900 font-bold py-4 px-6 rounded-xl transition-colors shadow-lg shadow-primary/20 flex items-center justify-center gap-2">
+<span>Confirm &amp; Save</span>
+<span class="material-symbols-outlined text-xl">check_circle</span>
+</button>
+</footer>
+</body></html>

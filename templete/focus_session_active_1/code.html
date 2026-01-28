@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Focus Session Active - Dark Mode</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "focus-neon": "#a7f3d0", // mint/soft cyan
+                        "deep-bg-start": "#0f172a", // midnight blue
+                        "deep-bg-end": "#2e1065", // deep violet
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "1rem",
+                        "lg": "2rem",
+                        "xl": "3rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        :root {
+            --timer-glow: 0 0 30px rgba(167, 243, 208, 0.4);
+        }
+        .bg-immersive-gradient {
+            background: radial-gradient(circle at top right, #1e1b4b 0%, #0f172a 100%);
+            background-attachment: fixed;
+        }
+        .timer-ring-glow {
+            filter: drop-shadow(0 0 8px rgba(167, 243, 208, 0.6));
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+            background-color: #0f172a;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display text-white antialiased">
+<div class="relative flex h-screen w-full flex-col bg-immersive-gradient overflow-hidden select-none">
+<div class="flex items-center p-6 justify-between z-10">
+<div class="flex items-center justify-center w-10 h-10 rounded-full glass-panel">
+<span class="material-symbols-outlined text-white/80">keyboard_arrow_down</span>
+</div>
+<h2 class="text-white/60 text-[10px] font-bold uppercase tracking-[0.3em]">Focus Session</h2>
+<div class="flex items-center justify-center w-10 h-10 rounded-full glass-panel">
+<span class="material-symbols-outlined text-white/80">more_horiz</span>
+</div>
+</div>
+<div class="flex flex-1 flex-col items-center justify-center px-8 relative">
+<div class="relative flex items-center justify-center w-80 h-80 mb-14">
+<div class="absolute inset-0 rounded-full border-[8px] border-white/5"></div>
+<svg class="absolute inset-0 w-full h-full -rotate-90 transform timer-ring-glow">
+<circle class="text-focus-neon" cx="160" cy="160" fill="transparent" r="152" stroke="currentColor" stroke-dasharray="955" stroke-dashoffset="240" stroke-linecap="round" stroke-width="8"></circle>
+</svg>
+<div class="flex flex-col items-center justify-center z-10">
+<div class="flex items-baseline gap-1">
+<span class="text-7xl font-light tracking-tight text-white">24</span>
+<span class="text-6xl font-extralight text-white/20">:</span>
+<span class="text-7xl font-light tracking-tight text-white">59</span>
+</div>
+<div class="mt-4 flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-focus-neon animate-pulse"></span>
+<p class="text-[10px] font-bold text-focus-neon/80 uppercase tracking-[0.2em]">Live Session</p>
+</div>
+</div>
+</div>
+<div class="text-center space-y-4 max-w-xs">
+<div class="inline-flex items-center gap-2 px-4 py-1 rounded-full glass-panel">
+<span class="material-symbols-outlined text-focus-neon text-sm leading-none">potted_plant</span>
+<span class="text-[10px] font-bold uppercase tracking-wider text-white/70">Deep Work</span>
+</div>
+<h1 class="text-white text-3xl font-semibold tracking-tight leading-tight">Finalize Project Proposal</h1>
+<p class="text-white/40 text-sm font-medium">Keep your momentum going</p>
+</div>
+</div>
+<div class="px-10 pb-14 space-y-8 z-10">
+<div class="flex flex-col gap-3">
+<div class="flex justify-between items-center text-[10px] font-bold text-white/30 uppercase tracking-[0.2em]">
+<span>Overall Progress</span>
+<span class="text-focus-neon">80%</span>
+</div>
+<div class="h-1 w-full bg-white/5 rounded-full overflow-hidden">
+<div class="h-full bg-gradient-to-r from-focus-neon/40 to-focus-neon rounded-full" style="width: 80%;"></div>
+</div>
+</div>
+<div class="flex gap-4">
+<button class="flex-1 flex items-center justify-center gap-3 glass-panel hover:bg-white/10 text-white py-5 rounded-2xl font-semibold text-base transition-all active:scale-95">
+<span class="material-symbols-outlined fill-1">pause</span>
+                    Pause
+                </button>
+<button class="flex items-center justify-center w-20 glass-panel hover:bg-white/10 text-white py-5 rounded-2xl transition-all active:scale-95">
+<span class="material-symbols-outlined fill-1">stop</span>
+</button>
+</div>
+</div>
+<div class="absolute -top-40 -left-40 w-[500px] h-[500px] bg-indigo-900/20 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-violet-900/10 rounded-full blur-[140px] pointer-events-none"></div>
+<div class="absolute -bottom-40 -right-40 w-[500px] h-[500px] bg-blue-900/20 rounded-full blur-[120px] pointer-events-none"></div>
+</div>
+
+</body></html>

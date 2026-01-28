@@ -235,3 +235,4 @@ class DatabaseHealthCheck {
     return buffer.toString();
   }
 }
+

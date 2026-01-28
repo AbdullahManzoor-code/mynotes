@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Universal Quick Add</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13b6ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101d22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        .ios-blur {
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+        .cursor-blink {
+            animation: blink 1s step-end infinite;
+            border-right: 2px solid #13b6ec;
+        }
+        @keyframes blink {
+            from, to { border-color: transparent }
+            50% { border-color: #13b6ec }
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display antialiased">
+<!-- Mock Background for Context (Blurred App Interface) -->
+<div class="fixed inset-0 z-0 flex flex-col p-6 pointer-events-none opacity-40">
+<div class="flex justify-between items-center mb-8">
+<div class="h-8 w-32 bg-gray-700 rounded-lg"></div>
+<div class="h-10 w-10 bg-gray-700 rounded-full"></div>
+</div>
+<div class="space-y-4">
+<div class="h-24 w-full bg-gray-700 rounded-xl"></div>
+<div class="h-24 w-full bg-gray-700 rounded-xl"></div>
+<div class="h-24 w-full bg-gray-700 rounded-xl"></div>
+</div>
+</div>
+<!-- Bottom Sheet Container -->
+<div class="fixed inset-0 z-10 flex flex-col justify-end bg-black/40 ios-blur">
+<!-- Bottom Sheet Content -->
+<div class="w-full max-w-md mx-auto bg-white/90 dark:bg-background-dark/95 rounded-t-[2.5rem] shadow-2xl flex flex-col border-t border-white/10">
+<!-- Handlebar -->
+<div class="flex h-6 w-full items-center justify-center pt-2">
+<div class="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-700"></div>
+</div>
+<!-- Main Input Area -->
+<div class="px-6 pt-4 pb-2 relative">
+<div class="flex items-start gap-4">
+<div class="flex-1 min-h-[120px] pt-2">
+<!-- Simulated Text with Blinking Cursor -->
+<div class="text-2xl font-medium text-gray-900 dark:text-white leading-relaxed">
+                            Buy milk tomorrow 6pm<span class="cursor-blink ml-1"></span>
+</div>
+<!-- Secondary text for empty state would be here if needed -->
+</div>
+<button class="mt-2 p-3 bg-primary/10 text-primary rounded-full hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-2xl">mic</span>
+</button>
+</div>
+</div>
+<!-- Parsing Preview Section -->
+<div class="px-2">
+<h4 class="text-gray-500 dark:text-[#9db2b9] text-[10px] font-bold leading-normal uppercase tracking-widest px-4 py-2">Parsing Preview</h4>
+<div class="flex gap-2 px-4 py-2 flex-wrap">
+<div class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-gray-100 dark:bg-[#283539] pl-2 pr-4 border border-black/5 dark:border-white/5">
+<span class="material-symbols-outlined text-primary text-lg">article</span>
+<p class="text-gray-700 dark:text-white text-sm font-medium">Buy milk <span class="text-xs text-gray-400 font-normal">Title</span></p>
+</div>
+<div class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-gray-100 dark:bg-[#283539] pl-2 pr-4 border border-black/5 dark:border-white/5">
+<span class="material-symbols-outlined text-primary text-lg">calendar_today</span>
+<p class="text-gray-700 dark:text-white text-sm font-medium">tomorrow <span class="text-xs text-gray-400 font-normal">Date</span></p>
+</div>
+<div class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-xl bg-gray-100 dark:bg-[#283539] pl-2 pr-4 border border-black/5 dark:border-white/5">
+<span class="material-symbols-outlined text-primary text-lg">schedule</span>
+<p class="text-gray-700 dark:text-white text-sm font-medium">6pm <span class="text-xs text-gray-400 font-normal">Time</span></p>
+</div>
+</div>
+</div>
+<!-- Destination Toggle -->
+<div class="px-6 py-4">
+<div class="flex h-12 w-full items-center justify-center rounded-xl bg-gray-100 dark:bg-[#283539] p-1.5">
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-background-dark has-[:checked]:shadow-sm has-[:checked]:text-primary text-gray-500 dark:text-[#9db2b9] text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-xl mr-2">description</span>
+<span class="truncate">Note</span>
+<input class="hidden" name="destination" type="radio" value="Note"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-background-dark has-[:checked]:shadow-sm has-[:checked]:text-primary text-gray-500 dark:text-[#9db2b9] text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-xl mr-2">task_alt</span>
+<span class="truncate">Todo</span>
+<input checked="" class="hidden" name="destination" type="radio" value="Todo"/>
+</label>
+<label class="flex cursor-pointer h-full grow items-center justify-center overflow-hidden rounded-lg px-2 has-[:checked]:bg-white dark:has-[:checked]:bg-background-dark has-[:checked]:shadow-sm has-[:checked]:text-primary text-gray-500 dark:text-[#9db2b9] text-sm font-semibold transition-all">
+<span class="material-symbols-outlined text-xl mr-2">notifications</span>
+<span class="truncate">Reminder</span>
+<input class="hidden" name="destination" type="radio" value="Reminder"/>
+</label>
+</div>
+</div>
+<!-- Action Area -->
+<div class="px-6 pb-10 pt-2">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 px-6 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-primary/20 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined">add_task</span>
+<span>Save Todo</span>
+</button>
+</div>
+<!-- iOS Home Indicator Spacing -->
+<div class="h-2"></div>
+</div>
+</div>
+</body></html>

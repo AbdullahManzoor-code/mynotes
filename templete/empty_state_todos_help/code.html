@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MyNotes - Calm Productivity</title>
+<!-- Fonts and Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cbfe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-screen w-full max-w-md mx-auto flex-col bg-white dark:bg-background-dark overflow-hidden shadow-2xl">
+<!-- TopAppBar -->
+<div class="flex items-center bg-white dark:bg-background-dark p-4 pb-2 justify-between">
+<div class="text-[#111617] dark:text-white flex size-12 shrink-0 items-center">
+<span class="material-symbols-outlined">menu</span>
+</div>
+<h2 class="text-[#111617] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">Today's Tasks</h2>
+<div class="flex w-12 items-center justify-end">
+<button class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 bg-transparent text-[#111617] dark:text-white gap-2 text-base font-bold leading-normal tracking-[0.015em] min-w-0 p-0">
+<span class="material-symbols-outlined">calendar_today</span>
+</button>
+</div>
+</div>
+<!-- Main Content Area (EmptyState) -->
+<div class="flex flex-1 flex-col items-center justify-center px-8 py-6">
+<div class="flex flex-col items-center gap-8 w-full">
+<!-- Calm Illustration Placeholder -->
+<div class="relative flex items-center justify-center w-48 h-48 bg-primary/10 dark:bg-primary/5 rounded-full">
+<div class="absolute inset-0 border-2 border-dashed border-primary/30 dark:border-primary/20 rounded-full scale-110"></div>
+<span class="material-symbols-outlined text-primary text-7xl" style="font-variation-settings: 'FILL' 0, 'wght' 200;">checklist</span>
+</div>
+<div class="flex max-w-[480px] flex-col items-center gap-4">
+<h3 class="text-[#111617] dark:text-white text-2xl font-bold leading-tight tracking-[-0.015em] text-center">No tasks for today yet.</h3>
+<!-- Educational Tip Card -->
+<div class="bg-primary/5 dark:bg-primary/10 border border-primary/20 dark:border-primary/30 p-4 rounded-xl w-full">
+<p class="text-primary/80 dark:text-primary/90 text-xs font-semibold uppercase tracking-wider mb-1 text-center">Pro Tip</p>
+<p class="text-[#111617] dark:text-gray-300 text-sm font-normal leading-relaxed text-center italic">
+                            Try saying: <span class="font-medium text-primary">"Remind me to drink water at 4"</span>
+</p>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex flex-col gap-3 w-full max-w-[280px]">
+<!-- Primary CTA -->
+<button class="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-xl h-14 bg-primary text-white text-base font-bold leading-normal tracking-[0.015em] shadow-lg shadow-primary/30 transition-all hover:scale-[1.02]">
+<span class="material-symbols-outlined text-xl">mic</span>
+<span class="truncate">Try Voice Add</span>
+</button>
+<!-- Secondary CTA -->
+<button class="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-xl h-12 px-5 bg-background-light dark:bg-gray-800 text-[#111617] dark:text-white text-sm font-semibold leading-normal tracking-[0.015em] border border-transparent hover:border-primary/20">
+<span class="truncate">Add Task Manually</span>
+</button>
+</div>
+</div>
+</div>
+<!-- BottomNavBar -->
+<div class="flex gap-2 border-t border-[#f0f3f4] dark:border-gray-800 bg-white dark:bg-background-dark px-4 pb-8 pt-2">
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[#647e87] dark:text-gray-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">description</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Notes</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-primary" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check_box</span>
+</div>
+<p class="text-xs font-bold leading-normal tracking-[0.015em]">Tasks</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[#647e87] dark:text-gray-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">calendar_today</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Calendar</p>
+</a>
+<a class="flex flex-1 flex-col items-center justify-end gap-1 text-[#647e87] dark:text-gray-500" href="#">
+<div class="flex h-8 items-center justify-center">
+<span class="material-symbols-outlined">settings</span>
+</div>
+<p class="text-xs font-medium leading-normal tracking-[0.015em]">Settings</p>
+</a>
+</div>
+</div>
+</body></html>

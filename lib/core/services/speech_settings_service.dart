@@ -145,3 +145,4 @@ class SpeechSettingsService {
     await prefs.setBool(_batteryOptimizationKey, _defaultBatteryOptimization);
   }
 }
+

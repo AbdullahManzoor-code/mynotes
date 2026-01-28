@@ -345,3 +345,4 @@ class _PermissionStatusScreenState extends State<PermissionStatusScreen> {
     return Icons.settings;
   }
 }
+

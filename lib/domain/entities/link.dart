@@ -84,3 +84,4 @@ class Link extends Equatable {
   @override
   List<Object?> get props => [id, url, title, description, iconUrl, createdAt];
 }
+

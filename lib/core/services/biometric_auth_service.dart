@@ -149,3 +149,4 @@ class BiometricAuthService {
     return 'Biometric';
   }
 }
+

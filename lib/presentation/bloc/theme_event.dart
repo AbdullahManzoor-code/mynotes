@@ -23,3 +23,4 @@ class SetThemeEvent extends ThemeEvent {
 class LoadThemeEvent extends ThemeEvent {
   const LoadThemeEvent();
 }
+

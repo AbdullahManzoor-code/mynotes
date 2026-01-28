@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
-import '../../core/constants/app_colors.dart';
 import '../../core/services/speech_service.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/note_template.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
-import '../widgets/note_card_widget.dart';
-import '../widgets/empty_state_widget.dart';
+import '../design_system/design_system.dart';
 import '../widgets/voice_input_button.dart';
 import '../widgets/template_selector_sheet.dart';
 import 'note_editor_page.dart';
@@ -145,7 +142,6 @@ class _NotesListScreenState extends State<NotesListScreen>
   @override
   Widget build(BuildContext context) {
     super.build(context);
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<NotesBloc, NoteState>(
       listener: (context, state) {
@@ -156,215 +152,135 @@ class _NotesListScreenState extends State<NotesListScreen>
           _loadNotes();
         }
       },
-      child: _buildContent(isDark),
-    );
-  }
-
-  Widget _buildContent(bool isDark) {
-    return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.darkBackground
-          : AppColors.lightBackground,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
-        automaticallyImplyLeading: false,
-        title: Text(
-          'My Notes',
-          style: TextStyle(
-            color: isDark ? Colors.white : Colors.black,
-            fontSize: 24.sp,
-            fontWeight: FontWeight.bold,
-          ),
+      child: AppScaffold(
+        appBar: GlassAppBar(
+          title: 'My Notes',
+          actions: [
+            AppIconButton(
+              icon: _isListView ? Icons.grid_view : Icons.view_list,
+              onPressed: () => setState(() => _isListView = !_isListView),
+              tooltip: _isListView ? 'Grid View' : 'List View',
+            ),
+            AppIconButton(
+              icon: Icons.search,
+              onPressed: _openSearch,
+              tooltip: 'Search',
+            ),
+            AppIconButton(
+              icon: Icons.settings_outlined,
+              onPressed: _openSettings,
+              tooltip: 'Settings',
+            ),
+          ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isListView ? Icons.grid_view : Icons.view_list,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-            onPressed: () {
-              setState(() => _isListView = !_isListView);
-            },
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.search,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-            onPressed: _openSearch,
-          ),
-          IconButton(
-            icon: Icon(
-              Icons.settings_outlined,
-              color: isDark ? Colors.white : Colors.black,
-            ),
-            onPressed: _openSettings,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Search Bar with Voice Input
-          Container(
-            padding: EdgeInsets.all(16.w),
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _searchController,
-                    decoration: InputDecoration(
+        body: Column(
+          children: [
+            // Search Bar with Voice Input
+            PageContainer(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: SearchTextField(
+                      controller: _searchController,
                       hintText: 'Search notes...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                      prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                      suffixIcon: _searchController.text.isNotEmpty
-                          ? IconButton(
-                              icon: const Icon(Icons.clear, color: Colors.grey),
-                              onPressed: () {
-                                _searchController.clear();
-                                _loadNotes();
-                              },
-                            )
-                          : null,
-                      filled: true,
-                      fillColor: isDark
-                          ? AppColors.darkBackground
-                          : Colors.grey.shade100,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.r),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 12.h,
-                      ),
+                      onChanged: (value) {
+                        // Search is handled by listener
+                      },
                     ),
                   ),
-                ),
-                SizedBox(width: 12.w),
-                VoiceInputButton(
-                  isListening: _isListening,
-                  onPressed: _isListening
-                      ? _stopVoiceSearch
-                      : _startVoiceSearch,
-                  size: 48.w,
-                ),
-              ],
+                  SizedBox(width: AppSpacing.md),
+                  VoiceInputButton(
+                    isListening: _isListening,
+                    onPressed: _isListening
+                        ? _stopVoiceSearch
+                        : _startVoiceSearch,
+                    size: 48,
+                  ),
+                ],
+              ),
             ),
-          ),
 
-          // Notes List/Grid
-          Expanded(
-            child: BlocBuilder<NotesBloc, NoteState>(
-              builder: (context, state) {
-                if (state is NoteLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+            // Notes List/Grid
+            Expanded(
+              child: BlocBuilder<NotesBloc, NoteState>(
+                builder: (context, state) {
+                  if (state is NoteLoading) {
+                    return const AppLoadingIndicator();
+                  }
 
-                if (state is NoteError) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64.sp,
-                          color: Colors.red,
-                        ),
-                        SizedBox(height: 16.h),
-                        Text(
-                          'Error loading notes',
-                          style: TextStyle(fontSize: 16.sp),
-                        ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          state.message,
-                          style: TextStyle(fontSize: 14.sp, color: Colors.grey),
-                        ),
-                        SizedBox(height: 24.h),
-                        ElevatedButton(
-                          onPressed: _loadNotes,
-                          child: const Text('Retry'),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                if (state is NotesLoaded) {
-                  if (state.notes.isEmpty) {
-                    return EmptyStateWidget(
-                      icon: Icons.note_outlined,
-                      title: _searchController.text.isNotEmpty
-                          ? 'No notes found'
-                          : 'No notes yet',
-                      subtitle: _searchController.text.isNotEmpty
-                          ? 'Try a different search term'
-                          : 'Tap the + button to create your first note',
+                  if (state is NoteError) {
+                    return ErrorState(
+                      title: 'Error loading notes',
+                      message: state.message,
+                      actionText: 'Retry',
+                      onActionPressed: _loadNotes,
                     );
                   }
 
-                  return RefreshIndicator(
-                    onRefresh: () async => _loadNotes(),
-                    child: _isListView
-                        ? _buildListView(state.notes)
-                        : _buildGridView(state.notes),
-                  );
-                }
+                  if (state is NotesLoaded) {
+                    if (state.notes.isEmpty) {
+                      return EmptyStateCard(
+                        icon: Icons.note_outlined,
+                        title: _searchController.text.isNotEmpty
+                            ? 'No notes found'
+                            : 'No notes yet',
+                        message: _searchController.text.isNotEmpty
+                            ? 'Try a different search term'
+                            : 'Tap the + button to create your first note',
+                        actionText: _searchController.text.isEmpty
+                            ? 'Create Note'
+                            : null,
+                        onActionPressed: _searchController.text.isEmpty
+                            ? _createNewNote
+                            : null,
+                      );
+                    }
 
-                return const SizedBox();
-              },
+                    return RefreshIndicator(
+                      onRefresh: () async => _loadNotes(),
+                      child: _isListView
+                          ? _buildListView(state.notes)
+                          : _buildGridView(state.notes),
+                    );
+                  }
+
+                  return const SizedBox();
+                },
+              ),
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _createNewNote,
-        backgroundColor: AppColors.primaryColor,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('New Note', style: TextStyle(color: Colors.white)),
+          ],
+        ),
+        floatingActionButton: AppFAB(
+          icon: Icons.add,
+          onPressed: _createNewNote,
+          tooltip: 'Create New Note',
+        ),
       ),
     );
   }
 
   Widget _buildGridView(List<Note> notes) {
     return GridView.builder(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(AppSpacing.lg),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 12.w,
-        mainAxisSpacing: 12.h,
+        crossAxisSpacing: AppSpacing.md,
+        mainAxisSpacing: AppSpacing.md,
         childAspectRatio: 0.85,
       ),
       itemCount: notes.length,
       itemBuilder: (context, index) {
-        return NoteCardWidget(
-          note: notes[index],
-          onTap: () => _openNote(notes[index]),
-          onLongPress: () {},
-          onPin: () {
-            final note = notes[index];
-            context.read<NotesBloc>().add(
-              UpdateNoteEvent(
-                note.copyWith(
-                  isPinned: !note.isPinned,
-                  updatedAt: DateTime.now(),
-                ),
-              ),
-            );
-          },
-          onColorChange: (color) {
-            final note = notes[index];
-            context.read<NotesBloc>().add(
-              UpdateNoteEvent(
-                note.copyWith(color: color, updatedAt: DateTime.now()),
-              ),
-            );
-          },
-          onDelete: () {
-            context.read<NotesBloc>().add(DeleteNoteEvent(notes[index].id));
-          },
+        final note = notes[index];
+        return NoteCard(
+          title: note.title,
+          content: note.content,
+          category: note.tags.isNotEmpty ? note.tags.first : null,
+          categoryColor: AppColors.getNoteColor(context, note.color),
+          createdAt: note.createdAt,
+          isPinned: note.isPinned,
+          onTap: () => _openNote(note),
+          margin: EdgeInsets.zero,
         );
       },
     );
@@ -372,40 +288,22 @@ class _NotesListScreenState extends State<NotesListScreen>
 
   Widget _buildListView(List<Note> notes) {
     return ListView.builder(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(AppSpacing.lg),
       itemCount: notes.length,
       itemBuilder: (context, index) {
-        return Padding(
-          padding: EdgeInsets.only(bottom: 12.h),
-          child: NoteCardWidget(
-            note: notes[index],
-            onTap: () => _openNote(notes[index]),
-            onLongPress: () {},
-            onPin: () {
-              final note = notes[index];
-              context.read<NotesBloc>().add(
-                UpdateNoteEvent(
-                  note.copyWith(
-                    isPinned: !note.isPinned,
-                    updatedAt: DateTime.now(),
-                  ),
-                ),
-              );
-            },
-            onColorChange: (color) {
-              final note = notes[index];
-              context.read<NotesBloc>().add(
-                UpdateNoteEvent(
-                  note.copyWith(color: color, updatedAt: DateTime.now()),
-                ),
-              );
-            },
-            onDelete: () {
-              context.read<NotesBloc>().add(DeleteNoteEvent(notes[index].id));
-            },
-          ),
+        final note = notes[index];
+        return NoteCard(
+          title: note.title,
+          content: note.content,
+          category: note.tags.isNotEmpty ? note.tags.first : null,
+          categoryColor: AppColors.getNoteColor(context, note.color),
+          createdAt: note.createdAt,
+          isPinned: note.isPinned,
+          onTap: () => _openNote(note),
+          margin: EdgeInsets.only(bottom: AppSpacing.md),
         );
       },
     );
   }
 }
+

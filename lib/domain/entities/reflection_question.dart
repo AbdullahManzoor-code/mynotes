@@ -47,3 +47,4 @@ class ReflectionQuestion extends Equatable {
     createdAt,
   ];
 }
+

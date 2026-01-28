@@ -146,3 +146,4 @@ class AppDateUtils {
     return difference.inHours;
   }
 }
+

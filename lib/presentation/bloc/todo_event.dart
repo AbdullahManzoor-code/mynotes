@@ -75,3 +75,4 @@ class UpdateTodoTextEvent extends TodoEvent {
   @override
   List<Object?> get props => [noteId, todoId, newText];
 }
+

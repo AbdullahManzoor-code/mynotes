@@ -57,3 +57,4 @@ class TodoItem extends Equatable {
     );
   }
 }
+

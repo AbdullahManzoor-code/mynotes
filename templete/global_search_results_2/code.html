@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+
+<html class="light dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Global Search Results - MyNotes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cbfe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen">
+<div class="relative flex h-auto min-h-screen w-full flex-col bg-white dark:bg-background-dark max-w-[430px] mx-auto shadow-2xl overflow-x-hidden">
+<!-- TopAppBar (Modified for Search context) -->
+<div class="sticky top-0 z-50 bg-white/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="flex items-center p-4 pb-2 justify-between">
+<h2 class="text-[#111617] dark:text-white text-xl font-bold leading-tight tracking-[-0.015em] flex-1">Global Search</h2>
+<div class="flex items-center justify-end">
+<button class="text-primary text-base font-semibold leading-normal tracking-[0.015em] shrink-0 active:opacity-60 transition-opacity">Cancel</button>
+</div>
+</div>
+<!-- SearchBar -->
+<div class="px-4 py-3">
+<label class="flex flex-col min-w-40 h-12 w-full">
+<div class="flex w-full flex-1 items-stretch rounded-xl h-full shadow-sm">
+<div class="text-[#647e87] flex border-none bg-[#f0f3f4] dark:bg-slate-800 items-center justify-center pl-4 rounded-l-xl border-r-0">
+<span class="material-symbols-outlined">search</span>
+</div>
+<input class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-[#111617] dark:text-white focus:outline-0 focus:ring-0 border-none bg-[#f0f3f4] dark:bg-slate-800 focus:border-none h-full placeholder:text-[#647e87] px-4 rounded-none border-r-0 pr-2 border-l-0 pl-2 text-base font-normal leading-normal" placeholder="Search notes, todos..." value="Weekly Review"/>
+<div class="flex items-center justify-center border-l-0 border-none bg-[#f0f3f4] dark:bg-slate-800 pr-2">
+<button class="flex items-center justify-center p-2 rounded-full hover:bg-black/5 dark:hover:bg-white/5 text-[#647e87]">
+<span class="material-symbols-outlined">cancel</span>
+</button>
+</div>
+<div class="flex items-center justify-center rounded-r-xl border-l-0 border-none bg-[#f0f3f4] dark:bg-slate-800 pr-4">
+<button class="flex items-center justify-center text-primary">
+<span class="material-symbols-outlined">mic</span>
+</button>
+</div>
+</div>
+</label>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto">
+<!-- SectionHeader: Recent Searches -->
+<h3 class="text-[#111617] dark:text-white text-sm uppercase font-bold leading-tight tracking-[0.05em] px-4 pb-2 pt-6 opacity-60">Recent Searches</h3>
+<!-- Chips -->
+<div class="flex gap-3 p-4 pt-2 overflow-x-auto no-scrollbar">
+<div class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f0f3f4] dark:bg-slate-800 px-4 active:bg-primary/20 transition-colors cursor-pointer">
+<p class="text-[#111617] dark:text-white text-sm font-medium leading-normal">Meeting notes</p>
+</div>
+<div class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f0f3f4] dark:bg-slate-800 px-4 active:bg-primary/20 transition-colors cursor-pointer">
+<p class="text-[#111617] dark:text-white text-sm font-medium leading-normal">Grocery list</p>
+</div>
+<div class="flex h-9 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-[#f0f3f4] dark:bg-slate-800 px-4 active:bg-primary/20 transition-colors cursor-pointer">
+<p class="text-[#111617] dark:text-white text-sm font-medium leading-normal">Project Alpha</p>
+</div>
+</div>
+<!-- Results Section: Notes -->
+<h3 class="text-[#111617] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">Notes</h3>
+<div class="divide-y divide-[#f0f3f4] dark:divide-slate-800">
+<div class="flex items-start gap-4 p-4 active:bg-background-light dark:active:bg-slate-900 transition-colors cursor-pointer">
+<div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex flex-col">
+<h4 class="text-[#111617] dark:text-white font-semibold text-base">Weekly Review: Strategic Ideas</h4>
+<p class="text-[#647e87] text-sm line-clamp-1">Refining the product roadmap for Q3 and exploring new calm UI patterns...</p>
+</div>
+</div>
+<div class="flex items-start gap-4 p-4 active:bg-background-light dark:active:bg-slate-900 transition-colors cursor-pointer">
+<div class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+<span class="material-symbols-outlined">description</span>
+</div>
+<div class="flex flex-col">
+<h4 class="text-[#111617] dark:text-white font-semibold text-base">Journal: Friday Review</h4>
+<p class="text-[#647e87] text-sm line-clamp-1">The team meeting went well. Everyone is aligned on the search feature...</p>
+</div>
+</div>
+</div>
+<!-- Results Section: Todos -->
+<h3 class="text-[#111617] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">Todos</h3>
+<div class="px-4 space-y-3">
+<div class="flex items-center gap-4 p-4 rounded-xl border border-[#f0f3f4] dark:border-slate-800 active:scale-[0.98] transition-all">
+<div class="size-6 rounded-full border-2 border-primary flex items-center justify-center">
+</div>
+<div class="flex-1">
+<p class="text-[#111617] dark:text-white font-medium">Finalize Weekly Review presentation</p>
+</div>
+<span class="material-symbols-outlined text-primary text-sm">priority_high</span>
+</div>
+<div class="flex items-center gap-4 p-4 rounded-xl border border-[#f0f3f4] dark:border-slate-800 active:scale-[0.98] transition-all">
+<div class="size-6 rounded-full border-2 border-[#647e87]/30 flex items-center justify-center">
+</div>
+<div class="flex-1">
+<p class="text-[#111617] dark:text-white font-medium">Review design variants for Search</p>
+</div>
+</div>
+</div>
+<!-- Results Section: Reminders -->
+<h3 class="text-[#111617] dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] px-4 pb-2 pt-6">Reminders</h3>
+<div class="px-4 pb-10">
+<div class="flex items-center gap-4 p-4 bg-primary/5 rounded-xl border-l-4 border-primary">
+<span class="material-symbols-outlined text-primary">notifications</span>
+<div class="flex-1">
+<h4 class="text-[#111617] dark:text-white font-semibold">Weekly Sync Reminder</h4>
+<p class="text-[#647e87] text-xs">Today, 4:00 PM</p>
+</div>
+<button class="text-[#647e87]">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Floating Action Button (Optional Context) -->
+<div class="fixed bottom-6 right-6 lg:right-[calc(50%-180px)]">
+<button class="flex size-14 items-center justify-center rounded-full bg-primary text-white shadow-lg active:scale-95 transition-transform">
+<span class="material-symbols-outlined" style="font-size: 32px;">add</span>
+</button>
+</div>
+</div>
+</body></html>

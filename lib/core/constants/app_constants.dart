@@ -144,3 +144,4 @@ class AppConstants {
   static const String permissionErrorMessage =
       'Permission denied. Please grant necessary permissions.';
 }
+

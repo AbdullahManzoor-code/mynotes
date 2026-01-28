@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+
+<html class="light dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Focus Session Active</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#4cbfe6", "background-light": "#f6f7f8", "background-dark": "#111d21"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+        .timer-glow {
+            box-shadow: 0 0 40px -10px rgba(76, 191, 230, 0.3);
+        }
+        .bg-pastel-gradient {
+            background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 50%, #e0f2fe 100%);
+        }
+        .dark .bg-pastel-gradient {
+            background: linear-gradient(135deg, #111d21 0%, #162a31 100%);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-display">
+<div class="relative flex h-screen w-full flex-col bg-pastel-gradient dark:bg-background-dark overflow-hidden select-none">
+<!-- Top App Bar -->
+<div class="flex items-center p-6 justify-between z-10">
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 backdrop-blur-md">
+<span class="material-symbols-outlined text-[#111617] dark:text-white">keyboard_arrow_down</span>
+</div>
+<h2 class="text-[#111617] dark:text-white text-sm font-semibold uppercase tracking-widest">Focus Session</h2>
+<div class="flex items-center justify-center w-10 h-10 rounded-full bg-white/50 dark:bg-white/10 backdrop-blur-md">
+<span class="material-symbols-outlined text-[#111617] dark:text-white">more_horiz</span>
+</div>
+</div>
+<!-- Main Content (Centered) -->
+<div class="flex flex-1 flex-col items-center justify-center px-8">
+<!-- Circular Timer Display -->
+<div class="relative flex items-center justify-center w-72 h-72 mb-12">
+<!-- Outer Progress Ring (Background) -->
+<div class="absolute inset-0 rounded-full border-[10px] border-primary/10"></div>
+<!-- Active Progress Ring -->
+<svg class="absolute inset-0 w-full h-full -rotate-90 transform">
+<circle class="text-primary" cx="144" cy="144" fill="transparent" r="134" stroke="currentColor" stroke-dasharray="842" stroke-dashoffset="168" stroke-width="10"></circle>
+</svg>
+<!-- Timer Numbers -->
+<div class="timer-glow bg-white dark:bg-background-dark/80 backdrop-blur-xl w-60 h-60 rounded-full flex flex-col items-center justify-center z-10 border border-white/20">
+<div class="flex items-baseline gap-1">
+<span class="text-6xl font-bold tracking-tighter text-[#111617] dark:text-white">24</span>
+<span class="text-5xl font-light text-[#111617]/40 dark:text-white/40">:</span>
+<span class="text-6xl font-bold tracking-tighter text-[#111617] dark:text-white">59</span>
+</div>
+<p class="text-xs font-medium text-primary uppercase tracking-[0.2em] mt-2">Time Remaining</p>
+</div>
+</div>
+<!-- Task Label -->
+<div class="text-center space-y-3 max-w-xs">
+<div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+<span class="material-symbols-outlined text-sm leading-none">potted_plant</span>
+<span class="text-[10px] font-bold uppercase tracking-wider">Deep Work Mode</span>
+</div>
+<h1 class="text-[#111617] dark:text-white text-3xl font-bold leading-tight">Finalize Project Proposal</h1>
+<p class="text-[#111617]/60 dark:text-white/60 text-base font-medium">Keep going, you're doing great!</p>
+</div>
+</div>
+<!-- Bottom Controls -->
+<div class="px-8 pb-12 space-y-4 z-10">
+<!-- Progress Summary Mini-Bar -->
+<div class="flex flex-col gap-2 mb-8">
+<div class="flex justify-between items-center text-xs font-bold text-[#111617]/40 dark:text-white/40 uppercase tracking-widest">
+<span>Session Progress</span>
+<span>80%</span>
+</div>
+<div class="h-1.5 w-full bg-white/30 dark:bg-white/5 rounded-full overflow-hidden border border-white/10">
+<div class="h-full bg-primary rounded-full" style="width: 80%;"></div>
+</div>
+</div>
+<!-- Action Buttons -->
+<div class="flex gap-4">
+<!-- Pause Button -->
+<button class="flex-1 flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-white py-5 rounded-xl font-bold text-lg shadow-lg shadow-primary/20 transition-all active:scale-95">
+<span class="material-symbols-outlined">pause_circle</span>
+                    Pause
+                </button>
+<!-- Stop Button -->
+<button class="flex items-center justify-center w-20 bg-white/50 dark:bg-white/10 backdrop-blur-md border border-[#111617]/5 dark:border-white/5 text-[#111617] dark:text-white py-5 rounded-xl transition-all active:scale-95">
+<span class="material-symbols-outlined text-2xl">stop_circle</span>
+</button>
+</div>
+</div>
+<!-- Decorative Elements -->
+<div class="absolute -top-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+<div class="absolute -bottom-24 -right-24 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
+</div>
+</body></html>

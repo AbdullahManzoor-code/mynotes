@@ -75,3 +75,4 @@ class CompressVideoEvent extends MediaEvent {
   @override
   List<Object?> get props => [noteId, mediaId];
 }
+

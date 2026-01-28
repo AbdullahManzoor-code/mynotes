@@ -47,3 +47,4 @@ class SettingsService {
     return prefs.getBool(_vibrateKey) ?? true;
   }
 }
+

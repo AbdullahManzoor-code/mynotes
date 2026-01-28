@@ -284,3 +284,4 @@ class NoteTemplate extends Equatable {
     );
   }
 }
+

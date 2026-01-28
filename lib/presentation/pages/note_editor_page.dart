@@ -730,3 +730,4 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
     }
   }
 }
+

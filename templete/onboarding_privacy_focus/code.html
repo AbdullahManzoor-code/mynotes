@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Onboarding - Privacy Focus</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cbfe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-white font-display">
+<div class="relative flex min-h-screen w-full flex-col max-w-[430px] mx-auto overflow-hidden">
+<!-- TopAppBar Navigation -->
+<div class="flex items-center p-4 pb-2 justify-between">
+<div aria-label="Go back" class="text-white flex size-12 shrink-0 items-center justify-start cursor-pointer">
+<span class="material-symbols-outlined text-[24px]">arrow_back_ios</span>
+</div>
+<div class="text-white/60 text-sm font-medium">Step 3 of 3</div>
+<div class="size-12"></div> <!-- Spacer for balance -->
+</div>
+<!-- Progress Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-4">
+<div class="h-1.5 w-8 rounded-full bg-[#3d4d52]"></div>
+<div class="h-1.5 w-8 rounded-full bg-[#3d4d52]"></div>
+<div class="h-1.5 w-8 rounded-full bg-primary shadow-[0_0_8px_rgba(76,191,230,0.5)]"></div>
+</div>
+<!-- Illustration Section -->
+<div class="flex w-full grow flex-col items-center justify-center @container p-8">
+<div class="relative flex items-center justify-center w-full aspect-square max-w-[280px]">
+<!-- Abstract Glow Background -->
+<div class="absolute inset-0 bg-primary/10 rounded-full blur-3xl"></div>
+<!-- Main Illustration Iconography -->
+<div class="relative flex flex-col items-center">
+<div class="flex items-center justify-center w-40 h-40 bg-background-dark border border-white/10 rounded-[40px] shadow-2xl">
+<span class="material-symbols-outlined text-primary text-[80px]" style="font-variation-settings: 'FILL' 1, 'wght' 300;">lock</span>
+</div>
+<!-- Secondary Small Phone Icon -->
+<div class="absolute -bottom-4 -right-4 flex items-center justify-center w-20 h-20 bg-primary rounded-3xl shadow-lg border-4 border-background-dark">
+<span class="material-symbols-outlined text-background-dark text-[40px]">smartphone</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Text Content -->
+<div class="px-6 pb-12">
+<h1 class="text-white tracking-tight text-[32px] font-bold leading-tight text-center pb-4">
+                Your data, your privacy
+            </h1>
+<p class="text-white/70 text-[17px] font-normal leading-relaxed text-center px-4">
+                Everything is processed locally on your device. Private reflections stay private.
+            </p>
+</div>
+<!-- Bottom Action Button -->
+<div class="p-6 pb-10">
+<button class="w-full bg-primary hover:bg-primary/90 text-background-dark font-bold text-lg py-5 rounded-2xl transition-all active:scale-[0.98] shadow-lg shadow-primary/20">
+                Finish
+            </button>
+<div class="h-2"></div>
+</div>
+<!-- iOS Home Indicator Spacer -->
+<div class="h-5"></div>
+</div>
+</body></html>

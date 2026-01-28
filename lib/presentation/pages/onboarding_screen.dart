@@ -246,3 +246,4 @@ class OnboardingPage {
     required this.color,
   });
 }
+

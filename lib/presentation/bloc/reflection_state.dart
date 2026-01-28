@@ -108,3 +108,4 @@ class ReflectionError extends ReflectionState {
   @override
   List<Object?> get props => [message];
 }
+

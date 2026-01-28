@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cbfe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen flex flex-col">
+<!-- Top App Bar -->
+<div class="relative flex h-auto w-full flex-col bg-transparent group/design-root overflow-x-hidden">
+<div class="flex items-center p-4 pb-2 justify-between">
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-[-0.015em] flex-1 text-center">MyNotes</h2>
+</div>
+</div>
+<!-- Main Content Area -->
+<main class="flex-1 flex flex-col items-center justify-center px-6 max-w-md mx-auto w-full">
+<!-- Hero Image Section -->
+<div class="w-full @container py-4">
+<div class="w-full gap-1 overflow-hidden bg-transparent @[480px]:gap-2 aspect-square rounded-xl flex items-center justify-center relative">
+<!-- Decorative background elements to simulate a serene scene -->
+<div class="absolute inset-0 bg-primary/10 rounded-full blur-3xl transform scale-75"></div>
+<div class="w-full h-full bg-center bg-no-repeat bg-contain flex-1 z-10" data-alt="Illustration of a person sitting peacefully with a notebook" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuADowpdpD0jqHCy_jLDlLGGQDUj9o9666hb4phE7OqsLGYi3KoSkwX6Zq0yE4ADeM-pFziOCvXegf4wyBH7AZgIjIsipr_6X3LRXUX_1eZFboPyTqAHAdCp55vCH-_kdgME61OVwQSrxoA8lHSJpkLajFrVUF0Ysid9m28reL0Y6gMjbVnEAk9B2pDCxWiC2LEotAvo1WWEJK-4UbVpEeX48YUxQjm7pnzo3c-fad6y8vs7EiyBhYYAF0ijYAKENAmAFmGagKbWhsPs");'>
+</div>
+</div>
+</div>
+<!-- Headline -->
+<div class="w-full text-center">
+<h1 class="text-slate-900 dark:text-white tracking-tight text-[32px] font-bold leading-tight pb-3 pt-6 font-display">
+                Welcome to Calm Productivity
+            </h1>
+</div>
+<!-- Body Text -->
+<div class="w-full text-center">
+<p class="text-slate-600 dark:text-slate-300 text-base font-normal leading-relaxed pb-8 pt-1 px-2 font-display">
+                A simpler way to capture notes, tasks, and reflections without the noise.
+            </p>
+</div>
+<!-- Page Indicators -->
+<div class="flex w-full flex-row items-center justify-center gap-3 py-4">
+<div class="h-2 w-2 rounded-full bg-primary"></div>
+<div class="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+<div class="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700"></div>
+</div>
+</main>
+<!-- Footer Actions (Bottom Anchored) -->
+<footer class="w-full max-w-md mx-auto px-6 pb-12 pt-4 flex flex-col gap-3">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-4 px-6 rounded-xl transition-colors text-lg shadow-lg shadow-primary/20">
+            Get Started
+        </button>
+<button class="w-full bg-transparent border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-medium py-4 px-6 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
+            Sign In
+        </button>
+</footer>
+<!-- iOS Home Indicator Spacing -->
+<div class="h-2 w-full"></div>
+</body></html>

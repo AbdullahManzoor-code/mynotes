@@ -35,3 +35,4 @@ class DeleteAlarmEvent extends AlarmEvent {
   @override
   List<Object?> get props => [noteId, alarmId];
 }
+

@@ -10,3 +10,4 @@ abstract class MediaRepository {
   Future<void> playMedia(String noteId, String mediaId);
   Future<void> pauseMedia(String noteId, String mediaId);
 }
+

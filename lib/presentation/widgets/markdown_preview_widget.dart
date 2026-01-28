@@ -245,3 +245,4 @@ class MarkdownPreviewWidget extends StatelessWidget {
         .replaceAll(RegExp(r'`(.+?)`'), r'$1'); // Code
   }
 }
+

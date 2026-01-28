@@ -12,3 +12,4 @@ abstract class NoteRepository {
   Future<void> scheduleReminder(String noteId, DateTime when);
   Future<void> cancelReminder(String noteId);
 }
+

@@ -235,3 +235,4 @@ class SpeechService {
     _speech.stop();
   }
 }
+

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Recurring Todo Schedule Picker</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cbfe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .ios-shadow {
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark min-h-screen flex flex-col justify-end">
+<!-- Screen Content Overlay (Background context) -->
+<div class="fixed inset-0 p-6 opacity-40 select-none pointer-events-none">
+<div class="flex items-center justify-between mb-8">
+<h1 class="text-3xl font-bold dark:text-white">Morning Yoga</h1>
+<span class="material-symbols-outlined dark:text-white">more_horiz</span>
+</div>
+<div class="space-y-4">
+<div class="h-12 w-full bg-white/5 rounded-xl border border-white/10 flex items-center px-4 gap-3">
+<span class="material-symbols-outlined text-primary">calendar_today</span>
+<div class="h-4 w-32 bg-white/10 rounded"></div>
+</div>
+<div class="h-12 w-full bg-white/5 rounded-xl border border-white/10 flex items-center px-4 gap-3">
+<span class="material-symbols-outlined text-primary">notifications</span>
+<div class="h-4 w-24 bg-white/10 rounded"></div>
+</div>
+</div>
+</div>
+<!-- Recurring Schedule Bottom Sheet -->
+<div class="relative w-full max-w-md mx-auto bg-background-light dark:bg-[#111d21] rounded-t-[2.5rem] ios-shadow border-t border-white/5">
+<!-- BottomSheetHandle -->
+<div class="flex flex-col items-center pt-3 pb-2">
+<div class="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-[#3d4d52]"></div>
+</div>
+<!-- SectionHeader -->
+<div class="flex items-center justify-between px-6 pt-2 pb-2">
+<button class="text-primary font-medium text-sm">Cancel</button>
+<h4 class="text-gray-900 dark:text-[#9eb1b7] text-sm font-bold leading-normal tracking-[0.015em] uppercase">Repeat</h4>
+<button class="text-primary font-bold text-sm">Done</button>
+</div>
+<div class="overflow-y-auto max-h-[80vh] pb-10">
+<!-- HeadlineText -->
+<div class="px-6 py-4">
+<h3 class="text-gray-900 dark:text-white tracking-tight text-2xl font-bold leading-tight">Frequency</h3>
+<p class="text-gray-500 dark:text-gray-400 text-sm mt-1">Choose how often this task repeats</p>
+</div>
+<!-- RadioList -->
+<div class="flex flex-col gap-2 p-4 pt-2" style="--radio-dot-svg: url('data:image/svg+xml,%3csvg viewBox=%270 0 16 16%27 fill=%27rgb(76,191,230)%27 xmlns=%27http://www.w3.org/2000/svg%27%3e%3ccircle cx=%278%27 cy=%278%27 r=%274%27/%3e%3c/svg%3e');">
+<label class="flex items-center gap-4 rounded-xl border border-solid border-gray-200 dark:border-[#3d4d52] p-4 flex-row-reverse hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<input class="h-5 w-5 border-2 border-gray-300 dark:border-[#3d4d52] bg-transparent text-transparent checked:border-primary checked:bg-[image:--radio-dot-svg] focus:outline-none focus:ring-0 focus:ring-offset-0 checked:focus:border-primary" name="repeat_freq" type="radio"/>
+<div class="flex grow flex-col">
+<p class="text-gray-900 dark:text-white text-base font-medium">Does not repeat</p>
+</div>
+</label>
+<label class="flex items-center gap-4 rounded-xl border border-solid border-gray-200 dark:border-[#3d4d52] p-4 flex-row-reverse hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<input class="h-5 w-5 border-2 border-gray-300 dark:border-[#3d4d52] bg-transparent text-transparent checked:border-primary checked:bg-[image:--radio-dot-svg] focus:outline-none focus:ring-0 focus:ring-offset-0 checked:focus:border-primary" name="repeat_freq" type="radio"/>
+<div class="flex grow flex-col">
+<p class="text-gray-900 dark:text-white text-base font-medium">Daily</p>
+</div>
+</label>
+<!-- Weekly Selected State (Expanded UI) -->
+<div class="flex flex-col gap-2 rounded-xl border border-solid border-primary/50 bg-primary/5 dark:bg-primary/10 p-4">
+<label class="flex items-center gap-4 flex-row-reverse cursor-pointer">
+<input checked="" class="h-5 w-5 border-2 border-primary bg-transparent text-transparent checked:border-primary checked:bg-[image:--radio-dot-svg] focus:outline-none focus:ring-0 focus:ring-offset-0 checked:focus:border-primary" name="repeat_freq" type="radio"/>
+<div class="flex grow flex-col">
+<p class="text-gray-900 dark:text-white text-base font-semibold">Weekly</p>
+</div>
+</label>
+<!-- SegmentedButtons (Day Picker) -->
+<div class="mt-4">
+<p class="text-xs font-bold text-primary uppercase tracking-wider mb-3 px-1">Repeat on these days</p>
+<div class="flex justify-between items-center gap-2">
+<!-- Mon -->
+<label class="flex-1 aspect-square max-w-[44px] flex items-center justify-center rounded-full border border-primary/30 bg-white dark:bg-background-dark text-gray-500 dark:text-gray-400 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:border-primary transition-all shadow-sm">
+<span>M</span>
+<input checked="" class="hidden" type="checkbox"/>
+</label>
+<!-- Tue -->
+<label class="flex-1 aspect-square max-w-[44px] flex items-center justify-center rounded-full border border-gray-200 dark:border-[#3d4d52] bg-white dark:bg-background-dark text-gray-500 dark:text-gray-400 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:border-primary transition-all shadow-sm">
+<span>T</span>
+<input class="hidden" type="checkbox"/>
+</label>
+<!-- Wed -->
+<label class="flex-1 aspect-square max-w-[44px] flex items-center justify-center rounded-full border border-primary/30 bg-white dark:bg-background-dark text-gray-500 dark:text-gray-400 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:border-primary transition-all shadow-sm">
+<span>W</span>
+<input checked="" class="hidden" type="checkbox"/>
+</label>
+<!-- Thu -->
+<label class="flex-1 aspect-square max-w-[44px] flex items-center justify-center rounded-full border border-gray-200 dark:border-[#3d4d52] bg-white dark:bg-background-dark text-gray-500 dark:text-gray-400 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:border-primary transition-all shadow-sm">
+<span>T</span>
+<input class="hidden" type="checkbox"/>
+</label>
+<!-- Fri -->
+<label class="flex-1 aspect-square max-w-[44px] flex items-center justify-center rounded-full border border-primary/30 bg-white dark:bg-background-dark text-gray-500 dark:text-gray-400 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:border-primary transition-all shadow-sm">
+<span>F</span>
+<input checked="" class="hidden" type="checkbox"/>
+</label>
+<!-- Sat -->
+<label class="flex-1 aspect-square max-w-[44px] flex items-center justify-center rounded-full border border-gray-200 dark:border-[#3d4d52] bg-white dark:bg-background-dark text-gray-500 dark:text-gray-400 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:border-primary transition-all shadow-sm">
+<span>S</span>
+<input class="hidden" type="checkbox"/>
+</label>
+<!-- Sun -->
+<label class="flex-1 aspect-square max-w-[44px] flex items-center justify-center rounded-full border border-gray-200 dark:border-[#3d4d52] bg-white dark:bg-background-dark text-gray-500 dark:text-gray-400 text-sm font-semibold cursor-pointer has-[:checked]:bg-primary has-[:checked]:text-white has-[:checked]:border-primary transition-all shadow-sm">
+<span>S</span>
+<input class="hidden" type="checkbox"/>
+</label>
+</div>
+</div>
+</div>
+<label class="flex items-center gap-4 rounded-xl border border-solid border-gray-200 dark:border-[#3d4d52] p-4 flex-row-reverse hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<input class="h-5 w-5 border-2 border-gray-300 dark:border-[#3d4d52] bg-transparent text-transparent checked:border-primary checked:bg-[image:--radio-dot-svg] focus:outline-none focus:ring-0 focus:ring-offset-0 checked:focus:border-primary" name="repeat_freq" type="radio"/>
+<div class="flex grow flex-col">
+<p class="text-gray-900 dark:text-white text-base font-medium">Monthly</p>
+</div>
+</label>
+<label class="flex items-center gap-4 rounded-xl border border-solid border-gray-200 dark:border-[#3d4d52] p-4 flex-row-reverse hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-gray-400 dark:text-[#3d4d52]">chevron_right</span>
+<div class="flex grow flex-col">
+<p class="text-gray-900 dark:text-white text-base font-medium">Custom...</p>
+</div>
+</label>
+</div>
+<!-- Footer Summary -->
+<div class="px-6 py-4 mt-2">
+<div class="bg-gray-100 dark:bg-white/5 rounded-2xl p-4 flex items-start gap-3">
+<span class="material-symbols-outlined text-primary mt-0.5">info</span>
+<div>
+<p class="text-gray-700 dark:text-gray-300 text-sm leading-relaxed">
+                            This task will repeat every <span class="font-bold text-gray-900 dark:text-white">Monday, Wednesday, and Friday</span>.
+                        </p>
+</div>
+</div>
+</div>
+</div>
+<!-- Safe area padding for mobile -->
+<div class="h-8"></div>
+</div>
+</body></html>

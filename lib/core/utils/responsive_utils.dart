@@ -110,3 +110,4 @@ class ResponsiveUtils {
     return MediaQuery.of(context).viewInsets.bottom > 0;
   }
 }
+

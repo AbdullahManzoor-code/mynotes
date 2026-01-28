@@ -61,3 +61,4 @@ class PermissionService {
     await openAppSettings();
   }
 }
+

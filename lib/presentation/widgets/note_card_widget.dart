@@ -354,3 +354,4 @@ Shared from My Notes
     Share.share(shareText, subject: note.title);
   }
 }
+

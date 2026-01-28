@@ -22,3 +22,4 @@ abstract class ReflectionRepository {
   Future<List<String>> getAvailableCategories();
   Future<int> getAnswerCountForToday();
 }
+

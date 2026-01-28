@@ -273,3 +273,4 @@ class WaveformPainter extends CustomPainter {
         oldDelegate.isAnimating != isAnimating;
   }
 }
+

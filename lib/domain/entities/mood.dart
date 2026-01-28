@@ -174,3 +174,4 @@ class MoodEntry extends Equatable {
     );
   }
 }
+

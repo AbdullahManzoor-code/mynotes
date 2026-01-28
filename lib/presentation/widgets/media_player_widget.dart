@@ -158,3 +158,4 @@ class ImageThumbnailWidget extends StatelessWidget {
     );
   }
 }
+

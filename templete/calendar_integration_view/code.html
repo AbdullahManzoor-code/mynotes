@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Calendar Integration View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#4cbfe6",
+                        "background-light": "#f6f7f8",
+                        "background-dark": "#111d21",
+                        "lavender-event": "#DCD3FF",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white font-display transition-colors duration-300">
+<div class="relative flex min-h-screen w-full flex-col max-w-[480px] mx-auto bg-background-light dark:bg-background-dark overflow-x-hidden border-x border-slate-200 dark:border-slate-800">
+<!-- TopAppBar -->
+<header class="sticky top-0 z-50 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-md">
+<div class="flex items-center p-4 pb-2 justify-between">
+<div class="flex size-10 shrink-0 items-center justify-center cursor-pointer">
+<span class="material-symbols-outlined text-slate-600 dark:text-slate-400">calendar_today</span>
+</div>
+<h2 class="text-slate-900 dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center">Today</h2>
+<div class="flex w-10 items-center justify-end">
+<button class="flex items-center justify-center rounded-lg h-10 w-10 bg-transparent text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+<span class="material-symbols-outlined">search</span>
+</button>
+</div>
+</div>
+<!-- Mini Calendar Scroller -->
+<div class="flex gap-4 overflow-x-auto px-4 py-3 custom-scrollbar">
+<div class="flex flex-col items-center gap-1 min-w-[44px]">
+<span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Mon</span>
+<div class="size-9 flex items-center justify-center rounded-full text-sm font-medium">4</div>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[44px]">
+<span class="text-[11px] font-bold text-primary uppercase tracking-wider">Tue</span>
+<div class="size-9 flex items-center justify-center rounded-full bg-primary text-background-dark text-sm font-bold">5</div>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[44px]">
+<span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Wed</span>
+<div class="size-9 flex items-center justify-center rounded-full text-sm font-medium">6</div>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[44px]">
+<span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Thu</span>
+<div class="size-9 flex items-center justify-center rounded-full text-sm font-medium">7</div>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[44px]">
+<span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Fri</span>
+<div class="size-9 flex items-center justify-center rounded-full text-sm font-medium">8</div>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[44px]">
+<span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Sat</span>
+<div class="size-9 flex items-center justify-center rounded-full text-sm font-medium">9</div>
+</div>
+<div class="flex flex-col items-center gap-1 min-w-[44px]">
+<span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Sun</span>
+<div class="size-9 flex items-center justify-center rounded-full text-sm font-medium">10</div>
+</div>
+</div>
+</header>
+<main class="flex-1 px-4 py-2">
+<!-- Section Header -->
+<div class="flex items-center justify-between py-2">
+<h3 class="text-slate-900 dark:text-white text-sm font-bold uppercase tracking-widest opacity-60">Schedule</h3>
+<span class="text-primary text-xs font-medium">3 tasks • 2 events</span>
+</div>
+<!-- Timeline Integration -->
+<div class="relative mt-4">
+<!-- Timeline Vertical Line -->
+<div class="absolute left-[19px] top-0 bottom-0 w-[1px] bg-slate-200 dark:bg-slate-800"></div>
+<!-- 9:00 AM - MyNotes Task -->
+<div class="grid grid-cols-[40px_1fr] gap-x-4 mb-6 relative">
+<div class="flex flex-col items-center pt-1 relative z-10">
+<div class="bg-background-light dark:bg-background-dark py-1">
+<span class="material-symbols-outlined text-primary text-[20px] fill-current">check_circle</span>
+</div>
+</div>
+<div class="flex flex-col p-4 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/50 shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 dark:text-white text-base font-semibold leading-tight">Morning Standup</p>
+<span class="text-[11px] font-medium text-slate-400 uppercase">9:00 AM</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-sm mt-1">Reviewing sprint goals with the design team</p>
+</div>
+</div>
+<!-- 10:30 AM - Calendar Event (Lavender Style) -->
+<div class="grid grid-cols-[40px_1fr] gap-x-4 mb-6 relative">
+<div class="flex flex-col items-center pt-1 relative z-10">
+<div class="bg-background-light dark:bg-background-dark py-1">
+<span class="material-symbols-outlined text-lavender-event text-[20px]">event</span>
+</div>
+</div>
+<div class="flex flex-col p-4 rounded-xl bg-lavender-event/10 dark:bg-[#DCD3FF15] border border-[#DCD3FF30] relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-lavender-event/60"></div>
+<div class="flex flex-col gap-1">
+<div class="flex justify-between items-start">
+<span class="text-[10px] font-bold text-lavender-event uppercase tracking-wider">iCloud Calendar</span>
+<span class="text-[11px] font-medium text-slate-400 dark:text-lavender-event/60 uppercase">10:30 AM</span>
+</div>
+<p class="text-slate-900 dark:text-white text-base font-bold leading-tight">Client Strategic Meeting</p>
+<p class="text-slate-600 dark:text-slate-300 text-sm">Reviewing annual roadmap and Q4 deliverables</p>
+</div>
+<div class="mt-4 flex gap-2">
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-lavender-event/20 dark:bg-white/10 hover:bg-lavender-event/30 rounded-lg text-xs font-semibold text-slate-800 dark:text-lavender-event transition-colors">
+<span class="material-symbols-outlined text-sm">note_add</span>
+                                Attach Note
+                            </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 bg-transparent border border-lavender-event/20 dark:border-white/10 hover:bg-white/5 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 transition-colors">
+<span class="material-symbols-outlined text-sm">link</span>
+                                Link Todo
+                            </button>
+</div>
+</div>
+</div>
+<!-- Current Time Indicator -->
+<div class="grid grid-cols-[40px_1fr] gap-x-4 mb-6 relative py-2">
+<div class="flex items-center justify-center relative z-20">
+<div class="size-2 rounded-full bg-primary shadow-[0_0_8px_rgba(76,191,230,0.6)]"></div>
+</div>
+<div class="flex items-center">
+<div class="h-[1px] flex-1 bg-primary/30"></div>
+<span class="ml-2 text-[10px] font-bold text-primary uppercase">Now • 12:45 PM</span>
+</div>
+</div>
+<!-- 1:30 PM - Calendar Event (Lavender Style) -->
+<div class="grid grid-cols-[40px_1fr] gap-x-4 mb-6 relative">
+<div class="flex flex-col items-center pt-1 relative z-10">
+<div class="bg-background-light dark:bg-background-dark py-1">
+<span class="material-symbols-outlined text-lavender-event text-[20px]">event</span>
+</div>
+</div>
+<div class="flex items-center justify-between p-4 rounded-xl bg-lavender-event/5 dark:bg-[#DCD3FF08] border border-dashed border-[#DCD3FF20]">
+<div class="flex flex-col">
+<p class="text-slate-700 dark:text-slate-200 text-sm font-semibold">Sync with Marketing</p>
+<p class="text-slate-400 text-[11px] font-medium uppercase">1:30 PM - 2:00 PM</p>
+</div>
+<button class="size-8 flex items-center justify-center rounded-full bg-lavender-event/20 text-slate-800 dark:text-lavender-event">
+<span class="material-symbols-outlined text-sm">add</span>
+</button>
+</div>
+</div>
+<!-- 3:00 PM - MyNotes Task -->
+<div class="grid grid-cols-[40px_1fr] gap-x-4 mb-10 relative">
+<div class="flex flex-col items-center pt-1 relative z-10">
+<div class="bg-background-light dark:bg-background-dark py-1">
+<span class="material-symbols-outlined text-slate-300 dark:text-slate-700 text-[20px]">radio_button_unchecked</span>
+</div>
+</div>
+<div class="flex flex-col p-4 rounded-xl bg-white dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800/50 shadow-sm">
+<div class="flex justify-between items-start">
+<p class="text-slate-900 dark:text-white text-base font-semibold leading-tight">Review Project Specs</p>
+<span class="text-[11px] font-medium text-slate-400 uppercase">3:00 PM</span>
+</div>
+<div class="flex gap-2 mt-2">
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-primary/10 text-primary uppercase">Work</span>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-orange-500/10 text-orange-500 uppercase">High Priority</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Floating Action Button -->
+<button class="fixed bottom-24 right-6 size-14 bg-primary text-background-dark rounded-full shadow-lg shadow-primary/20 flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-50">
+<span class="material-symbols-outlined font-bold">add</span>
+</button>
+<!-- Bottom Navigation -->
+<nav class="sticky bottom-0 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 flex justify-around items-center py-4 px-6 z-50">
+<div class="flex flex-col items-center gap-1 text-primary">
+<span class="material-symbols-outlined">description</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Notes</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">task_alt</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Tasks</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Schedule</span>
+</div>
+<div class="flex flex-col items-center gap-1 text-slate-400 hover:text-primary transition-colors cursor-pointer">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-[10px] font-bold uppercase tracking-widest">Settings</span>
+</div>
+</nav>
+<!-- Safe Area Spacer for iOS -->
+<div class="h-6 bg-background-light/95 dark:bg-background-dark/95"></div>
+</div>
+</body></html>

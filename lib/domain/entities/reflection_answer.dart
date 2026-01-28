@@ -47,3 +47,4 @@ class ReflectionAnswer extends Equatable {
     draft,
   ];
 }
+

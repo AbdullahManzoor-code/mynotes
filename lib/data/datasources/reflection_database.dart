@@ -98,3 +98,4 @@ class ReflectionDatabase {
     return presetPrompts[index];
   }
 }
+

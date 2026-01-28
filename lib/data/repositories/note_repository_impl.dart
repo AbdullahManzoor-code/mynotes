@@ -146,3 +146,4 @@ class NoteRepositoryImpl implements NoteRepository {
     // Deprecated
   }
 }
+

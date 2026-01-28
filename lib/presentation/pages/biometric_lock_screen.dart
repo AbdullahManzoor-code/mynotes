@@ -257,3 +257,4 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
     );
   }
 }
+

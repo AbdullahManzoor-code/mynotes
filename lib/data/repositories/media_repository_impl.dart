@@ -240,3 +240,4 @@ class MediaRepositoryImpl implements MediaRepository {
     await _audioPlayer.dispose();
   }
 }
+

@@ -74,3 +74,4 @@ class AudioPlayingState extends MediaState {
   @override
   List<Object?> get props => [noteId, mediaId, isPlaying];
 }
+

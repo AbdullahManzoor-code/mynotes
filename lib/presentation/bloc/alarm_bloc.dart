@@ -125,3 +125,4 @@ class AlarmBloc extends Bloc<AlarmEvent, AlarmState> {
     }
   }
 }
+

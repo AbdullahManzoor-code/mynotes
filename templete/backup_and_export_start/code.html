@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Backup &amp; Export - Start</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13b6ec",
+                        "background-light": "#f6f8f8",
+                        "background-dark": "#101d22",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-white transition-colors duration-300">
+<div class="relative flex min-h-screen w-full flex-col max-w-[480px] mx-auto overflow-x-hidden border-x border-slate-200 dark:border-slate-800 shadow-xl">
+<!-- TopAppBar -->
+<div class="flex items-center bg-background-light dark:bg-background-dark p-4 justify-between sticky top-0 z-10">
+<div class="flex size-10 shrink-0 items-center justify-center cursor-pointer hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full transition-colors">
+<span class="material-symbols-outlined text-2xl">close</span>
+</div>
+<h2 class="text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">Backup &amp; Export</h2>
+</div>
+<div class="flex flex-col flex-1 px-4 pb-8">
+<!-- HeaderImage / Illustration -->
+<div class="flex justify-center py-8">
+<div class="relative w-48 h-48 flex items-center justify-center rounded-full bg-primary/10">
+<div class="absolute inset-0 bg-primary/5 rounded-full blur-2xl"></div>
+<!-- Using a styled div to represent the illustration instead of external image for reliability -->
+<div class="relative flex items-center justify-center bg-background-light dark:bg-background-dark w-32 h-32 rounded-3xl border-4 border-primary shadow-[0_0_40px_rgba(19,182,236,0.3)]">
+<span class="material-symbols-outlined text-primary text-6xl" style="font-variation-settings: 'FILL' 1;">enhanced_encryption</span>
+</div>
+<div class="absolute bottom-4 right-4 bg-primary text-white p-2 rounded-xl shadow-lg">
+<span class="material-symbols-outlined text-xl">cloud_done</span>
+</div>
+</div>
+</div>
+<!-- HeadlineText -->
+<div class="text-center space-y-2 mb-8">
+<h1 class="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Your data, your control</h1>
+<p class="text-slate-500 dark:text-slate-400 text-sm">Create a complete archive of your productivity workspace.</p>
+</div>
+<!-- Included Items Section -->
+<div class="space-y-1 mb-8">
+<h3 class="text-sm font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1 pb-2">Included in export</h3>
+<!-- ListItem: Notes -->
+<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl px-4 min-h-[72px] transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined text-2xl">description</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-base font-semibold leading-normal">Notes</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-normal leading-normal">Formatted text and attached media</p>
+</div>
+</div>
+<!-- ListItem: Todos -->
+<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl px-4 min-h-[72px] transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined text-2xl">check_circle</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-base font-semibold leading-normal">Todos &amp; History</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-normal leading-normal">Task lists and completion logs</p>
+</div>
+</div>
+<!-- ListItem: Journal -->
+<div class="flex items-center gap-4 bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl px-4 min-h-[72px] transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+<div class="text-primary flex items-center justify-center rounded-lg bg-primary/10 shrink-0 size-12">
+<span class="material-symbols-outlined text-2xl">auto_stories</span>
+</div>
+<div class="flex flex-col justify-center">
+<p class="text-base font-semibold leading-normal">Reflection Journal</p>
+<p class="text-slate-500 dark:text-slate-400 text-xs font-normal leading-normal">Daily thoughts and mood tracking</p>
+</div>
+</div>
+</div>
+<!-- Configuration Toggle -->
+<div class="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-800 rounded-xl p-4 flex items-center justify-between mb-8">
+<div class="flex flex-col">
+<span class="font-semibold text-sm">Include media files</span>
+<span class="text-xs text-slate-500 dark:text-slate-400">Significantly increases file size</span>
+</div>
+<!-- iOS Style Toggle -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-slate-300 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<!-- Spacer -->
+<div class="flex-1"></div>
+<!-- Footer Actions -->
+<div class="space-y-4 pt-4">
+<button class="w-full bg-primary hover:bg-primary/90 text-white font-bold py-4 rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 transition-transform active:scale-95">
+                    Start Export
+                    <span class="material-symbols-outlined text-xl">arrow_forward</span>
+</button>
+<div class="flex flex-col items-center gap-2 text-center">
+<div class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 text-xs">
+<span class="material-symbols-outlined text-sm">shield_lock</span>
+<span>Privacy First</span>
+</div>
+<p class="text-slate-500 dark:text-slate-400 text-[11px] leading-relaxed max-w-[280px]">
+                        All data is processed locally on your device before being zipped for you. No unencrypted data ever leaves your hardware.
+                    </p>
+</div>
+</div>
+</div>
+<!-- iOS Home Indicator Safe Area Spacer -->
+<div class="h-6 bg-background-light dark:bg-background-dark"></div>
+</div>
+</body></html>

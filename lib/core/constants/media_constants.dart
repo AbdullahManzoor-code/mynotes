@@ -32,3 +32,4 @@ class MediaConstants {
   static const int maxCachedImages = 100;
   static const int cacheExpirationHours = 24;
 }
+

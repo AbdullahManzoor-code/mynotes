@@ -1,7 +1,6 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/utils/date_utils.dart' as app_date;
 import '../../domain/entities/alarm.dart';
 import '../../domain/entities/note.dart';
@@ -11,6 +10,8 @@ import '../bloc/note_event.dart';
 import '../bloc/alarm_bloc.dart';
 import '../bloc/alarm_event.dart';
 import '../bloc/alarm_state.dart';
+import '../design_system/design_system.dart';
+import '../widgets/empty_state_widget.dart';
 import '../widgets/alarm_bottom_sheet.dart';
 import 'note_editor_page.dart';
 
@@ -49,33 +50,38 @@ class _RemindersScreenState extends State<RemindersScreen>
     return BlocListener<AlarmBloc, AlarmState>(
       listener: (context, state) {
         if (state is AlarmSuccess) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.successColor,
-              behavior: SnackBarBehavior.floating,
-            ),
+          AppSnackbar.show(
+            context,
+            message: state.message,
+            type: SnackbarType.success,
           );
           // Reload notes to reflect changes
           context.read<NotesBloc>().add(const LoadNotesEvent());
         } else if (state is AlarmError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              backgroundColor: AppColors.errorColor,
-              behavior: SnackBarBehavior.floating,
-            ),
+          AppSnackbar.show(
+            context,
+            message: state.message,
+            type: SnackbarType.error,
           );
         }
       },
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Reminders'),
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'Upcoming', icon: Icon(Icons.schedule)),
-              Tab(text: 'Calendar', icon: Icon(Icons.calendar_month)),
+      child: AppScaffold(
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(AppSpacing.appBarHeight + 48.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GlassAppBar(title: 'Reminders'),
+              TabBar(
+                controller: _tabController,
+                tabs: const [
+                  Tab(text: 'Upcoming', icon: Icon(Icons.schedule)),
+                  Tab(text: 'Calendar', icon: Icon(Icons.calendar_month)),
+                ],
+                indicatorColor: AppColors.primary,
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.textSecondary(context),
+              ),
             ],
           ),
         ),
@@ -93,7 +99,6 @@ class _RemindersScreenState extends State<RemindersScreen>
         if (state is NoteLoading) {
           return const Center(child: CircularProgressIndicator());
         }
-
         if (state is NotesLoaded) {
           final notesWithAlarms = state.notes
               .where((note) => note.alarms != null && note.alarms!.isNotEmpty)
@@ -154,7 +159,7 @@ class _RemindersScreenState extends State<RemindersScreen>
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
-        padding: EdgeInsets.only(right: 20.w),
+        padding: EdgeInsets.only(right: AppSpacing.lg),
         decoration: BoxDecoration(
           color: AppColors.errorColor,
           borderRadius: BorderRadius.circular(12),
@@ -188,140 +193,197 @@ class _RemindersScreenState extends State<RemindersScreen>
           DeleteAlarmEvent(noteId: note.id, alarmId: alarm.id),
         );
       },
-      child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: InkWell(
-          onTap: () => _openNote(note),
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Note title
-                Row(
-                  children: [
-                    Icon(
-                      Icons.note,
-                      size: 20,
-                      color: Color(note.color.lightColor),
-                    ),
-                    SizedBox(width: 8.w),
-                    Expanded(
-                      child: Text(
-                        note.title.isNotEmpty ? note.title : 'Untitled Note',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+      child: Container(
+        margin: EdgeInsets.only(bottom: AppSpacing.md),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => _openNote(note),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                child: Container(
+                  padding: EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: AppColors.getSurfaceColor(
+                      Theme.of(context).brightness,
+                    ).withOpacity(0.7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.getBorderColor(
+                        Theme.of(context).brightness,
                       ),
-                    ),
-                    // Active indicator
-                    if (alarm.isActive)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.successColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Text(
-                          'Active',
-                          style: TextStyle(
-                            color: AppColors.successColor,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-
-                SizedBox(height: 12.h),
-
-                // Alarm Message (if any)
-                if (alarm.message != null &&
-                    alarm.message!.isNotEmpty &&
-                    alarm.message != note.title)
-                  Padding(
-                    padding: EdgeInsets.only(bottom: 8.h),
-                    child: Text(
-                      alarm.message!,
-                      style: TextStyle(
-                        fontStyle: FontStyle.italic,
-                        color: Colors.grey[700],
-                      ),
+                      width: 1,
                     ),
                   ),
-
-                // Alarm time
-                Row(
-                  children: [
-                    Icon(
-                      isOverdue ? Icons.error_outline : Icons.access_time,
-                      size: 18,
-                      color: isOverdue
-                          ? AppColors.errorColor
-                          : AppColors.infoColor,
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      app_date.AppDateUtils.formatDateTime(alarm.alarmTime),
-                      style: TextStyle(
-                        color: isOverdue ? AppColors.errorColor : null,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      timeUntil,
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                    ),
-                  ],
-                ),
-
-                // Repeat type
-                if (alarm.repeatType != AlarmRepeatType.none) ...[
-                  SizedBox(height: 8.h),
-                  Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        alarm.repeatType.icon, // Use icon from enum
-                        style: TextStyle(fontSize: 14),
+                      // Note title
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(AppSpacing.xs),
+                            decoration: BoxDecoration(
+                              color: AppColors.getNoteColor(
+                                note.color,
+                                context,
+                              ).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radiusSm,
+                              ),
+                            ),
+                            child: Icon(
+                              Icons.note,
+                              size: 16,
+                              color: AppColors.getNoteColor(
+                                note.color,
+                                context,
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: AppSpacing.sm),
+                          Expanded(
+                            child: Text(
+                              note.title.isNotEmpty
+                                  ? note.title
+                                  : 'Untitled Note',
+                              style: AppTypography.bodyLarge(
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          // Active indicator
+                          if (alarm.isActive)
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm,
+                                vertical: AppSpacing.xs,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.successColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(
+                                  AppSpacing.radiusMedium,
+                                ),
+                              ),
+                              child: Text(
+                                'Active',
+                                style: AppTypography.captionSmall(
+                                  color: AppColors.successColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        alarm.repeatType.displayName,
-                        style: TextStyle(color: Colors.grey[600], fontSize: 12),
+
+                      SizedBox(height: AppSpacing.sm),
+
+                      // Alarm Message (if any)
+                      if (alarm.message != null &&
+                          alarm.message!.isNotEmpty &&
+                          alarm.message != note.title)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: AppSpacing.xs),
+                          child: Text(
+                            alarm.message!,
+                            style: AppTypography.bodyMedium(
+                              color: AppColors.getSecondaryTextColor(
+                                Theme.of(context).brightness,
+                              ),
+                            ).copyWith(fontStyle: FontStyle.italic),
+                          ),
+                        ),
+
+                      // Alarm time
+                      Row(
+                        children: [
+                          Icon(
+                            isOverdue ? Icons.error_outline : Icons.access_time,
+                            size: 16,
+                            color: isOverdue
+                                ? AppColors.errorColor
+                                : AppColors.infoColor,
+                          ),
+                          SizedBox(width: AppSpacing.sm),
+                          Text(
+                            app_date.AppDateUtils.formatDateTime(
+                              alarm.alarmTime,
+                            ),
+                            style: AppTypography.bodyMedium(
+                              color: isOverdue ? AppColors.errorColor : null,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(width: AppSpacing.sm),
+                          Text(
+                            timeUntil,
+                            style: AppTypography.captionSmall(
+                              color: AppColors.getSecondaryTextColor(
+                                Theme.of(context).brightness,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      // Repeat type
+                      if (alarm.repeatType != AlarmRepeatType.none) ...[
+                        SizedBox(height: AppSpacing.xs),
+                        Row(
+                          children: [
+                            Text(
+                              alarm.repeatType.icon,
+                              style: TextStyle(fontSize: 14),
+                            ),
+                            SizedBox(width: AppSpacing.sm),
+                            Text(
+                              alarm.repeatType.displayName,
+                              style: AppTypography.captionSmall(
+                                color: AppColors.getSecondaryTextColor(
+                                  Theme.of(context).brightness,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+
+                      SizedBox(height: AppSpacing.sm),
+
+                      // Actions
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: () => _snoozeAlarm(alarm, note),
+                            icon: const Icon(Icons.snooze, size: 18),
+                            label: const Text('Snooze'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primaryColor,
+                              textStyle: AppTypography.buttonMedium(),
+                            ),
+                          ),
+                          SizedBox(width: AppSpacing.sm),
+                          TextButton.icon(
+                            onPressed: () => _editAlarm(alarm, note),
+                            icon: const Icon(Icons.edit, size: 18),
+                            label: const Text('Edit'),
+                            style: TextButton.styleFrom(
+                              foregroundColor: AppColors.primaryColor,
+                              textStyle: AppTypography.buttonMedium(),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-
-                SizedBox(height: 12.h),
-
-                // Actions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton.icon(
-                      onPressed: () => _snoozeAlarm(alarm, note),
-                      icon: const Icon(Icons.snooze, size: 18),
-                      label: const Text('Snooze'),
-                    ),
-                    SizedBox(width: 8.w),
-                    TextButton.icon(
-                      onPressed: () => _editAlarm(alarm, note),
-                      icon: const Icon(Icons.edit, size: 18),
-                      label: const Text('Edit'),
-                    ),
-                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -398,7 +460,7 @@ class _RemindersScreenState extends State<RemindersScreen>
           ),
         ),
 
-        SizedBox(height: 8.h),
+        SizedBox(height: AppSpacing.sm),
 
         // Calendar grid
         Expanded(
@@ -457,7 +519,7 @@ class _RemindersScreenState extends State<RemindersScreen>
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildLegendItem(AppColors.primaryColor, 'Today'),
-              SizedBox(width: 24.w),
+              SizedBox(width: AppSpacing.xxl),
               _buildLegendItem(AppColors.accentColor, 'Has Reminder'),
             ],
           ),
@@ -477,34 +539,20 @@ class _RemindersScreenState extends State<RemindersScreen>
             borderRadius: BorderRadius.circular(4),
           ),
         ),
-        SizedBox(width: 8.w),
+        SizedBox(width: AppSpacing.sm),
         Text(label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
 
   Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.notifications_none, size: 80, color: Colors.grey[300]),
-          SizedBox(height: 16.h),
-          Text(
-            'No reminders set',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(color: Colors.grey[600]),
-          ),
-          SizedBox(height: 8.h),
-          Text(
-            'Add reminders to your notes',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
-          ),
-        ],
-      ),
+    return EmptyStateWidget(
+      icon: Icons.notifications_none,
+      title: 'No Reminders',
+      subtitle:
+          'You haven\'t set any reminders yet. Tap the + button to create your first reminder.',
+      actionLabel: 'Create Reminder',
+      onAction: () => _showAddReminderDialog(context),
     );
   }
 
@@ -546,6 +594,22 @@ class _RemindersScreenState extends State<RemindersScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => AlarmBottomSheet(note: note, existingAlarm: alarm),
+    );
+  }
+
+  void _showAddReminderDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Reminder'),
+        content: const Text('Reminder creation UI not implemented.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 }

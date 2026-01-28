@@ -216,3 +216,4 @@ class WaveformIndicator extends StatelessWidget {
     );
   }
 }
+

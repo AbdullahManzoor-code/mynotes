@@ -19,3 +19,4 @@ class AppTheme {
 extension ThemeExtensions on ThemeData {
   // Helpers for consistent typography or shadows can be added here
 }
+

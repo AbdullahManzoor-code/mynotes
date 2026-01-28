@@ -662,3 +662,4 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     }
   }
 }
+

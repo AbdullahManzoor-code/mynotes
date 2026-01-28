@@ -46,3 +46,4 @@ class ReflectionAnswerModel extends ReflectionAnswer {
     };
   }
 }
+

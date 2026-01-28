@@ -150,3 +150,4 @@ class AppColors {
   static const Color outlineColor =
       outlineLight; // Use light as default, will adapt based on theme
 }
+
