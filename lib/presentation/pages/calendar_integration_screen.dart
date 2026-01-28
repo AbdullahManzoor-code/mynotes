@@ -12,7 +12,7 @@ import '../bloc/note_state.dart';
 /// Calendar Integration View
 /// Shows calendar with integrated reminders and events
 class CalendarIntegrationScreen extends StatefulWidget {
-  const CalendarIntegrationScreen({Key? key}) : super(key: key);
+  const CalendarIntegrationScreen({super.key});
 
   @override
   State<CalendarIntegrationScreen> createState() =>
@@ -24,7 +24,7 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
   DateTime _selectedDay = DateTime.now();
   DateTime _focusedDay = DateTime.now();
   List<Note> _notesForSelectedDay = [];
-  Map<DateTime, List<Note>> _notesMap = {};
+  final Map<DateTime, List<Note>> _notesMap = {};
 
   @override
   void initState() {

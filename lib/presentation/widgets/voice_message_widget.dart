@@ -12,12 +12,12 @@ class VoiceMessageWidget extends StatefulWidget {
   final VoidCallback? onDelete;
 
   const VoiceMessageWidget({
-    Key? key,
+    super.key,
     required this.audioPath,
     this.duration,
     this.isSent = true,
     this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   State<VoiceMessageWidget> createState() => _VoiceMessageWidgetState();
@@ -273,4 +273,3 @@ class WaveformPainter extends CustomPainter {
         oldDelegate.isAnimating != isAnimating;
   }
 }
-

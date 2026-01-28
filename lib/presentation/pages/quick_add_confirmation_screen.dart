@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:async';
-import 'dart:ui' as ui;
 import '../design_system/design_system.dart';
-import '../bloc/note_bloc.dart';
-import '../bloc/note_event.dart';
-import '../bloc/note_state.dart';
-import '../../domain/entities/note.dart';
 
 /// Quick Add Confirmation Screen
 /// Shows confirmation after creating a note/todo with options for quick actions

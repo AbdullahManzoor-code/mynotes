@@ -5,8 +5,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../core/services/settings_service.dart';
 import '../../core/services/biometric_auth_service.dart';
-import '../../core/utils/database_health_check.dart';
-import '../../data/datasources/local_database.dart';
 import '../bloc/theme_bloc.dart';
 import '../bloc/theme_event.dart';
 import '../bloc/theme_state.dart';
@@ -14,13 +12,12 @@ import '../design_system/design_system.dart';
 import 'voice_settings_screen.dart';
 import 'backup_export_screen.dart';
 import 'biometric_lock_screen.dart';
-import 'app_settings_screen.dart';
 import '../widgets/developer_test_links_sheet.dart';
 
 /// Settings Screen
 /// Customize app behavior, theme, notifications, and storage
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -110,32 +107,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAppearanceSection(bool isDark) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 16.w),
-      decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-        border: Border.all(
-          color: isDark
-              ? AppColors.borderDark.withOpacity(0.2)
-              : AppColors.borderLight,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    return BlocBuilder<ThemeBloc, ThemeState>(
+      builder: (context, themeState) {
+        return Container(
+          margin: EdgeInsets.symmetric(horizontal: 16.w),
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+            border: Border.all(
+              color: isDark
+                  ? AppColors.borderDark.withOpacity(0.2)
+                  : AppColors.borderLight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: _buildSettingTile(
-        icon: Icons.auto_awesome,
-        title: 'Micro-animations',
-        subtitle: 'Smooth transitions for focus',
-        trailing: _buildSwitch(_useCustomColors, (value) {
-          setState(() => _useCustomColors = value);
-        }),
-      ),
+          child: Column(
+            children: [
+              _buildSettingTile(
+                icon: isDark ? Icons.dark_mode : Icons.light_mode,
+                title: 'Dark Mode',
+                subtitle: isDark
+                    ? 'Currently using dark theme'
+                    : 'Currently using light theme',
+                trailing: _buildSwitch(themeState.themeMode == ThemeMode.dark, (
+                  value,
+                ) {
+                  context.read<ThemeBloc>().add(const ToggleThemeEvent());
+                }),
+                hasDivider: true,
+              ),
+              _buildSettingTile(
+                icon: Icons.auto_awesome,
+                title: 'Micro-animations',
+                subtitle: 'Smooth transitions for focus',
+                trailing: _buildSwitch(_useCustomColors, (value) {
+                  setState(() => _useCustomColors = value);
+                }),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -637,16 +655,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
               ),
               const PopupMenuItem(
-                value: 'app',
-                child: Row(
-                  children: [
-                    Icon(Icons.apps, size: 20),
-                    SizedBox(width: 12),
-                    Text('App Settings'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
                 value: 'security',
                 child: Row(
                   children: [
@@ -706,12 +714,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const VoiceSettingsScreen()),
-        );
-        break;
-      case 'app':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AppSettingsScreen()),
         );
         break;
       case 'security':

@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
@@ -17,7 +18,7 @@ import '../widgets/sound_level_indicator.dart';
 class AdvancedNoteEditor extends StatefulWidget {
   final Note? note;
 
-  const AdvancedNoteEditor({Key? key, this.note}) : super(key: key);
+  const AdvancedNoteEditor({super.key, this.note});
 
   @override
   State<AdvancedNoteEditor> createState() => _AdvancedNoteEditorState();
@@ -210,13 +211,13 @@ class _AdvancedNoteEditorState extends State<AdvancedNoteEditor>
             final cleanText = _commandService.extractTextWithoutCommands(text);
             if (cleanText.isNotEmpty) {
               final index = _quillController.selection.baseOffset;
-              _quillController.document.insert(index, cleanText + ' ');
+              _quillController.document.insert(index, '$cleanText ');
             }
           }
         } else {
           // Insert as regular text
           final index = _quillController.selection.baseOffset;
-          _quillController.document.insert(index, text + ' ');
+          _quillController.document.insert(index, '$text ');
         }
 
         setState(() {

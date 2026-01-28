@@ -8,10 +8,10 @@ class MarkdownPreviewWidget extends StatelessWidget {
   final bool isDark;
 
   const MarkdownPreviewWidget({
-    Key? key,
+    super.key,
     required this.content,
     this.isDark = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -245,4 +245,3 @@ class MarkdownPreviewWidget extends StatelessWidget {
         .replaceAll(RegExp(r'`(.+?)`'), r'$1'); // Code
   }
 }
-

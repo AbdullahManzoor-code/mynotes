@@ -9,7 +9,7 @@ import '../../core/utils/smart_voice_parser.dart';
 /// Demonstrates the power of the unified Notes/Todos/Reminders system
 /// Shows real-time transformation and integration capabilities
 class CrossFeatureDemo extends StatefulWidget {
-  const CrossFeatureDemo({Key? key}) : super(key: key);
+  const CrossFeatureDemo({super.key});
 
   @override
   State<CrossFeatureDemo> createState() => _CrossFeatureDemoState();

@@ -2,9 +2,9 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
-import '../pages/note_editor_page.dart';
+import '../pages/enhanced_note_editor_screen.dart';
 import '../pages/focus_session_screen.dart';
-import '../pages/reminders_screen.dart';
+import '../pages/enhanced_reminders_list_screen.dart';
 import '../pages/settings_screen.dart';
 import '../pages/daily_highlight_summary_screen.dart';
 
@@ -12,7 +12,7 @@ import '../pages/daily_highlight_summary_screen.dart';
 /// Quick access to all app features and recent items
 /// Based on template: global_command_palette_1
 class GlobalCommandPalette extends StatefulWidget {
-  const GlobalCommandPalette({Key? key}) : super(key: key);
+  const GlobalCommandPalette({super.key});
 
   @override
   State<GlobalCommandPalette> createState() => _GlobalCommandPaletteState();
@@ -220,7 +220,9 @@ class _GlobalCommandPaletteState extends State<GlobalCommandPalette>
           _closeAndNavigate(() {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const NoteEditorPage()),
+              MaterialPageRoute(
+                builder: (context) => const EnhancedNoteEditorScreen(),
+              ),
             );
           });
         },
@@ -256,7 +258,9 @@ class _GlobalCommandPaletteState extends State<GlobalCommandPalette>
           _closeAndNavigate(() {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const RemindersScreen()),
+              MaterialPageRoute(
+                builder: (context) => const EnhancedRemindersListScreen(),
+              ),
             );
           });
         },

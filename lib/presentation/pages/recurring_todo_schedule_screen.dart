@@ -14,7 +14,7 @@ class RecurringTodoScheduleScreen extends StatefulWidget {
 class _RecurringTodoScheduleScreenState
     extends State<RecurringTodoScheduleScreen> {
   String _selectedFrequency = 'weekly';
-  Set<int> _selectedDays = {1, 3, 5}; // Mon, Wed, Fri (0=Mon, 6=Sun)
+  final Set<int> _selectedDays = {1, 3, 5}; // Mon, Wed, Fri (0=Mon, 6=Sun)
 
   final List<String> _weekdayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
   final List<String> _weekdayNames = [

@@ -13,6 +13,7 @@ import '../bloc/note_bloc.dart';
 import '../bloc/note_event.dart';
 import '../bloc/note_state.dart';
 import '../../domain/entities/note.dart';
+import '../../core/routes/app_routes.dart';
 
 /// Enhanced Note Editor with Links and Pins
 /// Advanced note editing interface with smart features
@@ -64,7 +65,7 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
   late stt.SpeechToText _speechToText;
   String _voiceText = '';
   bool _isVoiceAvailable = false;
-  String _currentLocale = 'en_US';
+  final String _currentLocale = 'en_US';
 
   @override
   void initState() {
@@ -292,7 +293,7 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
                   _voiceText +
                   currentText.substring(cursorPosition);
             } else {
-              newText = currentText + ' ' + _voiceText;
+              newText = '$currentText $_voiceText';
             }
 
             _contentController.text = newText;
@@ -397,7 +398,7 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
     if (sentences.isNotEmpty) {
       final firstSentence = sentences.first.trim();
       if (firstSentence.length > 20) {
-        return firstSentence + '.';
+        return '$firstSentence.';
       }
     }
 
@@ -468,48 +469,58 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocListener<NotesBloc, NoteState>(
-      listener: (context, state) {
-        if (state is NoteCreated || state is NoteUpdated) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                state is NoteCreated
-                    ? 'Note created successfully'
-                    : 'Note updated successfully',
-              ),
-              backgroundColor: AppColors.primary,
-            ),
-          );
-        } else if (state is NoteError) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-          );
-        }
+    return PopScope(
+      canPop: !_isModified,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _showSaveDialog();
       },
-      child: Scaffold(
-        backgroundColor: AppColors.getBackgroundColor(
-          Theme.of(context).brightness,
-        ),
-        body: CustomScrollView(
-          slivers: [
-            _buildAppBar(isDark),
-            SliverToBoxAdapter(
-              child: Container(
-                constraints: BoxConstraints(maxWidth: 640.w),
-                margin: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Column(
-                  children: [
-                    if (_showSummary) _buildSummarySection(),
-                    _buildNoteEditor(),
-                    SizedBox(height: 100.h),
-                  ],
+      child: BlocListener<NotesBloc, NoteState>(
+        listener: (context, state) {
+          if (state is NoteCreated || state is NoteUpdated) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  state is NoteCreated
+                      ? 'Note created successfully'
+                      : 'Note updated successfully',
+                ),
+                backgroundColor: AppColors.primary,
+              ),
+            );
+          } else if (state is NoteError) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.getBackgroundColor(
+            Theme.of(context).brightness,
+          ),
+          body: CustomScrollView(
+            slivers: [
+              _buildAppBar(isDark),
+              SliverToBoxAdapter(
+                child: Container(
+                  constraints: BoxConstraints(maxWidth: 640.w),
+                  margin: EdgeInsets.symmetric(horizontal: 16.w),
+                  child: Column(
+                    children: [
+                      if (_showSummary) _buildSummarySection(),
+                      _buildNoteEditor(),
+                      SizedBox(height: 100.h),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
+          floatingActionButton: _buildFloatingActionButton(),
         ),
-        floatingActionButton: _buildFloatingActionButton(),
       ),
     );
   }
@@ -868,24 +879,31 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
   }
 
   Widget _buildQuickActionsRow() {
-    return Row(
-      children: [
-        _buildQuickAction(Icons.link, 'Add Link', _showAddLinkDialog),
-        SizedBox(width: 12.w),
-        _buildQuickAction(Icons.image, 'Add Image', _showAddImageDialog),
-        SizedBox(width: 12.w),
-        _buildQuickAction(Icons.alarm, 'Set Reminder', _showReminderDialog),
-        const Spacer(),
-        Text(
-          '${_contentController.text.split(' ').length} words',
-          style: TextStyle(
-            fontSize: 12.sp,
-            color: AppColors.getSecondaryTextColor(
-              Theme.of(context).brightness,
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildQuickAction(Icons.link, 'Link', _showAddLinkDialog),
+          SizedBox(width: 8.w),
+          _buildQuickAction(Icons.image, 'Image', _showAddImageDialog),
+          SizedBox(width: 8.w),
+          _buildQuickAction(Icons.videocam, 'Video', _showAddVideoDialog),
+          SizedBox(width: 8.w),
+          _buildQuickAction(Icons.mic, 'Audio', _showAddAudioDialog),
+          SizedBox(width: 8.w),
+          _buildQuickAction(Icons.alarm, 'Reminder', _showReminderDialog),
+          SizedBox(width: 16.w),
+          Text(
+            '${_contentController.text.split(' ').length} words',
+            style: TextStyle(
+              fontSize: 12.sp,
+              color: AppColors.getSecondaryTextColor(
+                Theme.of(context).brightness,
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -1138,7 +1156,7 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
                       linkText +
                       currentText.substring(cursorPosition);
                 } else {
-                  newText = currentText + '\n' + linkText;
+                  newText = '$currentText\n$linkText';
                 }
 
                 _contentController.text = newText;
@@ -1241,7 +1259,7 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
               imageText +
               currentText.substring(cursorPosition);
         } else {
-          newText = currentText + '\n' + imageText;
+          newText = '$currentText\n$imageText';
         }
 
         _contentController.text = newText;
@@ -1262,6 +1280,78 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  Future<void> _showAddVideoDialog() async {
+    // Navigate to media picker for video selection
+    final result = await Navigator.of(context).pushNamed(
+      AppRoutes.mediaPicker,
+      arguments: {'mediaType': 'video', 'maxSelection': 1},
+    );
+
+    if (result != null && result is List && result.isNotEmpty) {
+      // Insert video reference into note
+      final videoPath = result.first;
+      final videoText = '\n[Video: $videoPath]\n';
+      final currentText = _contentController.text;
+      final cursorPosition = _contentController.selection.baseOffset;
+
+      String newText;
+      if (cursorPosition >= 0) {
+        newText =
+            currentText.substring(0, cursorPosition) +
+            videoText +
+            currentText.substring(cursorPosition);
+      } else {
+        newText = '$currentText$videoText';
+      }
+
+      _contentController.text = newText;
+      _contentController.selection = TextSelection.collapsed(
+        offset: cursorPosition + videoText.length,
+      );
+
+      setState(() {
+        _isModified = true;
+      });
+
+      _debounceAnalysis();
+    }
+  }
+
+  Future<void> _showAddAudioDialog() async {
+    // Navigate to audio recorder screen
+    final result = await Navigator.of(
+      context,
+    ).pushNamed(AppRoutes.audioRecorder);
+
+    if (result != null && result is String && result.isNotEmpty) {
+      // Insert audio reference into note
+      final audioText = '\n[Audio Recording: $result]\n';
+      final currentText = _contentController.text;
+      final cursorPosition = _contentController.selection.baseOffset;
+
+      String newText;
+      if (cursorPosition >= 0) {
+        newText =
+            currentText.substring(0, cursorPosition) +
+            audioText +
+            currentText.substring(cursorPosition);
+      } else {
+        newText = '$currentText$audioText';
+      }
+
+      _contentController.text = newText;
+      _contentController.selection = TextSelection.collapsed(
+        offset: cursorPosition + audioText.length,
+      );
+
+      setState(() {
+        _isModified = true;
+      });
+
+      _debounceAnalysis();
     }
   }
 

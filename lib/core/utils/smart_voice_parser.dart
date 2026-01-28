@@ -219,7 +219,7 @@ class SmartVoiceParser {
 
     // Limit title length
     if (title.length > 50) {
-      title = title.substring(0, 50).trim() + '...';
+      title = '${title.substring(0, 50).trim()}...';
     }
 
     return title;

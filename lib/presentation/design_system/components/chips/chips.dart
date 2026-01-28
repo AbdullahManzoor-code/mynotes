@@ -13,13 +13,13 @@ class CategoryChip extends StatelessWidget {
   final IconData? icon;
 
   const CategoryChip({
-    Key? key,
+    super.key,
     required this.label,
     this.isSelected = false,
     this.color,
     this.onTap,
     this.icon,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -74,11 +74,11 @@ class PriorityTag extends StatelessWidget {
   final IconData? icon;
 
   const PriorityTag({
-    Key? key,
+    super.key,
     required this.label,
     required this.color,
     this.icon,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -120,12 +120,12 @@ class MoodChip extends StatelessWidget {
   final VoidCallback? onTap;
 
   const MoodChip({
-    Key? key,
+    super.key,
     required this.emoji,
     required this.label,
     this.isSelected = false,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -173,11 +173,11 @@ class RemovableChip extends StatelessWidget {
   final VoidCallback? onRemove;
 
   const RemovableChip({
-    Key? key,
+    super.key,
     required this.label,
     this.color,
     this.onRemove,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

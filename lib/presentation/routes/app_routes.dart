@@ -1,5 +1,6 @@
 /// App Routes
 /// Centralized route definitions for the entire app
+library;
 
 class AppRoutes {
   AppRoutes._();

@@ -10,7 +10,7 @@ import '../widgets/language_picker.dart';
 
 /// Voice and Speech Settings Screen
 class VoiceSettingsScreen extends StatefulWidget {
-  const VoiceSettingsScreen({Key? key}) : super(key: key);
+  const VoiceSettingsScreen({super.key});
 
   @override
   State<VoiceSettingsScreen> createState() => _VoiceSettingsScreenState();

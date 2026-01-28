@@ -22,7 +22,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
   final SystemUiOverlayStyle? systemOverlayStyle;
 
   const GlassAppBar({
-    Key? key,
+    super.key,
     this.title,
     this.titleWidget,
     this.actions,
@@ -34,7 +34,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.height,
     this.bottom,
     this.systemOverlayStyle,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize =>
@@ -114,7 +114,7 @@ class TransparentAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double? height;
 
   const TransparentAppBar({
-    Key? key,
+    super.key,
     this.title,
     this.actions,
     this.leading,
@@ -123,7 +123,7 @@ class TransparentAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.textColor,
     this.centerTitle = false,
     this.height,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => Size.fromHeight(height ?? 56.h);
@@ -161,7 +161,7 @@ class CollapsibleGlassAppBar extends StatelessWidget {
   final bool floating;
 
   const CollapsibleGlassAppBar({
-    Key? key,
+    super.key,
     required this.title,
     this.actions,
     this.leading,
@@ -169,7 +169,7 @@ class CollapsibleGlassAppBar extends StatelessWidget {
     this.flexibleSpace,
     this.pinned = true,
     this.floating = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -226,7 +226,7 @@ class SimpleAppBar extends StatelessWidget implements PreferredSizeWidget {
   final double? height;
 
   const SimpleAppBar({
-    Key? key,
+    super.key,
     this.title,
     this.titleWidget,
     this.actions,
@@ -235,7 +235,7 @@ class SimpleAppBar extends StatelessWidget implements PreferredSizeWidget {
     this.backgroundColor,
     this.centerTitle = false,
     this.height,
-  }) : super(key: key);
+  });
 
   @override
   Size get preferredSize => Size.fromHeight(height ?? 56.h);

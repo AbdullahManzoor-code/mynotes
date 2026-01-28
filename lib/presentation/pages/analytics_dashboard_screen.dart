@@ -10,7 +10,7 @@ import '../../data/repositories/unified_repository.dart';
 /// Unified productivity insights across Notes, Todos, and Reminders
 /// Shows the power of integrated data analytics
 class AnalyticsDashboardScreen extends StatefulWidget {
-  const AnalyticsDashboardScreen({Key? key}) : super(key: key);
+  const AnalyticsDashboardScreen({super.key});
 
   @override
   State<AnalyticsDashboardScreen> createState() =>
@@ -469,9 +469,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             ),
           ),
           SizedBox(height: 20.h),
-          ..._categoryBreakdown
-              .map((category) => _buildCategoryItem(category))
-              .toList(),
+          ..._categoryBreakdown.map((category) => _buildCategoryItem(category)),
         ],
       ),
     );
@@ -618,14 +616,12 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
               ),
             )
           else
-            ..._recentItems
-                .map(
-                  (item) => Padding(
-                    padding: EdgeInsets.only(bottom: 8.h),
-                    child: UniversalItemCard(item: item, showActions: false),
-                  ),
-                )
-                .toList(),
+            ..._recentItems.map(
+              (item) => Padding(
+                padding: EdgeInsets.only(bottom: 8.h),
+                child: UniversalItemCard(item: item, showActions: false),
+              ),
+            ),
         ],
       ),
     );
@@ -680,8 +676,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
                   padding: EdgeInsets.only(bottom: 8.h),
                   child: UniversalItemCard(item: item, showActions: false),
                 ),
-              )
-              .toList(),
+              ),
         ],
       ),
     );

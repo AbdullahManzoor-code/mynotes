@@ -13,7 +13,7 @@ class VoiceInputButton extends StatefulWidget {
   final double soundLevel;
 
   const VoiceInputButton({
-    Key? key,
+    super.key,
     required this.isListening,
     required this.onPressed,
     this.size,
@@ -21,7 +21,7 @@ class VoiceInputButton extends StatefulWidget {
     this.inactiveColor,
     this.showWaves = true,
     this.soundLevel = 0.0,
-  }) : super(key: key);
+  });
 
   @override
   State<VoiceInputButton> createState() => _VoiceInputButtonState();
@@ -126,4 +126,3 @@ class _VoiceInputButtonState extends State<VoiceInputButton>
     );
   }
 }
-

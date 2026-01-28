@@ -9,8 +9,7 @@ class PomodoroTimerWidget extends StatefulWidget {
   final String? taskName;
   final VoidCallback? onTimerComplete;
 
-  const PomodoroTimerWidget({Key? key, this.taskName, this.onTimerComplete})
-    : super(key: key);
+  const PomodoroTimerWidget({super.key, this.taskName, this.onTimerComplete});
 
   @override
   State<PomodoroTimerWidget> createState() => _PomodoroTimerWidgetState();
@@ -20,7 +19,7 @@ class _PomodoroTimerWidgetState extends State<PomodoroTimerWidget> {
   Timer? _timer;
   int _workDuration = 25 * 60; // 25 minutes in seconds
   int _breakDuration = 5 * 60; // 5 minutes in seconds
-  int _longBreakDuration = 15 * 60; // 15 minutes
+  final int _longBreakDuration = 15 * 60; // 15 minutes
   int _secondsRemaining = 25 * 60;
   bool _isRunning = false;
   bool _isWorkSession = true;
@@ -355,4 +354,3 @@ class _PomodoroTimerWidgetState extends State<PomodoroTimerWidget> {
     );
   }
 }
-

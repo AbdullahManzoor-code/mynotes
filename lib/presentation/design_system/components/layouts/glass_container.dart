@@ -14,7 +14,7 @@ class GlassContainer extends StatelessWidget {
   final Border? border;
 
   const GlassContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.margin,
@@ -22,7 +22,7 @@ class GlassContainer extends StatelessWidget {
     this.blur = 12,
     this.color,
     this.border,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

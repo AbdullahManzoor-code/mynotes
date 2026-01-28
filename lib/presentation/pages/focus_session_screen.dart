@@ -9,7 +9,7 @@ import 'focus_celebration_screen.dart';
 /// Focus Session Active Screen
 /// Pomodoro timer with immersive gradient design and circular progress
 class FocusSessionScreen extends StatefulWidget {
-  const FocusSessionScreen({Key? key}) : super(key: key);
+  const FocusSessionScreen({super.key});
 
   @override
   State<FocusSessionScreen> createState() => _FocusSessionScreenState();
@@ -25,15 +25,15 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
 
   // Session settings
   int _focusMinutes = 25;
-  int _shortBreakMinutes = 5;
-  int _longBreakMinutes = 15;
-  int _sessionsUntilLongBreak = 4;
+  final int _shortBreakMinutes = 5;
+  final int _longBreakMinutes = 15;
+  final int _sessionsUntilLongBreak = 4;
   int _currentSessionCount = 0;
   bool _isBreakTime = false;
 
   // Ambient sound
   String _selectedSound = 'None';
-  List<String> _ambientSounds = [
+  final List<String> _ambientSounds = [
     'None',
     'Rain',
     'Forest',
@@ -106,9 +106,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
       // Go to celebration screen after completing full pomodoro cycle
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const FocusCelebrationScreen(),
-        ),
+        MaterialPageRoute(builder: (context) => const FocusCelebrationScreen()),
       );
     } else if (_isBreakTime) {
       // Break completed, start next focus session
@@ -153,7 +151,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.darkCardBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
         title: Text(
           isLongBreak ? '🎉 Long Break Time!' : '☕ Break Time!',
           style: TextStyle(color: Colors.white, fontSize: 20.sp),
@@ -172,7 +172,10 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
               Navigator.pop(context);
               _startTimer();
             },
-            child: Text('Start Break', style: TextStyle(color: AppColors.primary)),
+            child: Text(
+              'Start Break',
+              style: TextStyle(color: AppColors.primary),
+            ),
           ),
         ],
       ),
@@ -185,7 +188,9 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.darkCardBackground,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
         title: Text(
           '🎯 Focus Time!',
           style: TextStyle(color: Colors.white, fontSize: 20.sp),
@@ -202,7 +207,10 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
               Navigator.pop(context);
               _startTimer();
             },
-            child: Text('Start Focus', style: TextStyle(color: AppColors.primary)),
+            child: Text(
+              'Start Focus',
+              style: TextStyle(color: AppColors.primary),
+            ),
           ),
         ],
       ),
@@ -706,13 +714,16 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
               child: GestureDetector(
                 onTap: () {}, // Prevent closing when tapping the panel
                 child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(1, 0),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                    parent: _settingsController,
-                    curve: Curves.easeOutCubic,
-                  )),
+                  position:
+                      Tween<Offset>(
+                        begin: const Offset(1, 0),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: _settingsController,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
                   child: Container(
                     width: 280.w,
                     height: double.infinity,
@@ -722,9 +733,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                         topLeft: Radius.circular(24.r),
                         bottomLeft: Radius.circular(24.r),
                       ),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                      ),
+                      border: Border.all(color: Colors.white.withOpacity(0.1)),
                     ),
                     child: Column(
                       children: [
@@ -770,17 +779,26 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                                 Wrap(
                                   spacing: 8.w,
                                   runSpacing: 8.h,
-                                  children: [15, 20, 25, 30, 45, 60].map((minutes) {
+                                  children: [15, 20, 25, 30, 45, 60].map((
+                                    minutes,
+                                  ) {
                                     final isSelected = _focusMinutes == minutes;
                                     return GestureDetector(
                                       onTap: () => _updateFocusTime(minutes),
                                       child: Container(
-                                        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: 12.w,
+                                          vertical: 8.h,
+                                        ),
                                         decoration: BoxDecoration(
                                           color: isSelected
-                                              ? AppColors.primary.withOpacity(0.2)
+                                              ? AppColors.primary.withOpacity(
+                                                  0.2,
+                                                )
                                               : Colors.white.withOpacity(0.05),
-                                          borderRadius: BorderRadius.circular(8.r),
+                                          borderRadius: BorderRadius.circular(
+                                            8.r,
+                                          ),
                                           border: Border.all(
                                             color: isSelected
                                                 ? AppColors.primary
@@ -826,10 +844,14 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                                         color: isSelected
                                             ? AppColors.primary.withOpacity(0.1)
                                             : Colors.white.withOpacity(0.03),
-                                        borderRadius: BorderRadius.circular(12.r),
+                                        borderRadius: BorderRadius.circular(
+                                          12.r,
+                                        ),
                                         border: Border.all(
                                           color: isSelected
-                                              ? AppColors.primary.withOpacity(0.3)
+                                              ? AppColors.primary.withOpacity(
+                                                  0.3,
+                                                )
                                               : Colors.white.withOpacity(0.05),
                                         ),
                                       ),
@@ -865,7 +887,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                                       ),
                                     ),
                                   );
-                                }).toList(),
+                                }),
 
                                 SizedBox(height: 32.h),
 
@@ -881,7 +903,8 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                                     ),
                                   ),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'Session Progress',
@@ -893,7 +916,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                                       ),
                                       SizedBox(height: 8.h),
                                       Text(
-                                        'Completed: $_currentSessionCount/${_sessionsUntilLongBreak}',
+                                        'Completed: $_currentSessionCount/$_sessionsUntilLongBreak',
                                         style: TextStyle(
                                           fontSize: 12.sp,
                                           color: Colors.grey.shade400,

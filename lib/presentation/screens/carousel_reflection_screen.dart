@@ -11,7 +11,7 @@ import '../screens/reflection_history_screen.dart';
 
 /// Modern Carousel-based Reflection Home Screen
 class CarouselReflectionScreen extends StatefulWidget {
-  const CarouselReflectionScreen({Key? key}) : super(key: key);
+  const CarouselReflectionScreen({super.key});
 
   @override
   State<CarouselReflectionScreen> createState() =>
@@ -457,4 +457,3 @@ class _CarouselReflectionScreenState extends State<CarouselReflectionScreen> {
     );
   }
 }
-

@@ -21,7 +21,7 @@ class OcrTextExtractionScreen extends StatefulWidget {
 
 class _OcrTextExtractionScreenState extends State<OcrTextExtractionScreen> {
   late TextEditingController _textController;
-  bool _isProcessing = false;
+  final bool _isProcessing = false;
 
   @override
   void initState() {

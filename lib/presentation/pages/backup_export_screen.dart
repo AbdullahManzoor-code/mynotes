@@ -5,7 +5,7 @@ import '../design_system/design_system.dart';
 /// Backup and Export Start Screen
 /// Configure and initiate data export
 class BackupExportScreen extends StatefulWidget {
-  const BackupExportScreen({Key? key}) : super(key: key);
+  const BackupExportScreen({super.key});
 
   @override
   State<BackupExportScreen> createState() => _BackupExportScreenState();
@@ -400,7 +400,7 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
 /// Backup Complete Screen
 /// Shows successful export with download/share options
 class BackupCompleteScreen extends StatelessWidget {
-  const BackupCompleteScreen({Key? key}) : super(key: key);
+  const BackupCompleteScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

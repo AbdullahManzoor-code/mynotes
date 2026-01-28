@@ -511,7 +511,7 @@ class LocationReminderComingSoonScreen extends StatelessWidget {
   }
 
   Widget _buildHomeIndicator(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 32.h,
       child: Center(
         child: Container(

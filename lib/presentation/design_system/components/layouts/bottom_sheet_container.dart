@@ -18,7 +18,7 @@ class BottomSheetContainer extends StatelessWidget {
   final Color? backgroundColor;
 
   const BottomSheetContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.title,
     this.showDragHandle = true,
@@ -27,7 +27,7 @@ class BottomSheetContainer extends StatelessWidget {
     this.padding,
     this.maxHeight,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -147,11 +147,11 @@ class ActionBottomSheet extends StatelessWidget {
   final VoidCallback? onCancel;
 
   const ActionBottomSheet({
-    Key? key,
+    super.key,
     this.title,
     required this.actions,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -215,12 +215,12 @@ class _ActionSheetTile extends StatelessWidget {
   final bool isDestructive;
 
   const _ActionSheetTile({
-    Key? key,
+    super.key,
     required this.icon,
     required this.label,
     required this.onTap,
     required this.isDestructive,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

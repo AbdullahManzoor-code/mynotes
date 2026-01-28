@@ -376,7 +376,7 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen> {
       child: AnimatedScale(
         scale: 1.0,
         duration: const Duration(milliseconds: 100),
-        child: Container(
+        child: SizedBox(
           width: 120.w,
           child: Column(
             children: [

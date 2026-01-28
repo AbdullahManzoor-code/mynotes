@@ -11,7 +11,7 @@ import '../bloc/reflection_bloc.dart';
 import '../bloc/reflection_state.dart';
 import '../design_system/design_system.dart';
 import '../screens/reflection_home_screen.dart';
-import 'reminders_screen.dart';
+import 'enhanced_reminders_list_screen.dart';
 import 'focus_session_screen.dart';
 import 'daily_highlight_summary_screen.dart';
 import 'analytics_dashboard_screen.dart';
@@ -23,7 +23,7 @@ import '../widgets/global_command_palette.dart';
 /// Main overview showing stats, daily reflection prompt, and upcoming items
 /// Based on template: today_dashboard_home_1/2
 class TodayDashboardScreen extends StatefulWidget {
-  const TodayDashboardScreen({Key? key}) : super(key: key);
+  const TodayDashboardScreen({super.key});
 
   @override
   State<TodayDashboardScreen> createState() => _TodayDashboardScreenState();
@@ -615,7 +615,8 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const RemindersScreen(),
+                        builder: (context) =>
+                            const EnhancedRemindersListScreen(),
                       ),
                     );
                   },
@@ -732,7 +733,7 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                   ],
                 ),
               );
-            }).toList(),
+            }),
         ],
       ),
     );
@@ -880,7 +881,9 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
       case 'reminders':
         Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const RemindersScreen()),
+          MaterialPageRoute(
+            builder: (_) => const EnhancedRemindersListScreen(),
+          ),
         );
         break;
       case 'highlights':
@@ -1006,7 +1009,7 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );

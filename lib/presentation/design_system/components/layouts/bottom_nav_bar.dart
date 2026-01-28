@@ -33,7 +33,7 @@ class GlassBottomNavBar extends StatelessWidget {
   final bool showLabels;
 
   const GlassBottomNavBar({
-    Key? key,
+    super.key,
     required this.items,
     required this.currentIndex,
     this.onTap,
@@ -41,7 +41,7 @@ class GlassBottomNavBar extends StatelessWidget {
     this.selectedItemColor,
     this.unselectedItemColor,
     this.showLabels = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -99,7 +99,7 @@ class _BottomNavBarItem extends StatefulWidget {
   final bool showLabel;
 
   const _BottomNavBarItem({
-    Key? key,
+    super.key,
     required this.icon,
     this.activeIcon,
     required this.label,
@@ -108,7 +108,7 @@ class _BottomNavBarItem extends StatefulWidget {
     required this.selectedColor,
     required this.unselectedColor,
     required this.showLabel,
-  }) : super(key: key);
+  });
 
   @override
   State<_BottomNavBarItem> createState() => _BottomNavBarItemState();
@@ -221,14 +221,14 @@ class SimpleBottomNavBar extends StatelessWidget {
   final Color? unselectedItemColor;
 
   const SimpleBottomNavBar({
-    Key? key,
+    super.key,
     required this.items,
     required this.currentIndex,
     this.onTap,
     this.backgroundColor,
     this.selectedItemColor,
     this.unselectedItemColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -265,7 +265,7 @@ class FloatingBottomNavBar extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
 
   const FloatingBottomNavBar({
-    Key? key,
+    super.key,
     required this.items,
     required this.currentIndex,
     this.onTap,
@@ -273,7 +273,7 @@ class FloatingBottomNavBar extends StatelessWidget {
     this.selectedItemColor,
     this.unselectedItemColor,
     this.margin,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

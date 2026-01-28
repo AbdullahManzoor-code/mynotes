@@ -10,14 +10,14 @@ import 'question_list_screen.dart';
 import 'reflection_history_screen.dart';
 
 class ReflectionHomeScreen extends StatefulWidget {
-  const ReflectionHomeScreen({Key? key}) : super(key: key);
+  const ReflectionHomeScreen({super.key});
 
   @override
   State<ReflectionHomeScreen> createState() => _ReflectionHomeScreenState();
 }
 
 class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
-  bool _isPrivacyMode = true;
+  final bool _isPrivacyMode = true;
   bool _isUnlocked = false;
 
   @override

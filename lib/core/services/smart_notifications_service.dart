@@ -353,7 +353,7 @@ enum NotificationType { note, todo, reminder }
 /// Smart Notifications Widget
 /// Displays upcoming notifications with smart actions
 class SmartNotificationsWidget extends StatelessWidget {
-  const SmartNotificationsWidget({Key? key}) : super(key: key);
+  const SmartNotificationsWidget({super.key});
 
   @override
   Widget build(BuildContext context) {

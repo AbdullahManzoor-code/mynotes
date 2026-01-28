@@ -6,7 +6,7 @@ import '../design_system/design_system.dart';
 /// Daily Highlight Summary Screen
 /// Shows evening review with top 3 wins of the day
 class DailyHighlightSummaryScreen extends StatelessWidget {
-  const DailyHighlightSummaryScreen({Key? key}) : super(key: key);
+  const DailyHighlightSummaryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

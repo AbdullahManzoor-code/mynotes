@@ -14,7 +14,7 @@ class EmptyStateWidget extends StatelessWidget {
   final Color? backgroundColor;
 
   const EmptyStateWidget({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     required this.description,
@@ -22,7 +22,7 @@ class EmptyStateWidget extends StatelessWidget {
     this.onButtonPressed,
     this.iconColor,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +95,7 @@ class EmptyStateWidget extends StatelessWidget {
 class EmptyStateNotes extends StatelessWidget {
   final VoidCallback? onCreateNote;
 
-  const EmptyStateNotes({Key? key, this.onCreateNote}) : super(key: key);
+  const EmptyStateNotes({super.key, this.onCreateNote});
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +115,7 @@ class EmptyStateNotes extends StatelessWidget {
 class EmptyStateTodos extends StatelessWidget {
   final VoidCallback? onCreateTodo;
 
-  const EmptyStateTodos({Key? key, this.onCreateTodo}) : super(key: key);
+  const EmptyStateTodos({super.key, this.onCreateTodo});
 
   @override
   Widget build(BuildContext context) {
@@ -135,8 +135,7 @@ class EmptyStateTodos extends StatelessWidget {
 class EmptyStateReminders extends StatelessWidget {
   final VoidCallback? onCreateReminder;
 
-  const EmptyStateReminders({Key? key, this.onCreateReminder})
-    : super(key: key);
+  const EmptyStateReminders({super.key, this.onCreateReminder});
 
   @override
   Widget build(BuildContext context) {
@@ -155,7 +154,7 @@ class EmptyStateReminders extends StatelessWidget {
 class EmptySearchResults extends StatelessWidget {
   final String query;
 
-  const EmptySearchResults({Key? key, required this.query}) : super(key: key);
+  const EmptySearchResults({super.key, required this.query});
 
   @override
   Widget build(BuildContext context) {

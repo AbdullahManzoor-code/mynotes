@@ -18,7 +18,7 @@ class CardContainer extends StatelessWidget {
   final double? height;
 
   const CardContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.margin,
@@ -30,7 +30,7 @@ class CardContainer extends StatelessWidget {
     this.blur,
     this.width,
     this.height,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

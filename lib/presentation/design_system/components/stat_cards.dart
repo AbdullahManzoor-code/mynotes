@@ -14,7 +14,7 @@ class StatCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const StatCard({
-    Key? key,
+    super.key,
     required this.label,
     required this.value,
     this.trend,
@@ -22,7 +22,7 @@ class StatCard extends StatelessWidget {
     this.icon,
     this.backgroundColor,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -116,11 +116,11 @@ class StatsGrid extends StatelessWidget {
   final double spacing;
 
   const StatsGrid({
-    Key? key,
+    super.key,
     required this.cards,
     this.crossAxisCount = 2,
     this.spacing = 16,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -151,7 +151,7 @@ class PromptCard extends StatelessWidget {
   final Color? backgroundColor;
 
   const PromptCard({
-    Key? key,
+    super.key,
     required this.icon,
     required this.title,
     required this.description,
@@ -159,7 +159,7 @@ class PromptCard extends StatelessWidget {
     required this.onPressed,
     this.accentColor,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -228,12 +228,12 @@ class SectionHeader extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   const SectionHeader({
-    Key? key,
+    super.key,
     required this.title,
     this.actionText,
     this.onActionTap,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

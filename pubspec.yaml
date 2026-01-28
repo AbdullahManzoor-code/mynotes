@@ -104,6 +104,7 @@ dependencies:
   flutter_quill: ^9.0.0
   speech_to_text: ^7.3.0
   table_calendar: ^3.2.0
+  photo_manager: ^3.8.3
 
 dev_dependencies:
   flutter_test:

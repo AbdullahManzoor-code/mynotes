@@ -8,7 +8,7 @@ import '../bloc/theme_state.dart';
 /// A simple icon button to toggle between light and dark themes
 /// Can be added to any AppBar or toolbar
 class ThemeToggleButton extends StatelessWidget {
-  const ThemeToggleButton({Key? key}) : super(key: key);
+  const ThemeToggleButton({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -42,4 +42,3 @@ class ThemeToggleButton extends StatelessWidget {
     );
   }
 }
-

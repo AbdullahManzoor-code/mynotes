@@ -9,8 +9,7 @@ class PdfPreviewScreen extends StatefulWidget {
   final Note note;
   final String? pdfPath;
 
-  const PdfPreviewScreen({Key? key, required this.note, this.pdfPath})
-    : super(key: key);
+  const PdfPreviewScreen({super.key, required this.note, this.pdfPath});
 
   @override
   State<PdfPreviewScreen> createState() => _PdfPreviewScreenState();
@@ -335,4 +334,3 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     );
   }
 }
-

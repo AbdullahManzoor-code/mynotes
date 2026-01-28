@@ -13,10 +13,10 @@ class QuestionListScreen extends StatefulWidget {
   final String categoryLabel;
 
   const QuestionListScreen({
-    Key? key,
+    super.key,
     required this.category,
     required this.categoryLabel,
-  }) : super(key: key);
+  });
 
   @override
   State<QuestionListScreen> createState() => _QuestionListScreenState();
@@ -356,4 +356,3 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
     );
   }
 }
-

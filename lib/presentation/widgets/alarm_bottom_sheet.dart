@@ -12,8 +12,7 @@ class AlarmBottomSheet extends StatefulWidget {
   final Note note;
   final Alarm? existingAlarm;
 
-  const AlarmBottomSheet({Key? key, required this.note, this.existingAlarm})
-    : super(key: key);
+  const AlarmBottomSheet({super.key, required this.note, this.existingAlarm});
 
   @override
   State<AlarmBottomSheet> createState() => _AlarmBottomSheetState();
@@ -281,4 +280,3 @@ class _AlarmBottomSheetState extends State<AlarmBottomSheet> {
     );
   }
 }
-

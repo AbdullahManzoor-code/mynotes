@@ -8,12 +8,12 @@ class MediaPlayerWidget extends StatelessWidget {
   final VoidCallback onPlay;
 
   const MediaPlayerWidget({
-    Key? key,
+    super.key,
     required this.mediaPath,
     required this.mediaType,
     this.thumbnailPath,
     required this.onPlay,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -119,10 +119,10 @@ class ImageThumbnailWidget extends StatelessWidget {
   final VoidCallback onTap;
 
   const ImageThumbnailWidget({
-    Key? key,
+    super.key,
     required this.imagePath,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -158,4 +158,3 @@ class ImageThumbnailWidget extends StatelessWidget {
     );
   }
 }
-

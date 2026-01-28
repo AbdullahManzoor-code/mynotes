@@ -1,5 +1,6 @@
 /// Layout components barrel file
 /// Export all layout components for easy importing
+library;
 
 export 'app_scaffold.dart';
 export 'glass_app_bar.dart';

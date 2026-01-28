@@ -593,7 +593,7 @@ extension AppTypographyExtensions on TextStyle {
 
   /// Add opacity to text color
   TextStyle withOpacity(double opacity) {
-    return copyWith(color: this.color?.withOpacity(opacity));
+    return copyWith(color: color?.withOpacity(opacity));
   }
 
   /// Scale font size

@@ -9,10 +9,10 @@ class LanguagePicker extends StatefulWidget {
   final Function(String) onLanguageSelected;
 
   const LanguagePicker({
-    Key? key,
+    super.key,
     required this.currentLocale,
     required this.onLanguageSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<LanguagePicker> createState() => _LanguagePickerState();
@@ -290,4 +290,3 @@ class _LanguagePickerState extends State<LanguagePicker> {
     );
   }
 }
-

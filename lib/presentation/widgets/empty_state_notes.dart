@@ -1,13 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:mynotes/presentation/pages/note_editor_page.dart';
+import 'package:mynotes/presentation/pages/enhanced_note_editor_screen.dart';
 import '../design_system/design_system.dart';
 
 /// Empty State for Notes List
 /// Helps users get started with templates and guidance
 class EmptyStateNotes extends StatelessWidget {
-  const EmptyStateNotes({Key? key}) : super(key: key);
+  const EmptyStateNotes({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -104,7 +104,7 @@ class EmptyStateNotes extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const NoteEditorPage(),
+                      builder: (context) => const EnhancedNoteEditorScreen(),
                     ),
                   );
                 },
@@ -272,8 +272,9 @@ class EmptyStateNotes extends StatelessWidget {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) =>
-                NoteEditorPage(initialContent: _getTemplateContent(label)),
+            builder: (context) => EnhancedNoteEditorScreen(
+              initialContent: _getTemplateContent(label),
+            ),
           ),
         );
       },

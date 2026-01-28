@@ -6,7 +6,7 @@ import '../design_system/design_system.dart';
 /// Edit Daily Highlight Screen
 /// Allows users to edit and add details to their daily wins
 class EditDailyHighlightScreen extends StatefulWidget {
-  const EditDailyHighlightScreen({Key? key}) : super(key: key);
+  const EditDailyHighlightScreen({super.key});
 
   @override
   State<EditDailyHighlightScreen> createState() =>

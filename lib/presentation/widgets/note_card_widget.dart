@@ -16,7 +16,7 @@ class NoteCardWidget extends StatelessWidget {
   final Function(dynamic)? onColorChange;
 
   const NoteCardWidget({
-    Key? key,
+    super.key,
     required this.note,
     this.isSelected = false,
     required this.onTap,
@@ -24,7 +24,7 @@ class NoteCardWidget extends StatelessWidget {
     this.onDelete,
     this.onPin,
     this.onColorChange,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

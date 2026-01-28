@@ -10,6 +10,7 @@ class AppRoutes {
 
   // ==================== Main Navigation ====================
   static const String home = '/home';
+  static const String mainHome = '/main-home';
   static const String todayDashboard = '/today';
   static const String search = '/search';
   static const String settings = '/settings';
@@ -20,6 +21,10 @@ class AppRoutes {
   static const String advancedNoteEditor = '/notes/advanced-editor';
   static const String globalSearch = '/global-search';
   static const String searchFilter = '/search-filter';
+
+  // ==================== Media Module ====================
+  static const String mediaPicker = '/media/picker';
+  static const String audioRecorder = '/audio/recorder';
 
   // ==================== Reminders Module ====================
   static const String remindersList = '/reminders';
@@ -75,4 +80,7 @@ class AppRoutes {
 
   // ==================== Command Palette ====================
   static const String commandPalette = '/command-palette';
+
+  // ==================== Widgets ====================
+  static const String homeWidgets = '/widgets';
 }

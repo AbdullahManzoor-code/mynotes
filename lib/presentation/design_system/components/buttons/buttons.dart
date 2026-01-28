@@ -20,7 +20,7 @@ class PrimaryButton extends StatefulWidget {
   final double? borderRadius;
 
   const PrimaryButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.icon,
@@ -32,7 +32,7 @@ class PrimaryButton extends StatefulWidget {
     this.backgroundColor,
     this.textColor,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
   State<PrimaryButton> createState() => _PrimaryButtonState();
@@ -160,7 +160,7 @@ class SecondaryButton extends StatefulWidget {
   final double? borderRadius;
 
   const SecondaryButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.icon,
@@ -172,7 +172,7 @@ class SecondaryButton extends StatefulWidget {
     this.borderColor,
     this.textColor,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
   State<SecondaryButton> createState() => _SecondaryButtonState();
@@ -297,13 +297,13 @@ class AppTextButton extends StatelessWidget {
   final double? fontSize;
 
   const AppTextButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.icon,
     this.textColor,
     this.fontSize,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -327,8 +327,10 @@ class AppTextButton extends StatelessWidget {
           ],
           Text(
             text,
-            style: AppTypography.button(
-            ).copyWith(color: color, fontSize: fontSize?.sp),
+            style: AppTypography.button().copyWith(
+              color: color,
+              fontSize: fontSize?.sp,
+            ),
           ),
         ],
       ),
@@ -348,7 +350,7 @@ class AppIconButton extends StatefulWidget {
   final bool showBackground;
 
   const AppIconButton({
-    Key? key,
+    super.key,
     required this.icon,
     this.onPressed,
     this.backgroundColor,
@@ -357,7 +359,7 @@ class AppIconButton extends StatefulWidget {
     this.iconSize,
     this.tooltip,
     this.showBackground = true,
-  }) : super(key: key);
+  });
 
   @override
   State<AppIconButton> createState() => _AppIconButtonState();
@@ -458,7 +460,7 @@ class AppFAB extends StatelessWidget {
   final bool mini;
 
   const AppFAB({
-    Key? key,
+    super.key,
     required this.icon,
     required this.onPressed,
     this.backgroundColor,
@@ -466,7 +468,7 @@ class AppFAB extends StatelessWidget {
     this.size,
     this.tooltip,
     this.mini = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -481,4 +483,3 @@ class AppFAB extends StatelessWidget {
     );
   }
 }
-

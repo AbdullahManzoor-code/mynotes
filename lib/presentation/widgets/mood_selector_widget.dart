@@ -10,10 +10,10 @@ class MoodSelectorWidget extends StatelessWidget {
   final Function(MoodType) onMoodSelected;
 
   const MoodSelectorWidget({
-    Key? key,
+    super.key,
     this.selectedMood,
     required this.onMoodSelected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -90,4 +90,3 @@ class MoodSelectorWidget extends StatelessWidget {
     );
   }
 }
-

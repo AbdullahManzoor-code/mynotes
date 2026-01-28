@@ -1,5 +1,6 @@
 /// Design System Components
 /// All reusable UI components for the app
+library;
 
 // Layouts
 export 'layouts/layouts.dart';

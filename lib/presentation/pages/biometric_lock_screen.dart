@@ -9,7 +9,7 @@ import 'main_home_screen.dart';
 class BiometricLockScreen extends StatefulWidget {
   final VoidCallback? onAuthenticated;
 
-  const BiometricLockScreen({Key? key, this.onAuthenticated}) : super(key: key);
+  const BiometricLockScreen({super.key, this.onAuthenticated});
 
   @override
   State<BiometricLockScreen> createState() => _BiometricLockScreenState();
@@ -257,4 +257,3 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
     );
   }
 }
-

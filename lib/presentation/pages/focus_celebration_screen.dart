@@ -9,10 +9,10 @@ class FocusCelebrationScreen extends StatefulWidget {
   final int streakDays;
 
   const FocusCelebrationScreen({
-    Key? key,
+    super.key,
     this.minutesFocused = 25,
     this.streakDays = 3,
-  }) : super(key: key);
+  });
 
   @override
   State<FocusCelebrationScreen> createState() => _FocusCelebrationScreenState();

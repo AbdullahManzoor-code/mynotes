@@ -6,7 +6,7 @@ import '../../domain/entities/note_template.dart';
 /// Template Selector Bottom Sheet
 /// Allows users to select from predefined note templates
 class TemplateSelectorSheet extends StatelessWidget {
-  const TemplateSelectorSheet({Key? key}) : super(key: key);
+  const TemplateSelectorSheet({super.key});
 
   @override
   Widget build(BuildContext context) {

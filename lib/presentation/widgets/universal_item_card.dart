@@ -17,7 +17,7 @@ class UniversalItemCard extends StatefulWidget {
   final bool isSelected;
 
   const UniversalItemCard({
-    Key? key,
+    super.key,
     required this.item,
     this.onTap,
     this.onLongPress,
@@ -25,7 +25,7 @@ class UniversalItemCard extends StatefulWidget {
     this.onReminderTap,
     this.showActions = true,
     this.isSelected = false,
-  }) : super(key: key);
+  });
 
   @override
   State<UniversalItemCard> createState() => _UniversalItemCardState();
@@ -402,8 +402,9 @@ class _UniversalItemCardState extends State<UniversalItemCard>
   // Helper methods
   Color _getBorderColor() {
     if (widget.isSelected) return AppColors.primary;
-    if (widget.item.priority == ItemPriority.high)
+    if (widget.item.priority == ItemPriority.high) {
       return Colors.red.withOpacity(0.5);
+    }
     if (_isReminderOverdue()) return Colors.red.withOpacity(0.3);
     return Colors.white.withOpacity(0.1);
   }

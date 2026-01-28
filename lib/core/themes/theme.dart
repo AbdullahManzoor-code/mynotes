@@ -13,10 +13,9 @@ class AppTheme {
     visualDensity: VisualDensity.adaptivePlatformDensity,
   );
 
-  static final ThemeData? current = light;
+  static final ThemeData current = light;
 }
 
 extension ThemeExtensions on ThemeData {
   // Helpers for consistent typography or shadows can be added here
 }
-

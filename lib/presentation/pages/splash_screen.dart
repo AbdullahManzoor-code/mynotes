@@ -13,7 +13,7 @@ import '../../core/routes/app_routes.dart';
 /// Initializes app services and shows loading animation
 /// Navigates to onboarding (first launch) or home screen
 class SplashScreen extends StatefulWidget {
-  const SplashScreen({Key? key}) : super(key: key);
+  const SplashScreen({super.key});
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();

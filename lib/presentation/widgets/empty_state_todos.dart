@@ -6,7 +6,7 @@ import '../widgets/quick_add_bottom_sheet.dart';
 /// Empty State for Todos/Tasks List
 /// Educational guidance for voice and manual task creation
 class EmptyStateTodos extends StatelessWidget {
-  const EmptyStateTodos({Key? key}) : super(key: key);
+  const EmptyStateTodos({super.key});
 
   @override
   Widget build(BuildContext context) {

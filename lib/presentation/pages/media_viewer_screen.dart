@@ -13,11 +13,11 @@ class MediaViewerScreen extends StatefulWidget {
   final Function(MediaItem)? onDelete;
 
   const MediaViewerScreen({
-    Key? key,
+    super.key,
     required this.mediaItems,
     this.initialIndex = 0,
     this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   State<MediaViewerScreen> createState() => _MediaViewerScreenState();
@@ -319,4 +319,3 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     }
   }
 }
-

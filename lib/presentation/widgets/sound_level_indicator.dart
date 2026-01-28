@@ -12,14 +12,14 @@ class SoundLevelIndicator extends StatelessWidget {
   final Color? inactiveColor;
 
   const SoundLevelIndicator({
-    Key? key,
+    super.key,
     required this.level,
     this.isVertical = false,
     this.width,
     this.height,
     this.activeColor,
     this.inactiveColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -124,11 +124,11 @@ class CircularSoundLevel extends StatelessWidget {
   final Color? activeColor;
 
   const CircularSoundLevel({
-    Key? key,
+    super.key,
     required this.level,
     this.size = 40,
     this.activeColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -179,13 +179,13 @@ class WaveformIndicator extends StatelessWidget {
   final int bars;
 
   const WaveformIndicator({
-    Key? key,
+    super.key,
     required this.level,
     this.width = 100,
     this.height = 40,
     this.activeColor,
     this.bars = 5,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -216,4 +216,3 @@ class WaveformIndicator extends StatelessWidget {
     );
   }
 }
-

@@ -10,7 +10,7 @@ import '../bloc/reflection_state.dart';
 class AnswerScreen extends StatefulWidget {
   final ReflectionQuestion question;
 
-  const AnswerScreen({Key? key, required this.question}) : super(key: key);
+  const AnswerScreen({super.key, required this.question});
 
   @override
   State<AnswerScreen> createState() => _AnswerScreenState();
@@ -232,8 +232,7 @@ class _AnswerScreenState extends State<AnswerScreen> {
                                 answer.mood,
                                 answer.createdAt,
                               ),
-                            )
-                            .toList(),
+                            ),
                         if (state.answers.length > 3)
                           Padding(
                             padding: EdgeInsets.only(top: 12.h),

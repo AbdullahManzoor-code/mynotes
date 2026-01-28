@@ -11,11 +11,11 @@ class PermissionDialog extends StatelessWidget {
   final VoidCallback? onGranted;
 
   const PermissionDialog({
-    Key? key,
+    super.key,
     required this.permission,
     this.customMessage,
     this.onGranted,
-  }) : super(key: key);
+  });
 
   static Future<bool?> show(
     BuildContext context, {
@@ -199,7 +199,7 @@ class PermissionDialog extends StatelessWidget {
 
 /// Permission status screen showing all permissions
 class PermissionStatusScreen extends StatefulWidget {
-  const PermissionStatusScreen({Key? key}) : super(key: key);
+  const PermissionStatusScreen({super.key});
 
   @override
   State<PermissionStatusScreen> createState() => _PermissionStatusScreenState();
@@ -345,4 +345,3 @@ class _PermissionStatusScreenState extends State<PermissionStatusScreen> {
     return Icons.settings;
   }
 }
-

@@ -12,19 +12,19 @@ class TemplateCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const TemplateCard({
-    Key? key,
+    super.key,
     required this.icon,
     required this.label,
     required this.iconColor,
     required this.backgroundColor,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: SizedBox(
         width: 120.w,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -73,11 +73,11 @@ class TemplatePicker extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
 
   const TemplatePicker({
-    Key? key,
+    super.key,
     required this.templates,
     required this.onTemplateSelected,
     this.padding,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

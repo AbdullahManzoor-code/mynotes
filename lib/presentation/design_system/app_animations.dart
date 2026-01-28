@@ -388,11 +388,11 @@ class AppAnimations {
   }) {
     return Hero(
       tag: tag,
-      child: child,
       createRectTween: createRectTween,
       flightShuttleBuilder: flightShuttleBuilder,
       placeholderBuilder: placeholderBuilder,
       transitionOnUserGestures: transitionOnUserGestures,
+      child: child,
     );
   }
 

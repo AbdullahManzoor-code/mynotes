@@ -59,7 +59,7 @@ class BiometricAuthService {
       }
 
       return didAuthenticate;
-    } on Exception catch (e) {
+    } on Exception {
       // Re-throw custom exceptions
       rethrow;
     } catch (e) {
@@ -149,4 +149,3 @@ class BiometricAuthService {
     return 'Biometric';
   }
 }
-

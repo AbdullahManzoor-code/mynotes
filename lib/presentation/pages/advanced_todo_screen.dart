@@ -10,8 +10,11 @@ class AdvancedTodoScreen extends StatefulWidget {
   final Note note;
   final Function(List<TodoItem>)? onTodosChanged;
 
-  const AdvancedTodoScreen({Key? key, required this.note, this.onTodosChanged})
-    : super(key: key);
+  const AdvancedTodoScreen({
+    super.key,
+    required this.note,
+    this.onTodosChanged,
+  });
 
   @override
   State<AdvancedTodoScreen> createState() => _AdvancedTodoScreenState();
@@ -398,4 +401,3 @@ class _AdvancedTodoScreenState extends State<AdvancedTodoScreen>
     );
   }
 }
-

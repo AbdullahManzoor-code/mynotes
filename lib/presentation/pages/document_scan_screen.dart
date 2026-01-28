@@ -9,7 +9,7 @@ import '../../presentation/design_system/app_spacing.dart';
 /// Document Scan and OCR Screen
 /// Capture documents and extract text using OCR
 class DocumentScanScreen extends StatefulWidget {
-  const DocumentScanScreen({Key? key}) : super(key: key);
+  const DocumentScanScreen({super.key});
 
   @override
   State<DocumentScanScreen> createState() => _DocumentScanScreenState();
@@ -22,7 +22,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
   File? _capturedImage;
   String _extractedText = '';
   bool _isProcessing = false;
-  bool _showPreview = false;
+  final bool _showPreview = false;
 
   late AnimationController _scanAnimationController;
   late AnimationController _fadeAnimationController;
@@ -249,7 +249,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
           AnimatedBuilder(
             animation: _scanAnimationController,
             builder: (context, child) {
-              return Container(
+              return SizedBox(
                 width: 200,
                 height: 200,
                 child: Stack(

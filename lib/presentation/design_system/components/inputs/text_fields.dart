@@ -34,7 +34,7 @@ class AppTextField extends StatelessWidget {
   final double? borderRadius;
 
   const AppTextField({
-    Key? key,
+    super.key,
     this.controller,
     this.hintText,
     this.labelText,
@@ -60,7 +60,7 @@ class AppTextField extends StatelessWidget {
     this.fillColor,
     this.borderColor,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +171,7 @@ class SearchTextField extends StatelessWidget {
   final bool autofocus;
 
   const SearchTextField({
-    Key? key,
+    super.key,
     this.controller,
     this.hintText,
     this.onChanged,
@@ -179,7 +179,7 @@ class SearchTextField extends StatelessWidget {
     this.onClear,
     this.focusNode,
     this.autofocus = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -212,7 +212,7 @@ class AppTextArea extends StatelessWidget {
   final bool enabled;
 
   const AppTextArea({
-    Key? key,
+    super.key,
     this.controller,
     this.hintText,
     this.labelText,
@@ -221,7 +221,7 @@ class AppTextArea extends StatelessWidget {
     this.onChanged,
     this.focusNode,
     this.enabled = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -254,7 +254,7 @@ class AppDropdownField<T> extends StatelessWidget {
   final double? borderRadius;
 
   const AppDropdownField({
-    Key? key,
+    super.key,
     this.value,
     required this.items,
     this.onChanged,
@@ -265,7 +265,7 @@ class AppDropdownField<T> extends StatelessWidget {
     this.fillColor,
     this.borderColor,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -345,7 +345,7 @@ class PasswordTextField extends StatefulWidget {
   final AutovalidateMode? autovalidateMode;
 
   const PasswordTextField({
-    Key? key,
+    super.key,
     this.controller,
     this.hintText,
     this.labelText,
@@ -354,7 +354,7 @@ class PasswordTextField extends StatefulWidget {
     this.focusNode,
     this.validator,
     this.autovalidateMode,
-  }) : super(key: key);
+  });
 
   @override
   State<PasswordTextField> createState() => _PasswordTextFieldState();
@@ -401,7 +401,7 @@ class EmailTextField extends StatelessWidget {
   final AutovalidateMode? autovalidateMode;
 
   const EmailTextField({
-    Key? key,
+    super.key,
     this.controller,
     this.hintText,
     this.labelText,
@@ -410,7 +410,7 @@ class EmailTextField extends StatelessWidget {
     this.focusNode,
     this.validator,
     this.autovalidateMode,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

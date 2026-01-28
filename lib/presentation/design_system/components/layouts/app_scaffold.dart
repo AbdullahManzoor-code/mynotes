@@ -23,7 +23,7 @@ class AppScaffold extends StatelessWidget {
   final bool safeAreaRight;
 
   const AppScaffold({
-    Key? key,
+    super.key,
     required this.body,
     this.appBar,
     this.bottomNavigationBar,
@@ -38,7 +38,7 @@ class AppScaffold extends StatelessWidget {
     this.safeAreaBottom = true,
     this.safeAreaLeft = true,
     this.safeAreaRight = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -75,7 +75,7 @@ class GradientScaffold extends StatelessWidget {
   final SystemUiOverlayStyle? systemOverlayStyle;
 
   const GradientScaffold({
-    Key? key,
+    super.key,
     required this.body,
     this.appBar,
     this.gradientColors,
@@ -84,7 +84,7 @@ class GradientScaffold extends StatelessWidget {
     this.safeAreaTop = true,
     this.safeAreaBottom = true,
     this.systemOverlayStyle,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -133,14 +133,14 @@ class BlurScaffold extends StatelessWidget {
   final bool safeAreaBottom;
 
   const BlurScaffold({
-    Key? key,
+    super.key,
     required this.body,
     this.appBar,
     this.bottomNavigationBar,
     this.backgroundColor,
     this.safeAreaTop = true,
     this.safeAreaBottom = true,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -162,12 +162,12 @@ class PageContainer extends StatelessWidget {
   final Color? backgroundColor;
 
   const PageContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.useSafeArea = true,
     this.backgroundColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -193,13 +193,13 @@ class ScrollablePageContainer extends StatelessWidget {
   final bool shrinkWrap;
 
   const ScrollablePageContainer({
-    Key? key,
+    super.key,
     required this.child,
     this.padding,
     this.physics,
     this.controller,
     this.shrinkWrap = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

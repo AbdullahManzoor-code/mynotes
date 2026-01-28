@@ -10,7 +10,7 @@ import '../bloc/note_event.dart';
 /// AI-powered parsing for notes, todos, and reminders
 /// Based on template: universal_quick_add_smart_input_1
 class QuickAddBottomSheet extends StatefulWidget {
-  const QuickAddBottomSheet({Key? key}) : super(key: key);
+  const QuickAddBottomSheet({super.key});
 
   static void show(BuildContext context) {
     showModalBottomSheet(

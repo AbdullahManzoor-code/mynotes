@@ -12,8 +12,7 @@ class TodoFocusScreen extends StatefulWidget {
   final Note note;
   final Function(List<TodoItem>)? onTodosChanged;
 
-  const TodoFocusScreen({Key? key, required this.note, this.onTodosChanged})
-    : super(key: key);
+  const TodoFocusScreen({super.key, required this.note, this.onTodosChanged});
 
   @override
   State<TodoFocusScreen> createState() => _TodoFocusScreenState();
@@ -384,4 +383,3 @@ class _TodoFocusScreenState extends State<TodoFocusScreen> {
     );
   }
 }
-

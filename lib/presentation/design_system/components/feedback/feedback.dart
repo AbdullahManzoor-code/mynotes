@@ -76,8 +76,7 @@ class AppLoadingIndicator extends StatelessWidget {
   final double? size;
   final String? message;
 
-  const AppLoadingIndicator({Key? key, this.color, this.size, this.message})
-    : super(key: key);
+  const AppLoadingIndicator({super.key, this.color, this.size, this.message});
 
   @override
   Widget build(BuildContext context) {
@@ -114,8 +113,7 @@ class LoadingOverlay extends StatelessWidget {
   final String? message;
   final bool isLoading;
 
-  const LoadingOverlay({Key? key, this.message, this.isLoading = true})
-    : super(key: key);
+  const LoadingOverlay({super.key, this.message, this.isLoading = true});
 
   @override
   Widget build(BuildContext context) {
@@ -146,13 +144,13 @@ class ErrorState extends StatelessWidget {
   final VoidCallback? onActionPressed;
 
   const ErrorState({
-    Key? key,
+    super.key,
     this.title,
     required this.message,
     this.icon,
     this.actionText,
     this.onActionPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -216,7 +214,7 @@ class ConfirmationDialog extends StatelessWidget {
   final bool isDestructive;
 
   const ConfirmationDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
     this.confirmText = 'Confirm',
@@ -224,7 +222,7 @@ class ConfirmationDialog extends StatelessWidget {
     required this.onConfirm,
     this.onCancel,
     this.isDestructive = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -295,11 +293,11 @@ class AppBadge extends StatelessWidget {
   final Color? textColor;
 
   const AppBadge({
-    Key? key,
+    super.key,
     required this.text,
     this.backgroundColor,
     this.textColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

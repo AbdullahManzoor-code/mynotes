@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'app_routes.dart';
 import '../pages/fixed_universal_quick_add_screen.dart';
 import '../pages/enhanced_notes_list_screen.dart';
-import '../pages/focus_session_active_screen.dart';
+import '../pages/focus_session_screen.dart';
 import '../pages/enhanced_global_search_screen.dart';
 import '../pages/quick_add_confirmation_screen.dart';
 import '../pages/enhanced_reminders_list_screen.dart';
@@ -168,20 +168,11 @@ class RouteGenerator {
 
       // ==================== Focus & Productivity ====================
       case AppRoutes.focusSession:
-        return _buildRoute(
-          // TODO: Import and use FocusSessionScreen
-          const Placeholder(), // Replace with FocusSessionScreen()
-          settings: settings,
-        );
+        return _buildRoute(const FocusSessionScreen(), settings: settings);
 
       case AppRoutes.focusSessionActiveEnhanced:
         return _buildRoute(
-          FocusSessionActiveScreen(
-            taskName:
-                (args as Map<String, dynamic>?)?['taskName'] ?? 'Deep Focus',
-            durationMinutes:
-                (args as Map<String, dynamic>?)?['duration'] as int? ?? 25,
-          ),
+          const FocusSessionScreen(),
           settings: settings,
           fullscreenDialog: true,
         );

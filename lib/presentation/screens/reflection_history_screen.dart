@@ -8,7 +8,7 @@ import '../bloc/reflection_event.dart';
 import '../bloc/reflection_state.dart';
 
 class ReflectionHistoryScreen extends StatefulWidget {
-  const ReflectionHistoryScreen({Key? key}) : super(key: key);
+  const ReflectionHistoryScreen({super.key});
 
   @override
   State<ReflectionHistoryScreen> createState() =>
@@ -380,4 +380,3 @@ class _ReflectionHistoryScreenState extends State<ReflectionHistoryScreen> {
     return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 }
-

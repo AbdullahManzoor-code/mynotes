@@ -18,7 +18,7 @@ class NoteCard extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
 
   const NoteCard({
-    Key? key,
+    super.key,
     required this.title,
     this.content,
     this.category,
@@ -28,7 +28,7 @@ class NoteCard extends StatelessWidget {
     this.onTap,
     this.onLongPress,
     this.margin,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +160,7 @@ class TodoCard extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
 
   const TodoCard({
-    Key? key,
+    super.key,
     required this.title,
     this.description,
     required this.isCompleted,
@@ -170,7 +170,7 @@ class TodoCard extends StatelessWidget {
     this.onTap,
     this.onCheckboxChanged,
     this.margin,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +329,7 @@ class ReminderCard extends StatelessWidget {
   final EdgeInsetsGeometry? margin;
 
   const ReminderCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.dateTime,
     this.repeat,
@@ -338,7 +338,7 @@ class ReminderCard extends StatelessWidget {
     this.onTap,
     this.onDismiss,
     this.margin,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -474,14 +474,14 @@ class StatsCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   const StatsCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.value,
     required this.icon,
     this.iconColor,
     this.backgroundColor,
     this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -545,12 +545,12 @@ class QuickActionCard extends StatelessWidget {
   final VoidCallback onTap;
 
   const QuickActionCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.icon,
     this.iconColor,
     required this.onTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -603,13 +603,13 @@ class EmptyStateCard extends StatelessWidget {
   final VoidCallback? onActionPressed;
 
   const EmptyStateCard({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
     required this.icon,
     this.actionText,
     this.onActionPressed,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

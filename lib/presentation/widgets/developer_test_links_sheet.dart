@@ -7,7 +7,7 @@ import '../design_system/design_system.dart';
 /// Quick navigation to all 25+ screens for testing
 /// Only visible in developer mode (Settings page)
 class DeveloperTestLinksSheet extends StatelessWidget {
-  const DeveloperTestLinksSheet({Key? key}) : super(key: key);
+  const DeveloperTestLinksSheet({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -8,12 +8,12 @@ import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
 import '../design_system/design_system.dart';
 import '../widgets/note_card_widget.dart';
-import 'note_editor_page.dart';
+import 'enhanced_note_editor_screen.dart';
 
 /// Search & Filter Screen
 /// Advanced search with filtering by content, media, reminders, and date
 class SearchFilterScreen extends StatefulWidget {
-  const SearchFilterScreen({Key? key}) : super(key: key);
+  const SearchFilterScreen({super.key});
 
   @override
   State<SearchFilterScreen> createState() => _SearchFilterScreenState();
@@ -560,7 +560,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                               title: Text(_getSortLabel(sortOption)),
                               activeColor: AppColors.primaryColor,
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
                     ),
@@ -636,7 +636,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   void _openNote(Note note) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => NoteEditorPage(note: note)),
+      MaterialPageRoute(builder: (_) => EnhancedNoteEditorScreen(note: note)),
     );
   }
 }

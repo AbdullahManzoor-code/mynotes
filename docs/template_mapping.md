@@ -1,6 +1,21 @@
-# Template to Flutter Screen Mapping
+# Template to Flutter Screen Mapping (Updated)
 
 This document maps HTML templates from `/templete/` to Flutter screens in the MyNotes app.
+
+## ✅ DEDUPLICATION COMPLETED
+
+### Removed Duplicate Screens:
+- ❌ `home_page.dart` (merged into `today_dashboard_screen.dart`)
+- ❌ `main_home_screen.dart` (merged into `today_dashboard_screen.dart`) 
+- ❌ `modern_home_screen.dart` (merged into `today_dashboard_screen.dart`)
+- ❌ `unified_home_screen.dart` (merged into `today_dashboard_screen.dart`)
+- ❌ `dashboard_screen.dart` (merged into `today_dashboard_screen.dart`)
+- ❌ `analytics_dashboard.dart` (replaced by `analytics_dashboard_screen.dart`)
+- ❌ `note_editor_page.dart` (replaced by `enhanced_note_editor_screen.dart`)
+- ❌ `notes_list_screen.dart` (replaced by `enhanced_notes_list_screen.dart`)
+- ❌ `reminders_screen.dart` (replaced by `enhanced_reminders_list_screen.dart`)
+- ❌ `global_search_screen.dart` (replaced by `enhanced_global_search_screen.dart`)
+- ❌ `universal_quick_add_screen.dart` (replaced by `fixed_universal_quick_add_screen.dart`)
 
 ## Template Analysis
 
@@ -8,10 +23,10 @@ This document maps HTML templates from `/templete/` to Flutter screens in the My
 
 | HTML Template | Flutter Screen | Route | BLoC | Status |
 |--------------|----------------|-------|------|--------|
-| `today_dashboard_home_1/2` | `TodayDashboardScreen` | `/today` | NotesBloc, AlarmBloc, ReflectionBloc | To Create |
-| `notes_list_and_templates_1/2` | `NotesListScreen` | `/notes` | NotesBloc | ✅ Exists - Update UI |
-| `reminders_list_and_smart_snooze_1/2` | `RemindersScreen` | `/reminders` | AlarmBloc | ✅ Exists - Update UI |
-| `home_screen_widgets_ui` | `MainHomeScreen` | `/` | Multiple | ✅ Exists - Update UI |
+| `today_dashboard_home_1/2` | `TodayDashboardScreen` | `/today` | NotesBloc, AlarmBloc, ReflectionBloc | ✅ Exists - Updated |
+| `notes_list_and_templates_1/2` | `EnhancedNotesListScreen` | `/notes` | NotesBloc | ✅ Unified - Needs Template UI |
+| `reminders_list_and_smart_snooze_1/2` | `EnhancedRemindersListScreen` | `/reminders` | AlarmBloc | ✅ Unified - Needs Template UI |
+| `home_screen_widgets_ui` | `TodayDashboardScreen` | `/` | Multiple | ✅ Merged into main dashboard |
 
 ### Notes Feature
 

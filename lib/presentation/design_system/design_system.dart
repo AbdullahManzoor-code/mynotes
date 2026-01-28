@@ -1,6 +1,7 @@
 /// Design System
 /// Complete design system for MyNotes app
 /// Includes colors, typography, spacing, animations, and components
+library;
 
 // Core Design System
 // Re-export flutter_screenutil so files importing the design system
@@ -13,4 +14,3 @@ export 'app_animations.dart';
 
 // Components
 export 'components/components.dart';
-

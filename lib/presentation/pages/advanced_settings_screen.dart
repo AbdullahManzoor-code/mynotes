@@ -9,74 +9,37 @@ import '../bloc/theme_event.dart';
 import '../bloc/theme_state.dart';
 
 // ==================== Core Screens ====================
-import 'unified_home_screen.dart';
 import 'analytics_dashboard_screen.dart';
 import 'focus_session_screen.dart';
 import 'enhanced_global_search_screen.dart';
 import 'fixed_universal_quick_add_screen.dart';
-// ignore: unused_import
-import 'analytics_dashboard.dart';
 
 // ==================== Notes Screens ====================
-// ignore: unused_import
-import 'notes_list_screen.dart';
-// ignore: unused_import
 import 'enhanced_notes_list_screen.dart';
-// ignore: unused_import
-import 'note_editor_page.dart';
-// ignore: unused_import
 import 'enhanced_note_editor_screen.dart';
-// ignore: unused_import
 import 'advanced_note_editor.dart';
 
 // ==================== Todos Screens ====================
-// ignore: unused_import
 import 'todos_list_screen.dart';
-// ignore: unused_import
-import 'advanced_todo_screen.dart';
-// ignore: unused_import
-import 'todo_focus_screen.dart';
-// ignore: unused_import
 import 'recurring_todo_schedule_screen.dart';
 
 // ==================== Reminders Screens ====================
-// ignore: unused_import
-import 'reminders_screen.dart';
-// ignore: unused_import
 import 'enhanced_reminders_list_screen.dart';
 
 // ==================== Focus & Productivity ====================
-// ignore: unused_import
-import 'focus_session_active_screen.dart';
-// ignore: unused_import
 import 'focus_celebration_screen.dart';
 
 // ==================== Dashboards ====================
-// ignore: unused_import
-import 'dashboard_screen.dart';
-// ignore: unused_import
 import 'today_dashboard_screen.dart';
-// ignore: unused_import
-import 'modern_home_screen.dart';
-// ignore: unused_import
 import 'main_home_screen.dart';
 
 // ==================== Special Screens ====================
-// ignore: unused_import
 import 'cross_feature_demo.dart';
-// ignore: unused_import
-import 'global_search_screen.dart';
-// ignore: unused_import
 import 'search_filter_screen.dart';
-// ignore: unused_import
 import 'voice_settings_screen.dart';
-// ignore: unused_import
-import 'app_settings_screen.dart';
-// ignore: unused_import
 import 'settings_screen.dart';
 
 // ==================== Utilities ====================
-// ignore: unused_import
 import 'document_scan_screen.dart';
 // ignore: unused_import
 import 'ocr_text_extraction_screen.dart';
@@ -105,7 +68,7 @@ import 'location_reminder_coming_soon_screen.dart';
 /// Master navigation hub with developer/debug section
 /// Links to every screen in the project for testing
 class AdvancedSettingsScreen extends StatefulWidget {
-  const AdvancedSettingsScreen({Key? key}) : super(key: key);
+  const AdvancedSettingsScreen({super.key});
 
   @override
   State<AdvancedSettingsScreen> createState() => _AdvancedSettingsScreenState();
@@ -517,9 +480,9 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
         // ==================== Core Screens ====================
         _buildDeveloperSubsection('🏠 Core Screens', [
           _buildDevTile(
-            'Unified Home',
-            'Main dashboard with all items',
-            () => _navigateToScreen(const UnifiedHomeScreen()),
+            'Main Home',
+            'Main dashboard with bottom navigation',
+            () => _navigateToScreen(const MainHomeScreen()),
           ),
           _buildDevTile(
             'Universal Quick Add',
@@ -535,11 +498,6 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
             'Focus Session',
             'Pomodoro timer',
             () => _navigateToScreen(const FocusSessionScreen()),
-          ),
-          _buildDevTile(
-            'Focus Active',
-            'Active focus mode',
-            () => _navigateToScreen(const FocusSessionActiveScreen()),
           ),
           _buildDevTile(
             'Focus Celebration',
@@ -558,29 +516,9 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
             () => _navigateToScreen(const AnalyticsDashboardScreen()),
           ),
           _buildDevTile(
-            'Analytics (Alt)',
-            'Alternative analytics view',
-            () => _navigateToScreen(const AnalyticsDashboard()),
-          ),
-          _buildDevTile(
             'Today Dashboard',
             'Today\'s overview',
             () => _navigateToScreen(const TodayDashboardScreen()),
-          ),
-          _buildDevTile(
-            'Modern Home',
-            'Modern home screen',
-            () => _navigateToScreen(const ModernHomeScreen()),
-          ),
-          _buildDevTile(
-            'Main Home',
-            'Main home screen',
-            () => _navigateToScreen(const MainHomeScreen()),
-          ),
-          _buildDevTile(
-            'Dashboard',
-            'General dashboard',
-            () => _navigateToScreen(const DashboardScreen()),
           ),
         ]),
 
@@ -589,19 +527,9 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
         // ==================== Notes Management ====================
         _buildDeveloperSubsection('📝 Notes', [
           _buildDevTile(
-            'Notes List',
-            'All notes',
-            () => _navigateToScreen(const NotesListScreen()),
-          ),
-          _buildDevTile(
             'Enhanced Notes List',
             'Enhanced notes view',
             () => _navigateToScreen(const EnhancedNotesListScreen()),
-          ),
-          _buildDevTile(
-            'Note Editor',
-            'Note editor page',
-            () => _navigateToScreen(const NoteEditorPage()),
           ),
           _buildDevTile(
             'Enhanced Note Editor',
@@ -610,7 +538,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           ),
           _buildDevTile(
             'Advanced Note Editor',
-            'Professional editor',
+            'Professional editor with Quill',
             () => _navigateToScreen(const AdvancedNoteEditor()),
           ),
           _buildDevTile(
@@ -648,11 +576,6 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
         // ==================== Reminders Management ====================
         _buildDeveloperSubsection('⏰ Reminders', [
           _buildDevTile(
-            'Reminders List',
-            'All reminders',
-            () => _navigateToScreen(const RemindersScreen()),
-          ),
-          _buildDevTile(
             'Enhanced Reminders',
             'Enhanced reminders view',
             () => _navigateToScreen(const EnhancedRemindersListScreen()),
@@ -663,11 +586,6 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
 
         // ==================== Search & Filter ====================
         _buildDeveloperSubsection('🔍 Search', [
-          _buildDevTile(
-            'Global Search',
-            'Search all items',
-            () => _navigateToScreen(const GlobalSearchScreen()),
-          ),
           _buildDevTile(
             'Search Filter',
             'Advanced filtering',
@@ -684,11 +602,6 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
 
         // ==================== Settings & Utilities ====================
         _buildDeveloperSubsection('⚙️ Settings & Utilities', [
-          _buildDevTile(
-            'App Settings',
-            'App configuration',
-            () => _navigateToScreen(const AppSettingsScreen()),
-          ),
           _buildDevTile(
             'Settings',
             'General settings',
@@ -728,7 +641,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'PDF Preview',
             'Preview PDFs',
-            () => _navigateToScreen(PdfPreviewScreen(note: Note.new(id: '1'))),
+            () => _navigateToScreen(PdfPreviewScreen(note: Note(id: '1'))),
           ),
           _buildDevTile(
             'Calendar Integration',

@@ -13,12 +13,12 @@ import 'advanced_todo_screen.dart';
 import 'recurring_todo_schedule_screen.dart';
 import 'empty_state_todos_help_screen.dart';
 import 'settings_screen.dart';
-import 'note_editor_page.dart';
+import 'enhanced_note_editor_screen.dart';
 
 /// Todos List Screen - Display all notes tagged as todos
 /// Features: Quick voice entry, checkbox completion, filtering
 class TodosListScreen extends StatefulWidget {
-  const TodosListScreen({Key? key}) : super(key: key);
+  const TodosListScreen({super.key});
 
   @override
   State<TodosListScreen> createState() => _TodosListScreenState();
@@ -109,7 +109,7 @@ class _TodosListScreenState extends State<TodosListScreen>
   void _openFocusMode(Note? note) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => NoteEditorPage(note: note)),
+      MaterialPageRoute(builder: (_) => EnhancedNoteEditorScreen(note: note)),
     );
   }
 
