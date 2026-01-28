@@ -15,12 +15,15 @@ class AppRoutes {
   static const String home = '/home';
   static const String todayDashboard = '/today';
   static const String search = '/search';
+  static const String globalSearch = '/search/global';
   static const String settings = '/settings';
   static const String profile = '/profile';
 
   // ==================== Notes Module ====================
   static const String notesList = '/notes';
+  static const String enhancedNotesList = '/notes/enhanced';
   static const String noteEditor = '/notes/editor';
+  static const String enhancedNoteEditor = '/notes/editor/enhanced';
   static const String noteDetail = '/notes/detail';
   static const String notesArchive = '/notes/archive';
   static const String notesTrash = '/notes/trash';
@@ -50,11 +53,14 @@ class AppRoutes {
   // ==================== Focus & Productivity ====================
   static const String focusSession = '/focus';
   static const String focusSessionActive = '/focus/active';
+  static const String focusSessionActiveEnhanced = '/focus/active-enhanced';
   static const String focusSessionComplete = '/focus/complete';
   static const String pomodoroTimer = '/pomodoro';
 
   // ==================== Quick Actions ====================
   static const String quickAdd = '/quick-add';
+  static const String quickAddConfirmation = '/quick-add/confirmation';
+  static const String universalQuickAdd = '/universal-quick-add';
   static const String quickNote = '/quick/note';
   static const String quickTodo = '/quick/todo';
   static const String quickReminder = '/quick/reminder';
@@ -78,4 +84,3 @@ class AppRoutes {
   static const String notFound = '/404';
   static const String maintenance = '/maintenance';
 }
-

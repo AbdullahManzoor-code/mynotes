@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import '../../core/constants/app_colors.dart';
+import 'package:mynotes/presentation/design_system/app_typography.dart';
+import '../../presentation/design_system/app_colors.dart';
 import '../../domain/entities/note.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
@@ -14,6 +15,10 @@ import 'search_filter_screen.dart';
 import '../screens/reflection_home_screen.dart';
 import 'reminders_screen.dart';
 import 'todo_focus_screen.dart';
+import 'focus_session_screen.dart';
+import '../widgets/command_palette.dart';
+import '../widgets/quick_add_bottom_sheet.dart';
+import '../widgets/empty_state_notes.dart';
 
 /// Modern Advanced Home Screen with categorized views
 class ModernHomeScreen extends StatefulWidget {
@@ -77,7 +82,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen>
                             AppColors.darkBackground,
                             AppColors.primaryColor.withOpacity(0.3),
                           ]
-                        : [AppColors.primaryColor, AppColors.secondaryColor],
+                        : [AppColors.primaryColor, AppColors.primaryColorLight],
                   ),
                 ),
                 child: SafeArea(
@@ -99,11 +104,20 @@ class _ModernHomeScreenState extends State<ModernHomeScreen>
                         BlocBuilder<NotesBloc, NoteState>(
                           builder: (context, state) {
                             int count = 0;
+                            String displayText = 'Loading...';
+
                             if (state is NotesLoaded) {
                               count = state.notes.length;
+                              displayText =
+                                  '$count notes • ${DateTime.now().toString().split(' ')[0]}';
+                            } else if (state is NoteError) {
+                              displayText = 'Error loading notes';
+                            } else if (state is NoteLoading) {
+                              displayText = 'Loading notes...';
                             }
+
                             return Text(
-                              '$count notes • ${DateTime.now().toString().split(' ')[0]}',
+                              displayText,
                               style: TextStyle(
                                 fontSize: 14.sp,
                                 color: Colors.white70,
@@ -169,7 +183,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen>
                           context,
                           'New Note',
                           Icons.note_add,
-                          [AppColors.primaryColor, AppColors.secondaryColor],
+                          [AppColors.primaryColor, AppColors.primaryColorLight],
                           () {
                             Navigator.push(
                               context,
@@ -231,6 +245,21 @@ class _ModernHomeScreenState extends State<ModernHomeScreen>
                             }
                           },
                         ),
+                        _buildQuickActionCard(
+                          context,
+                          'Focus Timer',
+                          Icons.timer_outlined,
+                          [Colors.teal, Colors.tealAccent],
+                          () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const FocusSessionScreen(),
+                              ),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -270,28 +299,7 @@ class _ModernHomeScreenState extends State<ModernHomeScreen>
                 );
 
                 if (notes.isEmpty) {
-                  return SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.note,
-                            size: 80.sp,
-                            color: Colors.grey.withOpacity(0.3),
-                          ),
-                          SizedBox(height: 16.h),
-                          Text(
-                            'No notes yet',
-                            style: TextStyle(
-                              fontSize: 18.sp,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+                  return const SliverFillRemaining(child: EmptyStateNotes());
                 }
 
                 return SliverPadding(
@@ -319,6 +327,53 @@ class _ModernHomeScreenState extends State<ModernHomeScreen>
                         onColorChange: (val) {},
                       );
                     },
+                  ),
+                );
+              }
+
+              if (state is NoteError) {
+                return SliverFillRemaining(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: AppColors.errorColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading notes',
+                          style: AppTypography.heading3(
+                            context,
+                            Theme.of(context).colorScheme.onSurface,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          state.message,
+                          style: AppTypography.bodyMedium(
+                            context,
+                            Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<NotesBloc>().add(
+                              const LoadNotesEvent(),
+                            );
+                          },
+                          child: Text('Retry'),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               }
@@ -402,15 +457,51 @@ class _ModernHomeScreenState extends State<ModernHomeScreen>
   }
 
   Widget _buildSpeedDial(BuildContext context) {
-    return FloatingActionButton(
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const NoteEditorPage()),
-        );
-      },
-      backgroundColor: AppColors.primaryColor,
-      child: const Icon(Icons.add, color: Colors.white),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        // Command Palette
+        FloatingActionButton.small(
+          heroTag: 'command_palette',
+          onPressed: () {
+            CommandPalette.show(context);
+          },
+          backgroundColor: AppColors.primaryColor.withOpacity(0.9),
+          child: const Icon(
+            Icons.keyboard_command_key_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+        SizedBox(height: 12.h),
+        // Quick Add
+        FloatingActionButton.small(
+          heroTag: 'quick_add',
+          onPressed: () {
+            QuickAddBottomSheet.show(context);
+          },
+          backgroundColor: AppColors.primaryColor.withOpacity(0.9),
+          child: const Icon(
+            Icons.flash_on_rounded,
+            color: Colors.white,
+            size: 20,
+          ),
+        ),
+        SizedBox(height: 12.h),
+        // New Note
+        FloatingActionButton(
+          heroTag: 'new_note',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NoteEditorPage()),
+            );
+          },
+          backgroundColor: AppColors.primaryColor,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      ],
     );
   }
 }

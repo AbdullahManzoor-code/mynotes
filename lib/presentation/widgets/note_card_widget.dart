@@ -29,7 +29,7 @@ class NoteCardWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return GestureDetector(
       onTap: onTap,
       onLongPress: onLongPress,
@@ -39,11 +39,11 @@ class NoteCardWidget extends StatelessWidget {
           color: isDark ? AppColors.darkCardBackground : AppColors.lightSurface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
           border: Border.all(
-            color: isSelected 
-                ? AppColors.primary 
-                : (isDark 
-                    ? Colors.white.withOpacity(0.05)
-                    : AppColors.borderLight),
+            color: isSelected
+                ? AppColors.primary
+                : (isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : AppColors.borderLight),
             width: isSelected ? 2 : 1,
           ),
           boxShadow: [
@@ -82,6 +82,7 @@ class NoteCardWidget extends StatelessWidget {
                           note.title.isEmpty ? 'Untitled' : note.title,
                           style: AppTypography.bodyMedium(
                             context,
+                            null,
                             FontWeight.w700,
                           ),
                           maxLines: 1,
@@ -96,15 +97,13 @@ class NoteCardWidget extends StatelessWidget {
                   _getTimeAgo(note.updatedAt).toUpperCase(),
                   style: AppTypography.caption(
                     AppColors.textMuted,
+                    null,
                     FontWeight.w500,
-                  ).copyWith(
-                    fontSize: 10.sp,
-                    letterSpacing: 0.3,
-                  ),
+                  ).copyWith(fontSize: 10.sp, letterSpacing: 0.3),
                 ),
               ],
             ),
-            
+
             // Content Preview
             if (note.content.isNotEmpty) ...[
               SizedBox(height: 8.h),
@@ -117,14 +116,17 @@ class NoteCardWidget extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ],
-            
+
             // Tags
             if (note.tags.isNotEmpty) ...[
               SizedBox(height: 12.h),
               Wrap(
                 spacing: 8.w,
                 runSpacing: 6.h,
-                children: note.tags.take(3).map((tag) => _buildTag(tag, isDark)).toList(),
+                children: note.tags
+                    .take(3)
+                    .map((tag) => _buildTag(tag, isDark))
+                    .toList(),
               ),
             ],
           ],
@@ -135,7 +137,7 @@ class NoteCardWidget extends StatelessWidget {
 
   Widget _buildTag(String tag, bool isDark) {
     final color = _getTagColor(tag);
-    
+
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
       decoration: BoxDecoration(
@@ -146,10 +148,9 @@ class NoteCardWidget extends StatelessWidget {
         tag.toUpperCase(),
         style: AppTypography.caption(
           color,
+          null,
           FontWeight.w700,
-        ).copyWith(
-          fontSize: 10.sp,
-        ),
+        ).copyWith(fontSize: 10.sp),
       ),
     );
   }

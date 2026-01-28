@@ -1,18 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/note.dart';
-import '../bloc/notes_bloc.dart';
-import '../bloc/notes_state.dart';
+import '../bloc/note_bloc.dart';
+import '../bloc/note_state.dart';
 import '../bloc/alarm_bloc.dart';
 import '../bloc/alarm_state.dart';
 import '../bloc/reflection_bloc.dart';
 import '../bloc/reflection_state.dart';
 import '../design_system/design_system.dart';
-import 'reflection_home_screen.dart';
-import 'notes_list_screen.dart';
+import '../screens/reflection_home_screen.dart';
 import 'reminders_screen.dart';
+import 'focus_session_screen.dart';
+import 'daily_highlight_summary_screen.dart';
+import 'analytics_dashboard_screen.dart';
+import 'settings_screen.dart';
+import '../widgets/quick_add_bottom_sheet.dart';
+import '../widgets/global_command_palette.dart';
 
 /// Today Dashboard Screen
 /// Main overview showing stats, daily reflection prompt, and upcoming items
@@ -27,139 +32,256 @@ class TodayDashboardScreen extends StatefulWidget {
 class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final now = DateTime.now();
     final greeting = _getGreeting(now.hour);
 
-    return AppScaffold(
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          // Top App Bar / Greeting Header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.screenPaddingHorizontal,
-                AppSpacing.screenPaddingVertical * 2,
-                AppSpacing.screenPaddingHorizontal,
-                AppSpacing.lg,
+    return Shortcuts(
+      shortcuts: {
+        LogicalKeySet(LogicalKeyboardKey.meta, LogicalKeyboardKey.keyK):
+            const _ShowCommandPaletteIntent(),
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyK):
+            const _ShowCommandPaletteIntent(),
+      },
+      child: Actions(
+        actions: {
+          _ShowCommandPaletteIntent: CallbackAction<_ShowCommandPaletteIntent>(
+            onInvoke: (_) {
+              showGlobalCommandPalette(context);
+              return null;
+            },
+          ),
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.background(context),
+          body: CustomScrollView(
+            physics: const BouncingScrollPhysics(),
+            slivers: [
+              // Top App Bar / Greeting Header
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    AppSpacing.screenPaddingHorizontal,
+                    AppSpacing.screenPaddingVertical * 2,
+                    AppSpacing.screenPaddingHorizontal,
+                    AppSpacing.lg,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      // Greeting
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              greeting,
+                              style: AppTypography.heading1(
+                                context,
+                                AppColors.textPrimary(context),
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Here's your focus for today.",
+                              style: AppTypography.bodyMedium(
+                                context,
+                                AppColors.textSecondary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Profile Avatar + Command Palette Button
+                      Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () => showGlobalCommandPalette(context),
+                            child: Container(
+                              width: 40,
+                              height: 40,
+                              margin: const EdgeInsets.only(right: 12),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppColors.primary.withOpacity(0.2),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.search,
+                                color: AppColors.primary,
+                                size: 20,
+                              ),
+                            ),
+                          ),
+                          PopupMenuButton<String>(
+                            icon: Icon(
+                              Icons.more_vert,
+                              color: AppColors.primary,
+                            ),
+                            onSelected: (value) => _handleTodayMenu(value),
+                            itemBuilder: (BuildContext context) => [
+                              const PopupMenuItem(
+                                value: 'analytics',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.analytics, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Analytics'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'reminders',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.notifications, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Reminders'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'highlights',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.star, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Daily Highlights'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'reflection',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.psychology, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Daily Reflection'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuDivider(),
+                              const PopupMenuItem(
+                                value: 'settings',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.settings, size: 20),
+                                    SizedBox(width: 12),
+                                    Text('Settings'),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          _buildProfileAvatar(context),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // Greeting
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          greeting,
-                          style: AppTypography.heading1(
-                            context,
-                            null,
-                            FontWeight.w700,
-                          ),
-                        ),
-                        SizedBox(height: 4.h),
-                        Text(
-                          "Here's your focus for today.",
-                          style: AppTypography.bodySmall(
-                            AppColors.textMuted,
-                          ),
-                        ),
-                      ],
+
+              // Stats Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPaddingHorizontal,
+                  ).copyWith(bottom: AppSpacing.lg),
+                  child: _buildStatsSection(context),
+                ),
+              ),
+
+              // Quick Actions Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPaddingHorizontal,
+                  ).copyWith(bottom: AppSpacing.lg),
+                  child: _buildQuickActionsSection(context),
+                ),
+              ),
+
+              // Daily Reflection Prompt
+              BlocBuilder<ReflectionBloc, ReflectionState>(
+                builder: (context, state) {
+                  // Handle different reflection states appropriately
+                  // For the dashboard, we always show the reflection prompt regardless of state
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenPaddingHorizontal,
+                      ).copyWith(bottom: AppSpacing.lg),
+                      child: _buildDailyReflection(context, state),
+                    ),
+                  );
+                },
+              ),
+
+              // Section: Your Day
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPaddingHorizontal,
+                  ).copyWith(bottom: AppSpacing.md),
+                  child: Text(
+                    'Your Day',
+                    style: AppTypography.heading2(
+                      context,
+                      AppColors.textPrimary(context),
                     ),
                   ),
-
-                  // Profile Avatar
-                  _buildProfileAvatar(),
-                ],
+                ),
               ),
-            ),
-          ),
 
-          // Stats Section
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSpacing.screenPaddingHorizontal,
-                vertical: AppSpacing.lg,
+              // Next Reminders Card
+              BlocBuilder<AlarmBloc, AlarmState>(
+                builder: (context, state) {
+                  // Handle different alarm states appropriately
+                  // For the dashboard, we show a simplified view regardless of state
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenPaddingHorizontal,
+                      ).copyWith(bottom: AppSpacing.md),
+                      child: _buildRemindersCard(context, state),
+                    ),
+                  );
+                },
               ),
-              child: _buildStatsSection(),
-            ),
-          ),
 
-          // Daily Reflection Prompt
-          BlocBuilder<ReflectionBloc, ReflectionState>(
-            builder: (context, state) {
-              return SliverToBoxAdapter(
+              // Todos Card
+              SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSpacing.screenPaddingHorizontal,
-                    vertical: AppSpacing.lg,
-                  ),
-                  child: _buildDailyReflection(state),
-                ),
-              );
-            },
-          ),
-
-          // Section: Your Day
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.only(
-                left: AppSpacing.screenPaddingHorizontal,
-                right: AppSpacing.screenPaddingHorizontal,
-                top: AppSpacing.lg,
-                bottom: AppSpacing.md,
-              ),
-              child: Text(
-                'Your Day',
-                style: AppTypography.heading2(
-                  context,
-                  null,
-                  FontWeight.w700,
+                  ).copyWith(bottom: AppSpacing.lg),
+                  child: _buildTodosCard(context),
                 ),
               ),
-            ),
-          ),
 
-          // Next Reminders Card
-          BlocBuilder<AlarmBloc, AlarmState>(
-            builder: (context, state) {
-              return SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPaddingHorizontal,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: _buildRemindersCard(state),
-                ),
-              );
-            },
-          ),
+              // Continue Writing (Recent Notes)
+              BlocBuilder<NotesBloc, NoteState>(
+                builder: (context, state) {
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSpacing.screenPaddingHorizontal,
+                      ).copyWith(bottom: AppSpacing.lg),
+                      child: _buildContinueWriting(context, state),
+                    ),
+                  );
+                },
+              ),
 
-          // Recent Notes Preview
-          BlocBuilder<NotesBloc, NotesState>(
-            builder: (context, state) {
-              return SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPaddingHorizontal,
-                    vertical: AppSpacing.md,
-                  ),
-                  child: _buildRecentNotesCard(state),
-                ),
-              );
-            },
+              // Bottom Spacing
+              SliverToBoxAdapter(child: SizedBox(height: 80)),
+            ],
           ),
-
-          // Bottom Spacing
-          SliverToBoxAdapter(
-            child: SizedBox(height: 80.h),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -170,96 +292,322 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
     return 'Good evening';
   }
 
-  Widget _buildProfileAvatar() {
+  Widget _buildProfileAvatar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      width: 40.w,
-      height: 40.w,
+      width: 40,
+      height: 40,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: AppColors.primary.withOpacity(0.2),
         border: Border.all(
-          color: AppColors.primary.withOpacity(0.3),
+          color: isDark ? AppColors.surface(context) : Colors.white,
           width: 2,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Icon(
         Icons.person,
-        size: 24.sp,
-        color: AppColors.primary,
+        size: 24,
+        color: isDark ? AppColors.surface(context) : Colors.white,
       ),
     );
   }
 
-  Widget _buildStatsSection() {
-    // In a real implementation, fetch stats from BLoCs
+  Widget _buildStatsSection(BuildContext context) {
     return Row(
       children: [
         Expanded(
-          child: StatCard(
-            label: 'Reflection Streak',
+          child: _buildStatCard(
+            context,
+            label: 'REFLECTION STREAK',
             value: '7 Days',
             trend: '+2%',
             trendColor: AppColors.successGreen,
           ),
         ),
-        SizedBox(width: 16.w),
+        const SizedBox(width: 16),
         Expanded(
-          child: StatCard(
-            label: 'Todos Done',
-            value: '4/10',
-            trend: '40%',
-            trendColor: AppColors.primary,
+          child: _buildStatCard(
+            context,
+            label: 'TODOS DONE',
+            value: '4/6',
+            trend: '67% complete',
+            trendColor: AppColors.successGreen,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildDailyReflection(ReflectionState state) {
-    // Fetch today's question from the state
-    final question = "What is one thing you want to achieve today that will make you feel proud?";
-
-    return PromptCard(
-      icon: Icons.self_improvement,
-      title: 'Daily Reflection',
-      description: question,
-      buttonText: 'Answer',
-      onPressed: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const ReflectionHomeScreen(),
+  Widget _buildQuickActionsSection(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildQuickActionButton(
+            context,
+            icon: Icons.add,
+            label: 'Quick Note',
+            onTap: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const QuickAddBottomSheet(),
+              );
+            },
           ),
-        );
-      },
-      accentColor: AppColors.primary,
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildQuickActionButton(
+            context,
+            icon: Icons.timer,
+            label: 'Focus',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FocusSessionScreen(),
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildQuickActionButton(
+            context,
+            icon: Icons.auto_awesome,
+            label: 'Highlights',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const DailyHighlightSummaryScreen(),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildRemindersCard(AlarmState state) {
+  Widget _buildQuickActionButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Get upcoming reminders (for demo, using placeholder)
-    final upcomingReminders = state is AlarmLoaded
-        ? state.alarms.where((a) => a.isEnabled).take(3).toList()
-        : [];
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+          border: Border.all(
+            color: isDark
+                ? AppColors.borderDark.withOpacity(0.2)
+                : AppColors.borderLight,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 24, color: AppColors.primary),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: AppTypography.captionLarge(
+                context,
+                AppColors.textPrimary(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    return GlassContainer(
-      padding: EdgeInsets.zero,
+  Widget _buildStatCard(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required String trend,
+    required Color trendColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border(context), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: AppTypography.labelSmall(
+              context,
+              AppColors.textSecondary(context),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: AppTypography.numberMedium(
+              context,
+              AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(trend, style: AppTypography.captionLarge(context, trendColor)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyReflection(BuildContext context, ReflectionState state) {
+    final question =
+        "What is one thing you want to achieve today that will make you feel proud?";
+
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.primary.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+                ),
+                child: Icon(
+                  Icons.self_improvement,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Daily Reflection',
+                style: AppTypography.heading3(
+                  context,
+                  AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            question,
+            style: AppTypography.bodyLarge(
+              context,
+              AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReflectionHomeScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                'Answer',
+                style: AppTypography.buttonMedium(context, Colors.white),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRemindersCard(BuildContext context, AlarmState state) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final upcomingReminders = [];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(color: AppColors.border(context), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Header
           Padding(
-            padding: EdgeInsets.all(16.w),
+            padding: const EdgeInsets.all(16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Next Reminders',
-                  style: AppTypography.bodySmall(
-                    AppColors.textMuted,
-                    FontWeight.w700,
+                  style: AppTypography.labelLarge(
+                    context,
+                    AppColors.textSecondary(context),
                   ),
                 ),
                 GestureDetector(
@@ -273,9 +621,9 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                   },
                   child: Text(
                     'See all',
-                    style: AppTypography.caption(
+                    style: AppTypography.labelMedium(
+                      context,
                       AppColors.primary,
-                      FontWeight.w600,
                     ),
                   ),
                 ),
@@ -285,31 +633,43 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
 
           // Reminders List
           if (upcomingReminders.isEmpty)
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 24.h),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 32),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: AppColors.border(context)),
+                ),
+              ),
               child: Center(
-                child: Text(
-                  'No upcoming reminders',
-                  style: AppTypography.bodySmall(
-                    AppColors.textMuted,
-                  ),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.notifications_none,
+                      size: 32,
+                      color: AppColors.textSecondary(context).withOpacity(0.5),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No upcoming reminders',
+                      style: AppTypography.bodyMedium(
+                        context,
+                        AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             )
           else
             ...upcomingReminders.map((reminder) {
               return Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 12.h,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
                 ),
                 decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(
-                      color: isDark
-                          ? AppColors.borderDark.withOpacity(0.2)
-                          : AppColors.borderLight,
-                    ),
+                    top: BorderSide(color: AppColors.border(context)),
                   ),
                 ),
                 child: Row(
@@ -339,9 +699,9 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                         children: [
                           Text(
                             reminder.title,
-                            style: AppTypography.bodyMedium(
+                            style: AppTypography.labelLarge(
                               context,
-                              FontWeight.w600,
+                              AppColors.textPrimary(context),
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -349,12 +709,25 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                           SizedBox(height: 2.h),
                           Text(
                             DateFormat('h:mm a').format(reminder.dateTime),
-                            style: AppTypography.caption(
-                              AppColors.textMuted,
+                            style: AppTypography.captionLarge(
+                              context,
+                              AppColors.textSecondary(context),
                             ),
                           ),
                         ],
                       ),
+                    ),
+
+                    // Snooze button
+                    IconButton(
+                      onPressed: () {},
+                      icon: Icon(
+                        Icons.notifications_paused,
+                        size: 20.sp,
+                        color: AppColors.textPrimary(context),
+                      ),
+                      padding: EdgeInsets.all(8.w),
+                      constraints: const BoxConstraints(),
                     ),
                   ],
                 ),
@@ -365,135 +738,282 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
     );
   }
 
-  Widget _buildRecentNotesCard(NotesState state) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+  Widget _buildContinueWriting(BuildContext context, NoteState state) {
     final recentNotes = state is NotesLoaded
-        ? state.notes.take(3).toList()
+        ? state.notes.take(5).toList()
         : <Note>[];
 
-    return GlassContainer(
-      padding: EdgeInsets.zero,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Section Header
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Text(
+            'CONTINUE WRITING',
+            style: AppTypography.labelSmall(
+              context,
+              AppColors.textSecondary(context),
+            ),
+          ),
+        ),
+
+        // Horizontal scrolling cards
+        if (recentNotes.isEmpty)
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            child: Center(
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.description_outlined,
+                    size: 32,
+                    color: AppColors.textSecondary(context).withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'No notes yet',
+                    style: AppTypography.bodyMedium(
+                      context,
+                      AppColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 120,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: recentNotes.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final note = recentNotes[index];
+                return _buildNoteCard(context, note);
+              },
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNoteCard(BuildContext context, Note note) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final timeDiff = DateTime.now().difference(note.createdAt);
+    final timeAgo = timeDiff.inHours < 24
+        ? '${timeDiff.inHours}h ago'
+        : timeDiff.inDays == 1
+        ? 'Yesterday'
+        : DateFormat('MMM d').format(note.createdAt);
+
+    return Container(
+      width: 160,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(color: AppColors.border(context), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon and time
+          Row(
+            children: [
+              Icon(Icons.description, size: 14, color: AppColors.primary),
+              const SizedBox(width: 6),
+              Text(
+                timeAgo,
+                style: AppTypography.captionSmall(context, AppColors.primary),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          // Title
+          Text(
+            note.title.isEmpty ? 'Untitled' : note.title,
+            style: AppTypography.labelLarge(
+              context,
+              AppColors.textPrimary(context),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 4),
+
+          // Content preview
+          Expanded(
+            child: Text(
+              note.content.isEmpty ? 'No content' : note.content,
+              style: AppTypography.bodySmall(
+                context,
+                AppColors.textSecondary(context),
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleTodayMenu(String value) {
+    switch (value) {
+      case 'analytics':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AnalyticsDashboardScreen()),
+        );
+        break;
+      case 'reminders':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RemindersScreen()),
+        );
+        break;
+      case 'highlights':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const DailyHighlightSummaryScreen(),
+          ),
+        );
+        break;
+      case 'reflection':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ReflectionHomeScreen()),
+        );
+        break;
+      case 'settings':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
+        break;
+    }
+  }
+
+  Widget _buildTodosCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final todos = [
+      {'title': 'Draft project proposal', 'completed': false},
+      {'title': 'Morning workout', 'completed': true},
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(color: AppColors.border(context), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
         children: [
           // Header
           Padding(
-            padding: EdgeInsets.all(16.w),
+            padding: const EdgeInsets.all(16),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Recent Notes',
-                  style: AppTypography.bodySmall(
-                    AppColors.textMuted,
-                    FontWeight.w700,
+                  "Today's Todos",
+                  style: AppTypography.labelLarge(
+                    context,
+                    AppColors.textSecondary(context),
                   ),
                 ),
                 GestureDetector(
                   onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const NotesListScreen(),
-                      ),
-                    );
+                    // Navigate to add todo
                   },
                   child: Text(
-                    'See all',
-                    style: AppTypography.caption(
+                    '+ Add',
+                    style: AppTypography.labelMedium(
+                      context,
                       AppColors.primary,
-                      FontWeight.w600,
                     ),
                   ),
                 ),
               ],
             ),
           ),
-
-          // Notes List
-          if (recentNotes.isEmpty)
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: 24.h),
-              child: Center(
-                child: Text(
-                  'No notes yet',
-                  style: AppTypography.bodySmall(
-                    AppColors.textMuted,
-                  ),
+          // Todo List
+          ...todos.map((todo) {
+            final isCompleted = todo['completed'] as bool;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                border: Border(
+                  top: BorderSide(color: AppColors.border(context)),
                 ),
               ),
-            )
-          else
-            ...recentNotes.map((note) {
-              return Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 12.h,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(
-                      color: isDark
-                          ? AppColors.borderDark.withOpacity(0.2)
-                          : AppColors.borderLight,
+              child: Row(
+                children: [
+                  Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: isCompleted
+                          ? AppColors.primary
+                          : Colors.transparent,
+                      border: Border.all(
+                        color: isCompleted
+                            ? AppColors.primary
+                            : AppColors.primary.withOpacity(0.4),
+                        width: 2,
+                      ),
                     ),
+                    child: isCompleted
+                        ? const Icon(Icons.check, size: 16, color: Colors.white)
+                        : null,
                   ),
-                ),
-                child: Row(
-                  children: [
-                    // Icon
-                    Container(
-                      width: 40.w,
-                      height: 40.w,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusLG,
-                        ),
-                      ),
-                      child: Icon(
-                        Icons.description,
-                        color: AppColors.primary,
-                        size: 20.sp,
-                      ),
-                    ),
-                    SizedBox(width: 12.w),
-
-                    // Title & Preview
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            note.title,
-                            style: AppTypography.bodyMedium(
-                              context,
-                              FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                  const SizedBox(width: 12),
+                  Text(
+                    todo['title'] as String,
+                    style: isCompleted
+                        ? AppTypography.bodyMedium(
+                            context,
+                            AppColors.textPrimary(context),
+                          ).copyWith(
+                            decoration: TextDecoration.lineThrough,
+                            // opacity: 0.5,
+                          )
+                        : AppTypography.bodyMedium(
+                            context,
+                            AppColors.textPrimary(context),
                           ),
-                          if (note.content.isNotEmpty) ...[
-                            SizedBox(height: 2.h),
-                            Text(
-                              note.content,
-                              style: AppTypography.caption(
-                                AppColors.textMuted,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
+                  ),
+                ],
+              ),
+            );
+          }).toList(),
         ],
       ),
     );
   }
+}
+
+// Intent for keyboard shortcut
+class _ShowCommandPaletteIntent extends Intent {
+  const _ShowCommandPaletteIntent();
 }

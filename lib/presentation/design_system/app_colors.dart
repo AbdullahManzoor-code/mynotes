@@ -64,6 +64,16 @@ class AppColors {
   static const Color grey400 = Color(0xFFBDBDBD);
   static const Color grey500 = Color(0xFF9E9E9E);
 
+  /// Alias: Muted text color
+  static const Color textMuted = Color(0xFF617F89);
+
+  /// Border colors
+  static const Color borderLight = Color(0xFFE5E7EB);
+  static const Color borderDark = Color(0xFF374151);
+
+  /// Success green alias
+  static const Color successGreen = Color(0xFF078836);
+
   // ==================== Accent Colors ====================
 
   /// Blue accent variations

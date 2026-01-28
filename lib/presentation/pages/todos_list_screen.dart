@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
+import 'dart:ui';
 import '../../core/services/speech_service.dart';
 import '../../domain/entities/note.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
 import '../design_system/design_system.dart';
-import '../widgets/voice_input_button.dart';
-import '../widgets/empty_state_widget.dart';
-import 'todo_focus_screen.dart';
+import '../widgets/empty_state_todos.dart' as widgets;
+import 'advanced_todo_screen.dart';
+import 'recurring_todo_schedule_screen.dart';
+import 'empty_state_todos_help_screen.dart';
 import 'settings_screen.dart';
 import 'note_editor_page.dart';
 
@@ -111,13 +113,6 @@ class _TodosListScreenState extends State<TodosListScreen>
     );
   }
 
-  void _openSettings() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
@@ -130,14 +125,27 @@ class _TodosListScreenState extends State<TodosListScreen>
           _loadTodos();
         }
       },
-      child: AppScaffold(
-        body: CustomScrollView(
-          slivers: [
-            _buildSliverAppBar(),
-            _buildInputSection(),
-            _buildFilterSection(),
-            _buildTodoListSection(),
-            SliverToBoxAdapter(child: SizedBox(height: 100.r)),
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        body: Stack(
+          children: [
+            // Main content
+            CustomScrollView(
+              slivers: [
+                _buildSliverAppBar(),
+                _buildFilterSection(),
+                _buildTodoListSection(),
+                SliverToBoxAdapter(child: SizedBox(height: 200.h)),
+              ],
+            ),
+
+            // Floating quick add at bottom
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildQuickAddSection(),
+            ),
           ],
         ),
       ),
@@ -145,88 +153,142 @@ class _TodosListScreenState extends State<TodosListScreen>
   }
 
   Widget _buildSliverAppBar() {
-    return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.xl,
-        AppSpacing.lg,
-        AppSpacing.md,
+    return SliverAppBar(
+      floating: true,
+      snap: true,
+      backgroundColor: AppColors.background(context).withOpacity(0.8),
+      flexibleSpace: ClipRRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(color: Colors.transparent),
+        ),
       ),
-      sliver: SliverToBoxAdapter(
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your Tasks',
-                  style: AppTypography.displayLarge(
-                    context,
-                    null,
-                    FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  'Stay focused and productive',
-                  style: AppTypography.bodySmall(
-                    context,
-                    AppColors.textSecondary(context),
-                  ),
-                ),
-              ],
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Your Tasks',
+            style: AppTypography.heading1(null, null, FontWeight.bold),
+          ),
+          Text(
+            'Stay focused and productive',
+            style: AppTypography.caption(null, AppColors.textMuted, null),
+          ),
+        ],
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.timer_outlined, size: 24.sp),
+          onPressed: () => _openFocusMode(null),
+          tooltip: 'Focus Mode',
+        ),
+        PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, color: AppColors.primary),
+          onSelected: (value) => _handleTodosMenu(value),
+          itemBuilder: (BuildContext context) => [
+            const PopupMenuItem(
+              value: 'recurring',
+              child: Row(
+                children: [
+                  Icon(Icons.repeat, size: 20),
+                  SizedBox(width: 12),
+                  Text('Recurring Tasks'),
+                ],
+              ),
             ),
-            AppIconButton(
-              icon: Icons.timer_outlined,
-              onPressed: () => _openFocusMode(null),
-              tooltip: 'Focus Mode',
+            const PopupMenuItem(
+              value: 'advanced',
+              child: Row(
+                children: [
+                  Icon(Icons.dashboard, size: 20),
+                  SizedBox(width: 12),
+                  Text('Advanced View'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'help',
+              child: Row(
+                children: [
+                  Icon(Icons.help, size: 20),
+                  SizedBox(width: 12),
+                  Text('Getting Started'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings, size: 20),
+                  SizedBox(width: 12),
+                  Text('Settings'),
+                ],
+              ),
             ),
           ],
         ),
-      ),
+      ],
+      elevation: 0,
     );
   }
 
-  Widget _buildInputSection() {
-    return SliverPadding(
-      padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-      sliver: SliverToBoxAdapter(
-        child: CardContainer(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.md,
-            vertical: AppSpacing.xs,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _todoController,
-                  style: AppTypography.bodyMedium(context),
-                  decoration: InputDecoration(
-                    hintText: 'Add a new task...',
-                    hintStyle: AppTypography.bodyMedium(
-                      context,
-                      AppColors.textSecondary(context).withOpacity(0.5),
-                    ),
-                    border: InputBorder.none,
+  Widget _buildQuickAddSection() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.background(context).withOpacity(0),
+            AppColors.background(context),
+          ],
+        ),
+      ),
+      padding: EdgeInsets.fromLTRB(16.w, 40.h, 16.w, 20.h),
+      child: GlassContainer(
+        padding: EdgeInsets.all(16.w),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _todoController,
+                style: AppTypography.bodyLarge(null, null, FontWeight.w500),
+                maxLines: null,
+                decoration: InputDecoration(
+                  hintText: "What's on your mind?",
+                  hintStyle: AppTypography.bodyLarge(
+                    null,
+                    AppColors.textMuted.withOpacity(0.5),
+                    FontWeight.w500,
                   ),
-                  onSubmitted: (_) => _addQuickTodo(),
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 4.h),
+                ),
+                onSubmitted: (_) => _addQuickTodo(),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            GestureDetector(
+              onTap: _isListening ? _stopVoiceInput : _startVoiceInput,
+              child: Container(
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: _isListening
+                      ? AppColors.primary.withOpacity(0.2)
+                      : AppColors.surface(context).withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                ),
+                child: Icon(
+                  Icons.mic,
+                  size: 24.sp,
+                  color: _isListening ? AppColors.primary : Colors.white,
                 ),
               ),
-              VoiceInputButton(
-                isListening: _isListening,
-                onPressed: _isListening ? _stopVoiceInput : _startVoiceInput,
-                size: 40.r,
-              ),
-              SizedBox(width: AppSpacing.xs),
-              AppIconButton(
-                icon: Icons.add_circle,
-                onPressed: _addQuickTodo,
-                iconColor: AppColors.primaryColor,
-                size: 32.r,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -240,45 +302,48 @@ class _TodosListScreenState extends State<TodosListScreen>
     ];
 
     return SliverPadding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.lg,
-        AppSpacing.md,
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.screenPaddingHorizontal,
+        vertical: 12.h,
       ),
       sliver: SliverToBoxAdapter(
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
+        child: Container(
+          height: 44.h,
+          decoration: BoxDecoration(
+            color: AppColors.surface(context).withOpacity(0.5),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+          ),
+          padding: EdgeInsets.all(4.w),
           child: Row(
             children: filters.map((f) {
               final isSelected = _filterBy == f['id'];
-              return GestureDetector(
-                onTap: () => setState(() => _filterBy = f['id']!),
-                child: Container(
-                  margin: EdgeInsets.only(right: AppSpacing.sm),
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.lg,
-                    vertical: AppSpacing.sm,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primaryColor
-                        : AppColors.surface(context),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusXl),
-                    border: Border.all(
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => setState(() => _filterBy = f['id']!),
+                  child: Container(
+                    decoration: BoxDecoration(
                       color: isSelected
-                          ? AppColors.primaryColor
-                          : AppColors.divider(context),
+                          ? AppColors.surface(context)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
                     ),
-                  ),
-                  child: Text(
-                    f['label']!,
-                    style: AppTypography.captionSmall(
-                      context,
-                      isSelected
-                          ? Colors.white
-                          : AppColors.textPrimary(context),
-                      isSelected ? FontWeight.bold : FontWeight.normal,
+                    alignment: Alignment.center,
+                    child: Text(
+                      f['label']!,
+                      style: AppTypography.bodySmall(
+                        null,
+                        isSelected ? AppColors.primary : AppColors.textMuted,
+                        FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -302,6 +367,12 @@ class _TodosListScreenState extends State<TodosListScreen>
           final todos = state.notes
               .where((n) => n.tags.contains('todo'))
               .toList();
+
+          // Show empty state if no todos at all
+          if (todos.isEmpty && _filterBy == 'all') {
+            return SliverFillRemaining(child: widgets.EmptyStateTodos());
+          }
+
           final filtered = _filterTodos(todos);
 
           if (filtered.isEmpty) {
@@ -311,7 +382,7 @@ class _TodosListScreenState extends State<TodosListScreen>
                 child: EmptyStateWidget(
                   icon: Icons.check_circle_outline,
                   title: 'All caught up!',
-                  subtitle: 'No tasks to show for this filter.',
+                  description: 'No tasks to show for this filter.',
                 ),
               ),
             );
@@ -327,6 +398,50 @@ class _TodosListScreenState extends State<TodosListScreen>
             ),
           );
         }
+
+        if (state is NoteError) {
+          return SliverFillRemaining(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppColors.errorColor,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading tasks',
+                    style: AppTypography.heading3(
+                      context,
+                      AppColors.textPrimary(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.message,
+                    style: AppTypography.bodyMedium(
+                      context,
+                      AppColors.textSecondary(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<NotesBloc>().add(const LoadNotesEvent());
+                    },
+                    child: Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         return const SliverFillRemaining(
           child: Center(child: Text('Error loading tasks')),
         );
@@ -403,71 +518,45 @@ class _TodosListScreenState extends State<TodosListScreen>
     return notes.where((n) => !n.tags.contains('completed')).toList();
   }
 
-  Widget _buildTodoCard(Note note) {
-    final isCompleted = note.isArchived;
-
-    return CardContainer(
-      margin: EdgeInsets.only(bottom: AppSpacing.md),
-      onTap: () => _openFocusMode(note),
-      child: Row(
-        children: [
-          Checkbox(
-            value: isCompleted,
-            onChanged: (value) {
-              final updatedNote = note.copyWith(
-                isArchived: value ?? false,
-                updatedAt: DateTime.now(),
-              );
-              context.read<NotesBloc>().add(UpdateNoteEvent(updatedNote));
-            },
-            activeColor: AppColors.successColor,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(4),
-            ),
+  void _handleTodosMenu(String value) {
+    switch (value) {
+      case 'recurring':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const RecurringTodoScheduleScreen(),
           ),
-          SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  note.title,
-                  style:
-                      AppTypography.heading4(
-                        context,
-                        isCompleted ? AppColors.textSecondary(context) : null,
-                      ).copyWith(
-                        decoration: isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
-                      ),
-                ),
-                if (note.content.isNotEmpty)
-                  Text(
-                    note.content,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.captionSmall(context),
-                  ),
-              ],
-            ),
+        );
+        break;
+      case 'advanced':
+        // Create a blank note for advanced todo view
+        final blankNote = Note(
+          id: DateTime.now().toString(),
+          title: '',
+          content: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+          tags: ['todo'],
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdvancedTodoScreen(note: blankNote),
           ),
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.more_vert,
-              color: AppColors.textSecondary(context),
-            ),
-            onSelected: (value) {
-              if (value == 'delete') {
-                context.read<NotesBloc>().add(DeleteNoteEvent(note.id));
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(value: 'delete', child: Text('Delete')),
-            ],
-          ),
-        ],
-      ),
-    );
+        );
+        break;
+      case 'help':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EmptyStateTodosHelpScreen()),
+        );
+        break;
+      case 'settings':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
+        break;
+    }
   }
 }

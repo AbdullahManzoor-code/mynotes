@@ -115,6 +115,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
         content: event.content,
         color: event.color,
         tags: event.tags ?? [],
+        isPinned: event.isPinned,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -662,4 +663,3 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     }
   }
 }
-

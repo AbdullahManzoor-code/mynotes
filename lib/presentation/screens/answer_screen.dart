@@ -187,6 +187,29 @@ class _AnswerScreenState extends State<AnswerScreen> {
               // Previous Answers Section
               BlocBuilder<ReflectionBloc, ReflectionState>(
                 builder: (context, state) {
+                  if (state is ReflectionLoading) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: CircularProgressIndicator(),
+                      ),
+                    );
+                  }
+
+                  if (state is ReflectionError) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Error loading previous responses: ${state.message}',
+                        style: TextStyle(
+                          color: AppColors.errorColor,
+                          fontSize: 12.sp,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    );
+                  }
+
                   if (state is AnswersLoaded && state.answers.isNotEmpty) {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,4 +404,3 @@ class _AnswerScreenState extends State<AnswerScreen> {
     }
   }
 }
-

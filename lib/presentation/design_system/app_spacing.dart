@@ -148,13 +148,24 @@ class AppSpacing {
   static double get radiusSmall => 4.r;
 
   /// Border radius (medium) - 8px
+  static double get radiusMD => 8.r;
+
+  /// Border radius (large) - 12px
+  static double get radiusLG => 12.r;
+
+  /// Border radius (extra large) - 16px
+  static double get radiusXL => 16.r;
+
+  /// Border radius (full/circle) - 9999px
+  static double get radiusFull => 9999.r;
+
+  /// Border radius (medium) - 8px (old name)
   static double get radiusMedium => 8.r;
 
   /// Border radius (large) - 12px
   static double get radiusLarge => 12.r;
 
   /// Border radius (full) - 999px
-  static double get radiusFull => 999.r;
 
   /// Border radius (extra large) - 16px
   static double get radiusXLarge => 16.r;

@@ -91,6 +91,47 @@ class _AnalyticsDashboardState extends State<AnalyticsDashboard> {
           int todosCompleted = 0;
           int activeAlarms = 0;
 
+          if (state is NoteLoading) {
+            return const SliverToBoxAdapter(
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (state is NoteError) {
+            return SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.errorColor,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading analytics',
+                      style: AppTypography.heading3(
+                        context,
+                        AppColors.textPrimary(context),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.message,
+                      style: AppTypography.bodyMedium(
+                        context,
+                        AppColors.textSecondary(context),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
           if (state is NotesLoaded) {
             totalNotes = state.notes.length;
             for (var note in state.notes) {

@@ -3,8 +3,8 @@
 ## Overview
 This document tracks the progress of refactoring the MyNotes Flutter app UI to match the HTML templates found in `/templete/`.
 
-**Last Updated:** Phase 1 Completed
-**Status:** ✅ Foundation Complete, Ready for Screen-by-Screen Updates
+**Last Updated:** Phase 2 - NotesListScreen Complete
+**Status:** ✅ Phase 1 Complete, ✅ NotesListScreen Updated
 
 ---
 
@@ -121,12 +121,13 @@ This document tracks the progress of refactoring the MyNotes Flutter app UI to m
 ### Phase 2: Core Screen Updates
 
 #### Priority 1: Notes Feature
-- [ ] **Update NotesListScreen**
-  - Add template picker section at top
-  - Update card layout to match `notes_list_and_templates_1/2`
-  - Implement grid/list toggle
-  - Add filter chips
-  - Update empty state to use `EmptyStateNotes`
+- [x] **Update NotesListScreen** ✅ COMPLETED
+  - Added template picker section at top using `TemplatePicker` component
+  - Updated app bar with glassmorphic sticky header and backdrop blur
+  - Implemented improved card layout matching `notes_list_and_templates_1/2`
+  - Updated empty state to use `EmptyStateNotes`
+  - Improved spacing and padding to match template design
+  - Updated `NoteCardWidget` with better styling, tag colors, and time formatting
 
 - [ ] **Update NoteEditorPage**
   - Match layout from `note_editor_with_links_and_pins`
@@ -239,7 +240,19 @@ All new components properly integrate with existing BLoCs:
 
 ### Modified
 1. `lib/presentation/design_system/components/components.dart` - Added exports
-2. `lib/presentation/pages/main_home_screen.dart` - Updated tabs and screens
+2. `lib/presentation/pages/main_home_screen.dart` - Updated tabs and scree
+4. `lib/presentation/pages/notes_list_screen.dart` - **UPDATED WITH TEMPLATE DESIGN**
+   - Glassmorphic sticky app bar with backdrop blur
+   - Integrated TemplatePicker component
+   - Updated section headers using SectionHeader component
+   - Improved card spacing and layout
+   - Better empty state handling
+5. `lib/presentation/widgets/note_card_widget.dart` - **UPDATED WITH TEMPLATE DESIGN**
+   - Complete redesign matching HTML template
+   - Color-coded tags (work=blue, personal=orange, journal=green, etc.)
+   - Improved time formatting (2h ago, Yesterday, Oct 12)
+   - Better typography and spacing
+   - Removed unused importsns
 3. `lib/presentation/pages/note_editor_page.dart` - Removed unused imports
 
 ### Compilation Status
@@ -282,7 +295,8 @@ All new components properly integrate with existing BLoCs:
 2. **Material 3 vs Custom:** Should the UI be closer to Material 3 or fully custom?
    - **Current approach:** Custom design based on templates, using Material widgets as base
 
-3. **Voice features:** Templates show voice input buttons - are these functional or placeholder?
+3. x] NotesListScreen updated (1/4 core screens complete)
+- [ ] All core screens updated (1show voice input buttons - are these functional or placeholder?
    - **Current status:** Voice service exists, UI needs updates
 
 ---

@@ -163,7 +163,7 @@ class EmptySearchResults extends StatelessWidget {
       icon: Icons.search_off,
       title: 'No results found',
       description: 'Try adjusting your search terms or filters.',
-      iconColor: AppColors.text,
+      iconColor: AppColors.textSecondary(context),
     );
   }
 }

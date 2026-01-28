@@ -1,5 +1,11 @@
 import 'package:flutter/material.dart';
 import 'app_routes.dart';
+import '../pages/fixed_universal_quick_add_screen.dart';
+import '../pages/enhanced_notes_list_screen.dart';
+import '../pages/focus_session_active_screen.dart';
+import '../pages/enhanced_global_search_screen.dart';
+import '../pages/quick_add_confirmation_screen.dart';
+import '../pages/enhanced_reminders_list_screen.dart';
 
 /// Route Generator
 /// Handles navigation and route generation for the entire app
@@ -63,6 +69,9 @@ class RouteGenerator {
           settings: settings,
         );
 
+      case AppRoutes.enhancedNotesList:
+        return _buildRoute(const EnhancedNotesListScreen(), settings: settings);
+
       case AppRoutes.noteEditor:
         return _buildRoute(
           // TODO: Import and use NoteEditorScreen
@@ -80,8 +89,7 @@ class RouteGenerator {
       // ==================== Reminders Module ====================
       case AppRoutes.remindersList:
         return _buildRoute(
-          // TODO: Import and use RemindersListScreen
-          const Placeholder(), // Replace with RemindersListScreen()
+          const EnhancedRemindersListScreen(),
           settings: settings,
         );
 
@@ -132,8 +140,28 @@ class RouteGenerator {
       // ==================== Quick Actions ====================
       case AppRoutes.quickAdd:
         return _buildRoute(
-          // TODO: Import and use QuickAddScreen
-          const Placeholder(), // Replace with QuickAddScreen()
+          const FixedUniversalQuickAddScreen(),
+          settings: settings,
+          fullscreenDialog: true,
+        );
+
+      case AppRoutes.quickAddConfirmation:
+        if (args is Map<String, dynamic>) {
+          return _buildRoute(
+            QuickAddConfirmationScreen(
+              noteId: args['noteId'] as String,
+              title: args['title'] as String,
+              type: args['type'] as String,
+            ),
+            settings: settings,
+            fullscreenDialog: true,
+          );
+        }
+        return _errorRoute(settings);
+
+      case AppRoutes.universalQuickAdd:
+        return _buildRoute(
+          const FixedUniversalQuickAddScreen(),
           settings: settings,
           fullscreenDialog: true,
         );
@@ -144,6 +172,32 @@ class RouteGenerator {
           // TODO: Import and use FocusSessionScreen
           const Placeholder(), // Replace with FocusSessionScreen()
           settings: settings,
+        );
+
+      case AppRoutes.focusSessionActiveEnhanced:
+        return _buildRoute(
+          FocusSessionActiveScreen(
+            taskName:
+                (args as Map<String, dynamic>?)?['taskName'] ?? 'Deep Focus',
+            durationMinutes:
+                (args as Map<String, dynamic>?)?['duration'] as int? ?? 25,
+          ),
+          settings: settings,
+          fullscreenDialog: true,
+        );
+
+      case AppRoutes.globalSearch:
+        if (args is Map<String, dynamic>) {
+          return _buildRoute(
+            EnhancedGlobalSearchScreen(initialQuery: args['query'] as String?),
+            settings: settings,
+            fullscreenDialog: true,
+          );
+        }
+        return _buildRoute(
+          const EnhancedGlobalSearchScreen(),
+          settings: settings,
+          fullscreenDialog: true,
         );
 
       // ==================== Error & Not Found ====================
@@ -168,6 +222,13 @@ class RouteGenerator {
       builder: (_) => page,
       settings: settings,
       fullscreenDialog: fullscreenDialog,
+    );
+  }
+
+  static Route<dynamic> _errorRoute(RouteSettings settings) {
+    return _buildRoute(
+      const _ErrorPage(error: 'Invalid route arguments'),
+      settings: settings,
     );
   }
 
@@ -301,4 +362,3 @@ class _NotFoundPage extends StatelessWidget {
     );
   }
 }
-

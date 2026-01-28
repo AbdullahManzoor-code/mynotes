@@ -30,16 +30,18 @@ class CreateNoteEvent extends NoteEvent {
   final String content;
   final NoteColor color;
   final List<String>? tags;
+  final bool isPinned;
 
   const CreateNoteEvent({
     required this.title,
     this.content = '',
     this.color = NoteColor.defaultColor,
     this.tags,
+    this.isPinned = false,
   });
 
   @override
-  List<Object?> get props => [title, content, color, tags];
+  List<Object?> get props => [title, content, color, tags, isPinned];
 }
 
 /// Update existing note
@@ -291,4 +293,3 @@ class RemoveLinkFromNoteEvent extends NoteEvent {
   @override
   List<Object?> get props => [noteId, linkId];
 }
-

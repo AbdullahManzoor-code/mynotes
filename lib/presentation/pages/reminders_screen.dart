@@ -11,9 +11,10 @@ import '../bloc/alarm_bloc.dart';
 import '../bloc/alarm_event.dart';
 import '../bloc/alarm_state.dart';
 import '../design_system/design_system.dart';
-import '../widgets/empty_state_widget.dart';
 import '../widgets/alarm_bottom_sheet.dart';
 import 'note_editor_page.dart';
+import 'enhanced_reminders_list_screen.dart';
+import 'settings_screen.dart';
 
 /// Reminders Screen
 /// Shows all upcoming alarms across notes
@@ -65,33 +66,175 @@ class _RemindersScreenState extends State<RemindersScreen>
           );
         }
       },
-      child: AppScaffold(
-        appBar: GlassAppBar(
-          title: 'Reminders',
-          bottom: TabBar(
-            controller: _tabController,
-            tabs: const [
-              Tab(text: 'Upcoming', icon: Icon(Icons.schedule)),
-              Tab(text: 'Calendar', icon: Icon(Icons.calendar_month)),
-            ],
-            indicatorColor: AppColors.primaryColor,
-            labelColor: AppColors.primaryColor,
-            unselectedLabelColor: AppColors.textSecondary(context),
-          ),
-        ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [_buildUpcomingView(), _buildCalendarView()],
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        body: CustomScrollView(
+          slivers: [
+            // Glassmorphic Sticky Header
+            SliverAppBar(
+              floating: true,
+              snap: true,
+              backgroundColor: AppColors.background(context).withOpacity(0.8),
+              flexibleSpace: ClipRRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+              title: Text(
+                'Reminders',
+                style: AppTypography.heading1(null, null, FontWeight.bold),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search, size: 24),
+                  onPressed: () {
+                    // Search functionality
+                  },
+                ),
+                PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, color: AppColors.primary),
+                  onSelected: (value) => _handleRemindersMenu(value),
+                  itemBuilder: (BuildContext context) => [
+                    const PopupMenuItem(
+                      value: 'enhanced',
+                      child: Row(
+                        children: [
+                          Icon(Icons.view_agenda, size: 20),
+                          SizedBox(width: 12),
+                          Text('Enhanced View'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuDivider(),
+                    const PopupMenuItem(
+                      value: 'settings',
+                      child: Row(
+                        children: [
+                          Icon(Icons.settings, size: 20),
+                          SizedBox(width: 12),
+                          Text('Settings'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+              elevation: 0,
+            ),
+
+            // Segmented Control for filters
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSpacing.screenPaddingHorizontal,
+                  vertical: 12,
+                ),
+                child: Container(
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.surface(context).withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+                  ),
+                  padding: const EdgeInsets.all(4),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _tabController.index = 0),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: _tabController.index == 0
+                                  ? AppColors.surface(context)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radiusLG,
+                              ),
+                              boxShadow: _tabController.index == 0
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Upcoming',
+                              style: AppTypography.bodySmall(
+                                null,
+                                _tabController.index == 0
+                                    ? AppColors.primary
+                                    : AppColors.textMuted,
+                                FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _tabController.index = 1),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: _tabController.index == 1
+                                  ? AppColors.surface(context)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(
+                                AppSpacing.radiusLG,
+                              ),
+                              boxShadow: _tabController.index == 1
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.05),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              'Completed',
+                              style: AppTypography.bodySmall(
+                                null,
+                                _tabController.index == 1
+                                    ? AppColors.primary
+                                    : AppColors.textMuted,
+                                FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Content based on selected tab
+            _tabController.index == 0
+                ? _buildUpcomingList()
+                : _buildCompletedList(),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildUpcomingView() {
+  Widget _buildUpcomingList() {
     return BlocBuilder<NotesBloc, NoteState>(
       builder: (context, state) {
         if (state is NoteLoading) {
-          return const Center(child: CircularProgressIndicator());
+          return const SliverFillRemaining(
+            child: Padding(
+              padding: EdgeInsets.all(48.0),
+              child: CircularProgressIndicator(),
+            ),
+          );
         }
         if (state is NotesLoaded) {
           final notesWithAlarms = state.notes
@@ -99,7 +242,61 @@ class _RemindersScreenState extends State<RemindersScreen>
               .toList();
 
           if (notesWithAlarms.isEmpty) {
-            return _buildEmptyState();
+            return SliverFillRemaining(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 48,
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    // Icon Container
+                    Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        color: AppColors.accentOrange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(
+                          color: AppColors.accentOrange.withOpacity(0.2),
+                          width: 1,
+                        ),
+                      ),
+                      child: Icon(
+                        Icons.notifications_outlined,
+                        size: 56,
+                        color: AppColors.accentOrange,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Title
+                    Text(
+                      'No reminders yet',
+                      style: AppTypography.heading2(
+                        context,
+                        null,
+                        FontWeight.w700,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+
+                    // Description
+                    Text(
+                      'Never forget important tasks. Set your first reminder now.',
+                      style: AppTypography.bodyMedium(
+                        context,
+                        AppColors.textSecondary(context),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
           // Collect all alarms with their notes
@@ -115,17 +312,173 @@ class _RemindersScreenState extends State<RemindersScreen>
             (a, b) => a.alarm.alarmTime.compareTo(b.alarm.alarmTime),
           );
 
-          return ListView.builder(
-            padding: const EdgeInsets.all(16),
-            itemCount: alarmsWithNotes.length,
-            itemBuilder: (context, index) {
-              final item = alarmsWithNotes[index];
-              return _buildAlarmCard(item.alarm, item.note);
-            },
+          // Group by date categories
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final tomorrow = today.add(const Duration(days: 1));
+          final nextWeek = today.add(const Duration(days: 7));
+
+          final todayAlarms = alarmsWithNotes.where((item) {
+            final alarmDate = DateTime(
+              item.alarm.alarmTime.year,
+              item.alarm.alarmTime.month,
+              item.alarm.alarmTime.day,
+            );
+            return alarmDate == today;
+          }).toList();
+
+          final tomorrowAlarms = alarmsWithNotes.where((item) {
+            final alarmDate = DateTime(
+              item.alarm.alarmTime.year,
+              item.alarm.alarmTime.month,
+              item.alarm.alarmTime.day,
+            );
+            return alarmDate == tomorrow;
+          }).toList();
+
+          final upcomingAlarms = alarmsWithNotes.where((item) {
+            final alarmDate = DateTime(
+              item.alarm.alarmTime.year,
+              item.alarm.alarmTime.month,
+              item.alarm.alarmTime.day,
+            );
+            return alarmDate.isAfter(tomorrow) && alarmDate.isBefore(nextWeek);
+          }).toList();
+
+          final laterAlarms = alarmsWithNotes.where((item) {
+            final alarmDate = DateTime(
+              item.alarm.alarmTime.year,
+              item.alarm.alarmTime.month,
+              item.alarm.alarmTime.day,
+            );
+            return alarmDate.isAfter(nextWeek) || alarmDate == nextWeek;
+          }).toList();
+
+          return SliverPadding(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.screenPaddingHorizontal,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  // Build sections
+                  int currentIndex = 0;
+
+                  if (todayAlarms.isNotEmpty) {
+                    if (index == currentIndex) {
+                      return SectionHeader(
+                        title: 'Today',
+                        padding: const EdgeInsets.only(top: 24, bottom: 8),
+                      );
+                    }
+                    currentIndex++;
+
+                    if (index < currentIndex + todayAlarms.length) {
+                      final item = todayAlarms[index - currentIndex];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildAlarmCard(item.alarm, item.note),
+                      );
+                    }
+                    currentIndex += todayAlarms.length;
+                  }
+
+                  if (tomorrowAlarms.isNotEmpty) {
+                    if (index == currentIndex) {
+                      return SectionHeader(
+                        title: 'Tomorrow',
+                        padding: const EdgeInsets.only(top: 24, bottom: 8),
+                      );
+                    }
+                    currentIndex++;
+
+                    if (index < currentIndex + tomorrowAlarms.length) {
+                      final item = tomorrowAlarms[index - currentIndex];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildAlarmCard(item.alarm, item.note),
+                      );
+                    }
+                    currentIndex += tomorrowAlarms.length;
+                  }
+
+                  if (upcomingAlarms.isNotEmpty) {
+                    if (index == currentIndex) {
+                      return SectionHeader(
+                        title: 'This Week',
+                        padding: const EdgeInsets.only(top: 24, bottom: 8),
+                      );
+                    }
+                    currentIndex++;
+
+                    if (index < currentIndex + upcomingAlarms.length) {
+                      final item = upcomingAlarms[index - currentIndex];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildAlarmCard(item.alarm, item.note),
+                      );
+                    }
+                    currentIndex += upcomingAlarms.length;
+                  }
+
+                  if (laterAlarms.isNotEmpty) {
+                    if (index == currentIndex) {
+                      return SectionHeader(
+                        title: 'Later',
+                        padding: const EdgeInsets.only(top: 24, bottom: 8),
+                      );
+                    }
+                    currentIndex++;
+
+                    if (index < currentIndex + laterAlarms.length) {
+                      final item = laterAlarms[index - currentIndex];
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _buildAlarmCard(item.alarm, item.note),
+                      );
+                    }
+                  }
+
+                  return const SizedBox.shrink();
+                },
+                childCount:
+                    (todayAlarms.isNotEmpty ? todayAlarms.length + 1 : 0) +
+                    (tomorrowAlarms.isNotEmpty
+                        ? tomorrowAlarms.length + 1
+                        : 0) +
+                    (upcomingAlarms.isNotEmpty
+                        ? upcomingAlarms.length + 1
+                        : 0) +
+                    (laterAlarms.isNotEmpty ? laterAlarms.length + 1 : 0),
+              ),
+            ),
           );
         }
 
-        return const Center(child: Text('Failed to load reminders'));
+        return SliverFillRemaining(
+          child: Padding(
+            padding: const EdgeInsets.all(48.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  size: 48,
+                  color: AppColors.errorColor,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Failed to load reminders',
+                  style: AppTypography.bodyLarge(
+                    context,
+                    AppColors.textPrimary(context),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }
@@ -137,246 +490,124 @@ class _RemindersScreenState extends State<RemindersScreen>
           return _buildCalendarGrid(state.notes);
         }
 
-        return const Center(child: CircularProgressIndicator());
+        return const SliverFillRemaining(
+          child: Padding(
+            padding: EdgeInsets.all(48.0),
+            child: CircularProgressIndicator(),
+          ),
+        );
       },
     );
   }
 
-  Widget _buildAlarmCard(Alarm alarm, Note note) {
-    final isOverdue =
-        alarm.alarmTime.isBefore(DateTime.now()) &&
-        alarm.repeatType == AlarmRepeatType.none;
-    final timeUntil = app_date.AppDateUtils.getRelativeTime(alarm.alarmTime);
-
-    return Dismissible(
-      key: Key(alarm.id),
-      direction: DismissDirection.endToStart,
-      background: Container(
-        alignment: Alignment.centerRight,
-        padding: EdgeInsets.only(right: AppSpacing.lg),
-        decoration: BoxDecoration(
-          color: AppColors.errorColor,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(Icons.delete, color: Colors.white),
-      ),
-      confirmDismiss: (_) async {
-        return await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Delete Reminder?'),
-            content: const Text('This will remove the reminder from the note.'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(color: Colors.red),
+  Widget _buildCompletedList() {
+    // For now, show empty state for completed reminders
+    return SliverFillRemaining(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: AppColors.successGreen.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: AppColors.successGreen.withOpacity(0.2),
+                  width: 1,
                 ),
               ),
-            ],
-          ),
-        );
-      },
-      onDismissed: (_) {
-        context.read<AlarmBloc>().add(
-          DeleteAlarmEvent(noteId: note.id, alarmId: alarm.id),
-        );
-      },
-      child: Container(
-        margin: EdgeInsets.only(bottom: AppSpacing.md),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () => _openNote(note),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: AppColors.getSurfaceColor(
-                      Theme.of(context).brightness,
-                    ).withOpacity(0.7),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.getBorderColor(
-                        Theme.of(context).brightness,
-                      ),
-                      width: 1,
-                    ),
+              child: Icon(
+                Icons.check_circle_outline,
+                size: 56,
+                color: AppColors.successGreen,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'No Completed Reminders',
+              style: AppTypography.heading2(context, null, FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Complete some reminders and they\'ll appear here.',
+              style: AppTypography.bodyMedium(
+                context,
+                AppColors.textSecondary(context),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlarmCard(Alarm alarm, Note note) {
+    final timeStr = app_date.AppDateUtils.formatTime(alarm.alarmTime);
+
+    return GestureDetector(
+      onTap: () => _openNote(note),
+
+      child: GlassContainer(
+        padding: const EdgeInsets.all(16),
+        margin: EdgeInsets.zero,
+        child: Row(
+          children: [
+            // Left content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    note.title.isNotEmpty ? note.title : 'Untitled Note',
+                    style: AppTypography.bodyLarge(null, null, FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 4),
+                  Row(
                     children: [
-                      // Note title
-                      Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(AppSpacing.xs),
-                            decoration: BoxDecoration(
-                              color: AppColors.getNoteColor(
-                                note.color,
-                                context,
-                              ).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(
-                                AppSpacing.radiusSm,
-                              ),
-                            ),
-                            child: Icon(
-                              Icons.note,
-                              size: 16,
-                              color: AppColors.getNoteColor(
-                                note.color,
-                                context,
-                              ),
-                            ),
-                          ),
-                          SizedBox(width: AppSpacing.sm),
-                          Expanded(
-                            child: Text(
-                              note.title.isNotEmpty
-                                  ? note.title
-                                  : 'Untitled Note',
-                              style: AppTypography.bodyLarge(context, null, FontWeight.w600),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          // Active indicator
-                          if (alarm.isActive)
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppSpacing.sm,
-                                vertical: AppSpacing.xs,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.successColor.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(
-                                  AppSpacing.radiusMedium,
-                                ),
-                              ),
-                              child: Text(
-                                'Active',
-                                style: AppTypography.captionSmall(
-                                  context, 
-                                  AppColors.successColor,
-                                  FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                        ],
+                      Icon(
+                        Icons.schedule,
+                        size: 14,
+                        color: AppColors.textMuted,
                       ),
-
-                      SizedBox(height: AppSpacing.sm),
-
-                      // Alarm Message (if any)
-                      if (alarm.message != null &&
-                          alarm.message!.isNotEmpty &&
-                          alarm.message != note.title)
-                        Padding(
-                          padding: EdgeInsets.only(bottom: AppSpacing.xs),
-                          child: Text(
-                            alarm.message!,
-                            style: AppTypography.bodyMedium(
-                              context,
-                              AppColors.textSecondary(context),
-                            ).copyWith(fontStyle: FontStyle.italic),
-                          ),
+                      const SizedBox(width: 6),
+                      Text(
+                        timeStr,
+                        style: AppTypography.caption(
+                          null,
+                          AppColors.textMuted,
+                          FontWeight.w500,
                         ),
-
-                      // Alarm time
-                      Row(
-                        children: [
-                          Icon(
-                            isOverdue ? Icons.error_outline : Icons.access_time,
-                            size: 16,
-                            color: isOverdue
-                                ? AppColors.errorColor
-                                : AppColors.infoColor,
-                          ),
-                          SizedBox(width: AppSpacing.sm),
-                          Text(
-                            app_date.AppDateUtils.formatDateTime(
-                              alarm.alarmTime,
-                            ),
-                            style: AppTypography.bodyMedium(
-                              context,
-                              isOverdue ? AppColors.errorColor : null,
-                              FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(width: AppSpacing.sm),
-                          Text(
-                            timeUntil,
-                            style: AppTypography.captionSmall(
-                              context,
-                              AppColors.textSecondary(context),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Repeat type
-                      if (alarm.repeatType != AlarmRepeatType.none) ...[
-                        SizedBox(height: AppSpacing.xs),
-                        Row(
-                          children: [
-                            Text(
-                              alarm.repeatType.icon,
-                              style: TextStyle(fontSize: 14),
-                            ),
-                            SizedBox(width: AppSpacing.sm),
-                            Text(
-                              alarm.repeatType.displayName,
-                              style: AppTypography.captionSmall(
-                              context,
-                              AppColors.textSecondary(context),
-                            ),
-                            ),
-                          ],
-                        ),
-                      ],
-
-                      SizedBox(height: AppSpacing.sm),
-
-                      // Actions
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          TextButton.icon(
-                            onPressed: () => _snoozeAlarm(alarm, note),
-                            icon: const Icon(Icons.snooze, size: 18),
-                            label: const Text('Snooze'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.primaryColor,
-                              textStyle: AppTypography.buttonMedium(),
-                            ),
-                          ),
-                          SizedBox(width: AppSpacing.sm),
-                          TextButton.icon(
-                            onPressed: () => _editAlarm(alarm, note),
-                            icon: const Icon(Icons.edit, size: 18),
-                            label: const Text('Edit'),
-                            style: TextButton.styleFrom(
-                              foregroundColor: AppColors.primaryColor,
-                              textStyle: AppTypography.buttonMedium(),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   ),
+                ],
+              ),
+            ),
+
+            // Snooze button
+            GestureDetector(
+              onTap: () => _snoozeAlarm(alarm, note),
+              child: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.surface(context).withOpacity(0.5),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+                ),
+                child: Icon(
+                  Icons.notifications_paused,
+                  size: 22,
+                  color: AppColors.primary,
                 ),
               ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -540,10 +771,10 @@ class _RemindersScreenState extends State<RemindersScreen>
     return EmptyStateWidget(
       icon: Icons.notifications_none,
       title: 'No Reminders',
-      subtitle:
+      description:
           'You haven\'t set any reminders yet. Tap the + button to create your first reminder.',
-      actionLabel: 'Create Reminder',
-      onAction: () => _showAddReminderDialog(context),
+      // actionLabel: 'Create Reminder',
+      // onAction: () => _showAddReminderDialog(context),
     );
   }
 
@@ -602,5 +833,24 @@ class _RemindersScreenState extends State<RemindersScreen>
         ],
       ),
     );
+  }
+
+  void _handleRemindersMenu(String value) {
+    switch (value) {
+      case 'enhanced':
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const EnhancedRemindersListScreen(),
+          ),
+        );
+        break;
+      case 'settings':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
+        break;
+    }
   }
 }

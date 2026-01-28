@@ -1,11 +1,12 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../core/constants/app_colors.dart';
 import '../../domain/entities/note.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
+import '../design_system/design_system.dart';
 import '../widgets/note_card_widget.dart';
 import 'note_editor_page.dart';
 
@@ -132,26 +133,48 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _searchController,
-          focusNode: _searchFocus,
-          decoration: const InputDecoration(
-            hintText: 'Search notes...',
-            border: InputBorder.none,
-            prefixIcon: Icon(Icons.search),
-          ),
-          onChanged: _performSearch,
-        ),
-        actions: [
-          IconButton(
-            icon: Badge(
-              isLabelVisible: _hasActiveFilters,
-              child: const Icon(Icons.filter_list),
+      backgroundColor: AppColors.background(context),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(60.h),
+        child: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AppBar(
+              backgroundColor: AppColors.background(context).withOpacity(0.8),
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new, size: 20.sp),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: TextField(
+                controller: _searchController,
+                focusNode: _searchFocus,
+                style: AppTypography.bodyLarge(null, null, FontWeight.w500),
+                decoration: InputDecoration(
+                  hintText: 'Search notes...',
+                  hintStyle: AppTypography.bodyLarge(
+                    null,
+                    AppColors.textMuted.withOpacity(0.5),
+                    FontWeight.w500,
+                  ),
+                  border: InputBorder.none,
+                  prefixIcon: Icon(Icons.search, size: 22.sp),
+                ),
+                onChanged: _performSearch,
+              ),
+              actions: [
+                IconButton(
+                  icon: Badge(
+                    isLabelVisible: _hasActiveFilters,
+                    child: Icon(Icons.filter_list, size: 22.sp),
+                  ),
+                  onPressed: _showFilterSheet,
+                ),
+                SizedBox(width: 4.w),
+              ],
             ),
-            onPressed: _showFilterSheet,
           ),
-        ],
+        ),
       ),
       body: BlocListener<NotesBloc, NoteState>(
         listener: (context, state) {
@@ -163,6 +186,45 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           builder: (context, state) {
             if (state is NoteLoading) {
               return const Center(child: CircularProgressIndicator());
+            }
+
+            if (state is NoteError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: AppColors.errorColor,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error loading notes',
+                      style: AppTypography.heading3(
+                        context,
+                        AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.message,
+                      style: AppTypography.bodyMedium(
+                        context,
+                        AppColors.textSecondary(context),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: () {
+                        context.read<NotesBloc>().add(const LoadNotesEvent());
+                      },
+                      child: Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
             }
 
             if (_searchController.text.isEmpty) {
@@ -185,22 +247,56 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
       children: [
         // Results header
         Container(
-          padding: EdgeInsets.all(16.w),
-          color: AppColors.primaryColor.withOpacity(0.1),
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.05),
+            border: Border(
+              bottom: BorderSide(
+                color: AppColors.borderLight.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+          ),
           child: Row(
             children: [
               Text(
                 '${_searchResults.length} result${_searchResults.length == 1 ? '' : 's'}',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                style: AppTypography.bodyLarge(null, null, FontWeight.w600),
               ),
               const Spacer(),
               if (_hasActiveFilters)
-                TextButton.icon(
-                  onPressed: _clearFilters,
-                  icon: Icon(Icons.clear, size: 18.sp),
-                  label: const Text('Clear filters'),
+                GestureDetector(
+                  onTap: _clearFilters,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 12.w,
+                      vertical: 6.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(
+                        AppSpacing.radiusFull,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.close,
+                          size: 16.sp,
+                          color: AppColors.primary,
+                        ),
+                        SizedBox(width: 4.w),
+                        Text(
+                          'Clear filters',
+                          style: AppTypography.captionSmall(null).copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -236,20 +332,40 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search, size: 80.sp, color: AppColors.grey300),
-          SizedBox(height: 16.h),
+          Container(
+            width: 120.w,
+            height: 120.w,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.search_rounded,
+              size: 56.sp,
+              color: AppColors.primary.withOpacity(0.5),
+            ),
+          ),
+          SizedBox(height: 24.h),
           Text(
             'Search your notes',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(color: AppColors.grey600),
+            style: AppTypography.heading2(null, null, FontWeight.bold),
           ),
           SizedBox(height: 8.h),
           Text(
             'Type to find notes by title or content',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.grey500),
+            style: AppTypography.bodyMedium(null, AppColors.textMuted),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 24.h),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 48.w),
+            child: Text(
+              'Try searching for keywords, tags, or phrases',
+              style: AppTypography.captionSmall(
+                null,
+              ).copyWith(color: AppColors.textMuted.withOpacity(0.7)),
+              textAlign: TextAlign.center,
+            ),
           ),
         ],
       ),
@@ -261,29 +377,62 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.search_off, size: 80.sp, color: AppColors.grey300),
-          SizedBox(height: 16.h),
+          Container(
+            width: 120.w,
+            height: 120.w,
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.search_off_rounded,
+              size: 56.sp,
+              color: Colors.orange.withOpacity(0.5),
+            ),
+          ),
+          SizedBox(height: 24.h),
           Text(
             'No results found',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(color: AppColors.grey600),
+            style: AppTypography.heading2(null, null, FontWeight.bold),
           ),
           SizedBox(height: 8.h),
           Text(
-            'Try different keywords or filters',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: Colors.grey[500]),
+            'Try adjusting your search or filters',
+            style: AppTypography.bodyMedium(null, AppColors.textMuted),
+            textAlign: TextAlign.center,
           ),
-          if (_hasActiveFilters) ...[
-            SizedBox(height: 24.h),
-            ElevatedButton.icon(
-              onPressed: _clearFilters,
-              icon: const Icon(Icons.clear),
-              label: const Text('Clear filters'),
+          SizedBox(height: 24.h),
+          if (_hasActiveFilters)
+            GestureDetector(
+              onTap: _clearFilters,
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.filter_list_off,
+                      size: 20.sp,
+                      color: AppColors.primary,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Clear all filters',
+                      style: AppTypography.bodyMedium(
+                        null,
+                        AppColors.primary,
+                        FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ],
         ],
       ),
     );
@@ -491,4 +640,3 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 }
-

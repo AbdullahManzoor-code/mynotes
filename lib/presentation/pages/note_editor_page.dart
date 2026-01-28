@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'dart:ui';
 import 'package:url_launcher/url_launcher.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/todo_item.dart';
@@ -103,16 +104,55 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
           },
         ),
       ],
-      child: AppScaffold(
-        appBar: GlassAppBar(
-          title: widget.note != null ? 'Edit Note' : 'New Note',
-          actions: [
-            AppIconButton(
-              icon: Icons.check,
-              onPressed: _saveNote,
-              iconColor: AppColors.primaryColor,
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: PreferredSize(
+          preferredSize: Size.fromHeight(60.h),
+          child: ClipRRect(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: AppBar(
+                backgroundColor: AppColors.background(context).withOpacity(0.8),
+                elevation: 0,
+                leading: IconButton(
+                  icon: Icon(Icons.arrow_back_ios_new, size: 20.sp),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                centerTitle: true,
+                title: Text(
+                  widget.note?.title.isEmpty ?? true
+                      ? 'New Note'
+                      : widget.note!.title,
+                  style: AppTypography.bodyLarge(null, null, FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                actions: [
+                  // Pin button
+                  IconButton(
+                    icon: Icon(
+                      widget.note?.isPinned ?? false
+                          ? Icons.push_pin
+                          : Icons.push_pin_outlined,
+                      size: 22.sp,
+                    ),
+                    color: widget.note?.isPinned ?? false
+                        ? AppColors.primary
+                        : null,
+                    onPressed: () {
+                      // Toggle pin would be handled here
+                    },
+                  ),
+                  // More options
+                  IconButton(
+                    icon: Icon(Icons.more_horiz, size: 22.sp),
+                    onPressed: _showMoreOptions,
+                  ),
+                  SizedBox(width: 4.w),
+                ],
+              ),
             ),
-          ],
+          ),
         ),
         body: Column(
           children: [
@@ -230,32 +270,61 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
   }
 
   Widget _buildActionToolbar() {
-    return GlassContainer(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            AppColors.background(context).withOpacity(0),
+            AppColors.background(context),
+            AppColors.background(context),
+          ],
+        ),
       ),
-      margin: EdgeInsets.all(AppSpacing.md),
-      borderRadius: AppSpacing.radiusLg,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _ToolbarAction(icon: Icons.image_outlined, onTap: _pickImage),
-          _ToolbarAction(
-            icon: _isRecording ? Icons.stop : Icons.mic_none,
-            onTap: _toggleAudioRecording,
-            iconColor: _isRecording ? AppColors.errorColor : null,
-          ),
-          _ToolbarAction(icon: Icons.link_outlined, onTap: _showAddLinkDialog),
-          _ToolbarAction(
-            icon: Icons.alarm_on_outlined,
-            onTap: _showAlarmPicker,
-          ),
-          _ToolbarAction(
-            icon: Icons.check_box_outlined,
-            onTap: _showAddTodoDialog,
-          ),
-        ],
+      child: GlassContainer(
+        padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 8.h),
+        borderRadius: AppSpacing.radiusFull,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _ToolbarAction(
+              icon: Icons.format_bold,
+              onTap: () {
+                // Bold formatting
+              },
+            ),
+            _ToolbarAction(
+              icon: Icons.format_italic,
+              onTap: () {
+                // Italic formatting
+              },
+            ),
+            _ToolbarAction(
+              icon: Icons.format_list_bulleted,
+              onTap: () {
+                // List formatting
+              },
+            ),
+            Container(
+              width: 1.w,
+              height: 24.h,
+              color: AppColors.borderLight.withOpacity(0.3),
+            ),
+            _ToolbarAction(
+              icon: Icons.alternate_email,
+              onTap: _showAddLinkDialog,
+              iconColor: AppColors.primary,
+              backgroundColor: AppColors.primary.withOpacity(0.1),
+            ),
+            _ToolbarAction(icon: Icons.image_outlined, onTap: _pickImage),
+            _ToolbarAction(
+              icon: Icons.alarm_on_outlined,
+              onTap: _showAlarmPicker,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -350,6 +419,7 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
             title: note.title,
             content: note.content,
             color: note.color,
+            isPinned: note.isPinned,
           ),
         );
       }
@@ -528,26 +598,73 @@ class _NoteEditorPageState extends State<NoteEditorPage> {
       }
     } catch (_) {}
   }
+
+  void _showMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.check, color: AppColors.primary),
+              title: Text('Save Note'),
+              onTap: () {
+                Navigator.pop(context);
+                _saveNote();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.delete_outline, color: AppColors.error),
+              title: Text('Delete Note'),
+              onTap: () {
+                Navigator.pop(context);
+                // Delete logic
+              },
+            ),
+            SizedBox(height: 20.h),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _ToolbarAction extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
   final Color? iconColor;
+  final Color? backgroundColor;
 
   const _ToolbarAction({
     required this.icon,
     required this.onTap,
     this.iconColor,
+    this.backgroundColor,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AppIconButton(
-      icon: icon,
-      onPressed: onTap,
-      iconColor: iconColor ?? AppColors.textPrimary(context),
-      size: 24,
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 40.w,
+        height: 40.w,
+        decoration: BoxDecoration(
+          color: backgroundColor ?? Colors.transparent,
+          borderRadius: BorderRadius.circular(20.r),
+        ),
+        child: Icon(
+          icon,
+          color: iconColor ?? AppColors.textSecondary(context),
+          size: 22.sp,
+        ),
+      ),
     );
   }
 }

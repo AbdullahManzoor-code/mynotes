@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../../domain/entities/note_template.dart';
 import '../design_system.dart';
 
 /// Template Card - Square card representing a note template type
@@ -52,7 +53,7 @@ class TemplateCard extends StatelessWidget {
             // Label
             Text(
               label,
-              style: AppTypography.caption(null, FontWeight.w500),
+              style: AppTypography.caption(null, null, FontWeight.w500),
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
@@ -114,94 +115,53 @@ class TemplatePicker extends StatelessWidget {
     );
   }
 
-  IconData _getTemplateIcon(String type) {
-    switch (type.toLowerCase()) {
-      case 'meeting':
+  IconData _getTemplateIcon(NoteTemplateType type) {
+    switch (type) {
+      case NoteTemplateType.meeting:
         return Icons.groups;
-      case 'shopping':
-        return Icons.shopping_cart;
-      case 'journal':
-        return Icons.menu_book;
-      case 'brainstorm':
-        return Icons.lightbulb;
-      case 'checklist':
+      case NoteTemplateType.todoList:
         return Icons.checklist;
-      case 'travel':
+      case NoteTemplateType.journal:
+        return Icons.menu_book;
+      case NoteTemplateType.ideaBrainstorm:
+        return Icons.lightbulb;
+      case NoteTemplateType.travelPlan:
         return Icons.flight;
+      case NoteTemplateType.recipe:
+        return Icons.restaurant_menu;
+      case NoteTemplateType.project:
+        return Icons.folder_special;
+      case NoteTemplateType.studyNotes:
+        return Icons.school;
+      case NoteTemplateType.bookSummary:
+        return Icons.menu_book;
       default:
         return Icons.description;
     }
   }
 
-  Color _getTemplateColor(String type) {
-    switch (type.toLowerCase()) {
-      case 'meeting':
+  Color _getTemplateColor(NoteTemplateType type) {
+    switch (type) {
+      case NoteTemplateType.meeting:
         return AppColors.primary;
-      case 'shopping':
-        return AppColors.accentOrange;
-      case 'journal':
+      case NoteTemplateType.journal:
         return AppColors.successGreen;
-      case 'brainstorm':
+      case NoteTemplateType.ideaBrainstorm:
         return AppColors.accentPurple;
-      case 'checklist':
-        return AppColors.primary;
-      case 'travel':
+      case NoteTemplateType.travelPlan:
         return AppColors.accentBlue;
+      case NoteTemplateType.recipe:
+        return AppColors.accentOrange;
+      case NoteTemplateType.todoList:
+        return AppColors.primary;
+      case NoteTemplateType.project:
+        return AppColors.accentPurple;
+      case NoteTemplateType.studyNotes:
+        return AppColors.accentBlue;
+      case NoteTemplateType.bookSummary:
+        return AppColors.successGreen;
       default:
         return AppColors.primary;
     }
   }
-}
-
-/// Note Template Entity (if not already defined)
-class NoteTemplate {
-  final String id;
-  final String name;
-  final String type;
-  final String content;
-  final List<String>? tags;
-
-  const NoteTemplate({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.content,
-    this.tags,
-  });
-}
-
-/// Pre-defined templates
-class NoteTemplates {
-  static const List<NoteTemplate> defaultTemplates = [
-    NoteTemplate(
-      id: 'meeting',
-      name: 'Meeting Notes',
-      type: 'meeting',
-      content:
-          '**Date:** \n**Attendees:** \n**Topics:** \n\n**Action Items:**\n- ',
-      tags: ['work', 'meeting'],
-    ),
-    NoteTemplate(
-      id: 'shopping',
-      name: 'Shopping List',
-      type: 'shopping',
-      content: '**Shopping List**\n\n- \n- \n- ',
-      tags: ['personal', 'shopping'],
-    ),
-    NoteTemplate(
-      id: 'journal',
-      name: 'Daily Journal',
-      type: 'journal',
-      content:
-          '**Date:** \n\n**Mood:** \n\n**What I\'m grateful for:**\n- \n\n**Today\'s highlights:**\n- ',
-      tags: ['journal', 'reflection'],
-    ),
-    NoteTemplate(
-      id: 'brainstorm',
-      name: 'Brainstorm',
-      type: 'brainstorm',
-      content: '**Topic:** \n\n**Ideas:**\n- \n- \n- \n\n**Next Steps:**\n- ',
-      tags: ['ideas', 'brainstorm'],
-    ),
-  ];
 }

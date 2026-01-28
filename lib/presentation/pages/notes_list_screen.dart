@@ -14,8 +14,11 @@ import '../widgets/voice_input_button.dart';
 import '../widgets/template_selector_sheet.dart';
 import '../../core/routes/app_routes.dart';
 import 'note_editor_page.dart';
+import 'enhanced_note_editor_screen.dart';
+import 'advanced_note_editor.dart';
 import 'settings_screen.dart';
 import 'global_search_screen.dart';
+import 'empty_state_notes_help_screen.dart';
 
 /// Notes List Screen - Display all notes with grid/list view
 /// Features: Speech-to-text search, voice commands, filtering
@@ -186,6 +189,53 @@ class _NotesListScreenState extends State<NotesListScreen>
       ),
       actions: [
         AppIconButton(icon: Icons.search, onPressed: _openSearch),
+        PopupMenuButton<String>(
+          icon: Icon(Icons.more_vert, color: AppColors.primary),
+          onSelected: (value) => _handleNotesMenu(value),
+          itemBuilder: (BuildContext context) => [
+            const PopupMenuItem(
+              value: 'enhanced_editor',
+              child: Row(
+                children: [
+                  Icon(Icons.edit, size: 20),
+                  SizedBox(width: 12),
+                  Text('Enhanced Editor'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'advanced_editor',
+              child: Row(
+                children: [
+                  Icon(Icons.app_settings_alt, size: 20),
+                  SizedBox(width: 12),
+                  Text('Advanced Editor'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'help',
+              child: Row(
+                children: [
+                  Icon(Icons.help, size: 20),
+                  SizedBox(width: 12),
+                  Text('Getting Started'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem(
+              value: 'settings',
+              child: Row(
+                children: [
+                  Icon(Icons.settings, size: 20),
+                  SizedBox(width: 12),
+                  Text('Settings'),
+                ],
+              ),
+            ),
+          ],
+        ),
         SizedBox(width: 8.w),
       ],
     );
@@ -193,35 +243,39 @@ class _NotesListScreenState extends State<NotesListScreen>
 
   Widget _buildTemplatesSection() {
     final templates = [
-      const NoteTemplate(
+      NoteTemplate(
         id: 'meeting',
         name: 'Meeting Notes',
-        type: 'meeting',
+        type: NoteTemplateType.meeting,
         content:
             '**Date:** \n**Attendees:** \n**Topics:** \n\n**Action Items:**\n- ',
-        tags: ['work', 'meeting'],
+        icon: NoteTemplateType.meeting.icon,
+        createdAt: DateTime.now(),
       ),
-      const NoteTemplate(
-        id: 'shopping',
-        name: 'Shopping List',
-        type: 'shopping',
-        content: '**Shopping List**\n\n- \n- \n- ',
-        tags: ['personal', 'shopping'],
+      NoteTemplate(
+        id: 'todoList',
+        name: 'To-Do List',
+        type: NoteTemplateType.todoList,
+        content: '**To-Do List**\n\n- [ ] \n- [ ] \n- [ ] ',
+        icon: NoteTemplateType.todoList.icon,
+        createdAt: DateTime.now(),
       ),
-      const NoteTemplate(
+      NoteTemplate(
         id: 'journal',
         name: 'Daily Journal',
-        type: 'journal',
+        type: NoteTemplateType.journal,
         content:
             '**Date:** \n\n**Mood:** \n\n**What I\'m grateful for:**\n- \n\n**Today\'s highlights:**\n- ',
-        tags: ['journal', 'reflection'],
+        icon: NoteTemplateType.journal.icon,
+        createdAt: DateTime.now(),
       ),
-      const NoteTemplate(
+      NoteTemplate(
         id: 'brainstorm',
-        name: 'Brainstorm',
-        type: 'brainstorm',
+        name: 'Idea Brainstorm',
+        type: NoteTemplateType.ideaBrainstorm,
         content: '**Topic:** \n\n**Ideas:**\n- \n- \n- \n\n**Next Steps:**\n- ',
-        tags: ['ideas', 'brainstorm'],
+        icon: NoteTemplateType.ideaBrainstorm.icon,
+        createdAt: DateTime.now(),
       ),
     ];
 
@@ -299,6 +353,49 @@ class _NotesListScreenState extends State<NotesListScreen>
           }
         }
 
+        if (state is NoteError) {
+          return SliverFillRemaining(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppColors.errorColor,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading notes',
+                    style: AppTypography.heading3(
+                      context,
+                      AppColors.textPrimary(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    state.message,
+                    style: AppTypography.bodyMedium(
+                      context,
+                      AppColors.textSecondary(context),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () {
+                      context.read<NotesBloc>().add(const LoadNotesEvent());
+                    },
+                    child: Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
         return const SliverToBoxAdapter(child: SizedBox());
       },
     );
@@ -309,5 +406,34 @@ class _NotesListScreenState extends State<NotesListScreen>
       context,
       MaterialPageRoute(builder: (_) => const NoteEditorPage()),
     );
+  }
+
+  void _handleNotesMenu(String value) {
+    switch (value) {
+      case 'enhanced_editor':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EnhancedNoteEditorScreen()),
+        );
+        break;
+      case 'advanced_editor':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AdvancedNoteEditor()),
+        );
+        break;
+      case 'help':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EmptyStateNotesHelpScreen()),
+        );
+        break;
+      case 'settings':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        );
+        break;
+    }
   }
 }

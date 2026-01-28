@@ -1,9 +1,8 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:local_auth/local_auth.dart';
-import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_constants.dart';
 import '../../core/services/settings_service.dart';
 import '../../core/services/biometric_auth_service.dart';
 import '../../core/utils/database_health_check.dart';
@@ -11,7 +10,12 @@ import '../../data/datasources/local_database.dart';
 import '../bloc/theme_bloc.dart';
 import '../bloc/theme_event.dart';
 import '../bloc/theme_state.dart';
+import '../design_system/design_system.dart';
 import 'voice_settings_screen.dart';
+import 'backup_export_screen.dart';
+import 'biometric_lock_screen.dart';
+import 'app_settings_screen.dart';
+import '../widgets/developer_test_links_sheet.dart';
 
 /// Settings Screen
 /// Customize app behavior, theme, notifications, and storage
@@ -90,572 +94,638 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await SettingsService.setAlarmSound(sound);
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 8.h),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: 12.sp,
+          fontWeight: FontWeight.bold,
+          color: AppColors.textMuted,
+          letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppearanceSection(bool isDark) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(
+          color: isDark
+              ? AppColors.borderDark.withOpacity(0.2)
+              : AppColors.borderLight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: _buildSettingTile(
+        icon: Icons.auto_awesome,
+        title: 'Micro-animations',
+        subtitle: 'Smooth transitions for focus',
+        trailing: _buildSwitch(_useCustomColors, (value) {
+          setState(() => _useCustomColors = value);
+        }),
+      ),
+    );
+  }
+
+  Widget _buildPrivacySection(bool isDark) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(
+          color: isDark
+              ? AppColors.borderDark.withOpacity(0.2)
+              : AppColors.borderLight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
         children: [
-          _buildSection(
-            title: 'Appearance',
-            children: [
-              _buildThemeSelector(),
-              SwitchListTile(
-                value: _useCustomColors,
-                onChanged: (value) {
-                  setState(() => _useCustomColors = value);
-                },
-                title: const Text('Custom colors'),
-                subtitle: const Text('Use personalized color scheme'),
-                activeColor: AppColors.primaryColor,
-              ),
-            ],
+          _buildSettingTile(
+            icon: Icons.visibility_off,
+            title: 'Private Reflection',
+            subtitle: 'Hide sensitive note previews',
+            trailing: _buildSwitch(false, (value) {}),
+            hasDivider: true,
           ),
-
-          const Divider(),
-
-          _buildSection(
-            title: 'Security & Privacy',
-            children: [
-              if (_biometricAvailable)
-                SwitchListTile(
-                  value: _biometricEnabled,
-                  onChanged: (value) async {
-                    try {
-                      if (value) {
-                        // Authenticate before enabling
-                        try {
-                          final authenticated = await _biometricService
-                              .authenticate(
-                                reason:
-                                    'Verify your identity to enable biometric lock',
-                              );
-
-                          if (authenticated) {
-                            await _biometricService.enableBiometric();
-                            setState(() => _biometricEnabled = true);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '${_biometricService.getBiometricTypeName(_availableBiometrics)} lock enabled successfully',
-                                  ),
-                                  backgroundColor: AppColors.successColor,
-                                ),
-                              );
-                            }
-                          } else {
-                            // Authentication cancelled by user
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Authentication cancelled'),
-                                  backgroundColor: Colors.orange,
-                                ),
-                              );
-                            }
-                          }
-                        } on Exception catch (e) {
-                          // Show specific error message from service
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  e.toString().replaceAll('Exception: ', ''),
-                                ),
-                                backgroundColor: Colors.red,
-                                duration: const Duration(seconds: 4),
-                              ),
-                            );
-                          }
-                        }
-                      } else {
-                        await _biometricService.disableBiometric();
-                        setState(() => _biometricEnabled = false);
-                        if (mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Biometric lock disabled'),
-                            ),
-                          );
-                        }
-                      }
-                    } catch (e) {
-                      // Catch any unexpected errors
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Unexpected error: ${e.toString().replaceAll('Exception: ', '')}',
-                            ),
-                            backgroundColor: Colors.red,
-                            duration: const Duration(seconds: 4),
-                          ),
-                        );
-                      }
-                    }
-                  },
-                  title: Text(
-                    '${_biometricService.getBiometricTypeName(_availableBiometrics)} Lock',
-                  ),
-                  subtitle: Text(
-                    _biometricEnabled
-                        ? 'Authentication required to open app'
-                        : 'Toggle switch to enable biometric security',
-                  ),
-                  secondary: Icon(
-                    _availableBiometrics.contains(BiometricType.face)
-                        ? Icons.face
-                        : Icons.fingerprint,
-                    color: AppColors.primaryColor,
-                  ),
-                  activeColor: AppColors.successColor,
-                ),
-              if (!_biometricAvailable)
-                ListTile(
-                  leading: const Icon(Icons.lock_outline),
-                  title: const Text('Biometric Lock'),
-                  subtitle: const Text('Not available on this device'),
-                  enabled: false,
-                ),
-              ListTile(
-                leading: const Icon(Icons.vpn_key),
-                title: const Text('Change PIN'),
-                subtitle: const Text('Set a backup unlock PIN'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  // TODO: Implement PIN change
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text('Coming soon')));
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.privacy_tip),
-                title: const Text('Privacy Policy'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  // TODO: Show privacy policy
-                },
-              ),
-            ],
+          _buildSettingTile(
+            icon: _availableBiometrics.contains(BiometricType.face)
+                ? Icons.face
+                : Icons.fingerprint,
+            title: _biometricAvailable
+                ? '${_biometricService.getBiometricTypeName(_availableBiometrics)} Lock'
+                : 'Biometric Lock',
+            subtitle: _biometricAvailable
+                ? (_biometricEnabled
+                      ? 'Require ${_biometricService.getBiometricTypeName(_availableBiometrics)} to open app'
+                      : 'Toggle switch to enable')
+                : 'Not available on this device',
+            trailing: _biometricAvailable
+                ? _buildSwitch(_biometricEnabled, _handleBiometricToggle)
+                : null,
           ),
-
-          const Divider(),
-
-          _buildSection(
-            title: 'Voice & Speech',
-            children: [
-              ListTile(
-                leading: const Icon(Icons.mic, color: AppColors.primaryColor),
-                title: const Text('Voice Settings'),
-                subtitle: const Text('Configure voice input and commands'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const VoiceSettingsScreen(),
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-
-          const Divider(),
-
-          _buildSection(
-            title: 'Notifications',
-            children: [
-              SwitchListTile(
-                value: _notificationsEnabled,
-                onChanged: (value) async {
-                  setState(() => _notificationsEnabled = value);
-                  await _saveNotifications(value);
-                },
-                title: const Text('Enable notifications'),
-                subtitle: const Text('Receive reminder alerts'),
-                activeColor: AppColors.primaryColor,
-              ),
-              ListTile(
-                enabled: _notificationsEnabled,
-                leading: const Icon(Icons.music_note),
-                title: const Text('Alarm sound'),
-                subtitle: Text(_defaultAlarmSound),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _showAlarmSoundPicker,
-              ),
-              SwitchListTile(
-                value: _vibrate,
-                onChanged: _notificationsEnabled
-                    ? (value) async {
-                        setState(() => _vibrate = value);
-                        await _saveVibrate(value);
-                      }
-                    : null,
-                title: const Text('Vibrate'),
-                subtitle: const Text('Vibrate on notifications'),
-                activeColor: AppColors.primaryColor,
-              ),
-            ],
-          ),
-
-          const Divider(),
-
-          _buildSection(
-            title: 'Default Note Settings',
-            children: [
-              ListTile(
-                leading: const Icon(Icons.color_lens),
-                title: const Text('Default color'),
-                subtitle: const Text('Color for new notes'),
-                trailing: Container(
-                  width: 24.w,
-                  height: 24.h,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryColor,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.grey300),
-                  ),
-                ),
-                onTap: () {
-                  // TODO: Show color picker
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.image),
-                title: const Text('Media quality'),
-                subtitle: const Text('Medium (recommended)'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _showMediaQualityPicker,
-              ),
-            ],
-          ),
-
-          const Divider(),
-
-          _buildSection(
-            title: 'Storage',
-            children: [
-              ListTile(
-                leading: const Icon(Icons.folder),
-                title: const Text('Storage used'),
-                subtitle: Text(_storageUsed),
-              ),
-              ListTile(
-                leading: const Icon(Icons.note),
-                title: const Text('Total notes'),
-                subtitle: Text('$_noteCount notes'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.photo_library),
-                title: const Text('Media files'),
-                subtitle: Text('$_mediaCount files'),
-              ),
-              ListTile(
-                leading: const Icon(Icons.cleaning_services),
-                title: const Text('Clear unused media'),
-                subtitle: const Text('Remove orphaned files'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _clearUnusedMedia,
-              ),
-              ListTile(
-                leading: const Icon(Icons.folder_delete),
-                title: const Text('Clear cache'),
-                subtitle: const Text('Free up temporary storage'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _clearCache,
-              ),
-            ],
-          ),
-
-          const Divider(),
-
-          _buildSection(
-            title: 'Backup & Restore',
-            children: [
-              ListTile(
-                leading: const Icon(Icons.cloud_upload),
-                title: const Text('Backup notes'),
-                subtitle: const Text('Coming soon'),
-                enabled: false,
-                trailing: const Icon(Icons.chevron_right),
-              ),
-              ListTile(
-                leading: const Icon(Icons.cloud_download),
-                title: const Text('Restore from backup'),
-                subtitle: const Text('Coming soon'),
-                enabled: false,
-                trailing: const Icon(Icons.chevron_right),
-              ),
-            ],
-          ),
-
-          const Divider(),
-
-          _buildSection(
-            title: 'About',
-            children: [
-              ListTile(
-                leading: const Icon(Icons.info),
-                title: const Text('App version'),
-                subtitle: const Text(AppConstants.appVersion),
-              ),
-              ListTile(
-                leading: const Icon(Icons.health_and_safety),
-                title: const Text('Database Health'),
-                subtitle: const Text('Check database status'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: _showDatabaseHealth,
-              ),
-              ListTile(
-                leading: const Icon(Icons.privacy_tip),
-                title: const Text('Privacy policy'),
-                trailing: const Icon(Icons.open_in_new),
-                onTap: () {
-                  // TODO: Open privacy policy
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.description),
-                title: const Text('Terms of service'),
-                trailing: const Icon(Icons.open_in_new),
-                onTap: () {
-                  // TODO: Open terms
-                },
-              ),
-            ],
-          ),
-
-          SizedBox(height: 24.h),
-
-          // Reset button
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 16.w),
-            child: OutlinedButton.icon(
-              onPressed: _showResetDialog,
-              icon: const Icon(Icons.restore, color: AppColors.errorColor),
-              label: const Text(
-                'Reset all settings',
-                style: TextStyle(color: AppColors.errorColor),
-              ),
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.errorColor),
-                padding: EdgeInsets.symmetric(vertical: 16.h),
-              ),
-            ),
-          ),
-
-          SizedBox(height: 32.h),
         ],
       ),
     );
   }
 
-  Widget _buildSection({
+  Widget _buildVoiceInputSection(bool isDark) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(
+          color: isDark
+              ? AppColors.borderDark.withOpacity(0.2)
+              : AppColors.borderLight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildSettingTile(
+            icon: Icons.mic,
+            title: 'Dictation Language',
+            subtitle: null,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'English',
+                  style: TextStyle(fontSize: 14.sp, color: AppColors.textMuted),
+                ),
+                SizedBox(width: 8.w),
+                Icon(
+                  Icons.chevron_right,
+                  size: 18.sp,
+                  color: AppColors.textMuted,
+                ),
+              ],
+            ),
+            hasDivider: true,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const VoiceSettingsScreen(),
+                ),
+              );
+            },
+          ),
+          _buildSettingTile(
+            icon: Icons.vibration,
+            title: 'Haptic Feedback',
+            subtitle: null,
+            trailing: _buildSwitch(_vibrate, (value) async {
+              setState(() => _vibrate = value);
+              await _saveVibrate(value);
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDataManagementSection(bool isDark) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.surface(context),
+            AppColors.surface(context).withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(
+          color: isDark
+              ? AppColors.borderDark.withOpacity(0.2)
+              : AppColors.borderLight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Safe Keeping',
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  SizedBox(height: 4.h),
+                  Text(
+                    'Last cloud backup: Today, 10:42 AM',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                ],
+              ),
+              Icon(
+                Icons.cloud_done,
+                color: AppColors.successGreen,
+                size: 20.sp,
+              ),
+            ],
+          ),
+          SizedBox(height: 16.h),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const BackupExportScreen(),
+                  ),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 12.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+                ),
+                elevation: 0,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.backup, size: 20.sp),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Backup & Export Wizard',
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDeveloperSection(bool isDark) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(
+          color: isDark
+              ? AppColors.borderDark.withOpacity(0.2)
+              : AppColors.borderLight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: _buildSettingTile(
+        icon: Icons.terminal,
+        title: 'Developer Test Links',
+        subtitle: 'Quick navigation to 25+ screens',
+        trailing: Icon(
+          Icons.arrow_forward_ios,
+          size: 16.sp,
+          color: AppColors.textMuted,
+        ),
+        onTap: () {
+          showModalBottomSheet(
+            context: context,
+            builder: (_) => const DeveloperTestLinksSheet(),
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFooter(bool isDark) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 32.h),
+      child: Column(
+        children: [
+          Text(
+            'MyNotes version 4.2.0 (Build 882)',
+            style: TextStyle(
+              fontSize: 12.sp,
+              color: AppColors.textMuted.withOpacity(0.5),
+            ),
+          ),
+          SizedBox(height: 12.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GestureDetector(
+                onTap: () {},
+                child: Text(
+                  'Privacy Policy',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppColors.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+              SizedBox(width: 16.w),
+              GestureDetector(
+                onTap: () {},
+                child: Text(
+                  'Terms of Service',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppColors.primary,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingTile({
+    required IconData icon,
     required String title,
-    required List<Widget> children,
+    String? subtitle,
+    Widget? trailing,
+    bool hasDivider = false,
+    VoidCallback? onTap,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
-          child: Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.primaryColor,
+        InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            child: Row(
+              children: [
+                Container(
+                  width: 40.w,
+                  height: 40.w,
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+                  ),
+                  child: Icon(icon, color: AppColors.primary, size: 20.sp),
+                ),
+                SizedBox(width: 16.w),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.textPrimary(context),
+                        ),
+                      ),
+                      if (subtitle != null) ...[
+                        SizedBox(height: 2.h),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                if (trailing != null) ...[SizedBox(width: 12.w), trailing],
+              ],
             ),
           ),
         ),
-        ...children,
+        if (hasDivider)
+          Divider(
+            height: 1,
+            thickness: 1,
+            indent: 72.w,
+            color: isDark
+                ? AppColors.borderDark.withOpacity(0.2)
+                : AppColors.borderLight,
+          ),
       ],
     );
   }
 
-  Widget _buildThemeSelector() {
-    return BlocBuilder<ThemeBloc, ThemeState>(
-      builder: (context, themeState) {
-        return SwitchListTile(
-          value: themeState.isDarkMode,
-          onChanged: (value) {
-            context.read<ThemeBloc>().add(const ToggleThemeEvent());
-          },
-          title: const Text('Dark Mode'),
-          subtitle: Text(
-            themeState.isDarkMode
-                ? 'Deep charcoal background (#1A1A1A)'
-                : 'Soft off-white background (#FAFAFA)',
-          ),
-          activeColor: AppColors.primaryColor,
-          secondary: Icon(
-            themeState.isDarkMode ? Icons.dark_mode : Icons.light_mode,
-            color: AppColors.primaryColor,
-          ),
-        );
-      },
-    );
-  }
-
-  void _showAlarmSoundPicker() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Choose alarm sound'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ['Default', 'Bell', 'Chime', 'Beep']
-              .map(
-                (sound) => RadioListTile<String>(
-                  value: sound,
-                  groupValue: _defaultAlarmSound,
-                  onChanged: (value) async {
-                    setState(() => _defaultAlarmSound = value!);
-                    await _saveAlarmSound(value!);
-                    Navigator.pop(context);
-                  },
-                  title: Text(sound),
-                ),
-              )
-              .toList(),
+  Widget _buildSwitch(bool value, ValueChanged<bool> onChanged) {
+    return SizedBox(
+      width: 48.w,
+      height: 28.h,
+      child: Transform.scale(
+        scale: 0.8,
+        child: Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: AppColors.primary,
+          activeTrackColor: AppColors.primary.withOpacity(0.5),
+          inactiveThumbColor: Colors.white,
+          inactiveTrackColor: AppColors.textMuted.withOpacity(0.3),
         ),
       ),
     );
   }
 
-  void _showMediaQualityPicker() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Media quality'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children:
-              [
-                    {'label': 'Low', 'subtitle': 'Smaller files'},
-                    {'label': 'Medium', 'subtitle': 'Recommended'},
-                    {'label': 'High', 'subtitle': 'Best quality'},
-                  ]
-                  .map(
-                    (option) => ListTile(
-                      title: Text(option['label']!),
-                      subtitle: Text(option['subtitle']!),
-                      onTap: () => Navigator.pop(context),
-                    ),
-                  )
-                  .toList(),
-        ),
-      ),
-    );
-  }
-
-  void _clearUnusedMedia() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Clear unused media'),
-        content: const Text(
-          'This will remove media files that are not linked to any note. This action cannot be undone.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Clearing unused media...')),
-              );
-            },
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _clearCache() {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Cache cleared successfully')));
-  }
-
-  Future<void> _showDatabaseHealth() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
-    );
-
+  Future<void> _handleBiometricToggle(bool value) async {
     try {
-      final healthCheck = DatabaseHealthCheck(notesDb: NotesDatabase());
-      final report = await healthCheck.generateHealthReport();
+      if (value) {
+        try {
+          final authenticated = await _biometricService.authenticate(
+            reason: 'Verify your identity to enable biometric lock',
+          );
 
-      if (mounted) {
-        Navigator.pop(context); // Close loading dialog
-
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Database Health Report'),
-            content: SingleChildScrollView(
-              child: Text(
-                report,
-                style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          if (authenticated) {
+            await _biometricService.enableBiometric();
+            setState(() => _biometricEnabled = true);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '${_biometricService.getBiometricTypeName(_availableBiometrics)} lock enabled successfully',
+                  ),
+                  backgroundColor: AppColors.successGreen,
+                ),
+              );
+            }
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Authentication cancelled'),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+          }
+        } on Exception catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(e.toString().replaceAll('Exception: ', '')),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ],
-          ),
-        );
+            );
+          }
+        }
+      } else {
+        await _biometricService.disableBiometric();
+        setState(() => _biometricEnabled = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Biometric lock disabled')),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Health check failed: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Unexpected error: ${e.toString().replaceAll('Exception: ', '')}',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+          ),
+        );
       }
     }
   }
 
-  void _showResetDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Reset all settings'),
-        content: const Text(
-          'This will reset all settings to their default values. Your notes and media will not be affected.',
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      backgroundColor: AppColors.background(context),
+      appBar: AppBar(
+        backgroundColor: AppColors.background(context),
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: AppColors.textPrimary(context),
+            size: 20.sp,
+          ),
+          onPressed: () => Navigator.of(context).pop(),
         ),
+        title: Text(
+          'Settings',
+          style: TextStyle(
+            fontSize: 20.sp,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary(context),
+          ),
+        ),
+        centerTitle: true,
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+          PopupMenuButton<String>(
+            icon: Icon(Icons.more_vert, color: AppColors.primary),
+            onSelected: (value) => _handleSettingsMenu(value),
+            itemBuilder: (BuildContext context) => [
+              const PopupMenuItem(
+                value: 'voice',
+                child: Row(
+                  children: [
+                    Icon(Icons.mic, size: 20),
+                    SizedBox(width: 12),
+                    Text('Voice Settings'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'app',
+                child: Row(
+                  children: [
+                    Icon(Icons.apps, size: 20),
+                    SizedBox(width: 12),
+                    Text('App Settings'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'security',
+                child: Row(
+                  children: [
+                    Icon(Icons.security, size: 20),
+                    SizedBox(width: 12),
+                    Text('Security'),
+                  ],
+                ),
+              ),
+              const PopupMenuItem(
+                value: 'backup',
+                child: Row(
+                  children: [
+                    Icon(Icons.backup, size: 20),
+                    SizedBox(width: 12),
+                    Text('Backup & Export'),
+                  ],
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _loadSettings(); // Reset to defaults
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Settings reset successfully')),
-              );
-            },
-            child: const Text(
-              'Reset',
-              style: TextStyle(color: AppColors.errorColor),
-            ),
-          ),
+        ],
+      ),
+      body: ListView(
+        padding: EdgeInsets.only(bottom: 40.h),
+        children: [
+          // Appearance Section
+          _buildSectionHeader('APPEARANCE'),
+          _buildAppearanceSection(isDark),
+
+          // Privacy & Trust Section
+          _buildSectionHeader('PRIVACY & TRUST'),
+          _buildPrivacySection(isDark),
+
+          // Voice & Input Section
+          _buildSectionHeader('VOICE & INPUT'),
+          _buildVoiceInputSection(isDark),
+
+          // Data Management Section
+          _buildSectionHeader('DATA MANAGEMENT'),
+          _buildDataManagementSection(isDark),
+
+          // Developer Mode Section
+          _buildSectionHeader('DEVELOPER TOOLS'),
+          _buildDeveloperSection(isDark),
+
+          // Footer
+          _buildFooter(isDark),
         ],
       ),
     );
   }
-}
 
+  void _handleSettingsMenu(String value) {
+    switch (value) {
+      case 'voice':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const VoiceSettingsScreen()),
+        );
+        break;
+      case 'app':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AppSettingsScreen()),
+        );
+        break;
+      case 'security':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BiometricLockScreen()),
+        );
+        break;
+      case 'backup':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const BackupExportScreen()),
+        );
+        break;
+    }
+  }
+}

@@ -1,11 +1,10 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 
-/// Design System Typography extracted from HTML templates
-/// Font Family: Inter (sans-serif)
+/// Design System Typography - Template Accurate
+/// Font Family: Inter (sans-serif) - matches HTML templates exactly
+/// Template Font Scale: 10px, 12px, 14px, 16px, 18px, 24px, 32px
 /// Weights: 300 (light), 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
 class AppTypography {
   AppTypography._();
@@ -16,6 +15,7 @@ class AppTypography {
     if (ctxOrColor is Color) return ctxOrColor;
     return explicitColor;
   }
+
   // ==================== Font Family ====================
 
   static const String primaryFontFamily = 'Inter';
@@ -36,7 +36,7 @@ class AppTypography {
   }) {
     final resolvedColor = _resolveColor(context, color);
     return GoogleFonts.inter(
-      fontSize: fontSize.sp,
+      fontSize: fontSize,
       fontWeight: overrideFontWeight ?? fontWeight,
       height: height,
       letterSpacing: letterSpacing,
@@ -46,22 +46,41 @@ class AppTypography {
     );
   }
 
-  // ==================== Display Text Styles (32px+) ====================
+  // ==================== Template Typography Scale ====================
 
-  /// Display Large - 32px, Bold, Tight tracking
-  static TextStyle displayLarge([
-    dynamic context,
+  /// 32px Bold - Greeting headers
+  static TextStyle displayLarge(
+    dynamic context, [
     Color? color,
     FontWeight? fontWeight,
-  ]) => _style(
-    fontSize: 32,
-    fontWeight: FontWeight.w700,
-    height: 1.2,
-    letterSpacing: -0.48,
-    context: context,
-    color: color,
-    overrideFontWeight: fontWeight,
-  );
+  ]) {
+    return _style(
+      fontSize: 32,
+      fontWeight: FontWeight.w700,
+      height: 1.2,
+      letterSpacing: -1.0,
+      context: context,
+      color: color,
+      overrideFontWeight: fontWeight,
+    );
+  }
+
+  /// 24px Bold - Screen titles
+  static TextStyle displayMedium(
+    dynamic context, [
+    Color? color,
+    FontWeight? fontWeight,
+  ]) {
+    return _style(
+      fontSize: 24,
+      fontWeight: FontWeight.w700,
+      height: 1.3,
+      letterSpacing: -0.5,
+      context: context,
+      color: color,
+      overrideFontWeight: fontWeight,
+    );
+  }
 
   // ==================== Heading Text Styles ====================
 
@@ -444,21 +463,21 @@ class AppTypography {
   /// Create a complete TextTheme for the app
   static TextTheme createTextTheme({required Brightness brightness}) {
     return TextTheme(
-      displayLarge: displayLarge(),
-      displayMedium: heading1(),
-      displaySmall: heading2(),
-      headlineLarge: heading1(),
-      headlineMedium: heading2(),
-      headlineSmall: heading3(),
-      titleLarge: heading2(),
-      titleMedium: heading3(),
-      titleSmall: heading4(),
-      bodyLarge: bodyLarge(),
-      bodyMedium: bodyMedium(),
-      bodySmall: bodySmall(),
-      labelLarge: labelLarge(),
-      labelMedium: labelMedium(),
-      labelSmall: labelSmall(),
+      displayLarge: displayLarge(null),
+      displayMedium: heading1(null),
+      displaySmall: heading2(null),
+      headlineLarge: heading1(null),
+      headlineMedium: heading2(null),
+      headlineSmall: heading3(null),
+      titleLarge: heading2(null),
+      titleMedium: heading3(null),
+      titleSmall: heading4(null),
+      bodyLarge: bodyLarge(null),
+      bodyMedium: bodyMedium(null),
+      bodySmall: bodySmall(null),
+      labelLarge: labelLarge(null),
+      labelMedium: labelMedium(null),
+      labelSmall: labelSmall(null),
     );
   }
 
@@ -520,7 +539,7 @@ class AppTypography {
     TextDecoration? decoration,
   }) {
     return GoogleFonts.inter(
-      fontSize: fontSize.sp,
+      fontSize: fontSize,
       fontWeight: fontWeight ?? FontWeight.w400,
       height: height,
       letterSpacing: letterSpacing,
@@ -531,7 +550,7 @@ class AppTypography {
 
   /// Apply responsive scaling to existing text style
   static TextStyle responsive(TextStyle style) {
-    return style.copyWith(fontSize: style.fontSize! * 1.sp);
+    return style.copyWith(fontSize: style.fontSize!);
   }
 
   /// Create uppercase text style

@@ -31,7 +31,6 @@ class AppSnackbar {
         icon = Icons.warning_amber_outlined;
         break;
       case SnackbarType.info:
-      default:
         backgroundColor = AppColors.info;
         icon = Icons.info_outline;
         break;

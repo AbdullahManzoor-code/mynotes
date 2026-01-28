@@ -58,6 +58,7 @@ class StatCard extends StatelessWidget {
             Text(
               label.toUpperCase(),
               style: AppTypography.caption(
+                null,
                 AppColors.textMuted,
                 FontWeight.w600,
               ).copyWith(letterSpacing: 0.5),
@@ -93,6 +94,7 @@ class StatCard extends StatelessWidget {
                     child: Text(
                       trend!,
                       style: AppTypography.caption(
+                        null,
                         trendColor ?? AppColors.successGreen,
                         FontWeight.w700,
                       ),
@@ -250,6 +252,7 @@ class SectionHeader extends StatelessWidget {
             title.toUpperCase(),
             style: AppTypography.caption(
               AppColors.textMuted,
+              null,
               FontWeight.w600,
             ).copyWith(letterSpacing: 0.5),
           ),
@@ -260,6 +263,7 @@ class SectionHeader extends StatelessWidget {
                 actionText!,
                 style: AppTypography.caption(
                   AppColors.primary,
+                  null,
                   FontWeight.w600,
                 ),
               ),

@@ -5,7 +5,6 @@ import '../design_system/design_system.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
-import '../../domain/entities/note.dart';
 import '../../core/routes/app_routes.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -388,6 +387,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
           height: 120.h,
           child: BlocBuilder<NotesBloc, NoteState>(
             builder: (context, state) {
+              if (state is NoteLoading) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (state is NoteError) {
+                return Center(
+                  child: Text(
+                    'Error loading notes',
+                    style: AppTypography.bodySmall(
+                      context,
+                      AppColors.errorColor,
+                    ),
+                  ),
+                );
+              }
+
               if (state is NotesLoaded) {
                 final recentNotes = state.notes.take(5).toList();
                 if (recentNotes.isEmpty) return const SizedBox();

@@ -1,10 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../core/constants/app_colors.dart';
 import '../../core/services/speech_settings_service.dart';
 import '../../core/services/language_service.dart';
 import '../../core/services/audio_feedback_service.dart';
 import '../../core/services/voice_command_service.dart';
+import '../design_system/design_system.dart';
 import '../widgets/language_picker.dart';
 
 /// Voice and Speech Settings Screen
@@ -100,7 +101,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
         return Container(
           height: MediaQuery.of(context).size.height * 0.7,
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: AppColors.surface(context),
             borderRadius: BorderRadius.only(
               topLeft: Radius.circular(20.r),
               topRight: Radius.circular(20.r),
@@ -231,18 +232,35 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
     }
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBackground : Colors.white,
-      appBar: AppBar(
-        title: const Text('Voice Settings'),
-        backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.restore),
-            tooltip: 'Reset to Defaults',
-            onPressed: _resetSettings,
+      backgroundColor: AppColors.background(context),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(60.h),
+        child: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: AppBar(
+              backgroundColor: AppColors.background(context).withOpacity(0.8),
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(Icons.arrow_back_ios_new, size: 20.sp),
+                onPressed: () => Navigator.pop(context),
+              ),
+              centerTitle: true,
+              title: Text(
+                'Voice Settings',
+                style: AppTypography.bodyLarge(null, null, FontWeight.w600),
+              ),
+              actions: [
+                IconButton(
+                  icon: Icon(Icons.restore, size: 22.sp),
+                  tooltip: 'Reset to Defaults',
+                  onPressed: _resetSettings,
+                ),
+                SizedBox(width: 4.w),
+              ],
+            ),
           ),
-        ],
+        ),
       ),
       body: ListView(
         padding: EdgeInsets.all(20.w),
@@ -377,7 +395,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
 
   Widget _buildLanguageTile(bool isDark) {
     return Card(
-      color: isDark ? AppColors.surfaceDark : Colors.white,
+      color: AppColors.surface(context),
       elevation: 1,
       child: ListTile(
         leading: const Icon(Icons.language, color: AppColors.primaryColor),
@@ -391,7 +409,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
 
   Widget _buildConfidenceSlider(bool isDark) {
     return Card(
-      color: isDark ? AppColors.surfaceDark : Colors.white,
+      color: AppColors.surface(context),
       elevation: 1,
       child: Padding(
         padding: EdgeInsets.all(16.w),
@@ -443,7 +461,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
 
   Widget _buildTimeoutSlider(bool isDark) {
     return Card(
-      color: isDark ? AppColors.surfaceDark : Colors.white,
+      color: AppColors.surface(context),
       elevation: 1,
       child: Padding(
         padding: EdgeInsets.all(16.w),
@@ -501,7 +519,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
     bool isDark,
   ) {
     return Card(
-      color: isDark ? AppColors.surfaceDark : Colors.white,
+      color: AppColors.surface(context),
       elevation: 1,
       margin: EdgeInsets.only(bottom: 8.h),
       child: SwitchListTile(
@@ -526,7 +544,7 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
 
   Widget _buildCommandsHelpTile(bool isDark) {
     return Card(
-      color: isDark ? AppColors.surfaceDark : Colors.white,
+      color: AppColors.surface(context),
       elevation: 1,
       child: ListTile(
         leading: const Icon(Icons.help_outline, color: AppColors.primaryColor),
@@ -538,4 +556,3 @@ class _VoiceSettingsScreenState extends State<VoiceSettingsScreen> {
     );
   }
 }
-

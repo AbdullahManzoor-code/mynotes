@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'dart:async';
-import '../../core/constants/app_colors.dart';
+import '../../presentation/design_system/app_colors.dart';
 import '../../domain/entities/note.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
@@ -74,7 +75,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           ? AppColors.darkBackground
           : AppColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+        backgroundColor: isDark ? AppColors.darkSurface : Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
@@ -110,7 +111,7 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
           // Filter chips
           Container(
             padding: EdgeInsets.all(16.w),
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.darkSurface : Colors.white,
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: Row(
@@ -133,6 +134,44 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
               builder: (context, state) {
                 if (state is NoteLoading) {
                   return const Center(child: CircularProgressIndicator());
+                }
+
+                if (state is NoteError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 64,
+                          color: AppColors.errorColor,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error loading notes',
+                          style: AppTypography.heading3(
+                            context,
+                            isDark ? Colors.white : Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          state.message,
+                          style: AppTypography.bodyMedium(context, Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: () {
+                            context.read<NotesBloc>().add(
+                              const LoadNotesEvent(),
+                            );
+                          },
+                          child: Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
                 }
 
                 if (state is NotesLoaded) {
@@ -266,4 +305,3 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     );
   }
 }
-
