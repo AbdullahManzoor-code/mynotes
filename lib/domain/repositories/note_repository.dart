@@ -11,5 +11,5 @@ abstract class NoteRepository {
   Future<String> exportNotePdf(Note note, String outputDir);
   Future<void> scheduleReminder(String noteId, DateTime when);
   Future<void> cancelReminder(String noteId);
+  Future<List<Note>> searchNotes(String query);
 }
-

@@ -6,6 +6,7 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:share_plus/share_plus.dart';
 import 'dart:ui' as ui;
 import 'dart:async';
 import '../design_system/design_system.dart';
@@ -66,6 +67,13 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
   String _voiceText = '';
   bool _isVoiceAvailable = false;
   final String _currentLocale = 'en_US';
+
+  // Undo/Redo functionality
+  final List<String> _undoStack = [];
+  final List<String> _redoStack = [];
+  Timer? _undoDebounceTimer;
+  bool _canUndo = false;
+  bool _canRedo = false;
 
   @override
   void initState() {
@@ -140,9 +148,60 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
         });
       }
 
+      // Undo/Redo: Add to undo stack with debouncing
+      _debounceUndoStack();
+
       // Re-analyze content after changes
       _debounceAnalysis();
     });
+  }
+
+  void _debounceUndoStack() {
+    _undoDebounceTimer?.cancel();
+    _undoDebounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        _saveToUndoStack(_contentController.text);
+      }
+    });
+  }
+
+  void _saveToUndoStack(String text) {
+    if (_undoStack.isEmpty || _undoStack.last != text) {
+      _undoStack.add(text);
+      // Limit to 50 changes
+      if (_undoStack.length > 50) {
+        _undoStack.removeAt(0);
+      }
+      _redoStack.clear();
+      setState(() {
+        _canUndo = _undoStack.isNotEmpty;
+        _canRedo = _redoStack.isNotEmpty;
+      });
+    }
+  }
+
+  void _undo() {
+    if (_undoStack.isNotEmpty) {
+      _redoStack.add(_contentController.text);
+      final previousText = _undoStack.removeLast();
+      _contentController.text = previousText;
+      setState(() {
+        _canUndo = _undoStack.isNotEmpty;
+        _canRedo = _redoStack.isNotEmpty;
+      });
+    }
+  }
+
+  void _redo() {
+    if (_redoStack.isNotEmpty) {
+      _undoStack.add(_contentController.text);
+      final nextText = _redoStack.removeLast();
+      _contentController.text = nextText;
+      setState(() {
+        _canUndo = _undoStack.isNotEmpty;
+        _canRedo = _redoStack.isNotEmpty;
+      });
+    }
   }
 
   Timer? _debounceTimer;
@@ -469,57 +528,79 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return PopScope(
-      canPop: !_isModified,
-      onPopInvokedWithResult: (didPop, result) {
-        if (didPop) return;
-        _showSaveDialog();
+    return Focus(
+      onKey: (node, event) {
+        // Ctrl+Z / Cmd+Z for Undo
+        if (event.isKeyPressed(LogicalKeyboardKey.keyZ) &&
+            (event.isControlPressed || event.isMetaPressed) &&
+            !event.isShiftPressed &&
+            _canUndo) {
+          _undo();
+          return KeyEventResult.handled;
+        }
+        // Ctrl+Y / Ctrl+Shift+Z for Redo
+        if ((event.isKeyPressed(LogicalKeyboardKey.keyY) ||
+                (event.isKeyPressed(LogicalKeyboardKey.keyZ) &&
+                    event.isShiftPressed)) &&
+            (event.isControlPressed || event.isMetaPressed) &&
+            _canRedo) {
+          _redo();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
       },
-      child: BlocListener<NotesBloc, NoteState>(
-        listener: (context, state) {
-          if (state is NoteCreated || state is NoteUpdated) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state is NoteCreated
-                      ? 'Note created successfully'
-                      : 'Note updated successfully',
-                ),
-                backgroundColor: AppColors.primary,
-              ),
-            );
-          } else if (state is NoteError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
+      child: PopScope(
+        canPop: !_isModified,
+        onPopInvokedWithResult: (didPop, result) {
+          if (didPop) return;
+          _showSaveDialog();
         },
-        child: Scaffold(
-          backgroundColor: AppColors.getBackgroundColor(
-            Theme.of(context).brightness,
-          ),
-          body: CustomScrollView(
-            slivers: [
-              _buildAppBar(isDark),
-              SliverToBoxAdapter(
-                child: Container(
-                  constraints: BoxConstraints(maxWidth: 640.w),
-                  margin: EdgeInsets.symmetric(horizontal: 16.w),
-                  child: Column(
-                    children: [
-                      if (_showSummary) _buildSummarySection(),
-                      _buildNoteEditor(),
-                      SizedBox(height: 100.h),
-                    ],
+        child: BlocListener<NotesBloc, NoteState>(
+          listener: (context, state) {
+            if (state is NoteCreated || state is NoteUpdated) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    state is NoteCreated
+                        ? 'Note created successfully'
+                        : 'Note updated successfully',
+                  ),
+                  backgroundColor: AppColors.primary,
+                ),
+              );
+            } else if (state is NoteError) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(state.message),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+          child: Scaffold(
+            backgroundColor: AppColors.getBackgroundColor(
+              Theme.of(context).brightness,
+            ),
+            body: CustomScrollView(
+              slivers: [
+                _buildAppBar(isDark),
+                SliverToBoxAdapter(
+                  child: Container(
+                    constraints: BoxConstraints(maxWidth: 640.w),
+                    margin: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Column(
+                      children: [
+                        if (_showSummary) _buildSummarySection(),
+                        _buildNoteEditor(),
+                        SizedBox(height: 100.h),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            floatingActionButton: _buildFloatingActionButton(),
           ),
-          floatingActionButton: _buildFloatingActionButton(),
         ),
       ),
     );
@@ -567,6 +648,32 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
         ),
       ),
       actions: [
+        // Undo Button
+        IconButton(
+          onPressed: _canUndo ? _undo : null,
+          icon: Icon(
+            Icons.undo,
+            color: _canUndo
+                ? AppColors.getTextColor(Theme.of(context).brightness)
+                : Colors.grey[500],
+            size: 24.sp,
+          ),
+          tooltip: 'Undo (Ctrl+Z)',
+        ),
+
+        // Redo Button
+        IconButton(
+          onPressed: _canRedo ? _redo : null,
+          icon: Icon(
+            Icons.redo,
+            color: _canRedo
+                ? AppColors.getTextColor(Theme.of(context).brightness)
+                : Colors.grey[500],
+            size: 24.sp,
+          ),
+          tooltip: 'Redo (Ctrl+Y)',
+        ),
+
         GestureDetector(
           onTap: _togglePin,
           child: AnimatedContainer(
@@ -994,7 +1101,7 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
             ),
             onTap: () {
               Navigator.pop(context);
-              // TODO: Implement share functionality
+              _shareNote();
             },
           ),
 
@@ -1523,5 +1630,41 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
     });
 
     _debounceAnalysis();
+  }
+
+  Future<void> _shareNote() async {
+    try {
+      final title = _titleController.text.isEmpty
+          ? 'Untitled Note'
+          : _titleController.text;
+      final content = _contentController.text;
+
+      // Format the share text
+      final shareText = '$title\n\n$content';
+
+      // Share using the native share sheet
+      await Share.share(shareText, subject: title);
+
+      // Show success feedback
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Note shared successfully'),
+            backgroundColor: AppColors.successGreen,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to share note: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 }

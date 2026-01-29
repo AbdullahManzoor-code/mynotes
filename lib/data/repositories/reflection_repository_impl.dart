@@ -1,349 +1,320 @@
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import '../../data/datasources/reflection_database.dart';
+import '../../domain/entities/reflection.dart';
 import '../../domain/entities/reflection_question.dart';
 import '../../domain/entities/reflection_answer.dart';
 import '../../domain/repositories/reflection_repository.dart';
+import '../datasources/local_database.dart';
 
+/// Repository for reflection/journaling entries
 class ReflectionRepositoryImpl implements ReflectionRepository {
-  static Database? _database;
-  static final ReflectionRepositoryImpl _instance =
-      ReflectionRepositoryImpl._internal();
+  final NotesDatabase _database;
 
-  ReflectionRepositoryImpl._internal();
+  ReflectionRepositoryImpl(this._database);
 
-  factory ReflectionRepositoryImpl() {
-    return _instance;
+  /// Create a new reflection entry
+  Future<Reflection> createReflection(Reflection reflection) async {
+    final db = await _database.database;
+
+    await db.insert(NotesDatabase.reflectionsTable, reflection.toMap());
+
+    return reflection;
   }
 
-  Future<Database> get _db async {
-    if (_database != null) {
-      return _database!;
-    }
-    _database = await _initDB();
-    return _database!;
+  /// Get reflection by ID
+  Future<Reflection?> getReflectionById(String id) async {
+    final db = await _database.database;
+
+    final maps = await db.query(
+      NotesDatabase.reflectionsTable,
+      where: 'id = ? AND isDeleted = 0',
+      whereArgs: [id],
+    );
+
+    if (maps.isEmpty) return null;
+    return Reflection.fromMap(maps.first);
   }
 
-  Future<Database> _initDB() async {
-    final databasesPath = await getDatabasesPath();
-    final path = join(databasesPath, 'reflection.db');
+  /// Get all reflections
+  Future<List<Reflection>> getAllReflections({
+    int limit = 100,
+    int offset = 0,
+  }) async {
+    final db = await _database.database;
 
-    return await openDatabase(
-      path,
-      version: 1,
-      onCreate: (db, version) async {
-        // Create reflection notes table (stores prompts and their answers together)
-        await db.execute('''
-          CREATE TABLE IF NOT EXISTS reflection_notes (
-            ${ReflectionDatabase.columnId} TEXT PRIMARY KEY,
-            ${ReflectionDatabase.columnPrompt} TEXT NOT NULL,
-            ${ReflectionDatabase.columnAnswer} TEXT,
-            ${ReflectionDatabase.columnCategory} TEXT NOT NULL,
-            ${ReflectionDatabase.columnIsCustomPrompt} INTEGER NOT NULL DEFAULT 0,
-            ${ReflectionDatabase.columnMood} TEXT,
-            ${ReflectionDatabase.columnCreatedAt} TEXT NOT NULL,
-            ${ReflectionDatabase.columnUpdatedAt} TEXT,
-            ${ReflectionDatabase.columnIsDraft} INTEGER NOT NULL DEFAULT 0
-          )
-        ''');
-      },
+    final maps = await db.query(
+      NotesDatabase.reflectionsTable,
+      where: 'isDeleted = 0',
+      orderBy: 'createdAt DESC',
+      limit: limit,
+      offset: offset,
+    );
+
+    return maps.map((map) => Reflection.fromMap(map)).toList();
+  }
+
+  /// Get reflections by date range
+  Future<List<Reflection>> getReflectionsByDateRange(
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    final db = await _database.database;
+
+    final maps = await db.query(
+      NotesDatabase.reflectionsTable,
+      where: 'createdAt >= ? AND createdAt <= ? AND isDeleted = 0',
+      whereArgs: [startDate.toIso8601String(), endDate.toIso8601String()],
+      orderBy: 'createdAt DESC',
+    );
+
+    return maps.map((map) => Reflection.fromMap(map)).toList();
+  }
+
+  /// Get today's reflections
+  Future<List<Reflection>> getTodayReflections() async {
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    return getReflectionsByDateRange(startOfDay, endOfDay);
+  }
+
+  /// Get week's reflections
+  Future<List<Reflection>> getWeekReflections() async {
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final startOfDay = DateTime(
+      startOfWeek.year,
+      startOfWeek.month,
+      startOfWeek.day,
+    );
+
+    return getReflectionsByDateRange(startOfDay, DateTime.now());
+  }
+
+  /// Get month's reflections
+  Future<List<Reflection>> getMonthReflections() async {
+    final now = DateTime.now();
+    final startOfMonth = DateTime(now.year, now.month, 1);
+
+    return getReflectionsByDateRange(startOfMonth, DateTime.now());
+  }
+
+  /// Update reflection
+  Future<void> updateReflection(Reflection reflection) async {
+    final db = await _database.database;
+
+    await db.update(
+      NotesDatabase.reflectionsTable,
+      reflection.toMap(),
+      where: 'id = ?',
+      whereArgs: [reflection.id],
     );
   }
 
-  @override
+  /// Soft delete reflection
+  Future<void> deleteReflection(String id) async {
+    final db = await _database.database;
+
+    await db.update(
+      NotesDatabase.reflectionsTable,
+      {'isDeleted': 1},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Permanently delete reflection
+  Future<void> permanentlyDeleteReflection(String id) async {
+    final db = await _database.database;
+
+    await db.delete(
+      NotesDatabase.reflectionsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+  }
+
+  /// Get reflections count
+  Future<int> getReflectionsCount() async {
+    final db = await _database.database;
+
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM ${NotesDatabase.reflectionsTable} WHERE isDeleted = 0',
+    );
+
+    return (result.first['count'] as int?) ?? 0;
+  }
+
+  /// Create reflection question
+  Future<ReflectionQuestion> createQuestion(ReflectionQuestion question) async {
+    final db = await _database.database;
+
+    await db.insert(NotesDatabase.reflectionQuestionsTable, {
+      'id': question.id,
+      'text': question.questionText,
+      'category': question.category,
+      'isDefault': 0,
+      'isCustom': question.isUserCreated ? 1 : 0,
+      'frequency': question.frequency,
+      'createdAt': question.createdAt.toIso8601String(),
+      'order': 999,
+    });
+
+    return question;
+  }
+
+  /// Get all reflection questions
   Future<List<ReflectionQuestion>> getAllQuestions() async {
-    try {
-      await _db; // Ensure database is initialized
-      // Get unique prompts from reflection_notes or return preset prompts
-      // For simplicity, we'll return preset prompts as available questions
-      final now = DateTime.now();
-      return ReflectionDatabase.presetPrompts.asMap().entries.map((entry) {
-        return ReflectionQuestion(
-          id: 'preset_${entry.key}',
-          questionText: entry.value['prompt']!,
-          category: entry.value['category']!,
-          isUserCreated: false,
-          frequency: entry.value['frequency']!,
-          createdAt: now,
-        );
-      }).toList();
-    } catch (e) {
-      throw Exception(
-        'Unable to load reflection questions. Please try again: $e',
-      );
-    }
-  }
+    final db = await _database.database;
 
-  @override
-  Future<List<ReflectionQuestion>> getQuestionsByCategory(
-    String category,
-  ) async {
-    try {
-      final now = DateTime.now();
-      return ReflectionDatabase.presetPrompts
-          .where((p) => p['category'] == category)
-          .toList()
-          .asMap()
-          .entries
-          .map((entry) {
-            return ReflectionQuestion(
-              id: 'preset_${category}_${entry.key}',
-              questionText: entry.value['prompt']!,
-              category: entry.value['category']!,
-              isUserCreated: false,
-              frequency: entry.value['frequency']!,
-              createdAt: now,
-            );
-          })
-          .toList();
-    } catch (e) {
-      throw Exception('Could not load questions for category "$category": $e');
-    }
-  }
+    final maps = await db.query(
+      NotesDatabase.reflectionQuestionsTable,
+      orderBy: 'order ASC, createdAt DESC',
+    );
 
-  @override
-  Future<ReflectionQuestion?> getQuestionById(String id) async {
-    try {
-      // For preset questions, parse from id
-      if (id.startsWith('preset_')) {
-        final questions = await getAllQuestions();
-        try {
-          return questions.firstWhere((q) => q.id == id);
-        } catch (e) {
-          // If not found in preset questions, check database
-        }
-      }
-
-      // Check custom questions in database
-      final db = await _db;
-      final result = await db.query(
-        ReflectionDatabase.reflectionNotesTable,
-        where:
-            '${ReflectionDatabase.columnId} = ? AND ${ReflectionDatabase.columnIsCustomPrompt} = 1',
-        whereArgs: [id],
-        limit: 1,
-      );
-
-      if (result.isNotEmpty) {
-        final data = result.first;
-        return ReflectionQuestion(
-          id: data[ReflectionDatabase.columnId] as String,
-          questionText: data[ReflectionDatabase.columnPrompt] as String,
-          category: data[ReflectionDatabase.columnCategory] as String,
-          isUserCreated: true,
-          frequency: 'once',
-          createdAt: DateTime.parse(
-            data[ReflectionDatabase.columnCreatedAt] as String,
+    return maps
+        .map(
+          (map) => ReflectionQuestion(
+            id: map['id'] as String,
+            questionText: map['text'] as String,
+            category: map['category'] as String,
+            isUserCreated: (map['isCustom'] as int?) == 1,
+            frequency: map['frequency'] as String? ?? 'daily',
+            createdAt: DateTime.parse(map['createdAt'] as String),
           ),
-        );
-      }
+        )
+        .toList();
+  }
 
-      return null;
-    } catch (e) {
-      throw Exception('Could not find reflection question with ID "$id": $e');
-    }
+  /// Get default questions
+  Future<List<ReflectionQuestion>> getDefaultQuestions() async {
+    final db = await _database.database;
+
+    final maps = await db.query(
+      NotesDatabase.reflectionQuestionsTable,
+      where: 'isDefault = 1',
+      orderBy: 'order ASC',
+    );
+
+    return maps
+        .map(
+          (map) => ReflectionQuestion(
+            id: map['id'] as String,
+            questionText: map['text'] as String,
+            category: map['category'] as String,
+            isUserCreated: (map['isCustom'] as int?) == 1,
+            frequency: map['frequency'] as String? ?? 'daily',
+            createdAt: DateTime.parse(map['createdAt'] as String),
+          ),
+        )
+        .toList();
+  }
+
+  /// Get custom questions
+  Future<List<ReflectionQuestion>> getCustomQuestions() async {
+    final db = await _database.database;
+
+    final maps = await db.query(
+      NotesDatabase.reflectionQuestionsTable,
+      where: 'isCustom = 1',
+      orderBy: 'createdAt DESC',
+    );
+
+    return maps
+        .map(
+          (map) => ReflectionQuestion(
+            id: map['id'] as String,
+            questionText: map['text'] as String,
+            category: map['category'] as String,
+            isUserCreated: (map['isCustom'] as int?) == 1,
+            frequency: map['frequency'] as String? ?? 'daily',
+            createdAt: DateTime.parse(map['createdAt'] as String),
+          ),
+        )
+        .toList();
   }
 
   @override
   Future<void> addQuestion(ReflectionQuestion question) async {
-    try {
-      // Custom questions would be added to reflection_notes with empty answer
-      final db = await _db;
-      await db.insert(ReflectionDatabase.reflectionNotesTable, {
-        ReflectionDatabase.columnId: question.id,
-        ReflectionDatabase.columnPrompt: question.questionText,
-        ReflectionDatabase.columnAnswer: '',
-        ReflectionDatabase.columnCategory: question.category,
-        ReflectionDatabase.columnIsCustomPrompt: 1,
-        ReflectionDatabase.columnCreatedAt: question.createdAt
-            .toIso8601String(),
-        ReflectionDatabase.columnIsDraft: 0,
-      });
-    } catch (e) {
-      throw Exception('Failed to save custom question. Please try again: $e');
-    }
-  }
-
-  @override
-  Future<void> updateQuestion(ReflectionQuestion question) async {
-    try {
-      // For unified table, updating a question means updating the prompt
-      // This is complex and not commonly used, skipping detailed implementation
-      return;
-    } catch (e) {
-      throw Exception('Could not update reflection question: $e');
-    }
-  }
-
-  @override
-  Future<void> deleteQuestion(String questionId) async {
-    try {
-      final db = await _db;
-      // Delete all reflection notes with this prompt
-      await db.delete(
-        ReflectionDatabase.reflectionNotesTable,
-        where: '${ReflectionDatabase.columnId} = ?',
-        whereArgs: [questionId],
-      );
-    } catch (e) {
-      throw Exception('Could not delete question and associated answers: $e');
-    }
-  }
-
-  @override
-  Future<List<ReflectionAnswer>> getAnswersByQuestion(String questionId) async {
-    try {
-      final db = await _db;
-      final result = await db.query(
-        ReflectionDatabase.reflectionNotesTable,
-        where:
-            '${ReflectionDatabase.columnPrompt} = (SELECT ${ReflectionDatabase.columnPrompt} FROM ${ReflectionDatabase.reflectionNotesTable} WHERE ${ReflectionDatabase.columnId} = ? LIMIT 1) AND ${ReflectionDatabase.columnAnswer} != \'\'',
-        whereArgs: [questionId],
-        orderBy: '${ReflectionDatabase.columnCreatedAt} DESC',
-      );
-      return result
-          .map(
-            (json) => ReflectionAnswer(
-              id: json[ReflectionDatabase.columnId] as String,
-              questionId: questionId,
-              answerText: json[ReflectionDatabase.columnAnswer] as String,
-              mood: json[ReflectionDatabase.columnMood] as String?,
-              createdAt: DateTime.parse(
-                json[ReflectionDatabase.columnCreatedAt] as String,
-              ),
-            ),
-          )
-          .toList();
-    } catch (e) {
-      throw Exception('Unable to load answers for this question: $e');
-    }
-  }
-
-  @override
-  Future<List<ReflectionAnswer>> getAllAnswers() async {
-    try {
-      final db = await _db;
-      final result = await db.query(
-        ReflectionDatabase.reflectionNotesTable,
-        where:
-            '${ReflectionDatabase.columnAnswer} != \'\'  AND ${ReflectionDatabase.columnIsDraft} = 0',
-        orderBy: '${ReflectionDatabase.columnCreatedAt} DESC',
-      );
-      return result
-          .map(
-            (json) => ReflectionAnswer(
-              id: json[ReflectionDatabase.columnId] as String,
-              questionId: json[ReflectionDatabase.columnId] as String,
-              answerText: json[ReflectionDatabase.columnAnswer] as String,
-              mood: json[ReflectionDatabase.columnMood] as String?,
-              createdAt: DateTime.parse(
-                json[ReflectionDatabase.columnCreatedAt] as String,
-              ),
-            ),
-          )
-          .toList();
-    } catch (e) {
-      throw Exception('Unable to load reflection history: $e');
-    }
-  }
-
-  @override
-  Future<void> saveAnswer(ReflectionAnswer answer) async {
-    try {
-      final db = await _db;
-      // Get the prompt from question
-      final question = await getQuestionById(answer.questionId);
-      await db.insert(ReflectionDatabase.reflectionNotesTable, {
-        ReflectionDatabase.columnId: answer.id,
-        ReflectionDatabase.columnPrompt: question?.questionText ?? '',
-        ReflectionDatabase.columnAnswer: answer.answerText,
-        ReflectionDatabase.columnCategory: question?.category ?? 'daily',
-        ReflectionDatabase.columnIsCustomPrompt: 0,
-        ReflectionDatabase.columnMood: answer.mood,
-        ReflectionDatabase.columnCreatedAt: answer.createdAt.toIso8601String(),
-        ReflectionDatabase.columnIsDraft: 0,
-      });
-      // Clear draft after saving
-      await deleteDraft(answer.questionId);
-    } catch (e) {
-      throw Exception('Failed to save your reflection. Please try again: $e');
-    }
-  }
-
-  @override
-  Future<void> saveDraft(String questionId, String draftText) async {
-    try {
-      final db = await _db;
-      final draftId = 'draft_$questionId';
-      final now = DateTime.now();
-      final question = await getQuestionById(questionId);
-
-      // Check if draft exists
-      final existing = await db.query(
-        ReflectionDatabase.reflectionNotesTable,
-        where: '${ReflectionDatabase.columnId} = ?',
-        whereArgs: [draftId],
-      );
-
-      if (existing.isNotEmpty) {
-        // Update existing draft
-        await db.update(
-          ReflectionDatabase.reflectionNotesTable,
-          {
-            ReflectionDatabase.columnAnswer: draftText,
-            ReflectionDatabase.columnUpdatedAt: now.toIso8601String(),
-          },
-          where: '${ReflectionDatabase.columnId} = ?',
-          whereArgs: [draftId],
-        );
-      } else {
-        // Create new draft
-        await db.insert(ReflectionDatabase.reflectionNotesTable, {
-          ReflectionDatabase.columnId: draftId,
-          ReflectionDatabase.columnPrompt: question?.questionText ?? '',
-          ReflectionDatabase.columnAnswer: draftText,
-          ReflectionDatabase.columnCategory: question?.category ?? 'daily',
-          ReflectionDatabase.columnIsCustomPrompt: 0,
-          ReflectionDatabase.columnCreatedAt: now.toIso8601String(),
-          ReflectionDatabase.columnIsDraft: 1,
-        });
-      }
-    } catch (e) {
-      throw Exception('Could not save draft. Changes may be lost: $e');
-    }
-  }
-
-  @override
-  Future<String?> getDraft(String questionId) async {
-    try {
-      final db = await _db;
-      final draftId = 'draft_$questionId';
-      final result = await db.query(
-        ReflectionDatabase.reflectionNotesTable,
-        where:
-            '${ReflectionDatabase.columnId} = ? AND ${ReflectionDatabase.columnIsDraft} = 1',
-        whereArgs: [draftId],
-      );
-      if (result.isEmpty) return null;
-      return result.first[ReflectionDatabase.columnAnswer] as String?;
-    } catch (e) {
-      throw Exception('Unable to load saved draft: $e');
-    }
+    await createQuestion(question);
   }
 
   @override
   Future<void> deleteDraft(String questionId) async {
-    try {
-      final db = await _db;
-      final draftId = 'draft_$questionId';
-      await db.delete(
-        ReflectionDatabase.reflectionNotesTable,
-        where: '${ReflectionDatabase.columnId} = ?',
-        whereArgs: [draftId],
-      );
-    } catch (e) {
-      throw Exception('Could not delete draft: $e');
-    }
+    final db = await _database.database;
+    await db.delete(
+      'reflection_drafts',
+      where: 'questionId = ?',
+      whereArgs: [questionId],
+    );
+  }
+
+  @override
+  Future<void> deleteQuestion(String questionId) async {
+    final db = await _database.database;
+    await db.delete(
+      NotesDatabase.reflectionQuestionsTable,
+      where: 'id = ?',
+      whereArgs: [questionId],
+    );
+  }
+
+  @override
+  Future<List<ReflectionAnswer>> getAllAnswers() async {
+    final db = await _database.database;
+    final maps = await db.query(
+      'reflection_answers',
+      orderBy: 'createdAt DESC',
+    );
+    return maps
+        .map(
+          (map) => ReflectionAnswer(
+            id: map['id'] as String,
+            questionId: map['questionId'] as String,
+            answerText: map['answerText'] as String,
+            mood: map['mood'] as String?,
+            createdAt: DateTime.parse(map['createdAt'] as String),
+            draft: map['draft'] as String?,
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<int> getAnswerCountForToday() async {
+    final db = await _database.database;
+    final now = DateTime.now();
+    final startOfDay = DateTime(now.year, now.month, now.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM reflection_answers WHERE createdAt >= ? AND createdAt < ?',
+      [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
+    );
+
+    return (result.first['count'] as int?) ?? 0;
+  }
+
+  @override
+  Future<List<ReflectionAnswer>> getAnswersByQuestion(String questionId) async {
+    final db = await _database.database;
+    final maps = await db.query(
+      'reflection_answers',
+      where: 'questionId = ?',
+      whereArgs: [questionId],
+      orderBy: 'createdAt DESC',
+    );
+    return maps
+        .map(
+          (map) => ReflectionAnswer(
+            id: map['id'] as String,
+            questionId: map['questionId'] as String,
+            answerText: map['answerText'] as String,
+            mood: map['mood'] as String?,
+            createdAt: DateTime.parse(map['createdAt'] as String),
+            draft: map['draft'] as String?,
+          ),
+        )
+        .toList();
   }
 
   @override
@@ -352,23 +323,116 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   }
 
   @override
-  Future<int> getAnswerCountForToday() async {
-    try {
-      final db = await _db;
-      final today = DateTime.now();
-      final startOfDay = DateTime(today.year, today.month, today.day);
-      final endOfDay = startOfDay.add(const Duration(days: 1));
+  Future<String?> getDraft(String questionId) async {
+    final db = await _database.database;
+    final maps = await db.query(
+      'reflection_drafts',
+      where: 'questionId = ?',
+      whereArgs: [questionId],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    return maps.first['draftText'] as String?;
+  }
 
-      final result = await db.rawQuery(
-        'SELECT COUNT(*) as count FROM ${ReflectionDatabase.reflectionNotesTable} '
-        'WHERE ${ReflectionDatabase.columnCreatedAt} >= ? AND ${ReflectionDatabase.columnCreatedAt} < ? AND ${ReflectionDatabase.columnIsDraft} = 0 AND ${ReflectionDatabase.columnAnswer} != \'\'',
-        [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
+  @override
+  Future<ReflectionQuestion?> getQuestionById(String id) async {
+    final db = await _database.database;
+    final maps = await db.query(
+      NotesDatabase.reflectionQuestionsTable,
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (maps.isEmpty) return null;
+    final map = maps.first;
+    return ReflectionQuestion(
+      id: map['id'] as String,
+      questionText: map['text'] as String,
+      category: map['category'] as String,
+      isUserCreated: (map['isCustom'] as int?) == 1,
+      frequency: map['frequency'] as String? ?? 'daily',
+      createdAt: DateTime.parse(map['createdAt'] as String),
+    );
+  }
+
+  @override
+  Future<List<ReflectionQuestion>> getQuestionsByCategory(
+    String category,
+  ) async {
+    final db = await _database.database;
+    final maps = await db.query(
+      NotesDatabase.reflectionQuestionsTable,
+      where: 'category = ?',
+      whereArgs: [category],
+    );
+    return maps
+        .map(
+          (map) => ReflectionQuestion(
+            id: map['id'] as String,
+            questionText: map['text'] as String,
+            category: map['category'] as String,
+            isUserCreated: (map['isCustom'] as int?) == 1,
+            frequency: map['frequency'] as String? ?? 'daily',
+            createdAt: DateTime.parse(map['createdAt'] as String),
+          ),
+        )
+        .toList();
+  }
+
+  @override
+  Future<void> saveAnswer(ReflectionAnswer answer) async {
+    final db = await _database.database;
+    await db.insert('reflection_answers', {
+      'id': answer.id,
+      'questionId': answer.questionId,
+      'answerText': answer.answerText,
+      'mood': answer.mood,
+      'createdAt': answer.createdAt.toIso8601String(),
+      'draft': answer.draft,
+    });
+  }
+
+  @override
+  Future<void> saveDraft(String questionId, String draftText) async {
+    final db = await _database.database;
+    final existing = await db.query(
+      'reflection_drafts',
+      where: 'questionId = ?',
+      whereArgs: [questionId],
+      limit: 1,
+    );
+
+    if (existing.isNotEmpty) {
+      await db.update(
+        'reflection_drafts',
+        {'draftText': draftText, 'updatedAt': DateTime.now().toIso8601String()},
+        where: 'questionId = ?',
+        whereArgs: [questionId],
       );
-
-      return result.isNotEmpty ? result.first['count'] as int? ?? 0 : 0;
-    } catch (e) {
-      throw Exception('Unable to count today\'s reflections: $e');
+    } else {
+      await db.insert('reflection_drafts', {
+        'id': '${questionId}_draft',
+        'questionId': questionId,
+        'draftText': draftText,
+        'createdAt': DateTime.now().toIso8601String(),
+        'updatedAt': DateTime.now().toIso8601String(),
+      });
     }
   }
-}
 
+  @override
+  Future<void> updateQuestion(ReflectionQuestion question) async {
+    final db = await _database.database;
+    await db.update(
+      NotesDatabase.reflectionQuestionsTable,
+      {
+        'text': question.questionText,
+        'category': question.category,
+        'frequency': question.frequency,
+      },
+      where: 'id = ?',
+      whereArgs: [question.id],
+    );
+  }
+}

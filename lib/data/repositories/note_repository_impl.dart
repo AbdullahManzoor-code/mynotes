@@ -145,5 +145,14 @@ class NoteRepositoryImpl implements NoteRepository {
   Future<void> cancelReminder(String noteId) async {
     // Deprecated
   }
-}
 
+  @override
+  Future<List<Note>> searchNotes(String query) async {
+    try {
+      final notes = await _database.searchNotes(query);
+      return await _enrichNotes(notes);
+    } catch (e) {
+      throw Exception('Search failed: $e');
+    }
+  }
+}

@@ -14,6 +14,20 @@ class AddImageToNoteEvent extends MediaEvent {
   List<Object?> get props => [noteId, imagePath];
 }
 
+class CapturePhotoEvent extends MediaEvent {
+  final String noteId;
+  const CapturePhotoEvent(this.noteId);
+  @override
+  List<Object?> get props => [noteId];
+}
+
+class PickPhotoFromGalleryEvent extends MediaEvent {
+  final String noteId;
+  const PickPhotoFromGalleryEvent(this.noteId);
+  @override
+  List<Object?> get props => [noteId];
+}
+
 class RemoveImageFromNoteEvent extends MediaEvent {
   final String noteId;
   final String mediaId;
@@ -24,9 +38,10 @@ class RemoveImageFromNoteEvent extends MediaEvent {
 
 class StartAudioRecordingEvent extends MediaEvent {
   final String noteId;
-  const StartAudioRecordingEvent(this.noteId);
+  final String fileName;
+  const StartAudioRecordingEvent(this.noteId, [this.fileName = 'recording']);
   @override
-  List<Object?> get props => [noteId];
+  List<Object?> get props => [noteId, fileName];
 }
 
 class StopAudioRecordingEvent extends MediaEvent {
@@ -42,6 +57,20 @@ class PlayAudioEvent extends MediaEvent {
   const PlayAudioEvent(this.noteId, this.mediaId);
   @override
   List<Object?> get props => [noteId, mediaId];
+}
+
+class CaptureVideoEvent extends MediaEvent {
+  final String noteId;
+  const CaptureVideoEvent(this.noteId);
+  @override
+  List<Object?> get props => [noteId];
+}
+
+class PickVideoFromGalleryEvent extends MediaEvent {
+  final String noteId;
+  const PickVideoFromGalleryEvent(this.noteId);
+  @override
+  List<Object?> get props => [noteId];
 }
 
 class AddVideoToNoteEvent extends MediaEvent {
@@ -60,6 +89,14 @@ class RemoveVideoFromNoteEvent extends MediaEvent {
   List<Object?> get props => [noteId, mediaId];
 }
 
+class ScanDocumentEvent extends MediaEvent {
+  final String noteId;
+  final String documentTitle;
+  const ScanDocumentEvent(this.noteId, this.documentTitle);
+  @override
+  List<Object?> get props => [noteId, documentTitle];
+}
+
 class CompressImageEvent extends MediaEvent {
   final String noteId;
   final String mediaId;
@@ -75,4 +112,3 @@ class CompressVideoEvent extends MediaEvent {
   @override
   List<Object?> get props => [noteId, mediaId];
 }
-

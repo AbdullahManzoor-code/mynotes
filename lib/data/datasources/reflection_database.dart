@@ -18,7 +18,7 @@ class ReflectionDatabase {
 
   // Preset prompts as a list (not inserted into DB, used for daily rotation)
   static final List<Map<String, String>> presetPrompts = [
-    // Life & Purpose
+    // Life & Purpose (12 questions)
     {
       'prompt': 'What is the main goal of my life right now?',
       'category': 'life',
@@ -34,8 +34,53 @@ class ReflectionDatabase {
       'category': 'life',
       'frequency': 'monthly',
     },
+    {
+      'prompt': 'What values are most important to me?',
+      'category': 'life',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'Am I living according to my values?',
+      'category': 'life',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What legacy do I want to leave?',
+      'category': 'life',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'What brings me the most joy?',
+      'category': 'life',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What am I grateful for today?',
+      'category': 'life',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'Where do I want to be in 5 years?',
+      'category': 'life',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'What is holding me back from my dreams?',
+      'category': 'life',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'How can I serve others better?',
+      'category': 'life',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What would my ideal day look like?',
+      'category': 'life',
+      'frequency': 'monthly',
+    },
 
-    // Daily Reflection
+    // Daily Reflection (15 questions)
     {
       'prompt': 'What did I do well today?',
       'category': 'daily',
@@ -51,8 +96,68 @@ class ReflectionDatabase {
       'category': 'daily',
       'frequency': 'daily',
     },
+    {
+      'prompt': 'What energized me today?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'Did I accomplish my main goal today?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What surprised me today?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'Who made a positive impact on my day?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What did I learn today?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What am I looking forward to tomorrow?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'How did I treat others today?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What was the highlight of my day?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'Did I take care of my health today?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What would make tomorrow better?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'How did I spend my free time?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What am I proud of today?',
+      'category': 'daily',
+      'frequency': 'daily',
+    },
 
-    // Career & Study
+    // Career & Study (13 questions)
     {
       'prompt': 'Am I learning the right skills?',
       'category': 'career',
@@ -68,8 +173,58 @@ class ReflectionDatabase {
       'category': 'career',
       'frequency': 'daily',
     },
+    {
+      'prompt': 'Am I building expertise in my field?',
+      'category': 'career',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'What challenges did I overcome at work?',
+      'category': 'career',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'How can I improve my performance?',
+      'category': 'career',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What projects excite me most?',
+      'category': 'career',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'Am I satisfied with my career growth?',
+      'category': 'career',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'What would my dream job look like?',
+      'category': 'career',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'How can I add more value to my team?',
+      'category': 'career',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What skills do I need to develop?',
+      'category': 'career',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'Did I make meaningful progress today?',
+      'category': 'career',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What did I learn from my mistakes?',
+      'category': 'career',
+      'frequency': 'weekly',
+    },
 
-    // Mental Health
+    // Mental Health & Wellness (14 questions)
     {
       'prompt': 'What am I feeling right now?',
       'category': 'mental_health',
@@ -82,6 +237,61 @@ class ReflectionDatabase {
     },
     {
       'prompt': 'What helped me feel calm today?',
+      'category': 'mental_health',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'How is my mental health?',
+      'category': 'mental_health',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What self-care did I practice today?',
+      'category': 'mental_health',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'Am I taking care of my emotional needs?',
+      'category': 'mental_health',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What triggered my stress today?',
+      'category': 'mental_health',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'How can I manage stress better?',
+      'category': 'mental_health',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What brings me peace?',
+      'category': 'mental_health',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'Am I being kind to myself?',
+      'category': 'mental_health',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What boundaries do I need to set?',
+      'category': 'mental_health',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'How did I handle difficult emotions?',
+      'category': 'mental_health',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What am I avoiding?',
+      'category': 'mental_health',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What small act of self-compassion can I do?',
       'category': 'mental_health',
       'frequency': 'daily',
     },
@@ -98,4 +308,3 @@ class ReflectionDatabase {
     return presetPrompts[index];
   }
 }
-

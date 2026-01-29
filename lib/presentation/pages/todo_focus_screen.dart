@@ -41,6 +41,8 @@ class _TodoFocusScreenState extends State<TodoFocusScreen> {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: _newTodoController.text.trim(),
       isCompleted: false,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
 
     setState(() {

@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
+import '../../core/services/theme_customization_service.dart';
 
-/// Design System Typography - Template Accurate
-/// Font Family: Inter (sans-serif) - matches HTML templates exactly
+/// Design System Typography - Customizable Font System
+/// Supports 6 font families with scaling options
 /// Template Font Scale: 10px, 12px, 14px, 16px, 18px, 24px, 32px
 /// Weights: 300 (light), 400 (regular), 500 (medium), 600 (semibold), 700 (bold)
 class AppTypography {
   AppTypography._();
+
+  // Cache for font settings to avoid repeated async calls
+  static AppFontFamily? _cachedFontFamily;
+  static double? _cachedFontScale;
 
   // Helper: resolve color when a BuildContext or Color is passed positionally
   static Color? _resolveColor(dynamic ctxOrColor, Color? explicitColor) {
@@ -16,12 +21,17 @@ class AppTypography {
     return explicitColor;
   }
 
-  // ==================== Font Family ====================
+  /// Initialize font settings cache
+  static Future<void> initializeFontSettings() async {
+    _cachedFontFamily = await ThemeCustomizationService.getFontFamily();
+    _cachedFontScale = await ThemeCustomizationService.getFontScaleMultiplier();
+  }
 
-  static const String primaryFontFamily = 'Inter';
-
-  /// Get the base text style with Inter font
-  static TextStyle get baseTextStyle => GoogleFonts.inter();
+  /// Update cached font settings
+  static void updateFontSettings(AppFontFamily fontFamily, double scale) {
+    _cachedFontFamily = fontFamily;
+    _cachedFontScale = scale;
+  }
 
   static TextStyle _style({
     required double fontSize,
@@ -33,17 +43,24 @@ class AppTypography {
     FontWeight? overrideFontWeight,
     List<FontFeature>? fontFeatures,
     TextDecoration? decoration,
+    AppFontFamily? customFontFamily,
+    double? customScale,
   }) {
     final resolvedColor = _resolveColor(context, color);
-    return GoogleFonts.inter(
-      fontSize: fontSize,
-      fontWeight: overrideFontWeight ?? fontWeight,
-      height: height,
-      letterSpacing: letterSpacing,
-      color: resolvedColor,
-      fontFeatures: fontFeatures,
-      decoration: decoration,
-    );
+    final fontFamily =
+        customFontFamily ?? _cachedFontFamily ?? AppFontFamily.system;
+    final scale = customScale ?? _cachedFontScale ?? 1.0;
+    final scaledFontSize = fontSize * scale;
+
+    return fontFamily
+        .getTextStyle(
+          fontSize: scaledFontSize,
+          fontWeight: overrideFontWeight ?? fontWeight,
+          color: resolvedColor,
+          letterSpacing: letterSpacing,
+          height: height,
+        )
+        .copyWith(fontFeatures: fontFeatures, decoration: decoration);
   }
 
   // ==================== Template Typography Scale ====================

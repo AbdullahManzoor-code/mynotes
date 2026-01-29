@@ -1,237 +1,195 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-/// Custom App Themes
-enum AppThemeType {
-  system,
-  light,
-  dark,
-  ocean,
-  forest,
-  sunset,
-  midnight;
+/// Font families supported by the app
+enum AppFontFamily {
+  system('System Default', ''),
+  roboto('Roboto', 'Roboto'),
+  openSans('Open Sans', 'OpenSans'),
+  lato('Lato', 'Lato'),
+  montserrat('Montserrat', 'Montserrat'),
+  poppins('Poppins', 'Poppins');
 
-  String get displayName {
+  const AppFontFamily(this.displayName, this.fontFamily);
+
+  final String displayName;
+  final String fontFamily;
+
+  /// Get TextStyle for this font family
+  TextStyle getTextStyle({
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+    double? letterSpacing,
+    double? height,
+  }) {
     switch (this) {
-      case AppThemeType.system:
-        return 'System Default';
-      case AppThemeType.light:
-        return 'Light';
-      case AppThemeType.dark:
-        return 'Dark';
-      case AppThemeType.ocean:
-        return 'Ocean Blue';
-      case AppThemeType.forest:
-        return 'Forest Green';
-      case AppThemeType.sunset:
-        return 'Sunset Orange';
-      case AppThemeType.midnight:
-        return 'Midnight Purple';
-    }
-  }
-
-  String get icon {
-    switch (this) {
-      case AppThemeType.system:
-        return '⚙️';
-      case AppThemeType.light:
-        return '☀️';
-      case AppThemeType.dark:
-        return '🌙';
-      case AppThemeType.ocean:
-        return '🌊';
-      case AppThemeType.forest:
-        return '🌲';
-      case AppThemeType.sunset:
-        return '🌅';
-      case AppThemeType.midnight:
-        return '🌌';
-    }
-  }
-}
-
-/// App Font
-enum AppFont {
-  system,
-  roboto,
-  openSans,
-  lato,
-  montserrat,
-  poppins;
-
-  String get displayName {
-    switch (this) {
-      case AppFont.system:
-        return 'System Default';
-      case AppFont.roboto:
-        return 'Roboto';
-      case AppFont.openSans:
-        return 'Open Sans';
-      case AppFont.lato:
-        return 'Lato';
-      case AppFont.montserrat:
-        return 'Montserrat';
-      case AppFont.poppins:
-        return 'Poppins';
-    }
-  }
-
-  String? get fontFamily {
-    switch (this) {
-      case AppFont.system:
-        return null;
-      case AppFont.roboto:
-        return 'Roboto';
-      case AppFont.openSans:
-        return 'OpenSans';
-      case AppFont.lato:
-        return 'Lato';
-      case AppFont.montserrat:
-        return 'Montserrat';
-      case AppFont.poppins:
-        return 'Poppins';
-    }
-  }
-}
-
-/// Theme Customization Service
-class ThemeCustomizationService {
-  static const String _themeKey = 'app_theme_type';
-  static const String _fontKey = 'app_font';
-  static const String _fontSizeKey = 'app_font_size';
-
-  /// Get current theme type
-  Future<AppThemeType> getThemeType() async {
-    final prefs = await SharedPreferences.getInstance();
-    final themeIndex = prefs.getInt(_themeKey) ?? 0;
-    return AppThemeType.values[themeIndex];
-  }
-
-  /// Set theme type
-  Future<void> setThemeType(AppThemeType theme) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_themeKey, theme.index);
-  }
-
-  /// Get current font
-  Future<AppFont> getFont() async {
-    final prefs = await SharedPreferences.getInstance();
-    final fontIndex = prefs.getInt(_fontKey) ?? 0;
-    return AppFont.values[fontIndex];
-  }
-
-  /// Set font
-  Future<void> setFont(AppFont font) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_fontKey, font.index);
-  }
-
-  /// Get font size multiplier
-  Future<double> getFontSizeMultiplier() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getDouble(_fontSizeKey) ?? 1.0;
-  }
-
-  /// Set font size multiplier
-  Future<void> setFontSizeMultiplier(double multiplier) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_fontSizeKey, multiplier);
-  }
-
-  /// Get theme data based on type
-  ThemeData getThemeData(AppThemeType themeType, AppFont font) {
-    switch (themeType) {
-      case AppThemeType.light:
-        return _lightTheme(font);
-      case AppThemeType.dark:
-        return _darkTheme(font);
-      case AppThemeType.ocean:
-        return _oceanTheme(font);
-      case AppThemeType.forest:
-        return _forestTheme(font);
-      case AppThemeType.sunset:
-        return _sunsetTheme(font);
-      case AppThemeType.midnight:
-        return _midnightTheme(font);
+      case AppFontFamily.roboto:
+        return GoogleFonts.roboto(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: color,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case AppFontFamily.openSans:
+        return GoogleFonts.openSans(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: color,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case AppFontFamily.lato:
+        return GoogleFonts.lato(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: color,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case AppFontFamily.montserrat:
+        return GoogleFonts.montserrat(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: color,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
+      case AppFontFamily.poppins:
+        return GoogleFonts.poppins(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: color,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
       default:
-        return _lightTheme(font);
+        return TextStyle(
+          fontSize: fontSize,
+          fontWeight: fontWeight,
+          color: color,
+          letterSpacing: letterSpacing,
+          height: height,
+        );
     }
-  }
-
-  ThemeData _lightTheme(AppFont font) {
-    return ThemeData(
-      brightness: Brightness.light,
-      primarySwatch: Colors.blue,
-      scaffoldBackgroundColor: Colors.grey[50],
-      fontFamily: font.fontFamily,
-      cardTheme: const CardThemeData(elevation: 2),
-    );
-  }
-
-  ThemeData _darkTheme(AppFont font) {
-    return ThemeData(
-      brightness: Brightness.dark,
-      primarySwatch: Colors.blue,
-      scaffoldBackgroundColor: const Color(0xFF121212),
-      fontFamily: font.fontFamily,
-      cardTheme: const CardThemeData(elevation: 4),
-    );
-  }
-
-  ThemeData _oceanTheme(AppFont font) {
-    return ThemeData(
-      brightness: Brightness.light,
-      primarySwatch: Colors.cyan,
-      primaryColor: const Color(0xFF006994),
-      scaffoldBackgroundColor: const Color(0xFFE0F7FA),
-      fontFamily: font.fontFamily,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF006994),
-        foregroundColor: Colors.white,
-      ),
-    );
-  }
-
-  ThemeData _forestTheme(AppFont font) {
-    return ThemeData(
-      brightness: Brightness.light,
-      primarySwatch: Colors.green,
-      primaryColor: const Color(0xFF2E7D32),
-      scaffoldBackgroundColor: const Color(0xFFE8F5E9),
-      fontFamily: font.fontFamily,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF2E7D32),
-        foregroundColor: Colors.white,
-      ),
-    );
-  }
-
-  ThemeData _sunsetTheme(AppFont font) {
-    return ThemeData(
-      brightness: Brightness.light,
-      primarySwatch: Colors.orange,
-      primaryColor: const Color(0xFFE65100),
-      scaffoldBackgroundColor: const Color(0xFFFFF3E0),
-      fontFamily: font.fontFamily,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFFE65100),
-        foregroundColor: Colors.white,
-      ),
-    );
-  }
-
-  ThemeData _midnightTheme(AppFont font) {
-    return ThemeData(
-      brightness: Brightness.dark,
-      primarySwatch: Colors.deepPurple,
-      primaryColor: const Color(0xFF4A148C),
-      scaffoldBackgroundColor: const Color(0xFF1A0033),
-      fontFamily: font.fontFamily,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Color(0xFF4A148C),
-        foregroundColor: Colors.white,
-      ),
-    );
   }
 }
 
+/// Font size scaling options
+enum FontSizeScale {
+  extraSmall('Extra Small', 0.8),
+  small('Small', 0.9),
+  normal('Normal', 1.0),
+  large('Large', 1.1),
+  extraLarge('Extra Large', 1.2),
+  huge('Huge', 1.5);
+
+  const FontSizeScale(this.displayName, this.scale);
+
+  final String displayName;
+  final double scale;
+}
+
+/// Service for managing theme and font customization
+class ThemeCustomizationService {
+  static const String _fontFamilyKey = 'font_family';
+  static const String _fontScaleKey = 'font_scale';
+
+  // Cache for font settings to avoid repeated async calls
+  static AppFontFamily? _cachedFontFamily;
+  static FontSizeScale? _cachedFontScale;
+
+  /// Get current font family (with cache)
+  static Future<AppFontFamily> getCurrentFontFamily() async {
+    if (_cachedFontFamily != null) return _cachedFontFamily!;
+
+    final prefs = await SharedPreferences.getInstance();
+    final fontIndex = prefs.getInt(_fontFamilyKey) ?? 0;
+    _cachedFontFamily = AppFontFamily.values[fontIndex];
+    return _cachedFontFamily!;
+  }
+
+  /// Backward compatibility method
+  static Future<AppFontFamily> getFontFamily() async {
+    return getCurrentFontFamily();
+  }
+
+  /// Set font family
+  static Future<void> setFontFamily(AppFontFamily fontFamily) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_fontFamilyKey, fontFamily.index);
+    _cachedFontFamily = fontFamily;
+  }
+
+  /// Get current font scale (with cache)
+  static Future<FontSizeScale> getCurrentFontScale() async {
+    if (_cachedFontScale != null) return _cachedFontScale!;
+
+    final prefs = await SharedPreferences.getInstance();
+    final scaleIndex = prefs.getInt(_fontScaleKey) ?? 2; // Default to normal
+    _cachedFontScale = FontSizeScale.values[scaleIndex];
+    return _cachedFontScale!;
+  }
+
+  /// Backward compatibility method
+  static Future<FontSizeScale> getFontSizeScale() async {
+    return getCurrentFontScale();
+  }
+
+  /// Get font scale multiplier
+  static Future<double> getFontScaleMultiplier() async {
+    final scale = await getCurrentFontScale();
+    return scale.scale;
+  }
+
+  /// Set font scale
+  static Future<void> setFontScale(FontSizeScale scale) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_fontScaleKey, scale.index);
+    _cachedFontScale = scale;
+  }
+
+  /// Backward compatibility method
+  static Future<void> setFontSizeScale(FontSizeScale scale) async {
+    return setFontScale(scale);
+  }
+
+  /// Clear cache (useful when initializing the app)
+  static void clearCache() {
+    _cachedFontFamily = null;
+    _cachedFontScale = null;
+  }
+
+  /// Get TextTheme with current font family
+  static Future<TextTheme> getCustomTextTheme() async {
+    final fontFamily = await getCurrentFontFamily();
+    final fontScale = await getCurrentFontScale();
+
+    switch (fontFamily) {
+      case AppFontFamily.roboto:
+        return GoogleFonts.robotoTextTheme().apply(
+          fontSizeFactor: fontScale.scale,
+        );
+      case AppFontFamily.openSans:
+        return GoogleFonts.openSansTextTheme().apply(
+          fontSizeFactor: fontScale.scale,
+        );
+      case AppFontFamily.lato:
+        return GoogleFonts.latoTextTheme().apply(
+          fontSizeFactor: fontScale.scale,
+        );
+      case AppFontFamily.montserrat:
+        return GoogleFonts.montserratTextTheme().apply(
+          fontSizeFactor: fontScale.scale,
+        );
+      case AppFontFamily.poppins:
+        return GoogleFonts.poppinsTextTheme().apply(
+          fontSizeFactor: fontScale.scale,
+        );
+      default:
+        return ThemeData().textTheme.apply(fontSizeFactor: fontScale.scale);
+    }
+  }
+}

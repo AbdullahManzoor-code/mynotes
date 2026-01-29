@@ -64,7 +64,7 @@ class _AdvancedTodoScreenState extends State<AdvancedTodoScreen>
     final newTodo = TodoItem(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       text: _newTodoController.text.trim(),
-      isCompleted: false,
+      isCompleted: false, createdAt: DateTime.now(), updatedAt: DateTime.now(),
     );
 
     setState(() {

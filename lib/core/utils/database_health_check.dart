@@ -9,7 +9,7 @@ class DatabaseHealthCheck {
 
   DatabaseHealthCheck({required NotesDatabase notesDb})
     : _notesDb = notesDb,
-      _reflectionRepo = ReflectionRepositoryImpl();
+      _reflectionRepo = ReflectionRepositoryImpl(notesDb);
 
   /// Run comprehensive database health checks
   Future<Map<String, dynamic>> runHealthCheck() async {

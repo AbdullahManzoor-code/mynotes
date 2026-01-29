@@ -8,12 +8,27 @@ import '../../domain/entities/alarm.dart';
 /// Local SQLite database for notes storage
 class NotesDatabase {
   static const String _databaseName = 'notes.db';
-  static const int _databaseVersion = 2;
+  static const int _databaseVersion = 4;
 
+  // P0 Tables
   static const String notesTable = 'notes';
   static const String todosTable = 'todos';
-  static const String alarmTable = 'alarm';
+  static const String remindersTable = 'reminders';
   static const String mediaTable = 'media';
+
+  // P1 Tables (Phase 2A)
+  static const String reflectionsTable = 'reflections';
+  static const String reflectionQuestionsTable = 'reflection_questions';
+  static const String activityTagsTable = 'activity_tags';
+  static const String moodEntriesTable = 'mood_entries';
+  static const String userSettingsTable = 'user_settings';
+
+  // Location-based Reminders (Phase 2B)
+  static const String locationRemindersTable = 'location_reminders';
+  static const String savedLocationsTable = 'saved_locations';
+
+  // Full-text search
+  static const String notesFtsTable = 'notes_fts';
 
   static Database? _database;
 
@@ -35,63 +50,281 @@ class NotesDatabase {
   }
 
   Future<void> _createTables(Database db, int version) async {
-    // Notes table
+    // Notes table (extended)
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $notesTable (
         id TEXT PRIMARY KEY,
         title TEXT NOT NULL,
         content TEXT NOT NULL,
-        color INTEGER NOT NULL,
+        contentPreview TEXT,
+        color INTEGER NOT NULL DEFAULT 0,
+        category TEXT DEFAULT 'General',
+        tags TEXT,
         isPinned INTEGER NOT NULL DEFAULT 0,
         isArchived INTEGER NOT NULL DEFAULT 0,
-        tags TEXT,
+        isFavorite INTEGER NOT NULL DEFAULT 0,
+        wordCount INTEGER DEFAULT 0,
+        characterCount INTEGER DEFAULT 0,
+        readingTimeMinutes INTEGER DEFAULT 0,
+        linkedReflectionId TEXT,
+        linkedTodoId TEXT,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        lastAccessedAt TEXT,
+        syncStatus TEXT DEFAULT 'pending',
+        lastSyncedAt TEXT,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (linkedReflectionId) REFERENCES $reflectionsTable(id),
+        FOREIGN KEY (linkedTodoId) REFERENCES $todosTable(id)
       )
     ''');
 
-    // Todos table
+    // Todos table (enhanced)
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $todosTable (
         id TEXT PRIMARY KEY,
-        noteId TEXT NOT NULL,
-        text TEXT NOT NULL,
-        completed INTEGER NOT NULL DEFAULT 0,
+        title TEXT NOT NULL,
+        description TEXT,
+        noteId TEXT,
+        parentTodoId TEXT,
+        category TEXT NOT NULL DEFAULT 'Personal',
+        priority INTEGER NOT NULL DEFAULT 2,
         dueDate TEXT,
-        FOREIGN KEY (noteId) REFERENCES $notesTable(id) ON DELETE CASCADE
-      )
-    ''');
-
-    // Alarms table
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS $alarmTable (
-        id TEXT PRIMARY KEY,
-        noteId TEXT NOT NULL,
-        alarmTime TEXT NOT NULL,
-        repeatType TEXT NOT NULL,
-        isActive INTEGER NOT NULL DEFAULT 1,
-        message TEXT,
+        dueTime TEXT,
+        completedAt TEXT,
+        isCompleted INTEGER NOT NULL DEFAULT 0,
+        todo_order INTEGER,
+        recurPattern TEXT,
+        recurDays TEXT,
+        recurEndDate TEXT,
+        recurEndType TEXT,
+        recurEndValue INTEGER,
+        reminderTime TEXT,
+        hasReminder INTEGER DEFAULT 0,
+        estimatedMinutes INTEGER,
+        actualMinutes INTEGER,
+        subtaskCount INTEGER DEFAULT 0,
+        completedSubtasks INTEGER DEFAULT 0,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT,
-        FOREIGN KEY (noteId) REFERENCES $notesTable(id) ON DELETE CASCADE
+        updatedAt TEXT NOT NULL,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (noteId) REFERENCES $notesTable(id) ON DELETE SET NULL,
+        FOREIGN KEY (parentTodoId) REFERENCES $todosTable(id) ON DELETE CASCADE
       )
     ''');
 
-    // Media table
+    // Reminders table (enhanced, renamed from 'alarm')
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $remindersTable (
+        id TEXT PRIMARY KEY,
+        message TEXT,
+        title TEXT,
+        linkedNoteId TEXT,
+        linkedTodoId TEXT,
+        scheduledTime TEXT NOT NULL,
+        timezone TEXT DEFAULT 'local',
+        recurPattern TEXT,
+        recurDays TEXT,
+        recurEndDate TEXT,
+        recurEndType TEXT,
+        recurEndValue INTEGER,
+        isActive INTEGER NOT NULL DEFAULT 1,
+        isCompleted INTEGER NOT NULL DEFAULT 0,
+        status TEXT DEFAULT 'pending',
+        snoozedUntil TEXT,
+        snoozeCount INTEGER DEFAULT 0,
+        notificationId INTEGER,
+        soundUri TEXT,
+        hasVibration INTEGER DEFAULT 1,
+        hasLED INTEGER DEFAULT 1,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (linkedNoteId) REFERENCES $notesTable(id) ON DELETE SET NULL,
+        FOREIGN KEY (linkedTodoId) REFERENCES $todosTable(id) ON DELETE SET NULL
+      )
+    ''');
+
+    // Media table (enhanced)
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $mediaTable (
         id TEXT PRIMARY KEY,
         noteId TEXT NOT NULL,
         type TEXT NOT NULL,
         filePath TEXT NOT NULL,
+        originalPath TEXT,
         thumbnailPath TEXT,
+        isCompressed INTEGER DEFAULT 1,
+        originalSize INTEGER,
+        compressedSize INTEGER,
+        compressionRatio REAL,
+        width INTEGER,
+        height INTEGER,
+        aspectRatio REAL,
         durationMs INTEGER,
+        mimeType TEXT,
+        caption TEXT,
+        media_order INTEGER,
+        ocrText TEXT,
+        ocrConfidence REAL,
         createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (noteId) REFERENCES $notesTable(id) ON DELETE CASCADE
       )
     ''');
 
-    // Create indexes for performance
+    // Reflections table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $reflectionsTable (
+        id TEXT PRIMARY KEY,
+        questionId TEXT NOT NULL,
+        answerText TEXT NOT NULL,
+        mood TEXT,
+        moodValue INTEGER,
+        energyLevel INTEGER,
+        sleepQuality INTEGER,
+        activityTags TEXT,
+        isPrivate INTEGER DEFAULT 0,
+        linkedNoteId TEXT,
+        linkedTodoId TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL,
+        reflectionDate TEXT NOT NULL,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
+        FOREIGN KEY (questionId) REFERENCES $reflectionQuestionsTable(id),
+        FOREIGN KEY (linkedNoteId) REFERENCES $notesTable(id) ON DELETE SET NULL,
+        FOREIGN KEY (linkedTodoId) REFERENCES $todosTable(id) ON DELETE SET NULL
+      )
+    ''');
+
+    // Reflection Questions table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $reflectionQuestionsTable (
+        id TEXT PRIMARY KEY,
+        questionText TEXT NOT NULL,
+        category TEXT NOT NULL,
+        isDefault INTEGER DEFAULT 1,
+        isCustom INTEGER DEFAULT 0,
+        usageCount INTEGER DEFAULT 0,
+        lastUsedAt TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
+        question_order INTEGER,
+        isDeleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // Activity Tags table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $activityTagsTable (
+        id TEXT PRIMARY KEY,
+        tagName TEXT NOT NULL,
+        color TEXT,
+        icon TEXT,
+        usageCount INTEGER DEFAULT 0,
+        lastUsedAt TEXT,
+        createdAt TEXT NOT NULL,
+        tag_order INTEGER,
+        isDeleted INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    // Mood Entries table (Analytics)
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $moodEntriesTable (
+        id TEXT PRIMARY KEY,
+        reflectionId TEXT NOT NULL,
+        mood TEXT NOT NULL,
+        moodValue INTEGER NOT NULL,
+        energyLevel INTEGER,
+        sleepQuality INTEGER,
+        recordedAt TEXT NOT NULL,
+        FOREIGN KEY (reflectionId) REFERENCES $reflectionsTable(id) ON DELETE CASCADE
+      )
+    ''');
+
+    // User Settings table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $userSettingsTable (
+        id TEXT PRIMARY KEY,
+        theme TEXT DEFAULT 'system',
+        fontFamily TEXT DEFAULT 'roboto',
+        fontSize REAL DEFAULT 1.0,
+        biometricEnabled INTEGER DEFAULT 0,
+        pinRequired INTEGER DEFAULT 0,
+        autoLockMinutes INTEGER DEFAULT 5,
+        notificationsEnabled INTEGER DEFAULT 1,
+        soundEnabled INTEGER DEFAULT 1,
+        vibrationEnabled INTEGER DEFAULT 1,
+        quietHoursStart TEXT,
+        quietHoursEnd TEXT,
+        voiceLanguage TEXT DEFAULT 'en-US',
+        voiceCommandsEnabled INTEGER DEFAULT 1,
+        audioFeedbackEnabled INTEGER DEFAULT 1,
+        voiceConfidenceThreshold REAL DEFAULT 0.8,
+        defaultNoteColor INTEGER DEFAULT 0,
+        defaultTodoCategory TEXT DEFAULT 'Personal',
+        defaultTodoPriority INTEGER DEFAULT 2,
+        autoBackupEnabled INTEGER DEFAULT 0,
+        cloudSyncEnabled INTEGER DEFAULT 0,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+
+    // Location Reminders table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $locationRemindersTable (
+        id TEXT PRIMARY KEY,
+        message TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        radius REAL DEFAULT 100.0,
+        trigger_type TEXT DEFAULT 'arrive',
+        place_name TEXT,
+        place_address TEXT,
+        linked_note_id TEXT,
+        is_active INTEGER DEFAULT 1,
+        last_triggered TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      )
+    ''');
+
+    // Saved Locations table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $savedLocationsTable (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        latitude REAL NOT NULL,
+        longitude REAL NOT NULL,
+        address TEXT,
+        icon TEXT DEFAULT 'location_on',
+        created_at TEXT NOT NULL
+      )
+    ''');
+
+    // Create FTS5 virtual table for full-text search
+    await db.execute('''
+      CREATE VIRTUAL TABLE IF NOT EXISTS $notesFtsTable USING fts5(
+        noteId UNINDEXED,
+        title,
+        content,
+        tags,
+        category,
+        content=notes,
+        content_rowid=id,
+        tokenize = 'porter'
+      )
+    ''');
+
+    // Create indexes for performance (P0 tables)
+    await _createIndexes(db);
+  }
+
+  Future<void> _createIndexes(Database db) async {
+    // Notes indexes
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_notes_created ON $notesTable(createdAt DESC)',
     );
@@ -102,35 +335,474 @@ class NotesDatabase {
       'CREATE INDEX IF NOT EXISTS idx_notes_archived ON $notesTable(isArchived)',
     );
     await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_notes_color ON $notesTable(color)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_notes_category ON $notesTable(category)',
+    );
+
+    // Todos indexes
+    await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_todos_noteId ON $todosTable(noteId)',
     );
     await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_alarms_noteId ON $alarmTable(noteId)',
+      'CREATE INDEX IF NOT EXISTS idx_todos_parentId ON $todosTable(parentTodoId)',
     );
     await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_todos_dueDate ON $todosTable(dueDate)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_todos_completed ON $todosTable(isCompleted)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_todos_category ON $todosTable(category)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_todos_priority ON $todosTable(priority)',
+    );
+
+    // Reminders indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_scheduledTime ON $remindersTable(scheduledTime)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_isActive ON $remindersTable(isActive)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_status ON $remindersTable(status)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_linkedNoteId ON $remindersTable(linkedNoteId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_linkedTodoId ON $remindersTable(linkedTodoId)',
+    );
+
+    // Media indexes
+    await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_media_noteId ON $mediaTable(noteId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_media_type ON $mediaTable(type)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_media_createdAt ON $mediaTable(createdAt DESC)',
+    );
+
+    // Reflections indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reflections_createdAt ON $reflectionsTable(createdAt DESC)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reflections_reflectionDate ON $reflectionsTable(reflectionDate)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reflections_mood ON $reflectionsTable(mood)',
+    );
+
+    // Questions indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_questions_category ON $reflectionQuestionsTable(category)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_questions_isDefault ON $reflectionQuestionsTable(isDefault)',
+    );
+
+    // Activity Tags indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_activity_tags_name ON $activityTagsTable(tagName)',
+    );
+
+    // Mood Entries indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_mood_entries_recordedAt ON $moodEntriesTable(recordedAt DESC)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_mood_entries_mood ON $moodEntriesTable(mood)',
     );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    // v1 → v2: Upgrade alarms table
     if (oldVersion < 2) {
-      // Upgrade alarms table
-      // Since it's development, we can drop and recreate or alter
-      // Let's force consistent schema by recreating for this task to be safe
-      await db.execute('DROP TABLE IF EXISTS $alarmTable');
+      await db.execute('DROP TABLE IF EXISTS ${remindersTable}');
       await db.execute('''
-        CREATE TABLE IF NOT EXISTS $alarmTable (
+        CREATE TABLE IF NOT EXISTS $remindersTable (
           id TEXT PRIMARY KEY,
-          noteId TEXT NOT NULL,
-          alarmTime TEXT NOT NULL,
-          repeatType TEXT NOT NULL,
+          linkedNoteId TEXT,
+          scheduledTime TEXT NOT NULL,
+          timezone TEXT DEFAULT 'local',
+          recurPattern TEXT,
           isActive INTEGER NOT NULL DEFAULT 1,
-          message TEXT,
+          isCompleted INTEGER NOT NULL DEFAULT 0,
+          status TEXT DEFAULT 'pending',
           createdAt TEXT NOT NULL,
           updatedAt TEXT,
-          FOREIGN KEY (noteId) REFERENCES $notesTable(id) ON DELETE CASCADE
+          FOREIGN KEY (linkedNoteId) REFERENCES $notesTable(id) ON DELETE CASCADE
         )
       ''');
+    }
+
+    // v2 → v3: Extend existing tables with new columns
+    if (oldVersion < 3) {
+      await _migrateToV3(db);
+    }
+
+    // v3 → v4: Create new tables for Phase 2A
+    if (oldVersion < 4) {
+      await _migrateToV4(db);
+    }
+  }
+
+  Future<void> _migrateToV3(Database db) async {
+    // Add new columns to notes table
+    try {
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN contentPreview TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN category TEXT DEFAULT "General"',
+      );
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN wordCount INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN characterCount INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN readingTimeMinutes INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN linkedReflectionId TEXT',
+      );
+      await db.execute('ALTER TABLE $notesTable ADD COLUMN linkedTodoId TEXT');
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN lastAccessedAt TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN syncStatus TEXT DEFAULT "pending"',
+      );
+      await db.execute('ALTER TABLE $notesTable ADD COLUMN lastSyncedAt TEXT');
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0',
+      );
+    } catch (e) {
+      // Columns may already exist
+    }
+
+    // Enhance todos table
+    try {
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN title TEXT');
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN description TEXT');
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN parentTodoId TEXT');
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN category TEXT DEFAULT "Personal"',
+      );
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN priority INTEGER DEFAULT 2',
+      );
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN dueTime TEXT');
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN completedAt TEXT');
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN todo_order INTEGER');
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN recurPattern TEXT');
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN recurDays TEXT');
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN recurEndDate TEXT');
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN recurEndType TEXT');
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN recurEndValue INTEGER',
+      );
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN reminderTime TEXT');
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN hasReminder INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN estimatedMinutes INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN actualMinutes INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN subtaskCount INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN completedSubtasks INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP',
+      );
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0',
+      );
+    } catch (e) {
+      // Columns may already exist
+    }
+
+    // Enhance media table
+    try {
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN originalPath TEXT');
+      await db.execute(
+        'ALTER TABLE $mediaTable ADD COLUMN isCompressed INTEGER DEFAULT 1',
+      );
+      await db.execute(
+        'ALTER TABLE $mediaTable ADD COLUMN originalSize INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE $mediaTable ADD COLUMN compressedSize INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE $mediaTable ADD COLUMN compressionRatio REAL',
+      );
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN width INTEGER');
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN height INTEGER');
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN aspectRatio REAL');
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN mimeType TEXT');
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN caption TEXT');
+      await db.execute(
+        'ALTER TABLE $mediaTable ADD COLUMN media_order INTEGER',
+      );
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN ocrText TEXT');
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN ocrConfidence REAL');
+      await db.execute(
+        'ALTER TABLE $mediaTable ADD COLUMN updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP',
+      );
+      await db.execute(
+        'ALTER TABLE $mediaTable ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0',
+      );
+    } catch (e) {
+      // Columns may already exist
+    }
+
+    // Enhance reminders table
+    try {
+      await db.execute('ALTER TABLE $remindersTable ADD COLUMN message TEXT');
+      await db.execute('ALTER TABLE $remindersTable ADD COLUMN title TEXT');
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN linkedTodoId TEXT',
+      );
+      await db.execute('ALTER TABLE $remindersTable ADD COLUMN recurDays TEXT');
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN recurEndDate TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN recurEndType TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN recurEndValue INTEGER',
+      );
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN snoozedUntil TEXT',
+      );
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN snoozeCount INTEGER DEFAULT 0',
+      );
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN notificationId INTEGER',
+      );
+      await db.execute('ALTER TABLE $remindersTable ADD COLUMN soundUri TEXT');
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN hasVibration INTEGER DEFAULT 1',
+      );
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN hasLED INTEGER DEFAULT 1',
+      );
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0',
+      );
+    } catch (e) {
+      // Columns may already exist
+    }
+
+    // Create indexes for v3
+    await _createIndexes(db);
+  }
+
+  Future<void> _migrateToV4(Database db) async {
+    // Create new tables for reflections and settings
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $reflectionsTable (
+          id TEXT PRIMARY KEY,
+          questionId TEXT NOT NULL,
+          answerText TEXT NOT NULL,
+          mood TEXT,
+          moodValue INTEGER,
+          energyLevel INTEGER,
+          sleepQuality INTEGER,
+          activityTags TEXT,
+          isPrivate INTEGER DEFAULT 0,
+          linkedNoteId TEXT,
+          linkedTodoId TEXT,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL,
+          reflectionDate TEXT NOT NULL,
+          isDeleted INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $reflectionQuestionsTable (
+          id TEXT PRIMARY KEY,
+          questionText TEXT NOT NULL,
+          category TEXT NOT NULL,
+          isDefault INTEGER DEFAULT 1,
+          isCustom INTEGER DEFAULT 0,
+          usageCount INTEGER DEFAULT 0,
+          lastUsedAt TEXT,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT,
+          question_order INTEGER,
+          isDeleted INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $activityTagsTable (
+          id TEXT PRIMARY KEY,
+          tagName TEXT NOT NULL,
+          color TEXT,
+          icon TEXT,
+          usageCount INTEGER DEFAULT 0,
+          lastUsedAt TEXT,
+          createdAt TEXT NOT NULL,
+          tag_order INTEGER,
+          isDeleted INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $moodEntriesTable (
+          id TEXT PRIMARY KEY,
+          reflectionId TEXT NOT NULL,
+          mood TEXT NOT NULL,
+          moodValue INTEGER NOT NULL,
+          energyLevel INTEGER,
+          sleepQuality INTEGER,
+          recordedAt TEXT NOT NULL,
+          FOREIGN KEY (reflectionId) REFERENCES $reflectionsTable(id) ON DELETE CASCADE
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $userSettingsTable (
+          id TEXT PRIMARY KEY,
+          theme TEXT DEFAULT 'system',
+          fontFamily TEXT DEFAULT 'roboto',
+          fontSize REAL DEFAULT 1.0,
+          biometricEnabled INTEGER DEFAULT 0,
+          pinRequired INTEGER DEFAULT 0,
+          autoLockMinutes INTEGER DEFAULT 5,
+          notificationsEnabled INTEGER DEFAULT 1,
+          soundEnabled INTEGER DEFAULT 1,
+          vibrationEnabled INTEGER DEFAULT 1,
+          quietHoursStart TEXT,
+          quietHoursEnd TEXT,
+          voiceLanguage TEXT DEFAULT 'en-US',
+          voiceCommandsEnabled INTEGER DEFAULT 1,
+          audioFeedbackEnabled INTEGER DEFAULT 1,
+          voiceConfidenceThreshold REAL DEFAULT 0.8,
+          defaultNoteColor INTEGER DEFAULT 0,
+          defaultTodoCategory TEXT DEFAULT 'Personal',
+          defaultTodoPriority INTEGER DEFAULT 2,
+          autoBackupEnabled INTEGER DEFAULT 0,
+          cloudSyncEnabled INTEGER DEFAULT 0,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        )
+      ''');
+
+      // Location Reminders table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $locationRemindersTable (
+          id TEXT PRIMARY KEY,
+          message TEXT NOT NULL,
+          latitude REAL NOT NULL,
+          longitude REAL NOT NULL,
+          radius REAL DEFAULT 100.0,
+          trigger_type TEXT DEFAULT 'arrive',
+          place_name TEXT,
+          place_address TEXT,
+          linked_note_id TEXT,
+          is_active INTEGER DEFAULT 1,
+          last_triggered TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL
+        )
+      ''');
+
+      // Saved Locations table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $savedLocationsTable (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          latitude REAL NOT NULL,
+          longitude REAL NOT NULL,
+          address TEXT,
+          icon TEXT DEFAULT 'location_on',
+          created_at TEXT NOT NULL
+        )
+      ''');
+
+      // Create FTS5 virtual table
+      await db.execute('''
+        CREATE VIRTUAL TABLE IF NOT EXISTS $notesFtsTable USING fts5(
+          noteId UNINDEXED,
+          title,
+          content,
+          tags,
+          category,
+          content=notes,
+          content_rowid=id,
+          tokenize = 'porter'
+        )
+      ''');
+
+      // Populate FTS table from existing notes
+      final notes = await db.query(notesTable);
+      for (final note in notes) {
+        await db.insert(notesFtsTable, {
+          'rowid': note['id'],
+          'noteId': note['id'],
+          'title': note['title'],
+          'content': note['content'],
+          'tags': note['tags'],
+          'category': note['category'],
+        });
+      }
+    } catch (e) {
+      // Tables may already exist
+    }
+
+    // Create FTS triggers
+    await _createFTSTriggers(db);
+  }
+
+  Future<void> _createFTSTriggers(Database db) async {
+    try {
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON $notesTable BEGIN
+          INSERT INTO $notesFtsTable(rowid, noteId, title, content, tags, category)
+          VALUES (new.id, new.id, new.title, new.content, new.tags, new.category);
+        END
+      ''');
+
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON $notesTable BEGIN
+          DELETE FROM $notesFtsTable WHERE rowid = old.id;
+        END
+      ''');
+
+      await db.execute('''
+        CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON $notesTable BEGIN
+          DELETE FROM $notesFtsTable WHERE rowid = old.id;
+          INSERT INTO $notesFtsTable(rowid, noteId, title, content, tags, category)
+          VALUES (new.id, new.id, new.title, new.content, new.tags, new.category);
+        END
+      ''');
+    } catch (e) {
+      // Triggers may already exist
     }
   }
 
@@ -268,6 +940,10 @@ class NotesDatabase {
         id: maps[i]['id'],
         text: maps[i]['text'],
         isCompleted: maps[i]['completed'] == 1,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        priority: TodoPriority.medium,
+        category: TodoCategory.personal,
       ),
     );
   }
@@ -276,11 +952,15 @@ class NotesDatabase {
   Future<void> updateAlarms(String noteId, List<Alarm> alarms) async {
     final db = await database;
     // Clear existing alarms for this note
-    await db.delete(alarmTable, where: 'noteId = ?', whereArgs: [noteId]);
+    await db.delete(
+      remindersTable,
+      where: 'linkedNoteId = ?',
+      whereArgs: [noteId],
+    );
 
     for (final alarm in alarms) {
       await db.insert(
-        alarmTable,
+        remindersTable,
         _alarmToMap(alarm),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -291,8 +971,8 @@ class NotesDatabase {
   Future<List<Alarm>> getAlarms(String noteId) async {
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
-      alarmTable,
-      where: 'noteId = ?',
+      remindersTable,
+      where: 'linkedNoteId = ?',
       whereArgs: [noteId],
     );
 
@@ -302,30 +982,53 @@ class NotesDatabase {
   Map<String, dynamic> _alarmToMap(Alarm alarm) {
     return {
       'id': alarm.id,
-      'noteId': alarm.noteId,
-      'alarmTime': alarm.alarmTime.toIso8601String(),
-      'repeatType': alarm.repeatType.name, // Storing enum name
+      'linkedNoteId': alarm.linkedNoteId,
+      'scheduledTime': alarm.scheduledTime.toIso8601String(),
+      'recurrence': alarm.recurrence.name,
       'isActive': alarm.isActive ? 1 : 0,
       'message': alarm.message,
+      'status': alarm.status.name,
+      'vibrate': alarm.vibrate ? 1 : 0,
       'createdAt': alarm.createdAt.toIso8601String(),
-      'updatedAt': alarm.updatedAt?.toIso8601String(),
+      'updatedAt': alarm.updatedAt.toIso8601String(),
+      'lastTriggered': alarm.lastTriggered?.toIso8601String(),
+      'snoozedUntil': alarm.snoozedUntil?.toIso8601String(),
+      'soundPath': alarm.soundPath,
+      'weekDays': alarm.weekDays?.join(','),
     };
   }
 
   Alarm _alarmFromMap(Map<String, dynamic> map) {
     return Alarm(
       id: map['id'],
-      noteId: map['noteId'],
-      alarmTime: DateTime.parse(map['alarmTime']),
-      repeatType: AlarmRepeatType.values.firstWhere(
-        (e) => e.name == map['repeatType'],
-        orElse: () => AlarmRepeatType.none,
+      linkedNoteId: map['linkedNoteId'],
+      scheduledTime: DateTime.parse(map['scheduledTime']),
+      recurrence: AlarmRecurrence.values.firstWhere(
+        (e) => e.name == (map['recurrence'] ?? 'none'),
+        orElse: () => AlarmRecurrence.none,
+      ),
+      status: AlarmStatus.values.firstWhere(
+        (e) => e.name == (map['status'] ?? 'scheduled'),
+        orElse: () => AlarmStatus.scheduled,
       ),
       isActive: map['isActive'] == 1,
-      message: map['message'],
+      message: map['message'] ?? '',
+      vibrate: (map['vibrate'] ?? 1) == 1,
       createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: map['updatedAt'] != null
-          ? DateTime.parse(map['updatedAt'])
+      updatedAt: DateTime.parse(map['updatedAt']),
+      lastTriggered: map['lastTriggered'] != null
+          ? DateTime.parse(map['lastTriggered'])
+          : null,
+      snoozedUntil: map['snoozedUntil'] != null
+          ? DateTime.parse(map['snoozedUntil'])
+          : null,
+      soundPath: map['soundPath'],
+      weekDays:
+          map['weekDays'] != null && (map['weekDays'] as String).isNotEmpty
+          ? (map['weekDays'] as String)
+                .split(',')
+                .map((e) => int.parse(e))
+                .toList()
           : null,
     );
   }
@@ -333,8 +1036,14 @@ class NotesDatabase {
   /// Delete all data (for testing)
   Future<void> clearAll() async {
     final db = await database;
+    await db.delete(moodEntriesTable);
+    await db.delete(reflectionsTable);
+    await db.delete(reflectionQuestionsTable);
+    await db.delete(activityTagsTable);
+    await db.delete(userSettingsTable);
+    await db.delete(mediaTable);
+    await db.delete(remindersTable);
     await db.delete(todosTable);
-    await db.delete(alarmTable);
     await db.delete(notesTable);
   }
 
@@ -445,4 +1154,3 @@ class NotesDatabase {
     );
   }
 } // End class
-

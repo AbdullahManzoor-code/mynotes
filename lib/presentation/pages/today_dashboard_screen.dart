@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:mynotes/core/routes/app_routes.dart';
 import '../../domain/entities/note.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
@@ -205,6 +206,16 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                 ),
               ),
 
+              // Daily Highlight Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSpacing.screenPaddingHorizontal,
+                  ).copyWith(bottom: AppSpacing.lg),
+                  child: _buildDailyHighlight(context),
+                ),
+              ),
+
               // Daily Reflection Prompt
               BlocBuilder<ReflectionBloc, ReflectionState>(
                 builder: (context, state) {
@@ -321,25 +332,154 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
   }
 
   Widget _buildStatsSection(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: _buildStatCard(
-            context,
-            label: 'REFLECTION STREAK',
-            value: '7 Days',
-            trend: '+2%',
-            trendColor: AppColors.successGreen,
+        // Progress Ring Card
+        Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+            border: Border.all(
+              color: Theme.of(context).brightness == Brightness.dark
+                  ? AppColors.borderDark.withOpacity(0.2)
+                  : AppColors.borderLight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(
+                  Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05,
+                ),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Text(
+                'Today\'s Progress',
+                style: TextStyle(
+                  fontSize: 14.sp,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textMuted,
+                  letterSpacing: 0.5,
+                ),
+              ),
+              SizedBox(height: 20.h),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  // Notes Ring
+                  _buildProgressRing(
+                    context,
+                    title: 'Notes',
+                    progress: 0.85,
+                    color: AppColors.primary,
+                    icon: Icons.note,
+                  ),
+                  // Todos Ring
+                  _buildProgressRing(
+                    context,
+                    title: 'Todos',
+                    progress: 0.67,
+                    color: AppColors.accentGreen,
+                    icon: Icons.check_circle,
+                  ),
+                  // Reflections Ring
+                  _buildProgressRing(
+                    context,
+                    title: 'Reflections',
+                    progress: 0.43,
+                    color: AppColors.accentPurple,
+                    icon: Icons.psychology,
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: _buildStatCard(
-            context,
-            label: 'TODOS DONE',
-            value: '4/6',
-            trend: '67% complete',
-            trendColor: AppColors.successGreen,
+        SizedBox(height: 16.h),
+        // Stats Cards
+        Row(
+          children: [
+            Expanded(
+              child: _buildStatCard(
+                context,
+                label: 'REFLECTION STREAK',
+                value: '7 Days',
+                trend: '+2%',
+                trendColor: AppColors.successGreen,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildStatCard(
+                context,
+                label: 'TODOS DONE',
+                value: '4/6',
+                trend: '67% complete',
+                trendColor: AppColors.successGreen,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProgressRing(
+    BuildContext context, {
+    required String title,
+    required double progress,
+    required Color color,
+    required IconData icon,
+  }) {
+    return Column(
+      children: [
+        SizedBox(
+          width: 80.sp,
+          height: 80.sp,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              // Background ring
+              CircularProgressIndicator(
+                value: 1.0,
+                strokeWidth: 4.sp,
+                backgroundColor: color.withOpacity(0.1),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  color.withOpacity(0.3),
+                ),
+              ),
+              // Progress ring
+              CircularProgressIndicator(
+                value: progress,
+                strokeWidth: 4.sp,
+                backgroundColor: Colors.transparent,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
+              // Icon in center
+              Icon(icon, color: color, size: 28.sp),
+            ],
+          ),
+        ),
+        SizedBox(height: 8.h),
+        Text(
+          title,
+          style: TextStyle(
+            fontSize: 11.sp,
+            fontWeight: FontWeight.w500,
+            color: AppColors.textMuted,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          '${(progress * 100).toStringAsFixed(0)}%',
+          style: TextStyle(
+            fontSize: 12.sp,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary(context),
           ),
         ),
       ],
@@ -1010,6 +1150,149 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
               ),
             );
           }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyHighlight(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final todayHighlight =
+        "Complete project proposal and send to stakeholders"; // This would come from storage
+    final hasHighlight = todayHighlight.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary.withOpacity(0.1),
+            AppColors.primary.withOpacity(0.05),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  Icons.star_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      "Today's Highlight",
+                      style: AppTypography.labelLarge(
+                        context,
+                        AppColors.textPrimary(context),
+                      ),
+                    ),
+                    Text(
+                      "Your main focus for today",
+                      style: AppTypography.captionLarge(
+                        context,
+                        AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, AppRoutes.editDailyHighlight);
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(
+                    hasHighlight ? Icons.edit_outlined : Icons.add,
+                    color: AppColors.primary,
+                    size: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (hasHighlight) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface(context),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark
+                      ? AppColors.borderDark.withOpacity(0.3)
+                      : AppColors.borderLight,
+                ),
+              ),
+              child: Text(
+                todayHighlight,
+                style: AppTypography.bodyMedium(
+                  context,
+                  AppColors.textPrimary(context),
+                ),
+              ),
+            ),
+          ] else ...[
+            GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, AppRoutes.editDailyHighlight);
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 20,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surface(context),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDark
+                        ? AppColors.borderDark.withOpacity(0.3)
+                        : AppColors.borderLight,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.add,
+                      color: AppColors.textSecondary(context),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      "Set your daily highlight",
+                      style: AppTypography.bodyMedium(
+                        context,
+                        AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );

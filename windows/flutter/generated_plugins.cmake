@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
   file_selector_windows
+  geolocator_windows
   irondash_engine_context
   local_auth_windows
   permission_handler_windows

@@ -391,7 +391,7 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
   }
 
   String _formatAlarmTime(Alarm alarm) {
-    final time = alarm.alarmTime;
+    final time = alarm.scheduledTime;
     final hour = time.hour;
     final minute = time.minute;
     final period = hour >= 12 ? 'PM' : 'AM';

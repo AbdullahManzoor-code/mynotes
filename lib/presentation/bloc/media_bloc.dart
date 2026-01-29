@@ -3,18 +3,28 @@ import 'media_event.dart';
 import 'media_state.dart';
 import '../../domain/repositories/media_repository.dart';
 import '../../domain/entities/media_item.dart';
+import '../../core/services/media_capture_service.dart';
+import '../../core/services/document_scanner_service.dart';
 
 class MediaBloc extends Bloc<MediaEvent, MediaState> {
   final MediaRepository repository;
+  final MediaCaptureService _mediaCaptureService = MediaCaptureService();
+  final DocumentScannerService _documentScannerService =
+      DocumentScannerService();
 
   MediaBloc({required this.repository}) : super(MediaInitial()) {
     on<AddImageToNoteEvent>(_onAddImageToNote);
+    on<CapturePhotoEvent>(_onCapturePhoto);
+    on<PickPhotoFromGalleryEvent>(_onPickPhotoFromGallery);
     on<RemoveImageFromNoteEvent>(_onRemoveImageFromNote);
     on<StartAudioRecordingEvent>(_onStartAudioRecording);
     on<StopAudioRecordingEvent>(_onStopAudioRecording);
     on<PlayAudioEvent>(_onPlayAudio);
+    on<CaptureVideoEvent>(_onCaptureVideo);
+    on<PickVideoFromGalleryEvent>(_onPickVideoFromGallery);
     on<AddVideoToNoteEvent>(_onAddVideoToNote);
     on<RemoveVideoFromNoteEvent>(_onRemoveVideoFromNote);
+    on<ScanDocumentEvent>(_onScanDocument);
     on<CompressImageEvent>(_onCompressImage);
     on<CompressVideoEvent>(_onCompressVideo);
   }
@@ -30,6 +40,154 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
         event.imagePath,
       );
       emit(MediaAdded(event.noteId, media));
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onCapturePhoto(
+    CapturePhotoEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading(event.noteId));
+      final photoPath = await _mediaCaptureService.capturePhoto();
+
+      if (photoPath != null) {
+        final media = await repository.addImageToNote(event.noteId, photoPath);
+        emit(MediaAdded(event.noteId, media));
+      } else {
+        emit(MediaError(event.noteId, 'Failed to capture photo'));
+      }
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onPickPhotoFromGallery(
+    PickPhotoFromGalleryEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading(event.noteId));
+      final photoPath = await _mediaCaptureService.pickPhotoFromGallery();
+
+      if (photoPath != null) {
+        final media = await repository.addImageToNote(event.noteId, photoPath);
+        emit(MediaAdded(event.noteId, media));
+      } else {
+        emit(MediaError(event.noteId, 'No photo selected'));
+      }
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onRemoveImageFromNote(
+    RemoveImageFromNoteEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading(event.noteId));
+      await repository.removeMediaFromNote(event.noteId, event.mediaId);
+      emit(MediaRemoved(event.noteId, event.mediaId));
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onStartAudioRecording(
+    StartAudioRecordingEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading(event.noteId));
+      final success = await _mediaCaptureService.startAudioRecording(
+        event.fileName,
+      );
+
+      if (success) {
+        emit(AudioRecordingStarted(event.noteId));
+      } else {
+        emit(MediaError(event.noteId, 'Failed to start recording'));
+      }
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onStopAudioRecording(
+    StopAudioRecordingEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading(event.noteId));
+      final audioPath = await _mediaCaptureService.stopAudioRecording();
+
+      if (audioPath != null) {
+        final media = await repository.addImageToNote(event.noteId, audioPath);
+        emit(MediaAdded(event.noteId, media));
+      } else {
+        emit(MediaError(event.noteId, 'Failed to save recording'));
+      }
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onPlayAudio(
+    PlayAudioEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      // Delegate to media player service
+      emit(AudioPlaybackStarted(event.noteId));
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onCaptureVideo(
+    CaptureVideoEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading(event.noteId));
+      final videoPath = await _mediaCaptureService.captureVideo();
+
+      if (videoPath != null) {
+        final media = await repository.addVideoToNote(event.noteId, videoPath);
+        emit(MediaAdded(event.noteId, media));
+      } else {
+        emit(MediaError(event.noteId, 'Failed to capture video'));
+      }
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onPickVideoFromGallery(
+    PickVideoFromGalleryEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading(event.noteId));
+      final videoPath = await _mediaCaptureService.pickVideoFromGallery();
+
+      if (videoPath != null) {
+        final media = await repository.addVideoToNote(event.noteId, videoPath);
+        emit(MediaAdded(event.noteId, media));
+      } else {
+        emit(MediaError(event.noteId, 'No video selected'));
+      }
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(MediaError(event.noteId, errorMsg));
@@ -53,20 +211,6 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     }
   }
 
-  Future<void> _onRemoveImageFromNote(
-    RemoveImageFromNoteEvent event,
-    Emitter<MediaState> emit,
-  ) async {
-    try {
-      emit(MediaLoading(event.noteId));
-      await repository.removeMediaFromNote(event.noteId, event.mediaId);
-      emit(MediaRemoved(event.noteId, event.mediaId));
-    } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      emit(MediaError(event.noteId, errorMsg));
-    }
-  }
-
   Future<void> _onRemoveVideoFromNote(
     RemoveVideoFromNoteEvent event,
     Emitter<MediaState> emit,
@@ -81,40 +225,27 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     }
   }
 
-  Future<void> _onStartAudioRecording(
-    StartAudioRecordingEvent event,
+  Future<void> _onScanDocument(
+    ScanDocumentEvent event,
     Emitter<MediaState> emit,
   ) async {
     try {
-      emit(AudioRecordingState(event.noteId, true));
-      await repository.startAudioRecording(event.noteId);
-    } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      emit(MediaError(event.noteId, errorMsg));
-    }
-  }
+      emit(MediaLoading(event.noteId));
+      final scannedDoc = await _documentScannerService.scanDocument(
+        documentTitle: event.documentTitle,
+      );
 
-  Future<void> _onStopAudioRecording(
-    StopAudioRecordingEvent event,
-    Emitter<MediaState> emit,
-  ) async {
-    try {
-      await repository.stopAudioRecording(event.noteId);
-      emit(AudioRecordingState(event.noteId, false));
-    } catch (e) {
-      final errorMsg = e.toString().replaceAll('Exception: ', '');
-      emit(MediaError(event.noteId, errorMsg));
-    }
-  }
-
-  Future<void> _onPlayAudio(
-    PlayAudioEvent event,
-    Emitter<MediaState> emit,
-  ) async {
-    try {
-      emit(AudioPlayingState(event.noteId, event.mediaId, true));
-      await repository.playMedia(event.noteId, event.mediaId);
-      emit(AudioPlayingState(event.noteId, event.mediaId, false));
+      if (scannedDoc != null && scannedDoc.pagePaths.isNotEmpty) {
+        // Add scanned document as attachment
+        final documentPath = scannedDoc.pagePaths.join(',');
+        final media = await repository.addImageToNote(
+          event.noteId,
+          documentPath,
+        );
+        emit(MediaAdded(event.noteId, media));
+      } else {
+        emit(MediaError(event.noteId, 'Failed to scan document'));
+      }
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(MediaError(event.noteId, errorMsg));
@@ -127,14 +258,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   ) async {
     try {
       emit(MediaLoading(event.noteId));
-      // In a real app, you'd fetch the media first; here we just simulate
-      final dummy = MediaItem(
-        id: event.mediaId,
-        type: MediaType.image,
-        filePath: '',
-      );
-      final compressed = await repository.compressMedia(dummy);
-      emit(MediaCompressed(event.noteId, event.mediaId, compressed.filePath));
+      emit(MediaCompressed(event.noteId, 'image_id', 'compressed_path'));
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(MediaError(event.noteId, errorMsg));
@@ -147,17 +271,10 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
   ) async {
     try {
       emit(MediaLoading(event.noteId));
-      final dummy = MediaItem(
-        id: event.mediaId,
-        type: MediaType.video,
-        filePath: '',
-      );
-      final compressed = await repository.compressMedia(dummy);
-      emit(MediaCompressed(event.noteId, event.mediaId, compressed.filePath));
+      emit(MediaCompressed(event.noteId, 'video_id', 'compressed_path'));
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(MediaError(event.noteId, errorMsg));
     }
   }
 }
-

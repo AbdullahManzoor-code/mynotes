@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import '../design_system/design_system.dart';
+import '../bloc/note_bloc.dart';
+import '../bloc/note_event.dart';
+import '../bloc/note_state.dart';
 import '../../domain/entities/note.dart';
 
 /// Enhanced Global Search Results Screen
@@ -34,8 +38,8 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
   bool _isVoiceAvailable = false;
 
   String _searchQuery = '';
-  List<Note> _searchResults = [];
   List<String> _recentSearches = [];
+  List<dynamic> _searchResults = [];
   bool _isSearching = false;
   bool _showFilters = false;
 
@@ -130,58 +134,12 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
       _saveRecentSearches();
     }
 
-    // Simulate search delay for better UX
-    Timer(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        _mockSearch();
-      }
-    });
-  }
-
-  void _mockSearch() {
-    // TODO: Replace with actual search implementation
-    final results = <Note>[];
-
-    // Mock search results based on query
-    if (_searchQuery.toLowerCase().contains('meeting')) {
-      results.addAll([
-        Note(
-          id: 'search1',
-          title: 'Weekly Review Meeting',
-          content: 'Discussed project progress and upcoming milestones...',
-          createdAt: DateTime.now().subtract(const Duration(days: 2)),
-          updatedAt: DateTime.now().subtract(const Duration(days: 1)),
-        ),
-        Note(
-          id: 'search2',
-          title: 'Client Meeting Notes',
-          content: 'Key discussion points from client presentation...',
-          createdAt: DateTime.now().subtract(const Duration(days: 5)),
-          updatedAt: DateTime.now().subtract(const Duration(days: 3)),
-        ),
-      ]);
-    }
-
-    if (_searchQuery.toLowerCase().contains('project')) {
-      results.add(
-        Note(
-          id: 'search3',
-          title: 'Project Planning',
-          content: 'Initial project scope and timeline planning...',
-          createdAt: DateTime.now().subtract(const Duration(days: 7)),
-          updatedAt: DateTime.now().subtract(const Duration(days: 4)),
-        ),
-      );
-    }
-
+    // Dispatch search event to NotesBloc
+    context.read<NotesBloc>().add(SearchNotesEvent(_searchQuery));
+    
     setState(() {
-      _searchResults = results;
       _isSearching = false;
     });
-
-    if (results.isNotEmpty) {
-      _resultsController.forward();
-    }
   }
 
   void _clearSearch() {

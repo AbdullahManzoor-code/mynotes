@@ -99,7 +99,6 @@ class _BottomNavBarItem extends StatefulWidget {
   final bool showLabel;
 
   const _BottomNavBarItem({
-    super.key,
     required this.icon,
     this.activeIcon,
     required this.label,
@@ -164,46 +163,56 @@ class _BottomNavBarItemState extends State<_BottomNavBarItem>
       onTapDown: _handleTapDown,
       onTapUp: _handleTapUp,
       onTapCancel: _handleTapCancel,
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSpacing.md.w,
-            vertical: AppSpacing.xs.h,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              AnimatedContainer(
-                duration: AppAnimations.fast,
-                padding: EdgeInsets.all(AppSpacing.xs.w),
-                decoration: BoxDecoration(
-                  color: widget.isSelected
-                      ? widget.selectedColor.withOpacity(0.1)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-                ),
-                child: Icon(displayIcon, color: color, size: 24.sp),
-              ),
-              if (widget.showLabel) ...[
-                SizedBox(height: AppSpacing.xxs.h),
-                AnimatedDefaultTextStyle(
+      child: Semantics(
+        button: true,
+        enabled: true,
+        label: widget.label,
+        onTap: widget.onTap,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.md.w,
+              vertical: AppSpacing.xs.h,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                AnimatedContainer(
                   duration: AppAnimations.fast,
-                  style: AppTypography.caption().copyWith(
-                    color: color,
-                    fontWeight: widget.isSelected
-                        ? FontWeight.w600
-                        : FontWeight.w400,
+                  padding: EdgeInsets.all(AppSpacing.xs.w),
+                  decoration: BoxDecoration(
+                    color: widget.isSelected
+                        ? widget.selectedColor.withOpacity(0.1)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
                   ),
-                  child: Text(
-                    widget.label,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Semantics(
+                    image: true,
+                    label: widget.label,
+                    child: Icon(displayIcon, color: color, size: 24.sp),
                   ),
                 ),
+                if (widget.showLabel) ...[
+                  SizedBox(height: AppSpacing.xxs.h),
+                  AnimatedDefaultTextStyle(
+                    duration: AppAnimations.fast,
+                    style: AppTypography.caption().copyWith(
+                      color: color,
+                      fontWeight: widget.isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                    ),
+                    child: Text(
+                      widget.label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),

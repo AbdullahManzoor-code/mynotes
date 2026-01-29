@@ -114,8 +114,6 @@ class PermissionHandlerService {
         return 'Permission permanently denied. Please enable it in settings.';
       case PermissionStatus.provisional:
         return 'Permission provisional';
-      default:
-        return 'Unknown permission status';
     }
   }
 
@@ -186,4 +184,3 @@ class PermissionHandlerService {
     }
   }
 }
-

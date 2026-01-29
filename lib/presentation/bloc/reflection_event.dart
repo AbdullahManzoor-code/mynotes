@@ -105,3 +105,32 @@ class LoadAllAnswersEvent extends ReflectionEvent {
   const LoadAllAnswersEvent();
 }
 
+class LoadTemplatesEvent extends ReflectionEvent {
+  const LoadTemplatesEvent();
+}
+
+class SelectTemplateEvent extends ReflectionEvent {
+  final String templateId;
+  final String templateName;
+
+  const SelectTemplateEvent({
+    required this.templateId,
+    required this.templateName,
+  });
+
+  @override
+  List<Object?> get props => [templateId, templateName];
+}
+
+class CreateFromTemplateEvent extends ReflectionEvent {
+  final String templateId;
+  final Map<String, String> answers;
+
+  const CreateFromTemplateEvent({
+    required this.templateId,
+    required this.answers,
+  });
+
+  @override
+  List<Object?> get props => [templateId, answers];
+}

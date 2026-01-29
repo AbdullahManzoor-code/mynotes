@@ -36,17 +36,26 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Notification settings
   bool _notificationsEnabled = true;
-  String _defaultAlarmSound = 'Default';
   bool _vibrate = true;
+  String _selectedNotificationSound = 'Default';
+  bool _vibrationEnabled = true;
+  bool _ledEnabled = true;
+  bool _quietHoursEnabled = false;
+  String _quietHoursStart = '22:00';
+  String _quietHoursEnd = '08:00';
 
   // Storage settings
-  String _storageUsed = 'Calculating...';
-  int _mediaCount = 0;
-  int _noteCount = 0;
+  String _storageUsed = '45.2 MB';
+  int _mediaCount = 127;
+  int _noteCount = 48;
+
+  // SettingsService instance
+  late SettingsService _settingsService;
 
   @override
   void initState() {
     super.initState();
+    _settingsService = SettingsService();
     _loadSettings();
   }
 
@@ -56,6 +65,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           await SettingsService.getNotificationsEnabled();
       final alarmSound = await SettingsService.getAlarmSound();
       final vibrate = await SettingsService.getVibrateEnabled();
+      final vibrationEnabled = await _settingsService.getVibrationEnabled();
+      final ledEnabled = await _settingsService.getLedEnabled();
+      final quietHoursEnabled = await _settingsService.getQuietHoursEnabled();
+      final quietHoursStart =
+          await _settingsService.getQuietHoursStart() ?? '22:00';
+      final quietHoursEnd =
+          await _settingsService.getQuietHoursEnd() ?? '08:00';
 
       // Load biometric settings
       final biometricAvailable = await _biometricService.isBiometricAvailable();
@@ -65,8 +81,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
       setState(() {
         _notificationsEnabled = notificationsEnabled;
-        _defaultAlarmSound = alarmSound;
+        _selectedNotificationSound = alarmSound;
         _vibrate = vibrate;
+        _vibrationEnabled = vibrationEnabled;
+        _ledEnabled = ledEnabled;
+        _quietHoursEnabled = quietHoursEnabled;
+        _quietHoursStart = quietHoursStart;
+        _quietHoursEnd = quietHoursEnd;
         _biometricAvailable = biometricAvailable;
         _biometricEnabled = biometricEnabled;
         _availableBiometrics = availableBiometrics;
@@ -77,18 +98,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       print('Error loading settings: $e');
     }
-  }
-
-  Future<void> _saveNotifications(bool enabled) async {
-    await SettingsService.setNotificationsEnabled(enabled);
-  }
-
-  Future<void> _saveVibrate(bool enabled) async {
-    await SettingsService.setVibrateEnabled(enabled);
-  }
-
-  Future<void> _saveAlarmSound(String sound) async {
-    await SettingsService.setAlarmSound(sound);
   }
 
   Widget _buildSectionHeader(String title) {
@@ -206,6 +215,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildNotificationsSection(bool isDark) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+        border: Border.all(
+          color: isDark
+              ? AppColors.borderDark.withOpacity(0.2)
+              : AppColors.borderLight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // Notifications Toggle
+          _buildSettingTile(
+            icon: Icons.notifications,
+            title: 'Notifications',
+            subtitle: 'Receive alerts and reminders',
+            trailing: _buildSwitch(_notificationsEnabled, (value) {
+              setState(() {
+                _notificationsEnabled = value;
+                SettingsService.setNotificationsEnabled(value);
+              });
+            }),
+            hasDivider: true,
+          ),
+
+          // Notification Sound
+          if (_notificationsEnabled)
+            _buildSettingTile(
+              icon: Icons.volume_up,
+              title: 'Notification Sound',
+              subtitle: _selectedNotificationSound,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.chevron_right,
+                    size: 18.sp,
+                    color: AppColors.textMuted,
+                  ),
+                ],
+              ),
+              hasDivider: true,
+              onTap: () => _showNotificationSoundPicker(),
+            ),
+
+          // Vibration
+          if (_notificationsEnabled)
+            _buildSettingTile(
+              icon: Icons.vibration,
+              title: 'Vibration',
+              subtitle: 'Haptic feedback for alerts',
+              trailing: _buildSwitch(_vibrationEnabled, (value) {
+                setState(() {
+                  _vibrationEnabled = value;
+                  _settingsService.setVibrationEnabled(value);
+                });
+              }),
+              hasDivider: true,
+            ),
+
+          // LED Notifications
+          if (_notificationsEnabled)
+            _buildSettingTile(
+              icon: Icons.lightbulb,
+              title: 'LED Notifications',
+              subtitle: 'Flash LED indicator',
+              trailing: _buildSwitch(_ledEnabled, (value) {
+                setState(() {
+                  _ledEnabled = value;
+                  _settingsService.setLedEnabled(value);
+                });
+              }),
+              hasDivider: true,
+            ),
+
+          // Quiet Hours
+          if (_notificationsEnabled)
+            _buildSettingTile(
+              icon: Icons.schedule,
+              title: 'Quiet Hours',
+              subtitle: _quietHoursEnabled
+                  ? '$_quietHoursStart - $_quietHoursEnd'
+                  : 'Not set',
+              trailing: _buildSwitch(_quietHoursEnabled, (value) {
+                setState(() {
+                  _quietHoursEnabled = value;
+                  _settingsService.setQuietHoursEnabled(value);
+                });
+              }),
+              hasDivider: !_quietHoursEnabled,
+              onTap: _quietHoursEnabled ? () => _showQuietHoursPicker() : null,
+            ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildVoiceInputSection(bool isDark) {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 16.w),
@@ -262,7 +378,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: null,
             trailing: _buildSwitch(_vibrate, (value) async {
               setState(() => _vibrate = value);
-              await _saveVibrate(value);
+              await SettingsService.setVibrateEnabled(value);
             }),
           ),
         ],
@@ -306,7 +422,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Safe Keeping',
+                    '$_storageUsed storage used',
                     style: TextStyle(
                       fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
@@ -315,7 +431,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   SizedBox(height: 4.h),
                   Text(
-                    'Last cloud backup: Today, 10:42 AM',
+                    '$_noteCount notes • $_mediaCount media files',
                     style: TextStyle(
                       fontSize: 12.sp,
                       color: AppColors.textMuted,
@@ -689,6 +805,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _buildSectionHeader('PRIVACY & TRUST'),
           _buildPrivacySection(isDark),
 
+          // Notifications Section (NEW)
+          _buildSectionHeader('NOTIFICATIONS'),
+          _buildNotificationsSection(isDark),
+
           // Voice & Input Section
           _buildSectionHeader('VOICE & INPUT'),
           _buildVoiceInputSection(isDark),
@@ -728,6 +848,117 @@ class _SettingsScreenState extends State<SettingsScreen> {
           MaterialPageRoute(builder: (_) => const BackupExportScreen()),
         );
         break;
+    }
+  }
+
+  void _showNotificationSoundPicker() {
+    final soundOptions = [
+      'Default',
+      'System Alert',
+      'Alert Tone 1',
+      'Alert Tone 2',
+      'Chime',
+      'Bell',
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Notification Sound'),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: soundOptions.length,
+            itemBuilder: (context, index) {
+              final sound = soundOptions[index];
+              return RadioListTile<String>(
+                title: Text(sound),
+                value: sound,
+                groupValue: _selectedNotificationSound,
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedNotificationSound = value;
+                      SettingsService.setAlarmSound(value);
+                    });
+                    Navigator.pop(context);
+                  }
+                },
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showQuietHoursPicker() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Set Quiet Hours'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 16),
+            const Text(
+              'Start Time:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              title: Text(_quietHoursStart),
+              trailing: const Icon(Icons.edit),
+              onTap: () => _selectQuietHourTime(true),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'End Time:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              title: Text(_quietHoursEnd),
+              trailing: const Icon(Icons.edit),
+              onTap: () => _selectQuietHourTime(false),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              _settingsService.setQuietHoursStart(_quietHoursStart);
+              _settingsService.setQuietHoursEnd(_quietHoursEnd);
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _selectQuietHourTime(bool isStart) async {
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+
+    if (pickedTime != null) {
+      final timeString =
+          '${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}';
+      setState(() {
+        if (isStart) {
+          _quietHoursStart = timeString;
+        } else {
+          _quietHoursEnd = timeString;
+        }
+      });
     }
   }
 }

@@ -21,18 +21,18 @@ class AlarmBottomSheet extends StatefulWidget {
 class _AlarmBottomSheetState extends State<AlarmBottomSheet> {
   late DateTime _selectedDate;
   late TimeOfDay _selectedTime;
-  late AlarmRepeatType _selectedRepeat;
+  late AlarmRecurrence _selectedRepeat;
   late TextEditingController _messageController;
 
   @override
   void initState() {
     super.initState();
     final initialDate =
-        widget.existingAlarm?.alarmTime ??
+        widget.existingAlarm?.scheduledTime ??
         DateTime.now().add(const Duration(minutes: 5));
     _selectedDate = initialDate;
     _selectedTime = TimeOfDay.fromDateTime(initialDate);
-    _selectedRepeat = widget.existingAlarm?.repeatType ?? AlarmRepeatType.none;
+    _selectedRepeat = widget.existingAlarm?.recurrence ?? AlarmRecurrence.none;
     _messageController = TextEditingController(
       text: widget.existingAlarm?.message ?? widget.note.title,
     );
@@ -62,13 +62,13 @@ class _AlarmBottomSheetState extends State<AlarmBottomSheet> {
 
     final alarm = Alarm(
       id: widget.existingAlarm?.id ?? const Uuid().v4(),
-      noteId: widget.note.id,
-      alarmTime: scheduledDateTime,
-      repeatType: _selectedRepeat,
+      linkedNoteId: widget.note.id,
+      scheduledTime: scheduledDateTime,
+      recurrence: _selectedRepeat,
       message: _messageController.text,
       createdAt: widget.existingAlarm?.createdAt ?? DateTime.now(),
-      isActive: true,
       updatedAt: DateTime.now(),
+      isActive: true,
     );
 
     if (widget.existingAlarm != null) {
@@ -197,7 +197,7 @@ class _AlarmBottomSheetState extends State<AlarmBottomSheet> {
           SizedBox(height: 8.h),
           Wrap(
             spacing: 8.w,
-            children: AlarmRepeatType.values.map((type) {
+            children: AlarmRecurrence.values.map((type) {
               final isSelected = _selectedRepeat == type;
               return ChoiceChip(
                 label: Text(type.displayName),

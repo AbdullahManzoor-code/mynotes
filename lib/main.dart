@@ -29,6 +29,8 @@ import 'presentation/bloc/media_bloc.dart';
 import 'presentation/bloc/reflection_bloc.dart';
 import 'presentation/bloc/alarm_bloc.dart';
 import 'presentation/bloc/todo_bloc.dart';
+import 'presentation/bloc/todos_bloc.dart';
+import 'presentation/widgets/global_error_handler_listener.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -74,7 +76,7 @@ class MyNotesApp extends StatelessWidget {
           create: (context) => MediaRepositoryImpl(database: database),
         ),
         RepositoryProvider<ReflectionRepository>(
-          create: (context) => ReflectionRepositoryImpl(),
+          create: (context) => ReflectionRepositoryImpl(database),
         ),
         RepositoryProvider<ClipboardService>(
           create: (context) => _clipboardService,
@@ -109,6 +111,9 @@ class MyNotesApp extends StatelessWidget {
           create: (context) =>
               TodoBloc(noteRepository: context.read<NoteRepository>()),
         ),
+        BlocProvider<TodosBloc>(
+          create: (context) => TodosBloc()..add(LoadTodos()),
+        ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {
@@ -117,19 +122,44 @@ class MyNotesApp extends StatelessWidget {
             minTextAdapt: true,
             splitScreenMode: true,
             builder: (context, child) {
-              return MaterialApp(
-                title: AppConstants.appName,
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.lightTheme,
-                darkTheme: AppTheme.darkTheme,
-                themeMode: themeState.themeMode,
-                initialRoute: AppRoutes.splash,
-                onGenerateRoute: AppRouter.onGenerateRoute,
+              return _TextScalingWrapper(
+                child: GlobalErrorHandlerListener(
+                  child: MaterialApp(
+                    title: AppConstants.appName,
+                    debugShowCheckedModeBanner: false,
+                    theme: AppTheme.lightTheme,
+                    darkTheme: AppTheme.darkTheme,
+                    themeMode: themeState.themeMode,
+                    initialRoute: AppRoutes.splash,
+                    onGenerateRoute: AppRouter.onGenerateRoute,
+                    // Accessibility features
+                    showSemanticsDebugger: false,
+                  ),
+                ),
               );
             },
           );
         },
       ),
+    );
+  }
+}
+
+/// Wrapper widget to support text scaling up to 200%
+class _TextScalingWrapper extends StatelessWidget {
+  final Widget child;
+
+  const _TextScalingWrapper({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaleFactor: MediaQuery.of(context).textScaleFactor > 2.0
+            ? 2.0
+            : MediaQuery.of(context).textScaleFactor,
+      ),
+      child: child,
     );
   }
 }

@@ -61,6 +61,7 @@ class AppRoutes {
   static const String appSettings = '/app-settings';
   static const String privacy = '/privacy';
   static const String voiceSettings = '/voice-settings';
+  static const String fontSettings = '/font-settings';
 
   // ==================== Quick Actions ====================
   static const String quickAdd = '/quick-add';
@@ -71,6 +72,7 @@ class AppRoutes {
   static const String mediaViewer = '/media/viewer';
   static const String pdfPreview = '/pdf/preview';
   static const String biometricLock = '/security/lock';
+  static const String pinSetup = '/security/pin-setup';
 
   // ==================== Help & Support ====================
   static const String emptyStateNotesHelp = '/help/empty-notes';

@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'dart:typed_data';
 import '../../domain/entities/alarm.dart'; // Ensure AlarmRepeatType is available
 
 class NotificationService {
@@ -48,9 +49,16 @@ class NotificationService {
     required String title,
     required String body,
     required DateTime scheduledTime,
-    AlarmRepeatType repeatType = AlarmRepeatType.none,
+    AlarmRecurrence repeatType = AlarmRecurrence.none,
+    String? soundPath,
   }) async {
     try {
+      // Map sound paths to UriAndroidNotificationSound
+      UriAndroidNotificationSound? sound;
+      if (soundPath != null && soundPath.isNotEmpty) {
+        sound = UriAndroidNotificationSound(soundPath);
+      }
+
       final android = AndroidNotificationDetails(
         'notes_channel',
         'Notes & Reminders',
@@ -59,6 +67,10 @@ class NotificationService {
         priority: Priority.high,
         fullScreenIntent: true, // For critical reminders
         category: AndroidNotificationCategory.reminder,
+        sound: sound,
+        enableVibration: true,
+        vibrationPattern: Int64List.fromList([0, 250, 250, 250]),
+        playSound: true,
       );
       final details = NotificationDetails(android: android);
 
@@ -71,7 +83,7 @@ class NotificationService {
         );
       }
 
-      if (repeatType == AlarmRepeatType.none) {
+      if (repeatType == AlarmRecurrence.none) {
         await _plugin.zonedSchedule(
           id,
           title,
@@ -87,15 +99,15 @@ class NotificationService {
         DateTimeComponents? matchDateTimeComponents;
 
         switch (repeatType) {
-          case AlarmRepeatType.daily:
+          case AlarmRecurrence.daily:
             matchDateTimeComponents = DateTimeComponents.time;
             break;
-          case AlarmRepeatType.weekly:
+          case AlarmRecurrence.weekly:
             matchDateTimeComponents = DateTimeComponents.dayOfWeekAndTime;
             break;
-          case AlarmRepeatType.monthly:
-            matchDateTimeComponents =
-                DateTimeComponents.dayOfMonthAndTime; // Check if supported
+          case AlarmRecurrence.monthly:
+          case AlarmRecurrence.yearly:
+            matchDateTimeComponents = DateTimeComponents.dayOfMonthAndTime;
             // Note: FlutterLocalNotificationsPlugin might not support monthly directly with DateTimeComponents.
             // For monthly, we might need manual rescheduling or use 'dayOfMonthAndTime' if avail.
             // 'dayOfMonthAndTime' is consistent with day of month + time.
@@ -143,4 +155,3 @@ class NotificationService {
     }
   }
 }
-

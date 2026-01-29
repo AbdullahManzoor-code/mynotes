@@ -75,3 +75,16 @@ class AudioPlayingState extends MediaState {
   List<Object?> get props => [noteId, mediaId, isPlaying];
 }
 
+class AudioRecordingStarted extends MediaState {
+  final String noteId;
+  const AudioRecordingStarted(this.noteId);
+  @override
+  List<Object?> get props => [noteId];
+}
+
+class AudioPlaybackStarted extends MediaState {
+  final String noteId;
+  const AudioPlaybackStarted(this.noteId);
+  @override
+  List<Object?> get props => [noteId];
+}

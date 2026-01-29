@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/reflection_question.dart';
 import '../../domain/entities/reflection_answer.dart';
+import '../../core/exceptions/app_exceptions.dart';
 
 class ReflectionState extends Equatable {
   const ReflectionState();
@@ -102,10 +103,43 @@ class QuestionDeleted extends ReflectionState {
 
 class ReflectionError extends ReflectionState {
   final String message;
+  final String? code;
+  final AppException? exception;
 
-  const ReflectionError(this.message);
+  const ReflectionError(this.message, {this.code, this.exception});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, code, exception];
 }
 
+class ReflectionValidationError extends ReflectionState {
+  final String message;
+  final String field;
+
+  const ReflectionValidationError(this.message, {required this.field});
+
+  @override
+  List<Object?> get props => [message, field];
+}
+
+class TemplatesLoaded extends ReflectionState {
+  final List<Map<String, String>> templates;
+
+  const TemplatesLoaded(this.templates);
+
+  @override
+  List<Object?> get props => [templates];
+}
+
+class TemplateSelected extends ReflectionState {
+  final String templateId;
+  final String templateName;
+
+  const TemplateSelected({
+    required this.templateId,
+    required this.templateName,
+  });
+
+  @override
+  List<Object?> get props => [templateId, templateName];
+}

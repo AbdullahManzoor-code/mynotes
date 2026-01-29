@@ -6,7 +6,7 @@ import '../../presentation/pages/main_home_screen.dart';
 import '../../presentation/pages/enhanced_notes_list_screen.dart';
 import '../../presentation/pages/enhanced_note_editor_screen.dart';
 import '../../presentation/pages/enhanced_reminders_list_screen.dart';
-import '../../presentation/pages/todos_list_screen.dart';
+import '../../presentation/screens/todos_screen_fixed.dart';
 import '../../presentation/pages/todo_focus_screen.dart';
 import '../../presentation/pages/advanced_todo_screen.dart';
 import '../../presentation/pages/settings_screen.dart';
@@ -18,12 +18,14 @@ import '../../presentation/pages/media_picker_screen.dart';
 import '../../presentation/pages/audio_recorder_screen.dart';
 import '../../presentation/pages/pdf_preview_screen.dart';
 import '../../presentation/pages/biometric_lock_screen.dart';
+import '../../presentation/pages/pin_setup_screen.dart';
 import '../../presentation/pages/focus_session_screen.dart';
 import '../../presentation/pages/focus_celebration_screen.dart';
 import '../../presentation/pages/document_scan_screen.dart';
 import '../../presentation/pages/backup_export_screen.dart';
 import '../../presentation/pages/calendar_integration_screen.dart';
 import '../../presentation/pages/voice_settings_screen.dart';
+import '../../presentation/pages/font_settings_screen.dart';
 import '../../presentation/pages/edit_daily_highlight_screen_new.dart';
 import '../../presentation/pages/daily_highlight_summary_screen.dart';
 import '../../presentation/pages/empty_state_notes_help_screen.dart';
@@ -48,6 +50,11 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const OnboardingScreen());
 
       case AppRoutes.home:
+        final args = settings.arguments;
+        return MaterialPageRoute(
+          builder: (_) => MainHomeScreen(initialIndex: args is int ? args : 0),
+        );
+
       case AppRoutes.todayDashboard:
         return MaterialPageRoute(builder: (_) => const TodayDashboardScreen());
 
@@ -82,7 +89,7 @@ class AppRouter {
         );
 
       case AppRoutes.todosList:
-        return MaterialPageRoute(builder: (_) => const TodosListScreen());
+        return MaterialPageRoute(builder: (_) => const TodosScreen());
 
       case AppRoutes.todoFocus:
         final args = settings.arguments;
@@ -158,6 +165,9 @@ class AppRouter {
       case AppRoutes.voiceSettings:
         return MaterialPageRoute(builder: (_) => const VoiceSettingsScreen());
 
+      case AppRoutes.fontSettings:
+        return MaterialPageRoute(builder: (_) => const FontSettingsScreen());
+
       case AppRoutes.editDailyHighlight:
         return MaterialPageRoute(
           builder: (_) => const EditDailyHighlightScreen(),
@@ -217,6 +227,15 @@ class AppRouter {
 
       case AppRoutes.biometricLock:
         return MaterialPageRoute(builder: (_) => const BiometricLockScreen());
+
+      case AppRoutes.pinSetup:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return MaterialPageRoute(
+          builder: (_) => PinSetupScreen(
+            isFirstSetup: args['isFirstSetup'] ?? false,
+            isChanging: args['isChanging'] ?? false,
+          ),
+        );
 
       case AppRoutes.dailyHighlightSummary:
         return MaterialPageRoute(

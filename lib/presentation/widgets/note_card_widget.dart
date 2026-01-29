@@ -5,10 +5,11 @@ import '../design_system/design_system.dart';
 import '../../domain/entities/note.dart';
 
 /// Note Card Widget
-/// Displays individual note in list view using the new Design System
+/// Displays individual note in list or grid view using the new Design System
 class NoteCardWidget extends StatelessWidget {
   final Note note;
   final bool isSelected;
+  final bool isGridView; // New property for grid layout
   final VoidCallback onTap;
   final VoidCallback onLongPress;
   final VoidCallback? onDelete;
@@ -19,6 +20,7 @@ class NoteCardWidget extends StatelessWidget {
     super.key,
     required this.note,
     this.isSelected = false,
+    this.isGridView = false, // Default to list view
     required this.onTap,
     required this.onLongPress,
     this.onDelete,
@@ -34,7 +36,7 @@ class NoteCardWidget extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
-        padding: EdgeInsets.all(16.w),
+        padding: EdgeInsets.all(isGridView ? 12.w : 16.w),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkCardBackground : AppColors.lightSurface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
@@ -56,90 +58,177 @@ class NoteCardWidget extends StatelessWidget {
             ),
           ],
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Title + Time Row
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Row(
-                    children: [
-                      if (note.isPinned)
-                        Padding(
-                          padding: EdgeInsets.only(right: 6.w),
-                          child: Icon(
-                            Icons.push_pin,
-                            size: 14.sp,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      Expanded(
-                        child: Text(
-                          note.title.isEmpty ? 'Untitled' : note.title,
-                          style: AppTypography.bodyMedium(
-                            context,
-                            null,
-                            FontWeight.w700,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(width: 8.w),
-                Text(
-                  _getTimeAgo(note.updatedAt).toUpperCase(),
-                  style: AppTypography.caption(
-                    AppColors.textMuted,
-                    null,
-                    FontWeight.w500,
-                  ).copyWith(fontSize: 10.sp, letterSpacing: 0.3),
-                ),
-              ],
-            ),
-
-            // Content Preview
-            if (note.content.isNotEmpty) ...[
-              SizedBox(height: 8.h),
-              Text(
-                note.content,
-                style: AppTypography.bodySmall(
-                  isDark ? const Color(0xFF9DB2B9) : AppColors.textMuted,
-                ).copyWith(height: 1.5),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-
-            // Tags
-            if (note.tags.isNotEmpty) ...[
-              SizedBox(height: 12.h),
-              Wrap(
-                spacing: 8.w,
-                runSpacing: 6.h,
-                children: note.tags
-                    .take(3)
-                    .map((tag) => _buildTag(tag, isDark))
-                    .toList(),
-              ),
-            ],
-          ],
-        ),
+        child: isGridView
+            ? _buildGridContent(context, isDark)
+            : _buildListContent(context, isDark),
       ),
     );
   }
 
-  Widget _buildTag(String tag, bool isDark) {
+  Widget _buildListContent(BuildContext context, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Title + Time Row
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Row(
+                children: [
+                  if (note.isPinned)
+                    Padding(
+                      padding: EdgeInsets.only(right: 6.w),
+                      child: Icon(
+                        Icons.push_pin,
+                        size: 14.sp,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  Expanded(
+                    child: Text(
+                      note.title.isEmpty ? 'Untitled' : note.title,
+                      style: AppTypography.bodyMedium(
+                        context,
+                        AppColors.getTextColor(Theme.of(context).brightness),
+                        FontWeight.w700,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(width: 8.w),
+            Text(
+              _getTimeAgo(note.updatedAt).toUpperCase(),
+              style: AppTypography.caption(
+                AppColors.textMuted,
+                null,
+                FontWeight.w500,
+              ).copyWith(fontSize: 10.sp, letterSpacing: 0.3),
+            ),
+          ],
+        ),
+
+        // Content Preview
+        if (note.content.isNotEmpty) ...[
+          SizedBox(height: 8.h),
+          Text(
+            note.content,
+            style: AppTypography.bodySmall(
+              isDark ? const Color(0xFF9DB2B9) : AppColors.textMuted,
+            ).copyWith(height: 1.5),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+
+        // Tags
+        if (note.tags.isNotEmpty) ...[
+          SizedBox(height: 12.h),
+          Wrap(
+            spacing: 8.w,
+            runSpacing: 6.h,
+            children: note.tags
+                .take(3)
+                .map((tag) => _buildTag(tag, isDark))
+                .toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildGridContent(BuildContext context, bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header - More compact for grid
+        Row(
+          children: [
+            if (note.isPinned)
+              Padding(
+                padding: EdgeInsets.only(right: 4.w),
+                child: Icon(
+                  Icons.push_pin,
+                  size: 12.sp,
+                  color: AppColors.primary,
+                ),
+              ),
+            Expanded(
+              child: Text(
+                note.title.isEmpty ? 'Untitled' : note.title,
+                style: AppTypography.bodyMedium(
+                  context,
+                  AppColors.getTextColor(Theme.of(context).brightness),
+                  FontWeight.w700,
+                ).copyWith(fontSize: 14.sp),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+
+        // Content Preview - Longer for grid
+        if (note.content.isNotEmpty) ...[
+          SizedBox(height: 8.h),
+          Expanded(
+            child: Text(
+              note.content,
+              style: AppTypography.bodySmall(
+                isDark ? const Color(0xFF9DB2B9) : AppColors.textMuted,
+              ).copyWith(height: 1.4, fontSize: 12.sp),
+              maxLines: 6, // More lines in grid view
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+
+        // Bottom section with tags and time
+        const Spacer(),
+
+        // Tags - Show only 2 for space
+        if (note.tags.isNotEmpty) ...[
+          Wrap(
+            spacing: 6.w,
+            runSpacing: 4.h,
+            children: note.tags
+                .take(2) // Fewer tags in grid view
+                .map((tag) => _buildTag(tag, isDark, isCompact: true))
+                .toList(),
+          ),
+          SizedBox(height: 8.h),
+        ],
+
+        // Time at bottom
+        Align(
+          alignment: Alignment.centerRight,
+          child: Text(
+            _getTimeAgo(note.updatedAt).toUpperCase(),
+            style: AppTypography.caption(
+              AppColors.textMuted,
+              null,
+              FontWeight.w500,
+            ).copyWith(fontSize: 9.sp, letterSpacing: 0.2),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTag(String tag, bool isDark, {bool isCompact = false}) {
     final color = _getTagColor(tag);
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 2.h),
+      padding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 6.w : 8.w,
+        vertical: isCompact ? 1.h : 2.h,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
@@ -150,7 +239,7 @@ class NoteCardWidget extends StatelessWidget {
           color,
           null,
           FontWeight.w700,
-        ).copyWith(fontSize: 10.sp),
+        ).copyWith(fontSize: isCompact ? 8.sp : 10.sp),
       ),
     );
   }

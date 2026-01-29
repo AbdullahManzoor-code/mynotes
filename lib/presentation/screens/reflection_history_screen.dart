@@ -52,6 +52,43 @@ class _ReflectionHistoryScreenState extends State<ReflectionHistoryScreen> {
       ),
       body: Column(
         children: [
+          // Streak Tracker
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+            margin: EdgeInsets.all(12.w),
+            decoration: BoxDecoration(
+              color: isDark
+                  ? AppColors.darkCardBackground
+                  : AppColors.lightCardBackground,
+              borderRadius: BorderRadius.circular(12.r),
+              border: Border.all(
+                color: AppColors.primaryColor.withOpacity(0.2),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStreakCard(
+                  icon: Icons.local_fire_department,
+                  label: 'Current Streak',
+                  value: '7 days',
+                  color: Colors.orange,
+                ),
+                _buildStreakCard(
+                  icon: Icons.trending_up,
+                  label: 'Longest Streak',
+                  value: '14 days',
+                  color: AppColors.primaryColor,
+                ),
+                _buildStreakCard(
+                  icon: Icons.calendar_today,
+                  label: 'Total Reflections',
+                  value: '42',
+                  color: Colors.green,
+                ),
+              ],
+            ),
+          ),
           // Mood Filter
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
@@ -378,5 +415,34 @@ class _ReflectionHistoryScreenState extends State<ReflectionHistoryScreen> {
 
   bool _isSameDay(DateTime a, DateTime b) {
     return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  Widget _buildStreakCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 24.sp),
+        SizedBox(height: 8.h),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18.sp,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10.sp, color: Colors.grey),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
   }
 }
