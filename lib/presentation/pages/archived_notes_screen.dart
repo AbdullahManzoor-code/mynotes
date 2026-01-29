@@ -176,3 +176,4 @@ class _ArchivedNotesScreenState extends State<ArchivedNotesScreen> {
     );
   }
 }
+

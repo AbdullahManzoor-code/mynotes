@@ -528,3 +528,4 @@ class LocationReminderComingSoonScreen extends StatelessWidget {
     );
   }
 }
+

@@ -488,3 +488,4 @@ class _QuickAddConfirmationScreenState extends State<QuickAddConfirmationScreen>
     );
   }
 }
+

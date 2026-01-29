@@ -319,3 +319,4 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     }
   }
 }
+

@@ -395,3 +395,4 @@ class DailyHighlightSummaryScreen extends StatelessWidget {
     );
   }
 }
+

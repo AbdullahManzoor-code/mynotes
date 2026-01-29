@@ -761,3 +761,4 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
     }
   }
 }
+

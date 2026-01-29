@@ -436,3 +436,4 @@ class _ConfettiParticle {
     required this.size,
   });
 }
+

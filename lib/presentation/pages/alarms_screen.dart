@@ -358,3 +358,4 @@ class _AlarmsScreenState extends State<AlarmsScreen>
     return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
   }
 }
+

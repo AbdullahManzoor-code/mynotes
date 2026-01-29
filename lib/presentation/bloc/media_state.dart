@@ -49,6 +49,13 @@ class MediaRemoved extends MediaState {
   List<Object?> get props => [noteId, mediaId];
 }
 
+class MediaLoaded extends MediaState {
+  final List<MediaItem> mediaItems;
+  const MediaLoaded(this.mediaItems);
+  @override
+  List<Object?> get props => [mediaItems];
+}
+
 class MediaError extends MediaState {
   final String noteId;
   final String message;

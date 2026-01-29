@@ -460,3 +460,4 @@ class _PinSetupScreenState extends State<PinSetupScreen>
     await prefs.setBool(_pinEnabledKey, false);
   }
 }
+

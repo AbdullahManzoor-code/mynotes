@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../design_system/design_system.dart';
+import '../../core/routes/app_routes.dart';
 import '../widgets/global_command_palette.dart';
 import 'today_dashboard_screen.dart';
 import 'enhanced_notes_list_screen.dart';
 import 'todos_list_screen.dart';
 import 'enhanced_reminders_list_screen.dart';
 import '../screens/reflection_home_screen.dart';
+import 'integrated_features_screen.dart';
 
 /// Main Home Screen with Bottom Navigation
 /// Central hub for all app features
@@ -54,14 +56,21 @@ class _MainHomeScreenState extends State<MainHomeScreen>
       if ((event.logicalKey == LogicalKeyboardKey.keyN) &&
           (HardwareKeyboard.instance.isControlPressed ||
               HardwareKeyboard.instance.isMetaPressed)) {
-        Navigator.pushNamed(context, '/note-editor');
+        Navigator.pushNamed(context, AppRoutes.noteEditor);
         return true;
       }
       // Command/Ctrl + T for new todo
       if ((event.logicalKey == LogicalKeyboardKey.keyT) &&
           (HardwareKeyboard.instance.isControlPressed ||
               HardwareKeyboard.instance.isMetaPressed)) {
-        Navigator.pushNamed(context, '/todos');
+        Navigator.pushNamed(context, AppRoutes.todosList);
+        return true;
+      }
+      // Command/Ctrl + F for Features (Integrated Features)
+      if ((event.logicalKey == LogicalKeyboardKey.keyF) &&
+          (HardwareKeyboard.instance.isControlPressed ||
+              HardwareKeyboard.instance.isMetaPressed)) {
+        _onTabTapped(5); // Navigate to Features tab
         return true;
       }
     }
@@ -95,6 +104,7 @@ class _MainHomeScreenState extends State<MainHomeScreen>
           TodosListScreen(),
           EnhancedRemindersListScreen(),
           ReflectionHomeScreen(),
+          IntegratedFeaturesScreen(),
         ],
       ),
       bottomNavigationBar: GlassBottomNavBar(
@@ -125,6 +135,11 @@ class _MainHomeScreenState extends State<MainHomeScreen>
             icon: Icons.self_improvement_outlined,
             activeIcon: Icons.self_improvement,
             label: 'Reflect',
+          ),
+          BottomNavItem(
+            icon: Icons.dashboard_outlined,
+            activeIcon: Icons.dashboard,
+            label: 'Features',
           ),
         ],
       ),

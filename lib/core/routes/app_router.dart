@@ -35,10 +35,52 @@ import '../../presentation/pages/recurring_todo_schedule_screen.dart';
 import '../../presentation/pages/ocr_text_extraction_screen.dart';
 import '../../presentation/screens/reflection_home_screen.dart';
 import '../../presentation/pages/home_widgets_screen.dart';
+import '../../presentation/pages/integrated_features_screen.dart';
 import '../../presentation/widgets/quick_add_bottom_sheet.dart';
 import '../../presentation/widgets/global_command_palette.dart';
 import '../../domain/entities/note.dart';
 import 'app_routes.dart';
+import '../../presentation/pages/media_filter_screen.dart';
+import '../../presentation/pages/batch_4_media_organization_view.dart';
+import '../../presentation/pages/batch_4_media_search_results.dart';
+import '../../presentation/pages/media_analytics_dashboard.dart';
+import '../../presentation/pages/batch_5_create_collection_wizard.dart';
+import '../../presentation/pages/batch_5_rule_builder_screen.dart';
+import '../../presentation/pages/batch_5_collection_details_screen.dart';
+import '../../presentation/pages/batch_5_collection_management_screen.dart';
+import '../../presentation/pages/batch_6_suggestion_recommendations_screen.dart';
+import '../../presentation/pages/batch_6_reminder_patterns_dashboard.dart';
+import '../../presentation/pages/batch_6_frequency_analytics_screen.dart';
+import '../../presentation/pages/batch_6_engagement_metrics_screen.dart';
+import '../../presentation/pages/batch_7_template_gallery_screen.dart';
+import '../../presentation/pages/batch_7_template_editor_screen.dart';
+import '../../presentation/pages/batch_8_advanced_search_screen.dart';
+import '../../presentation/pages/batch_8_search_results_screen.dart';
+
+// Missing Routes Imports
+import '../../presentation/pages/archived_notes_screen.dart';
+import '../../presentation/pages/smart_collections_screen.dart';
+import '../../presentation/pages/smart_reminders_screen.dart';
+import '../../presentation/pages/location_reminder_screen.dart';
+import '../../presentation/pages/saved_locations_screen.dart';
+import '../../presentation/pages/alarms_screen.dart';
+import '../../presentation/pages/reminder_templates_screen.dart';
+import '../../presentation/pages/full_media_gallery_screen.dart';
+import '../../presentation/pages/video_trimming_screen.dart';
+import '../../presentation/pages/advanced_settings_screen.dart';
+import '../../presentation/pages/tag_management_screen.dart';
+import '../../presentation/pages/drawing_canvas_screen.dart';
+import '../../presentation/pages/pdf_annotation_screen.dart';
+import '../../presentation/screens/answer_screen.dart';
+import '../../presentation/screens/reflection_history_screen.dart';
+import '../../presentation/screens/carousel_reflection_screen.dart';
+import '../../presentation/screens/question_list_screen.dart';
+import '../../presentation/pages/advanced_filters_screen.dart';
+import '../../presentation/pages/search_operators_screen.dart';
+import '../../presentation/pages/sort_customization_screen.dart';
+import '../../presentation/pages/quick_add_confirmation_screen.dart';
+import '../../presentation/pages/fixed_universal_quick_add_screen.dart';
+import '../../domain/entities/reflection_question.dart'; // Added for ReflectionQuestion
 
 class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
@@ -64,30 +106,165 @@ class AppRouter {
           builder: (_) => MainHomeScreen(initialIndex: args is int ? args : 0),
         );
 
+      // ==================== Notes Module ====================
       case AppRoutes.notesList:
         return MaterialPageRoute(
           builder: (_) => const EnhancedNotesListScreen(),
         );
 
       case AppRoutes.noteEditor:
-        // Note: Enhanced editor with all features
         final args = settings.arguments;
         return MaterialPageRoute(
           builder: (_) =>
               EnhancedNoteEditorScreen(note: args is Note ? args : null),
         );
 
-      // case AppRoutes.advancedNoteEditor:
-      //   final args = settings.arguments;
-      //   return MaterialPageRoute(
-      //     builder: (_) => AdvancedNoteEditor(note: args is Note ? args : null),
-      //   );
+      case AppRoutes.archivedNotes:
+        return MaterialPageRoute(builder: (_) => const ArchivedNotesScreen());
 
+      // ==================== Smart Collections Module ====================
+      case AppRoutes.smartCollections:
+        return MaterialPageRoute(
+          builder: (_) => const SmartCollectionsScreen(),
+        );
+
+      case AppRoutes.createCollection:
+        return MaterialPageRoute(
+          builder: (_) => const CreateSmartCollectionWizard(),
+        );
+
+      case AppRoutes.ruleBuilder:
+        return MaterialPageRoute(builder: (_) => const RuleBuilderScreen());
+
+      case AppRoutes.collectionDetails:
+        final args = settings.arguments;
+        return MaterialPageRoute(
+          builder: (_) => CollectionDetailsScreen(
+            collection: args is Map<String, dynamic> ? args : const {},
+          ),
+        );
+
+      case AppRoutes.collectionManagement:
+        return MaterialPageRoute(
+          builder: (_) => const CollectionManagementScreen(),
+        );
+
+      // ==================== Media Module ====================
+      case AppRoutes.mediaPicker:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => MediaPickerScreen(
+            mediaType: args?['mediaType'] ?? 'all',
+            multiSelect: args?['multiSelect'] ?? true,
+            maxSelection: args?['maxSelection'] ?? 10,
+          ),
+        );
+
+      case AppRoutes.audioRecorder:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => AudioRecorderScreen(noteId: args?['noteId']),
+        );
+
+      case AppRoutes.fullMediaGallery:
+        return MaterialPageRoute(
+          builder: (_) => const FullMediaGalleryScreen(),
+        );
+
+      case AppRoutes.videoTrimming:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => VideoTrimmingScreen(
+            videoPath: args['videoPath'],
+            videoTitle: args['videoTitle'] ?? 'Video',
+          ),
+        );
+
+      case AppRoutes.mediaViewer:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => MediaViewerScreen(
+            mediaItems: args['mediaItems'] ?? [],
+            initialIndex: args['index'] ?? 0,
+          ),
+        );
+
+      case AppRoutes.mediaFilter:
+        return MaterialPageRoute(
+          builder: (_) => const AdvancedMediaFilterScreen(),
+        );
+
+      case AppRoutes.mediaOrganization:
+        return MaterialPageRoute(builder: (_) => const MediaOrganizationView());
+
+      case AppRoutes.mediaSearchResults:
+        final args = settings.arguments;
+        return MaterialPageRoute(
+          builder: (_) =>
+              MediaSearchResultsScreen(query: args is String ? args : ''),
+        );
+
+      case AppRoutes.mediaAnalytics:
+        return MaterialPageRoute(
+          builder: (_) => const MediaAnalyticsDashboard(),
+        );
+
+      // ==================== Reminders Module ====================
       case AppRoutes.remindersList:
         return MaterialPageRoute(
           builder: (_) => const EnhancedRemindersListScreen(),
         );
 
+      case AppRoutes.calendarIntegration:
+        return MaterialPageRoute(
+          builder: (_) => const CalendarIntegrationScreen(),
+        );
+
+      case AppRoutes.smartReminders:
+        return MaterialPageRoute(builder: (_) => const SmartRemindersScreen());
+
+      case AppRoutes.locationReminder:
+        return MaterialPageRoute(
+          builder: (_) => const LocationReminderScreen(),
+        );
+
+      case AppRoutes.savedLocations:
+        return MaterialPageRoute(builder: (_) => const SavedLocationsScreen());
+
+      case AppRoutes.alarms:
+        return MaterialPageRoute(builder: (_) => const AlarmsScreen());
+
+      case AppRoutes.reminderTemplates:
+        return MaterialPageRoute(
+          builder: (_) => const ReminderTemplatesScreen(),
+        );
+
+      case AppRoutes.suggestionRecommendations:
+        return MaterialPageRoute(
+          builder: (_) => const SuggestionRecommendationsScreen(),
+        );
+
+      case AppRoutes.reminderPatterns:
+        return MaterialPageRoute(
+          builder: (_) => const ReminderPatternsDashboard(),
+        );
+
+      case AppRoutes.frequencyAnalytics:
+        return MaterialPageRoute(
+          builder: (_) => const FrequencyAnalyticsScreen(),
+        );
+
+      case AppRoutes.engagementMetrics:
+        return MaterialPageRoute(
+          builder: (_) => const EngagementMetricsScreen(),
+        );
+
+      case AppRoutes.locationReminderComingSoon:
+        return MaterialPageRoute(
+          builder: (_) => const LocationReminderComingSoonScreen(),
+        );
+
+      // ==================== Todos Module ====================
       case AppRoutes.todosList:
         return MaterialPageRoute(builder: (_) => const TodosScreen());
 
@@ -107,14 +284,89 @@ class AppRouter {
         }
         return _errorRoute();
 
+      case AppRoutes.recurringTodoSchedule:
+        return MaterialPageRoute(
+          builder: (_) => const RecurringTodoScheduleScreen(),
+        );
+
+      case AppRoutes.emptyStateTodosHelp:
+        return MaterialPageRoute(
+          builder: (_) => const EmptyStateTodosHelpScreen(),
+        );
+
+      // ==================== App Settings & Privacy ====================
       case AppRoutes.settings:
+      case AppRoutes.appSettings:
         return MaterialPageRoute(builder: (_) => const SettingsScreen());
 
+      case AppRoutes.advancedSettings:
+        return MaterialPageRoute(
+          builder: (_) => const AdvancedSettingsScreen(),
+        );
+
+      case AppRoutes.voiceSettings:
+        return MaterialPageRoute(builder: (_) => const VoiceSettingsScreen());
+
+      case AppRoutes.fontSettings:
+        return MaterialPageRoute(builder: (_) => const FontSettingsScreen());
+
+      case AppRoutes.tagManagement:
+        return MaterialPageRoute(builder: (_) => const TagManagementScreen());
+
+      case AppRoutes.biometricLock:
+        return MaterialPageRoute(builder: (_) => const BiometricLockScreen());
+
+      case AppRoutes.pinSetup:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return MaterialPageRoute(
+          builder: (_) => PinSetupScreen(
+            isFirstSetup: args['isFirstSetup'] ?? false,
+            isChanging: args['isChanging'] ?? false,
+          ),
+        );
+
+      case AppRoutes.backupExport:
+        return MaterialPageRoute(builder: (_) => const BackupExportScreen());
+
+      // ==================== Reflection Module ====================
       case AppRoutes.analytics:
         return MaterialPageRoute(
           builder: (_) => const AnalyticsDashboardScreen(),
         );
 
+      case AppRoutes.reflection:
+      case AppRoutes.reflectionHome:
+        return MaterialPageRoute(builder: (_) => const ReflectionHomeScreen());
+
+      case AppRoutes.reflectionAnswer:
+        final args = settings.arguments;
+        if (args is ReflectionQuestion) {
+          return MaterialPageRoute(
+            builder: (_) => AnswerScreen(question: args),
+          );
+        }
+        return _errorRoute();
+
+      case AppRoutes.reflectionHistory:
+        return MaterialPageRoute(
+          builder: (_) => const ReflectionHistoryScreen(),
+        );
+
+      case AppRoutes.reflectionCarousel:
+        return MaterialPageRoute(
+          builder: (_) => const CarouselReflectionScreen(),
+        );
+
+      case AppRoutes.reflectionQuestions:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => QuestionListScreen(
+            category: args['category'] ?? 'general',
+            categoryLabel: args['categoryLabel'] ?? 'General',
+          ),
+        );
+
+      // ==================== Search Module ====================
       case AppRoutes.search:
       case AppRoutes.globalSearch:
         return MaterialPageRoute(
@@ -124,27 +376,28 @@ class AppRouter {
       case AppRoutes.searchFilter:
         return MaterialPageRoute(builder: (_) => const SearchFilterScreen());
 
-      case AppRoutes.mediaPicker:
-        final args = settings.arguments as Map<String, dynamic>?;
+      case AppRoutes.advancedSearch:
+        return MaterialPageRoute(builder: (_) => const AdvancedSearchScreen());
+
+      case AppRoutes.searchResults:
+        final args = settings.arguments;
         return MaterialPageRoute(
-          builder: (_) => MediaPickerScreen(
-            mediaType: args?['mediaType'] ?? 'all',
-            multiSelect: args?['multiSelect'] ?? true,
-            maxSelection: args?['maxSelection'] ?? 10,
-          ),
+          builder: (_) =>
+              SearchResultsScreen(searchQuery: args is String ? args : ''),
         );
 
-      case AppRoutes.audioRecorder:
-        final args = settings.arguments as Map<String, dynamic>?;
+      case AppRoutes.advancedFilters:
+        return MaterialPageRoute(builder: (_) => const AdvancedFiltersScreen());
+
+      case AppRoutes.searchOperators:
+        return MaterialPageRoute(builder: (_) => const SearchOperatorsScreen());
+
+      case AppRoutes.sortCustomization:
         return MaterialPageRoute(
-          builder: (_) => AudioRecorderScreen(noteId: args?['noteId']),
+          builder: (_) => const SortCustomizationScreen(),
         );
 
-      case AppRoutes.calendarIntegration:
-        return MaterialPageRoute(
-          builder: (_) => const CalendarIntegrationScreen(),
-        );
-
+      // ==================== Focus & Productivity ====================
       case AppRoutes.focusSession:
         return MaterialPageRoute(builder: (_) => const FocusSessionScreen());
 
@@ -153,30 +406,51 @@ class AppRouter {
           builder: (_) => const FocusCelebrationScreen(),
         );
 
-      case AppRoutes.documentScan:
-        return MaterialPageRoute(builder: (_) => const DocumentScanScreen());
-
-      case AppRoutes.backupExport:
-        return MaterialPageRoute(builder: (_) => const BackupExportScreen());
-
-      case AppRoutes.appSettings:
-        return MaterialPageRoute(builder: (_) => const SettingsScreen());
-
-      case AppRoutes.voiceSettings:
-        return MaterialPageRoute(builder: (_) => const VoiceSettingsScreen());
-
-      case AppRoutes.fontSettings:
-        return MaterialPageRoute(builder: (_) => const FontSettingsScreen());
+      case AppRoutes.dailyHighlightSummary:
+        return MaterialPageRoute(
+          builder: (_) => const DailyHighlightSummaryScreen(),
+        );
 
       case AppRoutes.editDailyHighlight:
         return MaterialPageRoute(
           builder: (_) => const EditDailyHighlightScreen(),
         );
 
-      case AppRoutes.reflection:
-      case AppRoutes.reflectionHome:
-        return MaterialPageRoute(builder: (_) => const ReflectionHomeScreen());
+      case AppRoutes.homeWidgets:
+        return MaterialPageRoute(builder: (_) => const HomeWidgetsScreen());
 
+      // ==================== Document & Scanning ====================
+      case AppRoutes.documentScan:
+        return MaterialPageRoute(builder: (_) => const DocumentScanScreen());
+
+      case AppRoutes.drawingCanvas:
+        return MaterialPageRoute(builder: (_) => const DrawingCanvasScreen());
+
+      case AppRoutes.pdfAnnotation:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => PDFAnnotationScreen(
+            pdfPath: args['pdfPath'],
+            pdfTitle: args['pdfTitle'] ?? 'PDF Document',
+          ),
+        );
+
+      case AppRoutes.pdfPreview:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => PdfPreviewScreen(note: args['note']),
+        );
+
+      case AppRoutes.ocrExtraction:
+        final args = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => OcrTextExtractionScreen(
+            documentImagePath: args?['documentImagePath'],
+            extractedText: args?['extractedText'],
+          ),
+        );
+
+      // ==================== Quick Actions ====================
       case AppRoutes.quickAdd:
         final args = settings.arguments as BuildContext?;
         return PageRouteBuilder(
@@ -210,69 +484,38 @@ class AppRouter {
           },
         );
 
-      case AppRoutes.mediaViewer:
-        final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => MediaViewerScreen(
-            mediaItems: args['mediaItems'] ?? [],
-            initialIndex: args['index'] ?? 0,
-          ),
-        );
-
-      case AppRoutes.pdfPreview:
-        final args = settings.arguments as Map<String, dynamic>;
-        return MaterialPageRoute(
-          builder: (_) => PdfPreviewScreen(note: args['note']),
-        );
-
-      case AppRoutes.biometricLock:
-        return MaterialPageRoute(builder: (_) => const BiometricLockScreen());
-
-      case AppRoutes.pinSetup:
+      case AppRoutes.quickAddConfirmation:
         final args = settings.arguments as Map<String, dynamic>? ?? {};
         return MaterialPageRoute(
-          builder: (_) => PinSetupScreen(
-            isFirstSetup: args['isFirstSetup'] ?? false,
-            isChanging: args['isChanging'] ?? false,
+          builder: (_) => QuickAddConfirmationScreen(
+            noteId: args['noteId'] as String? ?? '',
+            title: args['title'] as String? ?? '',
+            type: args['type'] as String? ?? 'note',
           ),
         );
 
-      case AppRoutes.dailyHighlightSummary:
+      case AppRoutes.universalQuickAdd:
         return MaterialPageRoute(
-          builder: (_) => const DailyHighlightSummaryScreen(),
+          builder: (_) => const FixedUniversalQuickAddScreen(),
+        );
+
+      // ==================== Templates ====================
+      case AppRoutes.templateGallery:
+        return MaterialPageRoute(builder: (_) => const TemplateGalleryScreen());
+
+      case AppRoutes.templateEditor:
+        return MaterialPageRoute(builder: (_) => const TemplateEditorScreen());
+
+      // ==================== Other ====================
+      case AppRoutes.integratedFeatures:
+        return MaterialPageRoute(
+          builder: (_) => const IntegratedFeaturesScreen(),
         );
 
       case AppRoutes.emptyStateNotesHelp:
         return MaterialPageRoute(
           builder: (_) => const EmptyStateNotesHelpScreen(),
         );
-
-      case AppRoutes.emptyStateTodosHelp:
-        return MaterialPageRoute(
-          builder: (_) => const EmptyStateTodosHelpScreen(),
-        );
-
-      case AppRoutes.locationReminderComingSoon:
-        return MaterialPageRoute(
-          builder: (_) => const LocationReminderComingSoonScreen(),
-        );
-
-      case AppRoutes.recurringTodoSchedule:
-        return MaterialPageRoute(
-          builder: (_) => const RecurringTodoScheduleScreen(),
-        );
-
-      case AppRoutes.ocrExtraction:
-        final args = settings.arguments as Map<String, dynamic>?;
-        return MaterialPageRoute(
-          builder: (_) => OcrTextExtractionScreen(
-            documentImagePath: args?['documentImagePath'],
-            extractedText: args?['extractedText'],
-          ),
-        );
-
-      case AppRoutes.homeWidgets:
-        return MaterialPageRoute(builder: (_) => const HomeWidgetsScreen());
 
       default:
         return _errorRoute();

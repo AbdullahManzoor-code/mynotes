@@ -6,6 +6,8 @@ class MediaItem extends Equatable {
   final String id;
   final MediaType type;
   final String filePath;
+  final String name; // Added
+  final int size; // Added
   final int durationMs; // 0 for images; else duration in ms
   final String thumbnailPath;
   final DateTime createdAt;
@@ -14,6 +16,8 @@ class MediaItem extends Equatable {
     required this.id,
     required this.type,
     required this.filePath,
+    this.name = '',
+    this.size = 0,
     this.durationMs = 0,
     this.thumbnailPath = '',
     DateTime? createdAt,
@@ -24,6 +28,8 @@ class MediaItem extends Equatable {
     id,
     type,
     filePath,
+    name,
+    size,
     durationMs,
     thumbnailPath,
     createdAt,
@@ -33,6 +39,8 @@ class MediaItem extends Equatable {
     'id': id,
     'type': _typeToString(type),
     'filePath': filePath,
+    'name': name,
+    'size': size,
     'durationMs': durationMs,
     'thumbnailPath': thumbnailPath,
     'createdAt': createdAt.toIso8601String(),
@@ -67,6 +75,8 @@ class MediaItem extends Equatable {
       id: json['id'] as String,
       type: _stringToType(json['type'] as String),
       filePath: json['filePath'] as String,
+      name: (json['name'] as String?) ?? '',
+      size: (json['size'] as int?) ?? 0,
       durationMs: (json['durationMs'] as int?) ?? 0,
       thumbnailPath: (json['thumbnailPath'] as String?) ?? '',
       createdAt: json['createdAt'] != null
@@ -80,6 +90,8 @@ class MediaItem extends Equatable {
     String? id,
     MediaType? type,
     String? filePath,
+    String? name,
+    int? size,
     int? durationMs,
     String? thumbnailPath,
     DateTime? createdAt,
@@ -88,10 +100,11 @@ class MediaItem extends Equatable {
       id: id ?? this.id,
       type: type ?? this.type,
       filePath: filePath ?? this.filePath,
+      name: name ?? this.name,
+      size: size ?? this.size,
       durationMs: durationMs ?? this.durationMs,
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
       createdAt: createdAt ?? this.createdAt,
     );
   }
 }
-

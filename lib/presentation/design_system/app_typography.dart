@@ -523,6 +523,12 @@ class AppTypography {
     FontWeight? fontWeight,
   ]) => bodyMedium(context, color, fontWeight);
 
+  static TextStyle body3([
+    dynamic context,
+    Color? color,
+    FontWeight? fontWeight,
+  ]) => bodySmall(context, color, fontWeight);
+
   static TextStyle display1([
     dynamic context,
     Color? color,

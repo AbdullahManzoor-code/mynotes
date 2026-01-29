@@ -23,19 +23,173 @@ class MediaRepositoryImpl implements MediaRepository {
   MediaRepositoryImpl({required this.database});
 
   @override
+  Future<List<MediaItem>> getAllMedia() async {
+    final db = await database.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      NotesDatabase.mediaTable,
+      orderBy: 'createdAt DESC',
+    );
+    return List.generate(maps.length, (i) => database.mediaFromMap(maps[i]));
+  }
+
+  @override
+  Future<List<MediaItem>> filterMediaByType(String type) async {
+    final db = await database.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      NotesDatabase.mediaTable,
+      where: 'type = ?',
+      whereArgs: [type],
+      orderBy: 'createdAt DESC',
+    );
+    return List.generate(maps.length, (i) => database.mediaFromMap(maps[i]));
+  }
+
+  @override
+  Future<List<MediaItem>> searchMedia(String query) async {
+    final db = await database.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      NotesDatabase.mediaTable,
+      where: 'caption LIKE ? OR ocrText LIKE ?',
+      whereArgs: ['%$query%', '%$query%'],
+      orderBy: 'createdAt DESC',
+    );
+    return List.generate(maps.length, (i) => database.mediaFromMap(maps[i]));
+  }
+
+  @override
+  Future<MediaItem?> getMediaById(String id) async {
+    final db = await database.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      NotesDatabase.mediaTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isEmpty) return null;
+    return database.mediaFromMap(maps.first);
+  }
+
+  @override
+  Future<bool> deleteMedia(String id) async {
+    try {
+      final db = await database.database;
+      final count = await db.delete(
+        NotesDatabase.mediaTable,
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+      return count > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> archiveMedia(String id) async {
+    // Current schema doesn't support archiving media directly
+    return false;
+  }
+
+  @override
+  Future<Map<String, int>> getMediaStats() async {
+    final db = await database.database;
+    final allMedia = await db.query(NotesDatabase.mediaTable);
+
+    int images = 0;
+    int videos = 0;
+    int audio = 0;
+
+    for (final map in allMedia) {
+      final type = map['type'] as String;
+      if (type == 'image')
+        images++;
+      else if (type == 'video')
+        videos++;
+      else if (type == 'audio')
+        audio++;
+    }
+
+    return {
+      'total': allMedia.length,
+      'image': images,
+      'video': videos,
+      'audio': audio,
+    };
+  }
+
+  @override
+  Future<List<MediaItem>> getRecentMedia({int limit = 10}) async {
+    final db = await database.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      NotesDatabase.mediaTable,
+      orderBy: 'createdAt DESC',
+      limit: limit,
+    );
+    return List.generate(maps.length, (i) => database.mediaFromMap(maps[i]));
+  }
+
+  @override
+  Future<String> addMedia(MediaItem item) async {
+    throw UnimplementedError('Use addImageToNote or addVideoToNote instead');
+  }
+
+  @override
+  Future<bool> updateMedia(MediaItem item) async {
+    try {
+      final db = await database.database;
+      final existing = await db.query(
+        NotesDatabase.mediaTable,
+        columns: ['noteId', 'createdAt'],
+        where: 'id = ?',
+        whereArgs: [item.id],
+      );
+
+      if (existing.isEmpty) return false;
+
+      final noteId = existing.first['noteId'] as String;
+
+      final map = {
+        'id': item.id,
+        'noteId': noteId,
+        'type': item.type.toString().split('.').last,
+        'filePath': item.filePath,
+        'thumbnailPath': item.thumbnailPath,
+        'durationMs': item.durationMs,
+        'updatedAt': DateTime.now().toIso8601String(),
+        'caption': item.name,
+      };
+
+      final count = await db.update(
+        NotesDatabase.mediaTable,
+        map,
+        where: 'id = ?',
+        whereArgs: [item.id],
+      );
+      return count > 0;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Future<List<MediaItem>> getArchivedMedia() async {
+    return [];
+  }
+
+  @override
+  Future<bool> restoreMedia(String id) async {
+    return false;
+  }
+
+  @override
   Future<MediaItem> addImageToNote(String noteId, String imagePath) async {
     try {
-      // Check storage permission
       final hasPermission = await PermissionService.requestPhotosPermission();
       if (!hasPermission) {
-        throw Exception(
-          'Photo library access denied. Please enable in device settings',
-        );
+        throw Exception('Photo library access denied');
       }
 
-      // Pick image from gallery if path is empty
       String finalPath = imagePath;
-
       if (imagePath.isEmpty) {
         final XFile? image = await _picker.pickImage(
           source: ImageSource.gallery,
@@ -47,7 +201,6 @@ class MediaRepositoryImpl implements MediaRepository {
         if (image == null) {
           throw Exception('No image was selected');
         }
-
         finalPath = image.path;
       }
 
@@ -58,12 +211,8 @@ class MediaRepositoryImpl implements MediaRepository {
         createdAt: DateTime.now(),
       );
 
-      // Save to database
       await database.addMediaToNote(noteId, mediaItem);
-
       return mediaItem;
-    } on Exception {
-      rethrow;
     } catch (e) {
       throw Exception('Failed to add image to note: $e');
     }
@@ -76,9 +225,7 @@ class MediaRepositoryImpl implements MediaRepository {
     String? thumbnailPath,
   }) async {
     try {
-      // Pick video from gallery if path is empty
       String finalPath = videoPath;
-
       if (videoPath.isEmpty) {
         final XFile? video = await _picker.pickVideo(
           source: ImageSource.gallery,
@@ -90,7 +237,6 @@ class MediaRepositoryImpl implements MediaRepository {
         if (video == null) {
           throw Exception('No video was selected');
         }
-
         finalPath = video.path;
       }
 
@@ -102,12 +248,8 @@ class MediaRepositoryImpl implements MediaRepository {
         createdAt: DateTime.now(),
       );
 
-      // Save to database
       await database.addMediaToNote(noteId, mediaItem);
-
       return mediaItem;
-    } on Exception {
-      rethrow;
     } catch (e) {
       throw Exception('Failed to add video to note: $e');
     }
@@ -115,20 +257,13 @@ class MediaRepositoryImpl implements MediaRepository {
 
   @override
   Future<void> removeMediaFromNote(String noteId, String mediaId) async {
-    try {
-      await database.removeMediaFromNote(noteId, mediaId);
-    } on Exception {
-      rethrow;
-    } catch (e) {
-      throw Exception('Could not remove media from note: $e');
-    }
+    await database.removeMediaFromNote(noteId, mediaId);
   }
 
   @override
   Future<MediaItem> compressMedia(MediaItem media) async {
     try {
       if (media.type == MediaType.image) {
-        // Compress image using flutter_image_compress
         final file = File(media.filePath);
         final dir = await getTemporaryDirectory();
         final targetPath = path.join(
@@ -144,100 +279,65 @@ class MediaRepositoryImpl implements MediaRepository {
           minHeight: MediaConstants.compressedMinHeight,
         );
 
-        if (compressedFile == null) {
-          return media; // Return original if compression fails
-        }
-
+        if (compressedFile == null) return media;
         return media.copyWith(filePath: compressedFile.path);
       }
-
-      // For video, return as-is (video compression is complex and slow)
       return media;
     } catch (e) {
-      // Return original media if compression fails
       return media;
     }
   }
 
   @override
   Future<void> startAudioRecording(String noteId) async {
-    try {
-      // Request microphone permission
-      final hasPermission =
-          await PermissionService.requestMicrophonePermission();
-      if (!hasPermission) {
-        throw Exception('Microphone permission denied');
-      }
+    final hasPermission = await PermissionService.requestMicrophonePermission();
+    if (!hasPermission) throw Exception('Microphone permission denied');
 
-      if (await _recorder.hasPermission()) {
-        final dir = await getApplicationDocumentsDirectory();
-        final audioPath = path.join(
-          dir.path,
-          'audio_${DateTime.now().millisecondsSinceEpoch}.${MediaConstants.audioFormat}',
-        );
-
-        await _recorder.start(
-          const RecordConfig(encoder: AudioEncoder.aacLc),
-          path: audioPath,
-        );
-      } else {
-        throw Exception('Microphone permission denied');
-      }
-    } catch (e) {
-      throw Exception('Failed to start recording: $e');
+    if (await _recorder.hasPermission()) {
+      final dir = await getApplicationDocumentsDirectory();
+      final audioPath = path.join(
+        dir.path,
+        'audio_${DateTime.now().millisecondsSinceEpoch}.${MediaConstants.audioFormat}',
+      );
+      await _recorder.start(
+        const RecordConfig(encoder: AudioEncoder.aacLc),
+        path: audioPath,
+      );
+    } else {
+      throw Exception('Microphone permission denied');
     }
   }
 
   @override
   Future<void> stopAudioRecording(String noteId) async {
-    try {
-      final audioPath = await _recorder.stop();
-
-      if (audioPath != null) {
-        // Create audio media item
-        final mediaItem = MediaItem(
-          id: _uuid.v4(),
-          type: MediaType.audio,
-          filePath: audioPath,
-          createdAt: DateTime.now(),
-        );
-
-        // Save to database
-        await database.addMediaToNote(noteId, mediaItem);
-      }
-    } catch (e) {
-      throw Exception('Failed to stop recording: $e');
+    final audioPath = await _recorder.stop();
+    if (audioPath != null) {
+      final mediaItem = MediaItem(
+        id: _uuid.v4(),
+        type: MediaType.audio,
+        filePath: audioPath,
+        createdAt: DateTime.now(),
+      );
+      await database.addMediaToNote(noteId, mediaItem);
     }
   }
 
   @override
   Future<void> playMedia(String noteId, String mediaId) async {
-    try {
-      // Get media item from database
-      final mediaItems = await database.getMediaForNote(noteId);
-      final media = mediaItems.firstWhere((m) => m.id == mediaId);
-
-      if (media.type == MediaType.audio) {
-        await _audioPlayer.play(DeviceFileSource(media.filePath));
-      }
-    } catch (e) {
-      throw Exception('Failed to play media: $e');
+    final mediaItems = await database.getMediaForNote(noteId);
+    final media = mediaItems.firstWhere((m) => m.id == mediaId);
+    if (media.type == MediaType.audio) {
+      await _audioPlayer.play(DeviceFileSource(media.filePath));
     }
   }
 
   @override
   Future<void> pauseMedia(String noteId, String mediaId) async {
-    try {
-      await _audioPlayer.pause();
-    } catch (e) {
-      throw Exception('Failed to pause media: $e');
-    }
+    await _audioPlayer.pause();
   }
 
-  /// Dispose resources
   Future<void> dispose() async {
     await _recorder.dispose();
     await _audioPlayer.dispose();
   }
 }
-

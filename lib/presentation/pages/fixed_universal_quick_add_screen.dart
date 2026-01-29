@@ -642,3 +642,4 @@ class _FixedUniversalQuickAddScreenState
     return Colors.red;
   }
 }
+

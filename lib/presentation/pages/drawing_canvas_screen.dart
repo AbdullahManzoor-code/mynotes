@@ -502,3 +502,4 @@ class DrawingPainter extends CustomPainter {
     return oldDelegate.paths.length != paths.length;
   }
 }
+

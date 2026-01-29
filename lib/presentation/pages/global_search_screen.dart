@@ -197,3 +197,4 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     );
   }
 }
+

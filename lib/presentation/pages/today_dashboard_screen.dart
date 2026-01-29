@@ -1303,3 +1303,4 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
 class _ShowCommandPaletteIntent extends Intent {
   const _ShowCommandPaletteIntent();
 }
+

@@ -534,3 +534,4 @@ class _EditDailyHighlightScreenState extends State<EditDailyHighlightScreen> {
     Navigator.pop(context);
   }
 }
+

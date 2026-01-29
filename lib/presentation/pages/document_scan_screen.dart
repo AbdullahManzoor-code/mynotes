@@ -745,3 +745,4 @@ class _CaptureOptionsSheet extends StatelessWidget {
     );
   }
 }
+

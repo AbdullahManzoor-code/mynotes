@@ -13,6 +13,8 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       DocumentScannerService();
 
   MediaBloc({required this.repository}) : super(MediaInitial()) {
+    on<LoadMediaEvent>(_onLoadMedia);
+    on<FilterMediaEvent>(_onFilterMedia);
     on<AddImageToNoteEvent>(_onAddImageToNote);
     on<CapturePhotoEvent>(_onCapturePhoto);
     on<PickPhotoFromGalleryEvent>(_onPickPhotoFromGallery);
@@ -275,6 +277,35 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(MediaError(event.noteId, errorMsg));
+    }
+  }
+
+  Future<void> _onLoadMedia(
+    LoadMediaEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      emit(MediaLoading(''));
+      // In a real implementation, fetch media from repository
+      // For now, emit MediaLoaded with empty list
+      emit(const MediaLoaded([]));
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError('', errorMsg));
+    }
+  }
+
+  Future<void> _onFilterMedia(
+    FilterMediaEvent event,
+    Emitter<MediaState> emit,
+  ) async {
+    try {
+      // Filter logic would be implemented here
+      // For now, just emit loaded state
+      emit(const MediaLoaded([]));
+    } catch (e) {
+      final errorMsg = e.toString().replaceAll('Exception: ', '');
+      emit(MediaError('', errorMsg));
     }
   }
 }

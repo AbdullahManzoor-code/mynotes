@@ -765,3 +765,4 @@ class NoteTemplate {
     required this.description,
   });
 }
+

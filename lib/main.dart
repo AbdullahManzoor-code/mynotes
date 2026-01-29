@@ -31,6 +31,7 @@ import 'presentation/bloc/alarm_bloc.dart';
 import 'presentation/bloc/todo_bloc.dart';
 import 'presentation/bloc/todos_bloc.dart';
 import 'presentation/widgets/global_error_handler_listener.dart';
+import 'injection_container.dart' show setupServiceLocator, getIt;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +41,9 @@ void main() async {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
   }
+
+  // Initialize dependency injection (service locator)
+  await setupServiceLocator();
 
   // Initialize database
   final database = NotesDatabase();

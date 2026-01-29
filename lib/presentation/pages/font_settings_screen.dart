@@ -307,3 +307,4 @@ class _FontSettingsScreenState extends State<FontSettingsScreen> {
     }
   }
 }
+

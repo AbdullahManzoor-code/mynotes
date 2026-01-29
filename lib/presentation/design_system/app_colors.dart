@@ -295,6 +295,16 @@ class AppColors {
   static Color get info => infoColor;
   static Color get accentColor => accentBlue;
 
+  // Background aliases (for backward compatibility with screens using old naming)
+  static const Color darkBg = darkBackground;
+  static const Color lightBg = lightBackground;
+
+  // Text secondary color aliases (for backward compatibility)
+  static const Color lightTextSecondary =
+      secondaryTextDark; // Light theme secondary text
+  static const Color darkTextSecondary =
+      secondaryText; // Dark theme secondary text
+
   /// Returns primary text color for given BuildContext
   static Color textPrimary(BuildContext context) =>
       getTextColor(Theme.of(context).brightness);

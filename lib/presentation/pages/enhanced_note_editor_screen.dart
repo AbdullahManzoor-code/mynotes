@@ -1668,3 +1668,4 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
     }
   }
 }
+

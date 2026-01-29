@@ -530,3 +530,4 @@ class HomeWidgetsScreen extends StatelessWidget {
     );
   }
 }
+

@@ -112,3 +112,17 @@ class CompressVideoEvent extends MediaEvent {
   @override
   List<Object?> get props => [noteId, mediaId];
 }
+
+class LoadMediaEvent extends MediaEvent {
+  const LoadMediaEvent();
+  @override
+  List<Object?> get props => [];
+}
+
+class FilterMediaEvent extends MediaEvent {
+  final String? type;
+  final String? searchQuery;
+  const FilterMediaEvent({this.type, this.searchQuery});
+  @override
+  List<Object?> get props => [type, searchQuery];
+}

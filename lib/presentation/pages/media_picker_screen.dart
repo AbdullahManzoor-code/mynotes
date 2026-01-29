@@ -521,3 +521,4 @@ class _MediaPickerScreenState extends State<MediaPickerScreen>
     return '$minutes:$seconds';
   }
 }
+

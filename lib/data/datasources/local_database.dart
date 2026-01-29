@@ -1087,7 +1087,7 @@ class NotesDatabase {
     final db = await database;
     await db.insert(
       mediaTable,
-      _mediaToMap(noteId, media),
+      mediaToMap(noteId, media),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
@@ -1101,7 +1101,7 @@ class NotesDatabase {
       whereArgs: [noteId],
       orderBy: 'createdAt DESC',
     );
-    return List.generate(maps.length, (i) => _mediaFromMap(maps[i]));
+    return List.generate(maps.length, (i) => mediaFromMap(maps[i]));
   }
 
   /// Remove media from note
@@ -1115,7 +1115,7 @@ class NotesDatabase {
   }
 
   /// Convert MediaItem to database map
-  Map<String, dynamic> _mediaToMap(String noteId, MediaItem media) {
+  Map<String, dynamic> mediaToMap(String noteId, MediaItem media) {
     return {
       'id': media.id,
       'noteId': noteId,
@@ -1128,7 +1128,7 @@ class NotesDatabase {
   }
 
   /// Convert database map to MediaItem
-  MediaItem _mediaFromMap(Map<String, dynamic> map) {
+  MediaItem mediaFromMap(Map<String, dynamic> map) {
     MediaType type;
     switch (map['type']) {
       case 'image':

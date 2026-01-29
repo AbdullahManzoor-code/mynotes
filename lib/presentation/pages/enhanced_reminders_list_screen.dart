@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mynotes/core/routes/app_routes.dart';
 import 'dart:async';
 import '../design_system/design_system.dart';
+import '../../core/routes/app_routes.dart';
 
 /// Enhanced Smart Reminders List Screen
 /// Advanced reminders management with smart snooze and context awareness
@@ -340,15 +342,51 @@ class _EnhancedRemindersListScreenState
                       ),
                     ),
 
-                    GestureDetector(
-                      onTap: () {
-                        // TODO: Open reminder settings
-                      },
-                      child: Icon(
-                        Icons.more_vert,
-                        color: Colors.white,
-                        size: 24.sp,
-                      ),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.integratedFeatures,
+                          ),
+                          child: Container(
+                            padding: EdgeInsets.all(8.w),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8.r),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.auto_awesome,
+                                  color: AppColors.primary,
+                                  size: 16.sp,
+                                ),
+                                SizedBox(width: 4.w),
+                                Text(
+                                  'AI Insights',
+                                  style: TextStyle(
+                                    color: AppColors.primary,
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: 12.w),
+                        GestureDetector(
+                          onTap: () {
+                            // TODO: Open reminder settings
+                          },
+                          child: Icon(
+                            Icons.more_vert,
+                            color: Colors.white,
+                            size: 24.sp,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -731,7 +769,7 @@ class _EnhancedRemindersListScreenState
   Widget _buildFloatingActionButton() {
     return FloatingActionButton(
       onPressed: () {
-        Navigator.pushNamed(context, '/quick-add');
+        Navigator.pushNamed(context, AppRoutes.quickAdd);
       },
       backgroundColor: AppColors.primary,
       child: Icon(Icons.add, color: Colors.white, size: 24.sp),
