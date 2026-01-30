@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/note.dart';
+import '../../domain/entities/todo_item.dart';
 import '../design_system/design_system.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_event.dart';
@@ -462,19 +463,73 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
   }
 
   void _saveItem() {
-    if (_inputController.text.isNotEmpty) {
-      // Create a new note object
-      final note = Note(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: _inputController.text,
-        content: '',
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+    if (_inputController.text.isEmpty) return;
 
-      // TODO: Add to appropriate bloc based on type
+    final text = _inputController.text.trim();
+    final notesBloc = context.read<NotesBloc>();
+    final now = DateTime.now();
 
+    try {
+      if (_selectedType == 'Note') {
+        // Simple note creation using CreateNoteEvent
+        notesBloc.add(
+          CreateNoteEvent(
+            title: text,
+            content: '',
+            color: NoteColor.defaultColor,
+          ),
+        );
+      } else if (_selectedType == 'Todo') {
+        // Create note with embedded todo
+        final todoId = now.millisecondsSinceEpoch.toString();
+
+        final todoItem = TodoItem(
+          id: todoId,
+          text: text,
+          isCompleted: false,
+          priority: TodoPriority.medium,
+          category: TodoCategory.personal,
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        final noteWithTodo = Note(
+          id: now.millisecondsSinceEpoch.toString(),
+          title: text,
+          content: '',
+          todos: [todoItem],
+          color: NoteColor.defaultColor,
+          isPinned: false,
+          isArchived: false,
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        notesBloc.add(UpdateNoteEvent(noteWithTodo));
+      } else if (_selectedType == 'Reminder') {
+        // Create note with reminder tag
+        notesBloc.add(
+          CreateNoteEvent(
+            title: text,
+            content: 'Reminder: $text',
+            color: NoteColor.defaultColor,
+            tags: ['reminder'],
+          ),
+        );
+      }
+
+      // Close the sheet after saving
       _closeSheet();
+    } catch (e) {
+      // Show error message if something fails
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving $_selectedType: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

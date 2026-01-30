@@ -20,7 +20,8 @@ class CarouselReflectionScreen extends StatefulWidget {
 
 class _CarouselReflectionScreenState extends State<CarouselReflectionScreen> {
   int _currentIndex = 0;
-  final CarouselController _carouselController = CarouselController();
+  final CarouselSliderController _carouselController =
+      CarouselSliderController();
 
   final List<Map<String, dynamic>> _categories = [
     {

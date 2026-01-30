@@ -4,8 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
 import '../../domain/entities/note.dart';
+import '../../domain/entities/todo_item.dart';
+import '../../domain/entities/reflection_answer.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
+import '../bloc/note_event.dart';
 import '../bloc/alarm_bloc.dart';
 import '../bloc/alarm_state.dart';
 import '../bloc/reflection_bloc.dart';
@@ -332,99 +335,129 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
   }
 
   Widget _buildStatsSection(BuildContext context) {
-    return Column(
-      children: [
-        // Progress Ring Card
-        Container(
-          padding: EdgeInsets.all(20.w),
-          decoration: BoxDecoration(
-            color: AppColors.surface(context),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-            border: Border.all(
-              color: Theme.of(context).brightness == Brightness.dark
-                  ? AppColors.borderDark.withOpacity(0.2)
-                  : AppColors.borderLight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(
-                  Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05,
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, noteState) {
+        return BlocBuilder<ReflectionBloc, ReflectionState>(
+          builder: (context, reflectionState) {
+            final notesProgress = _calculateNotesProgress(noteState);
+            final todosProgress = _calculateTodosProgress(noteState);
+            final reflectionsProgress = _calculateReflectionsProgress(context);
+
+            int totalTodosCount = 0;
+            int completedTodosCount = 0;
+            if (noteState is NotesLoaded) {
+              for (var note in noteState.notes) {
+                if (note.todos != null &&
+                    note.createdAt.day == DateTime.now().day) {
+                  totalTodosCount += note.todos!.length;
+                  completedTodosCount += note.todos!
+                      .where((t) => t.isCompleted)
+                      .length;
+                }
+              }
+            }
+
+            return Column(
+              children: [
+                // Progress Ring Card
+                Container(
+                  padding: EdgeInsets.all(20.w),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface(context),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+                    border: Border.all(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? AppColors.borderDark.withOpacity(0.2)
+                          : AppColors.borderLight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.3
+                              : 0.05,
+                        ),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Today\'s Progress',
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textMuted,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      SizedBox(height: 20.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          // Notes Ring
+                          _buildProgressRing(
+                            context,
+                            title: 'Notes',
+                            progress: notesProgress,
+                            color: AppColors.primary,
+                            icon: Icons.note,
+                          ),
+                          // Todos Ring
+                          _buildProgressRing(
+                            context,
+                            title: 'Todos',
+                            progress: todosProgress,
+                            color: AppColors.accentGreen,
+                            icon: Icons.check_circle,
+                          ),
+                          // Reflections Ring
+                          _buildProgressRing(
+                            context,
+                            title: 'Reflections',
+                            progress: reflectionsProgress,
+                            color: AppColors.accentPurple,
+                            icon: Icons.psychology,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Text(
-                'Today\'s Progress',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textMuted,
-                  letterSpacing: 0.5,
+                SizedBox(height: 16.h),
+                // Stats Cards
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        label: 'REFLECTION STREAK',
+                        value: '${_getReflectionStreak(reflectionState)} Days',
+                        trend: 'Keep it up!',
+                        trendColor: AppColors.successGreen,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        label: 'TODOS DONE',
+                        value: '$completedTodosCount/$totalTodosCount',
+                        trend: totalTodosCount == 0
+                            ? 'No todos'
+                            : '${todosProgress * 100 > 0 ? (todosProgress * 100).toStringAsFixed(0) : 0}% complete',
+                        trendColor: AppColors.successGreen,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              SizedBox(height: 20.h),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  // Notes Ring
-                  _buildProgressRing(
-                    context,
-                    title: 'Notes',
-                    progress: 0.85,
-                    color: AppColors.primary,
-                    icon: Icons.note,
-                  ),
-                  // Todos Ring
-                  _buildProgressRing(
-                    context,
-                    title: 'Todos',
-                    progress: 0.67,
-                    color: AppColors.accentGreen,
-                    icon: Icons.check_circle,
-                  ),
-                  // Reflections Ring
-                  _buildProgressRing(
-                    context,
-                    title: 'Reflections',
-                    progress: 0.43,
-                    color: AppColors.accentPurple,
-                    icon: Icons.psychology,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: 16.h),
-        // Stats Cards
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                context,
-                label: 'REFLECTION STREAK',
-                value: '7 Days',
-                trend: '+2%',
-                trendColor: AppColors.successGreen,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: _buildStatCard(
-                context,
-                label: 'TODOS DONE',
-                value: '4/6',
-                trend: '67% complete',
-                trendColor: AppColors.successGreen,
-              ),
-            ),
-          ],
-        ),
-      ],
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -719,7 +752,9 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
 
   Widget _buildRemindersCard(BuildContext context, AlarmState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final upcomingReminders = [];
+    // Note: This uses the AlarmBloc which has AlarmState (not AlarmsLoaded)
+    // For upcoming reminders, we show a simplified view
+    final upcomingReminders = <dynamic>[];
 
     return Container(
       decoration: BoxDecoration(
@@ -839,7 +874,7 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            reminder.title,
+                            reminder.title ?? 'Reminder',
                             style: AppTypography.labelLarge(
                               context,
                               AppColors.textPrimary(context),
@@ -849,7 +884,7 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                           ),
                           SizedBox(height: 2.h),
                           Text(
-                            DateFormat('h:mm a').format(reminder.dateTime),
+                            DateFormat('h:mm a').format(reminder.time),
                             style: AppTypography.captionLarge(
                               context,
                               AppColors.textSecondary(context),
@@ -1051,107 +1086,190 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
 
   Widget _buildTodosCard(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final todos = [
-      {'title': 'Draft project proposal', 'completed': false},
-      {'title': 'Morning workout', 'completed': true},
-    ];
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        // Collect all todos from notes created today
+        final todos = <TodoItem>[];
+        if (state is NotesLoaded) {
+          for (var note in state.notes) {
+            if (note.todos != null &&
+                note.createdAt.day == DateTime.now().day) {
+              todos.addAll(note.todos!);
+            }
+          }
+        }
 
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-        border: Border.all(color: AppColors.border(context), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Today's Todos",
-                  style: AppTypography.labelLarge(
-                    context,
-                    AppColors.textSecondary(context),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    // Navigate to add todo
-                  },
-                  child: Text(
-                    '+ Add',
-                    style: AppTypography.labelMedium(
-                      context,
-                      AppColors.primary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Todo List
-          ...todos.map((todo) {
-            final isCompleted = todo['completed'] as bool;
-            return Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: AppColors.border(context)),
-                ),
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+            border: Border.all(color: AppColors.border(context), width: 1),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
               ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 24,
-                    height: 24,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isCompleted
-                          ? AppColors.primary
-                          : Colors.transparent,
-                      border: Border.all(
-                        color: isCompleted
-                            ? AppColors.primary
-                            : AppColors.primary.withOpacity(0.4),
-                        width: 2,
+            ],
+          ),
+          child: Column(
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      "Today's Todos",
+                      style: AppTypography.labelLarge(
+                        context,
+                        AppColors.textSecondary(context),
                       ),
                     ),
-                    child: isCompleted
-                        ? const Icon(Icons.check, size: 16, color: Colors.white)
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    todo['title'] as String,
-                    style: isCompleted
-                        ? AppTypography.bodyMedium(
-                            context,
-                            AppColors.textPrimary(context),
-                          ).copyWith(
-                            decoration: TextDecoration.lineThrough,
-                            // opacity: 0.5,
-                          )
-                        : AppTypography.bodyMedium(
-                            context,
-                            AppColors.textPrimary(context),
-                          ),
-                  ),
-                ],
+                    GestureDetector(
+                      onTap: () {
+                        showModalBottomSheet(
+                          context: context,
+                          builder: (context) => const QuickAddBottomSheet(),
+                        );
+                      },
+                      child: Text(
+                        '+ Add',
+                        style: AppTypography.labelMedium(
+                          context,
+                          AppColors.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          }),
-        ],
-      ),
+              // Todo List
+              if (todos.isEmpty)
+                Container(
+                  padding: const EdgeInsets.symmetric(vertical: 32),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: AppColors.border(context)),
+                    ),
+                  ),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.done_all,
+                          size: 32,
+                          color: AppColors.textSecondary(
+                            context,
+                          ).withOpacity(0.5),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No todos for today',
+                          style: AppTypography.bodyMedium(
+                            context,
+                            AppColors.textSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                ...todos.map((todo) {
+                  final isCompleted = todo.isCompleted;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border(
+                        top: BorderSide(color: AppColors.border(context)),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            // Find the note containing this todo and update it
+                            if (state is NotesLoaded) {
+                              for (var note in state.notes) {
+                                if (note.todos?.any((t) => t.id == todo.id) ??
+                                    false) {
+                                  final updatedTodos = note.todos!
+                                      .map(
+                                        (t) => t.id == todo.id
+                                            ? t.copyWith(
+                                                isCompleted: !isCompleted,
+                                                updatedAt: DateTime.now(),
+                                              )
+                                            : t,
+                                      )
+                                      .toList();
+                                  context.read<NotesBloc>().add(
+                                    UpdateNoteEvent(
+                                      note.copyWith(
+                                        todos: updatedTodos,
+                                        updatedAt: DateTime.now(),
+                                      ),
+                                    ),
+                                  );
+                                  break;
+                                }
+                              }
+                            }
+                          },
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: isCompleted
+                                  ? AppColors.primary
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: isCompleted
+                                    ? AppColors.primary
+                                    : AppColors.primary.withOpacity(0.4),
+                                width: 2,
+                              ),
+                            ),
+                            child: isCompleted
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: Colors.white,
+                                  )
+                                : null,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            todo.text,
+                            style: isCompleted
+                                ? AppTypography.bodyMedium(
+                                    context,
+                                    AppColors.textPrimary(context),
+                                  ).copyWith(
+                                    decoration: TextDecoration.lineThrough,
+                                  )
+                                : AppTypography.bodyMedium(
+                                    context,
+                                    AppColors.textPrimary(context),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -1297,10 +1415,94 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
       ),
     );
   }
+
+  /// Calculate notes progress based on note count
+  double _calculateNotesProgress(NoteState state) {
+    if (state is NotesLoaded) {
+      final todayNotes = state.notes
+          .where(
+            (note) =>
+                note.createdAt.day == DateTime.now().day &&
+                (note.todos?.isEmpty ?? true),
+          )
+          .length;
+      return todayNotes > 0 ? (todayNotes / 5).clamp(0.0, 1.0) : 0.0;
+    }
+    return 0.0;
+  }
+
+  /// Calculate todos progress based on completed todos
+  double _calculateTodosProgress(NoteState state) {
+    if (state is NotesLoaded) {
+      int totalTodos = 0;
+      int completedTodos = 0;
+      for (var note in state.notes) {
+        if (note.todos != null && note.createdAt.day == DateTime.now().day) {
+          totalTodos += note.todos!.length;
+          completedTodos += note.todos!.where((t) => t.isCompleted).length;
+        }
+      }
+      return totalTodos == 0
+          ? 0.0
+          : (completedTodos / totalTodos).clamp(0.0, 1.0);
+    }
+    return 0.0;
+  }
+
+  /// Calculate reflections progress based on reflection completions
+  double _calculateReflectionsProgress(BuildContext context) {
+    final reflectionBloc = context.read<ReflectionBloc>();
+    final state = reflectionBloc.state;
+
+    // Check for AllAnswersLoaded or AnswersLoaded states
+    if (state is AllAnswersLoaded) {
+      final todayReflections = state.answers
+          .where((r) => r.createdAt.day == DateTime.now().day)
+          .length;
+      return (todayReflections / 3).clamp(0.0, 1.0);
+    } else if (state is AnswersLoaded) {
+      final todayReflections = state.answers
+          .where((r) => r.createdAt.day == DateTime.now().day)
+          .length;
+      return (todayReflections / 3).clamp(0.0, 1.0);
+    }
+    return 0.0;
+  }
+
+  /// Get reflection streak days
+  int _getReflectionStreak(ReflectionState state) {
+    List<ReflectionAnswer> answers = <ReflectionAnswer>[];
+
+    if (state is AllAnswersLoaded) {
+      answers = state.answers;
+    } else if (state is AnswersLoaded) {
+      answers = state.answers;
+    }
+
+    if (answers.isEmpty) return 0;
+
+    int streak = 0;
+    final now = DateTime.now();
+    for (int i = 0; i < 365; i++) {
+      final date = now.subtract(Duration(days: i));
+      final hasReflection = answers.any(
+        (r) =>
+            r.createdAt.year == date.year &&
+            r.createdAt.month == date.month &&
+            r.createdAt.day == date.day,
+      );
+      if (hasReflection) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+    return 0;
+  }
 }
 
 // Intent for keyboard shortcut
 class _ShowCommandPaletteIntent extends Intent {
   const _ShowCommandPaletteIntent();
 }
-

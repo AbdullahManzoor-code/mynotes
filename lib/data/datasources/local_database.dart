@@ -306,18 +306,26 @@ class NotesDatabase {
     ''');
 
     // Create FTS5 virtual table for full-text search
-    await db.execute('''
-      CREATE VIRTUAL TABLE IF NOT EXISTS $notesFtsTable USING fts5(
-        noteId UNINDEXED,
-        title,
-        content,
-        tags,
-        category,
-        content=notes,
-        content_rowid=id,
-        tokenize = 'porter'
-      )
-    ''');
+    try {
+      await db.execute('''
+        CREATE VIRTUAL TABLE IF NOT EXISTS $notesFtsTable USING fts5(
+          noteId UNINDEXED,
+          title,
+          content,
+          tags,
+          category,
+          content=notes,
+          content_rowid=id,
+          tokenize = 'porter'
+        )
+      ''');
+    } catch (e) {
+      // FTS5 may not be available on all Android devices
+      // Log the error but continue without FTS5 support
+      print(
+        'Warning: FTS5 not available. Full-text search will be disabled. Error: $e',
+      );
+    }
 
     // Create indexes for performance (P0 tables)
     await _createIndexes(db);
@@ -746,30 +754,35 @@ class NotesDatabase {
       ''');
 
       // Create FTS5 virtual table
-      await db.execute('''
-        CREATE VIRTUAL TABLE IF NOT EXISTS $notesFtsTable USING fts5(
-          noteId UNINDEXED,
-          title,
-          content,
-          tags,
-          category,
-          content=notes,
-          content_rowid=id,
-          tokenize = 'porter'
-        )
-      ''');
+      try {
+        await db.execute('''
+          CREATE VIRTUAL TABLE IF NOT EXISTS $notesFtsTable USING fts5(
+            noteId UNINDEXED,
+            title,
+            content,
+            tags,
+            category,
+            content=notes,
+            content_rowid=id,
+            tokenize = 'porter'
+          )
+        ''');
 
-      // Populate FTS table from existing notes
-      final notes = await db.query(notesTable);
-      for (final note in notes) {
-        await db.insert(notesFtsTable, {
-          'rowid': note['id'],
-          'noteId': note['id'],
-          'title': note['title'],
-          'content': note['content'],
-          'tags': note['tags'],
-          'category': note['category'],
-        });
+        // Populate FTS table from existing notes
+        final notes = await db.query(notesTable);
+        for (final note in notes) {
+          await db.insert(notesFtsTable, {
+            'rowid': note['id'],
+            'noteId': note['id'],
+            'title': note['title'],
+            'content': note['content'],
+            'tags': note['tags'],
+            'category': note['category'],
+          });
+        }
+      } catch (e) {
+        // FTS5 may not be available on all Android devices
+        print('Warning: FTS5 not available during migration. Error: $e');
       }
     } catch (e) {
       // Tables may already exist
@@ -781,26 +794,31 @@ class NotesDatabase {
 
   Future<void> _createFTSTriggers(Database db) async {
     try {
-      await db.execute('''
-        CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON $notesTable BEGIN
-          INSERT INTO $notesFtsTable(rowid, noteId, title, content, tags, category)
-          VALUES (new.id, new.id, new.title, new.content, new.tags, new.category);
-        END
-      ''');
+      try {
+        await db.execute('''
+          CREATE TRIGGER IF NOT EXISTS notes_ai AFTER INSERT ON $notesTable BEGIN
+            INSERT INTO $notesFtsTable(rowid, noteId, title, content, tags, category)
+            VALUES (new.id, new.id, new.title, new.content, new.tags, new.category);
+          END
+        ''');
 
-      await db.execute('''
-        CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON $notesTable BEGIN
-          DELETE FROM $notesFtsTable WHERE rowid = old.id;
-        END
-      ''');
+        await db.execute('''
+          CREATE TRIGGER IF NOT EXISTS notes_ad AFTER DELETE ON $notesTable BEGIN
+            DELETE FROM $notesFtsTable WHERE rowid = old.id;
+          END
+        ''');
 
-      await db.execute('''
-        CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON $notesTable BEGIN
-          DELETE FROM $notesFtsTable WHERE rowid = old.id;
-          INSERT INTO $notesFtsTable(rowid, noteId, title, content, tags, category)
-          VALUES (new.id, new.id, new.title, new.content, new.tags, new.category);
-        END
-      ''');
+        await db.execute('''
+          CREATE TRIGGER IF NOT EXISTS notes_au AFTER UPDATE ON $notesTable BEGIN
+            DELETE FROM $notesFtsTable WHERE rowid = old.id;
+            INSERT INTO $notesFtsTable(rowid, noteId, title, content, tags, category)
+            VALUES (new.id, new.id, new.title, new.content, new.tags, new.category);
+          END
+        ''');
+      } catch (e) {
+        // FTS5 triggers may not be available
+        print('Warning: FTS5 triggers not available. Error: $e');
+      }
     } catch (e) {
       // Triggers may already exist
     }
@@ -919,8 +937,15 @@ class NotesDatabase {
       await db.insert(todosTable, {
         'id': todo.id,
         'noteId': noteId,
-        'text': todo.text,
-        'completed': todo.isCompleted ? 1 : 0,
+        'title': todo.text,
+        'description': todo.notes,
+        'category': todo.category.displayName,
+        'priority': todo.priority.level,
+        'isCompleted': todo.isCompleted ? 1 : 0,
+        'dueDate': todo.dueDate?.toIso8601String(),
+        'completedAt': todo.completedAt?.toIso8601String(),
+        'createdAt': todo.createdAt.toIso8601String(),
+        'updatedAt': todo.updatedAt.toIso8601String(),
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     }
   }
@@ -938,12 +963,23 @@ class NotesDatabase {
       maps.length,
       (i) => TodoItem(
         id: maps[i]['id'],
-        text: maps[i]['text'],
-        isCompleted: maps[i]['completed'] == 1,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-        priority: TodoPriority.medium,
-        category: TodoCategory.personal,
+        text: maps[i]['title'] ?? '',
+        isCompleted: (maps[i]['isCompleted'] ?? 0) == 1,
+        dueDate: maps[i]['dueDate'] != null
+            ? DateTime.parse(maps[i]['dueDate'])
+            : null,
+        completedAt: maps[i]['completedAt'] != null
+            ? DateTime.parse(maps[i]['completedAt'])
+            : null,
+        priority: _parseTodoPriority(maps[i]['priority'] ?? 2),
+        category: _parseTodoCategory(maps[i]['category'] ?? 'Personal'),
+        notes: maps[i]['description'],
+        createdAt: maps[i]['createdAt'] != null
+            ? DateTime.parse(maps[i]['createdAt'])
+            : DateTime.now(),
+        updatedAt: maps[i]['updatedAt'] != null
+            ? DateTime.parse(maps[i]['updatedAt'])
+            : DateTime.now(),
       ),
     );
   }
@@ -977,6 +1013,28 @@ class NotesDatabase {
     );
 
     return List.generate(maps.length, (i) => _alarmFromMap(maps[i]));
+  }
+
+  TodoPriority _parseTodoPriority(int level) {
+    switch (level) {
+      case 1:
+        return TodoPriority.low;
+      case 2:
+        return TodoPriority.medium;
+      case 3:
+        return TodoPriority.high;
+      case 4:
+        return TodoPriority.urgent;
+      default:
+        return TodoPriority.medium;
+    }
+  }
+
+  TodoCategory _parseTodoCategory(String category) {
+    return TodoCategory.values.firstWhere(
+      (c) => c.displayName == category,
+      orElse: () => TodoCategory.personal,
+    );
   }
 
   Map<String, dynamic> _alarmToMap(Alarm alarm) {
