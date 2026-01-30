@@ -1,7 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'dart:convert';
 
 part 'pomodoro_stats_event.dart';
 part 'pomodoro_stats_state.dart';

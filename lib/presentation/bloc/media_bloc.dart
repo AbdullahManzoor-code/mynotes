@@ -2,7 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'media_event.dart';
 import 'media_state.dart';
 import '../../domain/repositories/media_repository.dart';
-import '../../domain/entities/media_item.dart';
+
 import '../../core/services/media_capture_service.dart';
 import '../../core/services/document_scanner_service.dart';
 

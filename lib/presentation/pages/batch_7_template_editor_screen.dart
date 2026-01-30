@@ -5,7 +5,7 @@ import 'package:mynotes/domain/services/template_conversion_service.dart';
 
 /// Template Editor - Batch 7, Screen 2
 class TemplateEditorScreen extends StatefulWidget {
-  final dynamic? existingTemplate;
+  final dynamic existingTemplate;
 
   const TemplateEditorScreen({Key? key, this.existingTemplate})
     : super(key: key);

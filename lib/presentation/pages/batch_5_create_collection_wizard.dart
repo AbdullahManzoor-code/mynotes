@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/bloc/smart_collections_bloc.dart';
-import 'package:mynotes/domain/services/rule_evaluation_engine.dart';
 
 /// Create Smart Collection Wizard - Batch 5, Screen 1
 class CreateSmartCollectionWizard extends StatefulWidget {
@@ -465,4 +464,3 @@ class CreateCollectionEvent extends SmartCollectionsEvent {
     required this.logic,
   });
 }
-

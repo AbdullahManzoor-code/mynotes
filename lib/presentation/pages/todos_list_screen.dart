@@ -81,6 +81,15 @@ class _TodosListScreenState extends State<TodosListScreen>
   void _stopVoiceInput() {
     _speechService.stopListening();
     setState(() => _isListening = false);
+
+    // Auto-add todo if there's text after voice input stops
+    if (mounted && _todoController.text.trim().isNotEmpty) {
+      Future.delayed(const Duration(milliseconds: 500), () {
+        if (mounted) {
+          _addQuickTodo();
+        }
+      });
+    }
   }
 
   void _addQuickTodo() {
@@ -271,6 +280,7 @@ class _TodosListScreenState extends State<TodosListScreen>
               ),
             ),
             SizedBox(width: 12.w),
+            // Voice input button
             GestureDetector(
               onTap: _isListening ? _stopVoiceInput : _startVoiceInput,
               child: Container(
@@ -280,11 +290,35 @@ class _TodosListScreenState extends State<TodosListScreen>
                       ? AppColors.primary.withOpacity(0.2)
                       : AppColors.surface(context).withOpacity(0.5),
                   borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                  border: _isListening
+                      ? Border.all(color: AppColors.primary, width: 2)
+                      : null,
                 ),
                 child: Icon(
-                  Icons.mic,
+                  _isListening ? Icons.mic : Icons.mic_none,
                   size: 24.sp,
                   color: _isListening ? AppColors.primary : Colors.white,
+                ),
+              ),
+            ),
+            SizedBox(width: 12.w),
+            // Add button
+            GestureDetector(
+              onTap: _todoController.text.trim().isEmpty ? null : _addQuickTodo,
+              child: Container(
+                padding: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: _todoController.text.trim().isEmpty
+                      ? AppColors.surface(context).withOpacity(0.3)
+                      : AppColors.primary,
+                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                ),
+                child: Icon(
+                  Icons.add,
+                  size: 24.sp,
+                  color: _todoController.text.trim().isEmpty
+                      ? Colors.grey
+                      : Colors.white,
                 ),
               ),
             ),
@@ -560,4 +594,3 @@ class _TodosListScreenState extends State<TodosListScreen>
     }
   }
 }
-

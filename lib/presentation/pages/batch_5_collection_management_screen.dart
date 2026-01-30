@@ -27,9 +27,7 @@ class _CollectionManagementScreenState
     final state = context.read<SmartCollectionsBloc>().state;
     if (state is SmartCollectionsLoaded) {
       // Mock data for now
-      _collectionsFuture = Future.value(
-        state.collections as List<Map<String, dynamic>>,
-      );
+      _collectionsFuture = Future.value(state.collections);
     }
   }
 
@@ -192,4 +190,3 @@ class _CollectionManagementScreenState
     );
   }
 }
-

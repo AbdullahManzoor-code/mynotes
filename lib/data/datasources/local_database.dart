@@ -934,19 +934,11 @@ class NotesDatabase {
     await db.delete(todosTable, where: 'noteId = ?', whereArgs: [noteId]);
 
     for (final todo in todos) {
-      await db.insert(todosTable, {
-        'id': todo.id,
-        'noteId': noteId,
-        'title': todo.text,
-        'description': todo.notes,
-        'category': todo.category.displayName,
-        'priority': todo.priority.level,
-        'isCompleted': todo.isCompleted ? 1 : 0,
-        'dueDate': todo.dueDate?.toIso8601String(),
-        'completedAt': todo.completedAt?.toIso8601String(),
-        'createdAt': todo.createdAt.toIso8601String(),
-        'updatedAt': todo.updatedAt.toIso8601String(),
-      }, conflictAlgorithm: ConflictAlgorithm.replace);
+      await db.insert(
+        todosTable,
+        _todoToMap(todo, noteId),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
     }
   }
 
@@ -959,29 +951,7 @@ class NotesDatabase {
       whereArgs: [noteId],
     );
 
-    return List.generate(
-      maps.length,
-      (i) => TodoItem(
-        id: maps[i]['id'],
-        text: maps[i]['title'] ?? '',
-        isCompleted: (maps[i]['isCompleted'] ?? 0) == 1,
-        dueDate: maps[i]['dueDate'] != null
-            ? DateTime.parse(maps[i]['dueDate'])
-            : null,
-        completedAt: maps[i]['completedAt'] != null
-            ? DateTime.parse(maps[i]['completedAt'])
-            : null,
-        priority: _parseTodoPriority(maps[i]['priority'] ?? 2),
-        category: _parseTodoCategory(maps[i]['category'] ?? 'Personal'),
-        notes: maps[i]['description'],
-        createdAt: maps[i]['createdAt'] != null
-            ? DateTime.parse(maps[i]['createdAt'])
-            : DateTime.now(),
-        updatedAt: maps[i]['updatedAt'] != null
-            ? DateTime.parse(maps[i]['updatedAt'])
-            : DateTime.now(),
-      ),
-    );
+    return List.generate(maps.length, (i) => _todoFromMap(maps[i]));
   }
 
   /// Add alarms to note
@@ -1015,27 +985,27 @@ class NotesDatabase {
     return List.generate(maps.length, (i) => _alarmFromMap(maps[i]));
   }
 
-  TodoPriority _parseTodoPriority(int level) {
-    switch (level) {
-      case 1:
-        return TodoPriority.low;
-      case 2:
-        return TodoPriority.medium;
-      case 3:
-        return TodoPriority.high;
-      case 4:
-        return TodoPriority.urgent;
-      default:
-        return TodoPriority.medium;
-    }
-  }
+  // TodoPriority _parseTodoPriority(int level) {
+  //   switch (level) {
+  //     case 1:
+  //       return TodoPriority.low;
+  //     case 2:
+  //       return TodoPriority.medium;
+  //     case 3:
+  //       return TodoPriority.high;
+  //     case 4:
+  //       return TodoPriority.urgent;
+  //     default:
+  //       return TodoPriority.medium;
+  //   }
+  // }
 
-  TodoCategory _parseTodoCategory(String category) {
-    return TodoCategory.values.firstWhere(
-      (c) => c.displayName == category,
-      orElse: () => TodoCategory.personal,
-    );
-  }
+  // TodoCategory _parseTodoCategory(String category) {
+  //   return TodoCategory.values.firstWhere(
+  //     (c) => c.displayName == category,
+  //     orElse: () => TodoCategory.personal,
+  //   );
+  // }
 
   Map<String, dynamic> _alarmToMap(Alarm alarm) {
     return {
@@ -1209,6 +1179,69 @@ class NotesDatabase {
       thumbnailPath: map['thumbnailPath'],
       durationMs: map['durationMs'] ?? 0,
       createdAt: DateTime.parse(map['createdAt']),
+    );
+  }
+
+  /// Convert TodoItem to database map
+  Map<String, dynamic> _todoToMap(TodoItem todo, String noteId) {
+    return {
+      'id': todo.id,
+      'noteId': noteId,
+      'title': todo.text,
+      'description': todo.notes,
+      'category': todo.category.displayName,
+      'priority': todo.priority.level,
+      'isCompleted': todo.isCompleted ? 1 : 0,
+      'dueDate': todo.dueDate?.toIso8601String(),
+      'completedAt': todo.completedAt?.toIso8601String(),
+      'createdAt': todo.createdAt.toIso8601String(),
+      'updatedAt': todo.updatedAt.toIso8601String(),
+    };
+  }
+
+  /// Convert database map to TodoItem
+  TodoItem _todoFromMap(Map<String, dynamic> map) {
+    return TodoItem(
+      id: map['id'],
+      text: map['title'] ?? '',
+      isCompleted: (map['isCompleted'] ?? 0) == 1,
+      dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
+      completedAt: map['completedAt'] != null
+          ? DateTime.parse(map['completedAt'])
+          : null,
+      priority: _parseTodoPriority(map['priority'] ?? 2),
+      category: _parseTodoCategory(map['category'] ?? 'Personal'),
+      notes: map['description'],
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'])
+          : DateTime.now(),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'])
+          : DateTime.now(),
+    );
+  }
+
+  /// Parse priority int to TodoPriority enum
+  TodoPriority _parseTodoPriority(int level) {
+    switch (level) {
+      case 1:
+        return TodoPriority.low;
+      case 2:
+        return TodoPriority.medium;
+      case 3:
+        return TodoPriority.high;
+      case 4:
+        return TodoPriority.urgent;
+      default:
+        return TodoPriority.medium;
+    }
+  }
+
+  /// Parse category string to TodoCategory enum
+  TodoCategory _parseTodoCategory(String category) {
+    return TodoCategory.values.firstWhere(
+      (cat) => cat.displayName == category,
+      orElse: () => TodoCategory.personal,
     );
   }
 } // End class

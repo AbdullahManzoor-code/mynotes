@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
-import 'package:mynotes/core/design_system/app_spacing.dart';
+
 
 /// Advanced Filters Screen (ORG-005)
 /// Complex visual filter builder with multiple conditions

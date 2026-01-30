@@ -118,6 +118,12 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final bgColor = colorScheme.surface;
+    final textColor = colorScheme.onSurface;
+    final hintColor = colorScheme.onSurfaceVariant;
+    final screenSize = MediaQuery.of(context).size;
+
     return AnimatedBuilder(
       animation: _slideAnimation,
       builder: (context, child) => Transform.translate(
@@ -128,44 +134,48 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: Container(
-            color: Colors.black.withOpacity(0.6),
+            color: AppColors.accentBlueDark.withOpacity(0.2),
             child: DraggableScrollableSheet(
-              initialChildSize: 0.7,
-              minChildSize: 0.4,
-              maxChildSize: 0.95,
+              initialChildSize: 0.75,
+              minChildSize: 0.45,
+              maxChildSize: 0.96,
+              snap: true,
+              snapSizes: const [0.45, 0.75, 0.96],
               builder: (context, scrollController) => Container(
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1A1A1C), // Charcoal
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(40),
+                  color: bgColor,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(32.r),
                   ),
                   border: Border(
                     top: BorderSide(
-                      color: Colors.white.withOpacity(0.05),
-                      width: 1,
+                      color: colorScheme.outlineVariant,
+                      width: 1.w,
                     ),
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, -8),
+                      color: colorScheme.shadow.withOpacity(0.25),
+                      blurRadius: 32,
+                      offset: const Offset(0, -12),
+                      spreadRadius: 4,
                     ),
                   ],
                 ),
                 child: Column(
                   children: [
-                    _buildHeader(),
+                    _buildHeader(colorScheme),
                     Expanded(
                       child: SingleChildScrollView(
                         controller: scrollController,
+                        physics: const BouncingScrollPhysics(),
                         child: Column(
                           children: [
-                            _buildInputArea(),
+                            _buildInputArea(colorScheme, textColor, hintColor),
                             if (_parsedEntities.isNotEmpty)
-                              _buildParsePreview(),
-                            _buildTypeSelector(),
-                            _buildActionButton(),
+                              _buildParsePreview(colorScheme),
+                            _buildTypeSelector(colorScheme, textColor),
+                            _buildActionButton(colorScheme),
                           ],
                         ),
                       ),
@@ -180,119 +190,194 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+      child: Column(
+        children: [
+          Container(
+            width: 48.w,
+            height: 5.h,
+            decoration: BoxDecoration(
+              color: colorScheme.outlineVariant.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(3.r),
+            ),
+          ),
+          SizedBox(height: AppSpacing.lg),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Create',
+                  style: TextStyle(
+                    fontSize: 28.sp,
+                    fontWeight: FontWeight.w700,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    color: colorScheme.onSurfaceVariant,
+                    size: 24.r,
+                  ),
+                  style: IconButton.styleFrom(
+                    backgroundColor: colorScheme.surfaceContainerHighest
+                        .withOpacity(0.5),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputArea(
+    ColorScheme colorScheme,
+    Color textColor,
+    Color? hintColor,
+  ) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.lg,
+      ),
       child: Container(
-        width: 40,
-        height: 4,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(2),
+          color: colorScheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: colorScheme.outlineVariant, width: 1.w),
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.shadow.withOpacity(0.08),
+              blurRadius: 8.r,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                constraints: BoxConstraints(minHeight: 110.h),
+                child: TextField(
+                  controller: _inputController,
+                  focusNode: _inputFocus,
+                  maxLines: null,
+                  style: TextStyle(
+                    color: textColor,
+                    fontSize: 18.sp,
+                    fontWeight: FontWeight.w500,
+                    height: 1.5,
+                  ),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: "What's on your mind?",
+                    hintStyle: TextStyle(
+                      color: hintColor,
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.w400,
+                    ),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.lg,
+                    ),
+                  ),
+                  cursorColor: AppColors.primary,
+                  cursorWidth: 2.w,
+                  cursorHeight: 24.h,
+                ),
+              ),
+            ),
+            Padding(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: GestureDetector(
+                onTap: _toggleVoiceInput,
+                child: Container(
+                  padding: EdgeInsets.all(AppSpacing.md),
+                  decoration: BoxDecoration(
+                    color: _isVoiceListening
+                        ? AppColors.primary.withOpacity(0.2)
+                        : colorScheme.surfaceContainerHighest,
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: _isVoiceListening
+                          ? AppColors.primary.withOpacity(0.3)
+                          : Colors.transparent,
+                      width: 2.w,
+                    ),
+                  ),
+                  child: Icon(
+                    _isVoiceListening ? Icons.mic : Icons.mic_none,
+                    color: _isVoiceListening ? AppColors.primary : textColor,
+                    size: 20.r,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildInputArea() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: Container(
-              constraints: const BoxConstraints(minHeight: 100),
-              child: TextField(
-                controller: _inputController,
-                focusNode: _inputFocus,
-                maxLines: null,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w500,
-                  height: 1.4,
-                ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: "What's on your mind?",
-                  hintStyle: TextStyle(
-                    color: Colors.grey[500],
-                    fontSize: 24,
-                    fontWeight: FontWeight.w400,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                cursorColor: const Color(0xFF0EA5E9), // Primary Blue
-                cursorWidth: 2,
-                cursorHeight: 28,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          GestureDetector(
-            onTap: _toggleVoiceInput,
-            child: Container(
-              margin: const EdgeInsets.only(top: 16),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _isVoiceListening
-                    ? AppColors.primary
-                    : Colors.white.withOpacity(0.05),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _isVoiceListening ? Icons.mic : Icons.mic_none,
-                color: _isVoiceListening ? Colors.white : Colors.white,
-                size: 24,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildParsePreview() {
+  Widget _buildParsePreview(ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.lg,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'PARSING PREVIEW',
+            'DETECTED',
             style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.5,
+              color: colorScheme.onSurfaceVariant,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: AppSpacing.md),
           Wrap(
-            spacing: 8,
-            runSpacing: 8,
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.md,
             children: _parsedEntities
-                .map((entity) => _buildEntityChip(entity))
+                .map((entity) => _buildEntityChip(entity, colorScheme))
                 .toList(),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: AppSpacing.md),
         ],
       ),
     );
   }
 
-  Widget _buildEntityChip(ParsedEntity entity) {
+  Widget _buildEntityChip(ParsedEntity entity, ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        color: entity.color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: entity.color.withOpacity(0.2), width: 1),
+        color: entity.color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10.r),
+        border: Border.all(color: entity.color.withOpacity(0.3), width: 1.2.w),
         boxShadow: [
           BoxShadow(
-            color: entity.color.withOpacity(0.2),
-            blurRadius: 12,
+            color: entity.color.withOpacity(0.1),
+            blurRadius: 8.r,
             spreadRadius: 0,
           ),
         ],
@@ -300,28 +385,34 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(entity.icon, color: entity.color, size: 18),
-          const SizedBox(width: 8),
+          Icon(entity.icon, color: entity.color, size: 16.r),
+          SizedBox(width: AppSpacing.sm),
           Text(
-            entity.type == 'Todo'
-                ? 'Buy milk'
-                : (entity.type == 'Reminder'
-                      ? '6pm'
-                      : 'tomorrow'), // Placeholder logic to match visual style for now, or use entity.label if it fits well
-            // Actually, best to just use entity.label but styled better
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+            entity.label,
+            style: TextStyle(
+              color: colorScheme.onSurface,
+              fontSize: 13.sp,
+              fontWeight: FontWeight.w600,
             ),
           ),
-          const SizedBox(width: 4),
-          Text(
-            entity.type.toUpperCase(),
-            style: TextStyle(
-              color: entity.color.withOpacity(0.6),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
+          SizedBox(width: AppSpacing.xs),
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.xs,
+            ),
+            decoration: BoxDecoration(
+              color: entity.color.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(6.r),
+            ),
+            child: Text(
+              entity.type.toUpperCase(),
+              style: TextStyle(
+                color: entity.color,
+                fontSize: 9.sp,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ],
@@ -329,86 +420,93 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
     );
   }
 
-  Widget _buildTypeSelector() {
+  Widget _buildTypeSelector(ColorScheme colorScheme, Color textColor) {
     final types = ['Note', 'Todo', 'Reminder'];
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: AppSpacing.lg,
+      ),
       child: Container(
-        height: 48,
+        height: 52.h,
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(16),
+          color: colorScheme.surfaceContainer,
+          borderRadius: BorderRadius.circular(14.r),
+          border: Border.all(color: colorScheme.outlineVariant, width: 1.w),
         ),
-        padding: const EdgeInsets.all(4),
         child: Row(
-          children: types.map((type) {
-            final isSelected = type == _selectedType;
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedType = type),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? Colors.white.withOpacity(0.1)
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _getTypeIcon(type),
-                        color: isSelected ? Colors.white : Colors.grey[500],
-                        size: 18,
+          children: types
+              .asMap()
+              .entries
+              .map(
+                (entry) => Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _selectedType = entry.value),
+                    child: Container(
+                      margin: EdgeInsets.all(4.w),
+                      decoration: BoxDecoration(
+                        color: _selectedType == entry.value
+                            ? AppColors.primary
+                            : Colors.transparent,
+                        borderRadius: BorderRadius.circular(11.r),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        type,
-                        style: TextStyle(
-                          color: isSelected ? Colors.white : Colors.grey[500],
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                      child: Center(
+                        child: Text(
+                          entry.value,
+                          style: TextStyle(
+                            color: _selectedType == entry.value
+                                ? Colors.white
+                                : textColor,
+                            fontSize: 14.sp,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            );
-          }).toList(),
+              )
+              .toList(),
         ),
       ),
     );
   }
 
-  Widget _buildActionButton() {
+  Widget _buildActionButton(ColorScheme colorScheme) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 40),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.md,
+        AppSpacing.lg,
+        AppSpacing.xl,
+      ),
       child: SizedBox(
         width: double.infinity,
-        height: 56,
+        height: 56.h,
         child: ElevatedButton(
           onPressed: _inputController.text.isNotEmpty ? _saveItem : null,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-            elevation: 4,
-            shadowColor: Colors.black.withOpacity(0.2),
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            elevation: _inputController.text.isNotEmpty ? 4 : 0,
+            shadowColor: AppColors.primary.withOpacity(0.4),
+            disabledBackgroundColor: colorScheme.surfaceContainerHighest,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(16.r),
             ),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(_getActionIcon(), size: 20),
-              const SizedBox(width: 8),
+              Icon(_getActionIcon(), size: 20.r),
+              SizedBox(width: AppSpacing.lg),
               Text(
                 'Save $_selectedType',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.3,
                 ),
               ),
             ],

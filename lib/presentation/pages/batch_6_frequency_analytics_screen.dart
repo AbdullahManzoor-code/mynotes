@@ -13,7 +13,7 @@ class FrequencyAnalyticsScreen extends StatefulWidget {
 }
 
 class _FrequencyAnalyticsScreenState extends State<FrequencyAnalyticsScreen> {
-  final _aiEngine = AISuggestionEngine();
+  // Removed unused _aiEngine field
   String _selectedPeriod = 'week'; // week, month, year
 
   @override

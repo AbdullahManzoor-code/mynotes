@@ -1,5 +1,4 @@
-import 'dart:math';
-import 'package:mynotes/domain/repositories/smart_reminder_repository.dart';
+// Removed unused imports
 
 /// AI-powered reminder suggestion engine
 class AISuggestionEngine {

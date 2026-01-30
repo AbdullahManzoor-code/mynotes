@@ -1,4 +1,4 @@
-import 'package:mynotes/domain/repositories/smart_collection_repository.dart';
+// Removed unused import
 
 /// Rule evaluation engine for smart collections
 class RuleEvaluationEngine {

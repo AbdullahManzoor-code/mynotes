@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../core/pdf/pdf_export_service.dart';
+
 import '../../domain/repositories/note_repository.dart';
 
 part 'export_event.dart';
