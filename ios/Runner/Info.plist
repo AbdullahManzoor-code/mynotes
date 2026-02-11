@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Mynotes</string>
+	<string>MyNotes</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>mynotes</string>
+	<string>MyNotes</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -71,6 +71,14 @@
 	<!-- ========== NOTIFICATIONS ========== -->
 	<key>NSUserNotificationsUsageDescription</key>
 	<string>This app sends notifications for reminders and alarms you set.</string>
+	
+	<!-- ========== LOCATION PERMISSIONS ========== -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to show it on the map and for location-based reminders.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>This app needs access to your location to show it on the map and for location-based reminders even when in the background.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>This app needs access to your location for location-based reminders even when in the background.</string>
 	
 	<!-- ========== BACKGROUND MODES ========== -->
 	<key>UIBackgroundModes</key>

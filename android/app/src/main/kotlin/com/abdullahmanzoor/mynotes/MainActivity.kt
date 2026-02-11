@@ -1,4 +1,4 @@
-package com.example.mynotes
+package com.abdullahmanzoor.mynotes
 
 import io.flutter.embedding.android.FlutterFragmentActivity
 

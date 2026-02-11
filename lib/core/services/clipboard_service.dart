@@ -22,7 +22,9 @@ import 'dart:async';
 /// 2. Using WorkManager for periodic checks
 /// 3. Implementing native Android receiver for clipboard changes
 class ClipboardService {
-  static const platform = MethodChannel('com.example.mynotes/clipboard');
+  static const platform = MethodChannel(
+    'com.abdullahmanzoor.mynotes/clipboard',
+  );
 
   final _clipboardSubject = BehaviorSubject<String?>();
 
@@ -113,4 +115,3 @@ class ClipboardService {
     _clipboardSubject.close();
   }
 }
-

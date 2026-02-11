@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/domain/entities/note.dart';
@@ -39,6 +40,7 @@ import 'cross_feature_demo.dart';
 import 'search_filter_screen.dart';
 import 'voice_settings_screen.dart';
 import 'settings_screen.dart';
+import 'privacy_policy_screen.dart';
 
 // ==================== Utilities ====================
 import 'document_scan_screen.dart';
@@ -218,6 +220,12 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
                 'Help us improve',
                 Icons.star_outline,
                 _handleRateApp,
+              ),
+              _buildActionTile(
+                'Privacy Policy',
+                'Read how we protect your data',
+                Icons.privacy_tip_outlined,
+                () => _navigateToScreen(const PrivacyPolicyScreen()),
               ),
             ]),
 
@@ -773,6 +781,15 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
   void _handleRateApp() {
     // TODO: Open app store rating
     _showSnackbar('Thank you for your support!');
+  }
+
+  Future<void> _launchUrl(String urlString) async {
+    final Uri url = Uri.parse(urlString);
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        _showSnackbar('Could not launch $urlString');
+      }
+    }
   }
 
   void _generateSampleData() {
