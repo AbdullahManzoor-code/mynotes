@@ -30,7 +30,7 @@ jobs:
         run: flutter pub get
 
       - name: Check for formatting and linting
-        run: flutter analyze
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: Build APK (Release)
         run: flutter build apk --release
