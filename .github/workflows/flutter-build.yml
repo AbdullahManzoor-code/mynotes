@@ -14,6 +14,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # - name: Create key.properties and Keystore
+      #   run: |
+      #     echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
+      #     echo "storeFile=upload-keystore.jks" > android/key.properties
+      #     echo "storePassword=${{ secrets.STORE_PASSWORD }}" >> android/key.properties
+      #     echo "keyPassword=${{ secrets.KEY_PASSWORD }}" >> android/key.properties
+      #     echo "keyAlias=${{ secrets.KEY_ALIAS }}" >> android/key.properties
+
       - name: Set up Java 17
         uses: actions/setup-java@v4
         with:
@@ -33,11 +41,30 @@ jobs:
         run: flutter analyze --no-fatal-warnings --no-fatal-infos
 
       - name: Build App Bundle (Release)
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --no-pub
 
-      - name: Upload App Bundle Artifact
+      - name: Build APK (Release)
+        run: flutter build apk --release --no-pub
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: release-aab
-          path: build/app/outputs/bundle/release/app-release.aab
+          name: build-outputs
+          path: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/app-release.apk
           retention-days: 7
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest
+          name: "Latest Release (Automated)"
+          draft: false
+          prerelease: false
+          files: |
+            build/app/outputs/bundle/release/app-release.aab
+            build/app/outputs/flutter-apk/app-release.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
