@@ -33,10 +33,35 @@
 # Google ML Kit & Maps
 -keep class com.google.mlkit.** { *; }
 -keep class com.google.android.gms.** { *; }
+-dontwarn com.google.android.gms.**
+-dontwarn com.google.mlkit.**
+-dontwarn com.google.mlkit.vision.text.chinese.**
+-dontwarn com.google.mlkit.vision.text.devanagari.**
+-dontwarn com.google.mlkit.vision.text.japanese.**
+-dontwarn com.google.mlkit.vision.text.korean.**
 
-# WebView
--keep class android.webkit.** { *; }
+# Play Core (Deferred Components)
+-dontwarn com.google.android.play.core.**
+-dontwarn com.google.android.play.tasks.**
+-keep class com.google.android.play.core.** { *; }
 
-# Sqflite
+# Flutter Deferred Components
+-keep class io.flutter.embedding.engine.deferredcomponents.** { *; }
+-dontwarn io.flutter.embedding.engine.deferredcomponents.**
+
+
+# SQFLite & SQLite
 -keep class com.tekartik.sqflite.** { *; }
+-keep class io.requery.android.database.sqlite.** { *; }
+-dontwarn com.tekartik.sqflite.**
+
+
+# Flutter Plugins general
+-keep class io.flutter.plugins.** { *; }
+-dontwarn io.flutter.plugins.**
+
+# Prevent R8 from being too aggressive with optimization that might cause OOM
+-optimizations !code/simplification/arithmetic,!field/*,!class/merging/*
+-keepattributes Signature,Annotation,Exceptions
+
 
