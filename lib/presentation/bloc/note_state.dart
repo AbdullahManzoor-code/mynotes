@@ -1,5 +1,27 @@
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import '../../domain/entities/note.dart';
+
+/// View modes for the notes list
+enum NoteViewMode {
+  list,
+  grid;
+
+  String get displayName => this == list ? 'List View' : 'Grid View';
+  IconData get icon => this == list ? Icons.view_list : Icons.grid_view;
+}
+
+/// Sort options for notes
+enum NoteSortOption {
+  dateCreated('Date Created', Icons.access_time),
+  dateModified('Date Modified', Icons.update),
+  titleAZ('Title A-Z', Icons.sort_by_alpha),
+  color('Color', Icons.palette);
+
+  const NoteSortOption(this.displayName, this.icon);
+  final String displayName;
+  final IconData icon;
+}
 
 /// States for Notes BLoC
 abstract class NoteState extends Equatable {
@@ -21,13 +43,93 @@ class NoteLoading extends NoteState {
 
 /// Notes loaded successfully
 class NotesLoaded extends NoteState {
-  final List<Note> notes;
+  final List<Note> allNotes;
+  final List<Note> displayedNotes;
   final int totalCount;
 
-  const NotesLoaded(this.notes, {this.totalCount = 0});
+  // View Configuration
+  final String searchQuery;
+  final List<String> selectedTags;
+  final List<NoteColor> selectedColors;
+  final NoteSortOption sortBy;
+  final bool sortDescending;
+  final bool filterPinned;
+  final bool filterWithMedia;
+  final bool filterWithReminders;
+  final NoteViewMode viewMode;
+
+  // Backward compatibility
+  List<Note> get notes => displayedNotes;
+
+  const NotesLoaded({
+    required this.allNotes,
+    required this.displayedNotes,
+    this.totalCount = 0,
+    this.searchQuery = '',
+    this.selectedTags = const [],
+    this.selectedColors = const [],
+    this.sortBy = NoteSortOption.dateModified,
+    this.sortDescending = true,
+    this.filterPinned = false,
+    this.filterWithMedia = false,
+    this.filterWithReminders = false,
+    this.viewMode = NoteViewMode.list,
+  });
+
+  /// Factory for backward compatibility or simple loads
+  factory NotesLoaded.simple(List<Note> notes) {
+    return NotesLoaded(
+      allNotes: notes,
+      displayedNotes: notes,
+      totalCount: notes.length,
+    );
+  }
+
+  NotesLoaded copyWith({
+    List<Note>? allNotes,
+    List<Note>? displayedNotes,
+    int? totalCount,
+    String? searchQuery,
+    List<String>? selectedTags,
+    List<NoteColor>? selectedColors,
+    NoteSortOption? sortBy,
+    bool? sortDescending,
+    bool? filterPinned,
+    bool? filterWithMedia,
+    bool? filterWithReminders,
+    NoteViewMode? viewMode,
+  }) {
+    return NotesLoaded(
+      allNotes: allNotes ?? this.allNotes,
+      displayedNotes: displayedNotes ?? this.displayedNotes,
+      totalCount: totalCount ?? this.totalCount,
+      searchQuery: searchQuery ?? this.searchQuery,
+      selectedTags: selectedTags ?? this.selectedTags,
+      selectedColors: selectedColors ?? this.selectedColors,
+      sortBy: sortBy ?? this.sortBy,
+      sortDescending: sortDescending ?? this.sortDescending,
+      filterPinned: filterPinned ?? this.filterPinned,
+      filterWithMedia: filterWithMedia ?? this.filterWithMedia,
+      filterWithReminders: filterWithReminders ?? this.filterWithReminders,
+      viewMode: viewMode ?? this.viewMode,
+    );
+  }
 
   @override
-  List<Object?> get props => [notes, totalCount];
+  List<Object?> get props => [
+    allNotes,
+    displayedNotes,
+    totalCount,
+    searchQuery,
+    selectedTags,
+    selectedColors,
+    sortBy,
+    sortDescending,
+    filterPinned,
+    filterWithMedia,
+    filterWithReminders,
+    viewMode,
+  ];
 }
 
 /// Single note loaded
@@ -127,7 +229,7 @@ class TagRemoved extends NoteState {
 
 /// Search results loaded
 class SearchResultsLoaded extends NoteState {
-  final List<Note> results;
+  final List<dynamic> results;
   final String query;
   final int resultCount;
 
@@ -280,4 +382,3 @@ class LinkRemovedFromNote extends NoteState {
   @override
   List<Object?> get props => [note];
 }
-

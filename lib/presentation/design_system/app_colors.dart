@@ -49,6 +49,9 @@ class AppColors {
   /// Primary text color (light mode) - Near black (#111618)
   static const Color darkText = Color(0xFF111618);
 
+  /// Primary text alias
+  static const Color primaryText = darkText;
+
   /// Secondary text color - Medium gray (#617f89)
   static const Color secondaryText = Color(0xFF617F89);
   static const Color secondaryTextDark = Color(0xFF92BBC9);
@@ -71,10 +74,14 @@ class AppColors {
   static const Color borderLight = Color(0xFFE5E7EB);
   static const Color borderDark = Color(0xFF374151);
 
-  /// Success green alias
+  /// Success Green alias
   static const Color successGreen = Color(0xFF078836);
+  static const Color success = Color(0xFF078836);
+  static const Color error = Color(0xFFEF4444);
+  static const Color warning = Color(0xFFFBBF24);
+  static const Color info = Color(0xFF3B82F6);
 
-  // ==================== Accent Colors ====================
+  // ==================== Background Colors ====================
 
   /// Blue accent variations
   static const Color accentBlue = Color(0xFF38BDF8);
@@ -257,6 +264,29 @@ class AppColors {
   static const Color moodAnxious = Color(0xFFFBBF24);
   static const Color moodGrateful = Color(0xFFC084FC);
 
+  // ==================== Focus Module Colors ====================
+
+  /// Deep violet for focus background gradient
+  static const Color focusDeepViolet = Color(0xFF1e1b4b);
+
+  /// Midnight blue for focus background gradient
+  static const Color focusMidnightBlue = Color(0xFF0f172a);
+
+  /// Purple orb for background effects
+  static const Color focusPurpleOrb = Color(0xFF4c1d95);
+
+  /// Violet orb for background effects
+  static const Color focusVioletOrb = Color(0xFF5b21b6);
+
+  /// Blue orb for background effects
+  static const Color focusBlueOrb = Color(0xFF1e3a8a);
+
+  /// Accent green for timer ring and active indicators
+  static const Color focusAccentGreen = Color(0xFFa7f3d0);
+
+  /// Light indigo for celebration screen accents
+  static const Color focusIndigoLight = Color(0xFFA5B4FC);
+
   // ==================== Utility Functions ====================
 
   /// Get color based on theme brightness
@@ -289,10 +319,7 @@ class AppColors {
   // ==================== Legacy compatibility aliases ====================
   // Many components still reference older API names; provide aliases
   static Color get primary => primaryColor;
-  static Color get success => successColor;
-  static Color get error => errorColor;
-  static Color get warning => warningColor;
-  static Color get info => infoColor;
+
   static Color get accentColor => accentBlue;
 
   // Background aliases (for backward compatibility with screens using old naming)

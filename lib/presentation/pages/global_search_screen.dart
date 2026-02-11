@@ -1,76 +1,47 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/todos_bloc.dart';
-import '../../domain/entities/note.dart';
-import '../../domain/entities/todo_item.dart';
-import '../../domain/repositories/note_repository.dart';
+import 'package:mynotes/presentation/widgets/command_palette_widget.dart';
+import 'package:mynotes/presentation/widgets/universal_item_card.dart';
+import '../bloc/command_palette_bloc.dart';
+import '../bloc/global_search_bloc.dart';
+import '../bloc/params/global_search_params.dart';
+import '../design_system/design_system.dart';
+import 'enhanced_note_editor_screen.dart';
+import '../../injection_container.dart' show getIt;
+import '../../domain/models/search_filters.dart';
+import '../../data/repositories/unified_repository.dart';
+import '../widgets/search_filter_modal.dart';
 
-/// Global search results screen
-class GlobalSearchScreen extends StatefulWidget {
-  const GlobalSearchScreen({Key? key}) : super(key: key);
+/// Global Search & Command Palette Screen
+/// Refactored to StatelessWidget using GlobalSearchBloc and Design System
+class GlobalSearchScreen extends StatelessWidget {
+  const GlobalSearchScreen({super.key});
 
   @override
-  State<GlobalSearchScreen> createState() => _GlobalSearchScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          GlobalSearchBloc()..add(const SearchQueryChangedEvent('')),
+      child: const _GlobalSearchView(),
+    );
+  }
 }
 
-class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
-  late TextEditingController _searchController;
-  List<Note> _searchedNotes = [];
-  List<TodoItem> _searchedTodos = [];
-  bool _isSearching = false;
+class _GlobalSearchView extends StatefulWidget {
+  const _GlobalSearchView();
+
+  @override
+  State<_GlobalSearchView> createState() => _GlobalSearchViewState();
+}
+
+class _GlobalSearchViewState extends State<_GlobalSearchView> {
+  late final TextEditingController _searchController;
 
   @override
   void initState() {
     super.initState();
     _searchController = TextEditingController();
-    _searchController.addListener(_performSearch);
-  }
-
-  void _performSearch() async {
-    final query = _searchController.text.trim();
-
-    if (query.isEmpty) {
-      setState(() {
-        _searchedNotes = [];
-        _searchedTodos = [];
-        _isSearching = false;
-      });
-      return;
-    }
-
-    setState(() {
-      _isSearching = true;
-    });
-
-    try {
-      // Get repository from context
-      final noteRepo = context.read<NoteRepository>();
-
-      // Search notes
-      final notes = await noteRepo.searchNotes(query);
-
-      // Search todos (would need TodoRepository)
-      // For now, filtering in-memory
-      final todosState = context.read<TodosBloc>().state;
-      final allTodos = todosState is TodosLoaded
-          ? (todosState as TodosLoaded).allTodos
-          : <TodoItem>[];
-
-      final todos = allTodos
-          .where((t) => t.text.toLowerCase().contains(query.toLowerCase()))
-          .toList();
-
-      setState(() {
-        _searchedNotes = notes;
-        _searchedTodos = todos;
-        _isSearching = false;
-      });
-    } catch (e) {
-      print('Search error: $e');
-      setState(() {
-        _isSearching = false;
-      });
-    }
+    context.read<CommandPaletteBloc>().add(const LoadCommandsEvent());
   }
 
   @override
@@ -79,122 +50,285 @@ class _GlobalSearchScreenState extends State<GlobalSearchScreen> {
     super.dispose();
   }
 
+  Future<void> _showFilterModal(
+    BuildContext context,
+    SearchFilters currentFilters,
+  ) async {
+    final newFilters = await showModalBottomSheet<SearchFilters>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => SearchFilterModal(initialFilters: currentFilters),
+    );
+
+    if (newFilters != null && mounted) {
+      context.read<GlobalSearchBloc>().add(
+        SearchFiltersChangedEvent(newFilters),
+      );
+    }
+  }
+
+  void _handleCommandSelection(BuildContext context, CommandItem command) {
+    switch (command.id) {
+      case 'new_note':
+        Navigator.pop(context);
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const EnhancedNoteEditorScreen()),
+        );
+        break;
+      default:
+        getIt<GlobalUiService>().showInfo('Executing: ${command.label}');
+        Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Global Search'), elevation: 0),
-      body: Column(
-        children: [
-          // Search Input
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Search notes, todos, reminders...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchController.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+    return BlocBuilder<GlobalSearchBloc, GlobalSearchState>(
+      builder: (context, state) {
+        final query = state.params.query;
+        final isCommandMode = query.startsWith('/') || query.startsWith('>');
+
+        return Scaffold(
+          backgroundColor: AppColors.background(context),
+          body: SafeArea(
+            child: Column(
+              children: [
+                CommandPaletteWidget(
+                  controller: _searchController,
+                  onQueryChanged: (val) {
+                    context.read<GlobalSearchBloc>().add(
+                      SearchQueryChangedEvent(val),
+                    );
+                    if (val.startsWith('/') || val.startsWith('>')) {
+                      context.read<CommandPaletteBloc>().add(
+                        SearchCommandsEvent(val.substring(1)),
+                      );
+                    }
+                  },
+                  onClear: () {
+                    _searchController.clear();
+                    context.read<GlobalSearchBloc>().add(ClearSearchEvent());
+                  },
+                  onFilterPressed: () =>
+                      _showFilterModal(context, state.params.filters),
                 ),
-              ),
-              autofocus: true,
+                Expanded(
+                  child: isCommandMode
+                      ? _buildCommandList(context)
+                      : _buildSearchResults(context, state),
+                ),
+              ],
             ),
           ),
+        );
+      },
+    );
+  }
 
-          // Loading indicator
-          if (_isSearching)
-            const Padding(
-              padding: EdgeInsets.all(16),
-              child: CircularProgressIndicator(),
+  Widget _buildCommandList(BuildContext context) {
+    return BlocBuilder<CommandPaletteBloc, CommandPaletteState>(
+      builder: (context, state) {
+        if (state is CommandPaletteFiltered) {
+          return ListView.builder(
+            padding: AppSpacing.paddingAllL,
+            itemCount: state.filteredCommands.length,
+            itemBuilder: (context, index) {
+              final cmd = state.filteredCommands[index];
+              return _buildCommandTile(context, cmd);
+            },
+          );
+        } else if (state is CommandPaletteOpen) {
+          return ListView.builder(
+            padding: AppSpacing.paddingAllL,
+            itemCount: state.commands.length,
+            itemBuilder: (context, index) {
+              final cmd = state.commands[index];
+              return _buildCommandTile(context, cmd);
+            },
+          );
+        }
+        return const Center(child: Text('No matching commands'));
+      },
+    );
+  }
+
+  Widget _buildCommandTile(BuildContext context, CommandItem cmd) {
+    return Card(
+      margin: EdgeInsets.only(bottom: 12.h),
+      elevation: 0,
+      color: AppColors.lightSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16.r),
+        // Borderside: Border.all(color: AppColors.borderLight),
+      ),
+      child: ListTile(
+        leading: Container(
+          padding: EdgeInsets.all(8.r),
+          decoration: BoxDecoration(
+            color: AppColors.primary10,
+            borderRadius: BorderRadius.circular(10.r),
+          ),
+          child: Icon(
+            Icons.terminal_rounded,
+            color: AppColors.primaryColor,
+            size: 20.sp,
+          ),
+        ),
+        title: Text(
+          cmd.label,
+          style: AppTypography.bodyMedium(context, null, FontWeight.w600),
+        ),
+        subtitle: Text(
+          cmd.description ?? '',
+          style: AppTypography.bodySmall(context, AppColors.secondaryText),
+        ),
+        trailing: cmd.shortcut != null
+            ? Container(
+                padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                decoration: BoxDecoration(
+                  color: AppColors.background(context),
+                  borderRadius: BorderRadius.circular(6.r),
+                  border: Border.all(color: AppColors.borderLight),
+                ),
+                child: Text(
+                  cmd.shortcut!,
+                  style: AppTypography.labelSmall(
+                    context,
+                    AppColors.secondaryText,
+                    FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,
+        onTap: () => _handleCommandSelection(context, cmd),
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(BuildContext context, GlobalSearchState state) {
+    final query = state.params.query;
+    final results = state.params.searchResults;
+
+    if (query.isEmpty) {
+      return _buildEmptyState(context);
+    }
+
+    if (state is GlobalSearchLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (results.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off_rounded,
+              size: 80.sp,
+              color: AppColors.borderLight,
             ),
-
-          // Results
-          if (!_isSearching && _searchController.text.isNotEmpty)
-            Expanded(
-              child: _searchedNotes.isEmpty && _searchedTodos.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.search_off,
-                            size: 64,
-                            color: Colors.grey,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No results for "${_searchController.text}"',
-                            style: Theme.of(context).textTheme.bodyLarge,
-                          ),
-                        ],
-                      ),
-                    )
-                  : ListView(
-                      children: [
-                        // Notes section
-                        if (_searchedNotes.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Text(
-                              'Notes (${_searchedNotes.length})',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ),
-                          ..._searchedNotes.map(
-                            (note) => ListTile(
-                              leading: const Icon(Icons.note),
-                              title: Text(note.title),
-                              subtitle: Text(
-                                note.content.length > 100
-                                    ? '${note.content.substring(0, 100)}...'
-                                    : note.content,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              onTap: () {
-                                Navigator.pop(context, note);
-                              },
-                            ),
-                          ),
-                        ],
-
-                        // Todos section
-                        if (_searchedTodos.isNotEmpty) ...[
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                            child: Text(
-                              'Todos (${_searchedTodos.length})',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ),
-                          ..._searchedTodos.map(
-                            (todo) => ListTile(
-                              leading: const Icon(Icons.check_circle_outline),
-                              title: Text(todo.text),
-                              trailing: Checkbox(
-                                value: todo.isCompleted,
-                                onChanged: null,
-                              ),
-                              onTap: () {
-                                Navigator.pop(context, todo);
-                              },
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
+            AppSpacing.gapL,
+            Text(
+              'No results for "$query"',
+              style: AppTypography.bodyMedium(context, AppColors.secondaryText),
             ),
-        ],
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: AppSpacing.paddingAllL,
+      itemCount: results.length,
+      itemBuilder: (context, index) {
+        final item = results[index];
+        return UniversalItemCard(item: item);
+      },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.search_rounded, size: 100.sp, color: AppColors.primary10),
+        AppSpacing.gapXL,
+        Text(
+          'Search Notes, Todos, and Reminders',
+          style: AppTypography.bodyLarge(context, AppColors.secondaryText),
+        ),
+        AppSpacing.gapXXXL,
+        _buildQuickActions(context),
+      ],
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context) {
+    return Wrap(
+      spacing: 16.w,
+      runSpacing: 16.h,
+      alignment: WrapAlignment.center,
+      children: [
+        _buildQuickActionBtn(context, Icons.note_add_rounded, 'New Note', () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const EnhancedNoteEditorScreen()),
+          );
+        }),
+        _buildQuickActionBtn(
+          context,
+          Icons.check_circle_outline_rounded,
+          'New Todo',
+          () {
+            // Navigate to new todo
+          },
+        ),
+        _buildQuickActionBtn(
+          context,
+          Icons.notification_add_rounded,
+          'Reminder',
+          () {
+            // Navigate to new reminder
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickActionBtn(
+    BuildContext context,
+    IconData icon,
+    String label,
+    VoidCallback onTap,
+  ) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16.r),
+      child: Container(
+        width: 100.w,
+        padding: EdgeInsets.symmetric(vertical: 16.h),
+        decoration: BoxDecoration(
+          color: AppColors.lightSurface,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: AppColors.borderLight),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: AppColors.primaryColor, size: 28.sp),
+            AppSpacing.gapM,
+            Text(
+              label,
+              style: AppTypography.labelSmall(
+                context,
+                AppColors.secondaryText,
+                FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
-

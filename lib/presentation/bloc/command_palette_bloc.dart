@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'command_palette_event.dart';
@@ -133,9 +134,8 @@ class CommandPaletteBloc
           .where(
             (cmd) =>
                 cmd.label.toLowerCase().contains(query) ||
-                    cmd.description!.toLowerCase().contains(query) ??
-                false || cmd.shortcut!.toLowerCase().contains(query) ??
-                false,
+                (cmd.description?.toLowerCase().contains(query) ?? false) ||
+                (cmd.shortcut?.toLowerCase().contains(query) ?? false),
           )
           .toList();
 
@@ -208,7 +208,6 @@ class CommandPaletteBloc
       // Save to preferences
       final prefs = await SharedPreferences.getInstance();
       // Serialize and save
-
       emit(CommandPaletteOpen(commands: _allCommands));
     } catch (e) {
       emit(CommandPaletteError(e.toString()));

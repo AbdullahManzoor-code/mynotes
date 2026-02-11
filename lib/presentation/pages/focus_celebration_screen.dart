@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/focus_bloc.dart';
+import 'focus_session_screen.dart';
 
 /// Focus Session Celebration Screen
 /// Shown after completing a focus session to celebrate achievement
@@ -40,7 +43,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0C10),
+      backgroundColor: AppColors.focusMidnightBlue,
       body: Stack(
         children: [
           // Confetti particles
@@ -58,7 +61,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
                   center: const Alignment(0, 1),
                   radius: 1.5,
                   colors: [
-                    const Color(0xFFA5B4FC).withOpacity(0.2),
+                    AppColors.focusIndigoLight.withOpacity(0.2),
                     Colors.transparent,
                   ],
                 ),
@@ -209,7 +212,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(0xFFA5B4FC).withOpacity(0.1),
+                      AppColors.focusIndigoLight.withOpacity(0.1),
                       Colors.transparent,
                     ],
                   ),
@@ -229,7 +232,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
                 child: Icon(
                   Icons.auto_awesome_rounded,
                   size: 56.sp,
-                  color: const Color(0xFFA5B4FC),
+                  color: AppColors.focusIndigoLight,
                 ),
               ),
             ],
@@ -286,7 +289,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
                       shape: BoxShape.circle,
                       gradient: RadialGradient(
                         colors: [
-                          const Color(0xFFA5B4FC).withOpacity(0.05),
+                          AppColors.focusIndigoLight.withOpacity(0.05),
                           Colors.transparent,
                         ],
                       ),
@@ -322,10 +325,10 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
                         vertical: 4.h,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFA5B4FC).withOpacity(0.1),
+                        color: AppColors.focusIndigoLight.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20.r),
                         border: Border.all(
-                          color: const Color(0xFFA5B4FC).withOpacity(0.2),
+                          color: AppColors.focusIndigoLight.withOpacity(0.2),
                           width: 1,
                         ),
                       ),
@@ -334,14 +337,14 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
                         children: [
                           Icon(
                             Icons.local_fire_department_rounded,
-                            color: const Color(0xFFA5B4FC),
+                            color: AppColors.focusIndigoLight,
                             size: 14.sp,
                           ),
                           SizedBox(width: 8.w),
                           Text(
                             '${widget.streakDays} DAY STREAK',
                             style: AppTypography.captionSmall(null).copyWith(
-                              color: const Color(0xFFA5B4FC),
+                              color: AppColors.focusIndigoLight,
                               fontWeight: FontWeight.bold,
                               letterSpacing: 1,
                               fontSize: 12.sp,
@@ -365,31 +368,68 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
       padding: EdgeInsets.fromLTRB(32.w, 0, 32.w, 48.h),
       child: Column(
         children: [
+          // Take Long Break Button
           SizedBox(
             width: double.infinity,
             height: 64.h,
             child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                context.read<FocusBloc>().add(const StartBreakSessionEvent());
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FocusSessionScreen(),
+                  ),
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.white,
-                foregroundColor: const Color(0xFF0A0C10),
+                foregroundColor: AppColors.focusMidnightBlue,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16.r),
                 ),
                 elevation: 0,
-                shadowColor: const Color(0xFFA5B4FC).withOpacity(0.3),
+                shadowColor: AppColors.focusIndigoLight.withOpacity(0.3),
               ),
-              child: Text(
-                'Done',
-                style: AppTypography.bodyLarge(
-                  null,
-                  const Color(0xFF0A0C10),
-                  FontWeight.bold,
-                ).copyWith(fontSize: 18.sp),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.coffee_outlined),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Take Long Break (15m)',
+                    style: AppTypography.bodyLarge(
+                      null,
+                      AppColors.focusMidnightBlue,
+                      FontWeight.bold,
+                    ).copyWith(fontSize: 16.sp),
+                  ),
+                ],
               ),
             ),
           ),
-          SizedBox(height: 24.h),
+
+          SizedBox(height: 16.h),
+
+          // Done / Start New Button
+          TextButton(
+            onPressed: () {
+              // Reset to initial state
+              context.read<FocusBloc>().add(const StopFocusSessionEvent());
+              Navigator.pop(context);
+            },
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.white.withOpacity(0.8),
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+            ),
+            child: Text(
+              'Done & Finish',
+              style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
+            ),
+          ),
+
+          SizedBox(height: 8.h),
+
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -436,4 +476,3 @@ class _ConfettiParticle {
     required this.size,
   });
 }
-

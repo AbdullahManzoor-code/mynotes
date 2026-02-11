@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mynotes/injection_container.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/todo_item.dart';
 import '../../core/services/speech_service.dart';
+import '../../core/services/global_ui_service.dart';
 
 /// Create Todo Bottom Sheet (TD-001)
 /// Supports text input with voice, due date, priority, and category selection
@@ -86,11 +88,7 @@ class _CreateTodoBottomSheetState extends State<CreateTodoBottomSheet>
       setState(() => _isListening = false);
     } catch (e) {
       setState(() => _isListening = false);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to start voice input: $e')),
-        );
-      }
+      getIt<GlobalUiService>().showError('Failed to start voice input: $e');
     }
   }
 
@@ -256,9 +254,7 @@ class _CreateTodoBottomSheetState extends State<CreateTodoBottomSheet>
 
   void _createTodo() async {
     if (_textController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter a todo text')));
+      getIt<GlobalUiService>().showWarning('Please enter a todo text');
       return;
     }
 
@@ -286,9 +282,7 @@ class _CreateTodoBottomSheetState extends State<CreateTodoBottomSheet>
 
       HapticFeedback.mediumImpact();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error creating todo: $e')));
+      getIt<GlobalUiService>().showError('Error creating todo: $e');
     } finally {
       setState(() => _isLoading = false);
     }

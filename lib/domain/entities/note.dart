@@ -1,10 +1,11 @@
+import 'dart:ui';
+
 import 'package:equatable/equatable.dart';
 import 'media_item.dart';
 import 'todo_item.dart';
 import 'link.dart';
 import 'alarm.dart';
 
-// Note Color Enum
 enum NoteColor {
   defaultColor(0xFFFFFFFF, 0xFF1C1B1F),
   red(0xFFFFCDD2, 0xFFB71C1C),
@@ -13,12 +14,30 @@ enum NoteColor {
   blue(0xFFBBDEFB, 0xFF1976D2),
   green(0xFFC8E6C9, 0xFF388E3C),
   yellow(0xFFFFF9C4, 0xFFFBC02D),
-  orange(0xFFFFE0B2, 0xFFF57C00);
+  orange(0xFFFFE0B2, 0xFFF57C00),
+  brown(0xFFD7CCC8, 0xFF3E2723), // Added
+  grey(0xFFF5F5F5, 0xFF212121); // Added
 
   final int lightColor;
   final int darkColor;
 
   const NoteColor(this.lightColor, this.darkColor);
+
+  String get displayName => name[0].toUpperCase() + name.substring(1);
+
+  // Helper for UI
+  int getColorValue(bool isDarkMode) => isDarkMode ? darkColor : lightColor;
+
+  Color toColor(bool isDarkMode) => Color(getColorValue(isDarkMode));
+
+  static NoteColor fromColor(Color color) {
+    for (var c in NoteColor.values) {
+      if (Color(c.lightColor) == color || Color(c.darkColor) == color) {
+        return c;
+      }
+    }
+    return NoteColor.defaultColor;
+  }
 }
 
 class Note extends Equatable {
@@ -176,4 +195,3 @@ class Note extends Equatable {
     updatedAt,
   ];
 }
-

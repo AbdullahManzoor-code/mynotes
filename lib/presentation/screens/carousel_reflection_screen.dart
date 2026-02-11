@@ -197,7 +197,7 @@ class _CarouselReflectionScreenState extends State<CarouselReflectionScreen> {
       builder: (context, state) {
         String prompt = 'What made you smile today?';
 
-        if (state is QuestionsLoaded && state.questions.isNotEmpty) {
+        if (state.questions.isNotEmpty) {
           prompt = state.questions.first.questionText;
         }
 
@@ -260,7 +260,7 @@ class _CarouselReflectionScreenState extends State<CarouselReflectionScreen> {
               SizedBox(height: 16.h),
               ElevatedButton(
                 onPressed: () {
-                  if (state is QuestionsLoaded && state.questions.isNotEmpty) {
+                  if (state.questions.isNotEmpty) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(

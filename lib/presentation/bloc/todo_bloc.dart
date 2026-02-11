@@ -36,7 +36,8 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     try {
       if (state is TodosLoaded) {
         final currentTodos = (state as TodosLoaded).todos;
-        final updatedTodos = List<TodoItem>.from(currentTodos)..add(event.todo);
+        final newTodo = event.params.toTodoItem();
+        final updatedTodos = List<TodoItem>.from(currentTodos)..add(newTodo);
         emit(TodosLoaded(todos: updatedTodos, filteredTodos: updatedTodos));
       }
     } catch (e) {
@@ -53,7 +54,7 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
       if (state is TodosLoaded) {
         final currentTodos = (state as TodosLoaded).todos;
         final updatedTodos = currentTodos.map((todo) {
-          if (todo.id == event.todoId) {
+          if (todo.id == event.params.todoId) {
             return todo.toggleComplete();
           }
           return todo;
@@ -93,9 +94,10 @@ class TodoBloc extends Bloc<TodoEvent, TodoState> {
     try {
       if (state is TodosLoaded) {
         final currentTodos = (state as TodosLoaded).todos;
+        final updatedTodo = event.params.toTodoItem();
         final updatedTodos = currentTodos.map((todo) {
-          if (todo.id == event.todo.id) {
-            return event.todo;
+          if (todo.id == event.params.todoId) {
+            return updatedTodo;
           }
           return todo;
         }).toList();

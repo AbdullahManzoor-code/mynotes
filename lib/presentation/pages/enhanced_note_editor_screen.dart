@@ -1,34 +1,54 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:speech_to_text/speech_to_text.dart' as stt;
-import 'package:permission_handler/permission_handler.dart';
-import 'package:url_launcher/url_launcher.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
+import 'package:mynotes/core/services/ocr_service.dart';
 import 'package:share_plus/share_plus.dart';
-import 'dart:ui' as ui;
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'dart:async';
-import '../design_system/design_system.dart';
-import '../bloc/note_bloc.dart';
-import '../bloc/note_event.dart';
-import '../bloc/note_state.dart';
-import '../../domain/entities/note.dart';
-import '../../core/routes/app_routes.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
 
-/// Enhanced Note Editor with Links and Pins
-/// Advanced note editing interface with smart features
-/// Based on note_editor_with_links_and_pins template
+import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/core/services/speech_service.dart';
+import 'graph_view_page.dart';
+import 'package:mynotes/core/services/voice_command_service.dart';
+// OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+import 'package:mynotes/core/services/link_parser_service.dart';
+import 'package:mynotes/data/datasources/local_database.dart';
+import 'package:mynotes/data/repositories/note_repository_impl.dart';
+import 'package:mynotes/core/services/audio_feedback_service.dart';
+import 'package:mynotes/presentation/bloc/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note_editor_bloc.dart';
+import 'package:mynotes/presentation/bloc/note_editor_event.dart';
+import 'package:mynotes/presentation/bloc/note_editor_state.dart';
+import 'package:mynotes/presentation/bloc/note_event.dart';
+import 'package:mynotes/domain/entities/note.dart';
+import 'package:mynotes/domain/entities/media_item.dart';
+import 'package:mynotes/presentation/widgets/drawing_canvas_widget.dart';
+import 'package:mynotes/presentation/widgets/audio_recorder_widget.dart';
+import 'package:mynotes/presentation/widgets/document_scanner_widget.dart';
+import 'package:mynotes/presentation/widgets/add_reminder_bottom_sheet.dart';
+import 'package:mynotes/presentation/widgets/note_template_selector.dart';
+import 'package:mynotes/presentation/widgets/video_player_widget.dart';
+import '../widgets/developer_test_links_sheet.dart';
+import '../widgets/universal_media_sheet.dart';
+import 'package:mynotes/presentation/widgets/create_todo_bottom_sheet.dart';
+import 'package:mynotes/presentation/widgets/media_player_widget.dart';
+import 'package:mynotes/presentation/pages/media_viewer_screen.dart';
+
 class EnhancedNoteEditorScreen extends StatefulWidget {
   final Note? note;
-  final String? template;
   final String? initialContent;
+  final dynamic template;
 
   const EnhancedNoteEditorScreen({
     super.key,
     this.note,
-    this.template,
     this.initialContent,
+    this.template,
   });
 
   @override
@@ -39,922 +59,343 @@ class EnhancedNoteEditorScreen extends StatefulWidget {
 class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
     with TickerProviderStateMixin {
   final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _contentController = TextEditingController();
+  late quill.QuillController _quillController;
   final FocusNode _titleFocusNode = FocusNode();
   final FocusNode _contentFocusNode = FocusNode();
+
+  final SpeechService _speechService = SpeechService();
+  final VoiceCommandService _commandService = VoiceCommandService();
+  final AudioFeedbackService _feedbackService = AudioFeedbackService();
 
   late AnimationController _summaryController;
   late AnimationController _fabController;
   late AnimationController _toolbarController;
+  final ScrollController _scrollController = ScrollController();
+  final ScrollController _quillScrollController = ScrollController();
 
-  bool _isPinned = false;
-  bool _showSummary = false;
-  bool _isModified = false;
-  bool _isListening = false;
-  bool _showRichToolbar = false;
-
-  // Rich text formatting state
-  bool _isBold = false;
-  bool _isItalic = false;
-  bool _isUnderline = false;
-
-  String _generatedSummary = '';
-  List<String> _detectedLinks = [];
-  List<String> _keyPoints = [];
-
-  // Voice input
-  late stt.SpeechToText _speechToText;
-  String _voiceText = '';
-  bool _isVoiceAvailable = false;
-  final String _currentLocale = 'en_US';
-
-  // Undo/Redo functionality
-  final List<String> _undoStack = [];
-  final List<String> _redoStack = [];
-  Timer? _undoDebounceTimer;
-  bool _canUndo = false;
-  bool _canRedo = false;
+  late NoteEditorBloc _editorBloc;
+  bool _isUndoingOrRedoing = false;
 
   @override
   void initState() {
     super.initState();
-
     _summaryController = AnimationController(
+      vsync: this,
       duration: const Duration(milliseconds: 300),
-      vsync: this,
     );
-
     _fabController = AnimationController(
-      duration: const Duration(milliseconds: 200),
       vsync: this,
+      duration: const Duration(milliseconds: 400),
     );
-
     _toolbarController = AnimationController(
-      duration: const Duration(milliseconds: 250),
       vsync: this,
+      duration: const Duration(milliseconds: 300),
     );
 
-    _initializeNote();
-    _setupListeners();
-    _initializeVoiceInput();
+    _fabController.forward();
 
-    // Auto-focus content if new note
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.note == null) {
-        _titleFocusNode.requestFocus();
+    _editorBloc =
+        NoteEditorBloc(
+          speechService: _speechService,
+          commandService: _commandService,
+          feedbackService: _feedbackService,
+          ocrService: OCRService(),
+          // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+          noteRepository: NoteRepositoryImpl(database: NotesDatabase()),
+          linkParserService: LinkParserService(),
+        )..add(
+          NoteEditorInitialized(
+            note: widget.note,
+            template: widget.template,
+            initialContent: widget.initialContent,
+          ),
+        );
+
+    _quillController = quill.QuillController.basic();
+    _setupUIListeners();
+  }
+
+  void _setupUIListeners() {
+    _contentFocusNode.addListener(() {
+      if (_contentFocusNode.hasFocus) {
+        _toolbarController.forward();
+      } else {
+        _toolbarController.reverse();
       }
+    });
+
+    _quillController.addListener(() {
+      if (!_isUndoingOrRedoing) {
+        final content = jsonEncode(
+          _quillController.document.toDelta().toJson(),
+        );
+        _editorBloc.add(ContentChanged(content));
+      }
+    });
+
+    _titleController.addListener(() {
+      _editorBloc.add(TitleChanged(_titleController.text));
     });
   }
 
   @override
   void dispose() {
+    _titleController.dispose();
+    _quillController.dispose();
+    _titleFocusNode.dispose();
+    _contentFocusNode.dispose();
     _summaryController.dispose();
     _fabController.dispose();
     _toolbarController.dispose();
-    _titleController.dispose();
-    _contentController.dispose();
-    _titleFocusNode.dispose();
-    _contentFocusNode.dispose();
+    _scrollController.dispose();
+    _quillScrollController.dispose();
+    _editorBloc.close();
     super.dispose();
   }
 
-  void _initializeNote() {
-    if (widget.note != null) {
-      _titleController.text = widget.note!.title;
-      _contentController.text = widget.note!.content;
-      _isPinned = widget.note!.isPinned;
-    } else if (widget.initialContent != null) {
-      _contentController.text = widget.initialContent!;
-    }
-
-    if (_contentController.text.isNotEmpty) {
-      _analyzeContent();
-    }
-  }
-
-  void _setupListeners() {
-    _titleController.addListener(() {
-      if (!_isModified) {
-        setState(() {
-          _isModified = true;
-        });
-      }
-    });
-
-    _contentController.addListener(() {
-      if (!_isModified) {
-        setState(() {
-          _isModified = true;
-        });
-      }
-
-      // Undo/Redo: Add to undo stack with debouncing
-      _debounceUndoStack();
-
-      // Re-analyze content after changes
-      _debounceAnalysis();
-    });
-  }
-
-  void _debounceUndoStack() {
-    _undoDebounceTimer?.cancel();
-    _undoDebounceTimer = Timer(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        _saveToUndoStack(_contentController.text);
-      }
-    });
-  }
-
-  void _saveToUndoStack(String text) {
-    if (_undoStack.isEmpty || _undoStack.last != text) {
-      _undoStack.add(text);
-      // Limit to 50 changes
-      if (_undoStack.length > 50) {
-        _undoStack.removeAt(0);
-      }
-      _redoStack.clear();
-      setState(() {
-        _canUndo = _undoStack.isNotEmpty;
-        _canRedo = _redoStack.isNotEmpty;
-      });
-    }
-  }
-
-  void _undo() {
-    if (_undoStack.isNotEmpty) {
-      _redoStack.add(_contentController.text);
-      final previousText = _undoStack.removeLast();
-      _contentController.text = previousText;
-      setState(() {
-        _canUndo = _undoStack.isNotEmpty;
-        _canRedo = _redoStack.isNotEmpty;
-      });
-    }
-  }
-
-  void _redo() {
-    if (_redoStack.isNotEmpty) {
-      _undoStack.add(_contentController.text);
-      final nextText = _redoStack.removeLast();
-      _contentController.text = nextText;
-      setState(() {
-        _canUndo = _undoStack.isNotEmpty;
-        _canRedo = _redoStack.isNotEmpty;
-      });
-    }
-  }
-
-  Timer? _debounceTimer;
-  void _debounceAnalysis() {
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      if (mounted) {
-        _analyzeContent();
-      }
-    });
-  }
-
-  void _analyzeContent() {
-    final content = _contentController.text;
-
-    if (content.isEmpty) {
-      setState(() {
-        _detectedLinks = [];
-        _keyPoints = [];
-        _generatedSummary = '';
-        _showSummary = false;
-      });
-      return;
-    }
-
-    // Detect links
-    final urlRegex = RegExp(r'https?://[^\s]+');
-    final matches = urlRegex.allMatches(content);
-    final links = matches.map((m) => m.group(0)!).toList();
-
-    // Generate key points (simplified extraction)
-    final lines = content.split('\n');
-    final points = <String>[];
-
-    for (final line in lines) {
-      final trimmed = line.trim();
-      if (trimmed.startsWith('- ') ||
-          trimmed.startsWith('• ') ||
-          trimmed.startsWith('* ') ||
-          trimmed.contains(':')) {
-        if (trimmed.length > 10 && trimmed.length < 100) {
-          points.add(trimmed);
-        }
-      }
-    }
-
-    // Generate summary
-    final summary = _generateSummary(content);
-
-    setState(() {
-      _detectedLinks = links;
-      _keyPoints = points.take(3).toList();
-      _generatedSummary = summary;
-      _showSummary =
-          summary.isNotEmpty || links.isNotEmpty || points.isNotEmpty;
-    });
-
-    if (_showSummary && !_summaryController.isCompleted) {
-      _summaryController.forward();
-    }
-  }
-
-  void _initializeVoiceInput() async {
-    _speechToText = stt.SpeechToText();
-
+  void _loadContentIntoQuill(String content) {
+    if (content.isEmpty) return;
+    _isUndoingOrRedoing = true;
     try {
-      // Check microphone permission
-      final hasPermission = await Permission.microphone.request();
-      if (hasPermission != PermissionStatus.granted) {
-        setState(() {
-          _isVoiceAvailable = false;
-        });
-        return;
-      }
-
-      // Initialize speech recognition
-      final available = await _speechToText.initialize(
-        onStatus: (status) {
-          if (mounted) {
-            setState(() {
-              _isListening = status == 'listening';
-            });
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            setState(() {
-              _isListening = false;
-            });
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Voice recognition error: ${error.errorMsg}'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
-      );
-
-      if (mounted) {
-        setState(() {
-          _isVoiceAvailable = available;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isVoiceAvailable = false;
-        });
-      }
-    }
-  }
-
-  void _startVoiceInput() async {
-    if (!_isVoiceAvailable || _isListening) return;
-
-    try {
-      final available = await _speechToText.initialize();
-      if (!available) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Speech recognition not available'),
-            backgroundColor: Colors.red,
-          ),
+      if (content.startsWith('[') || content.startsWith('{')) {
+        _quillController.document = quill.Document.fromJson(
+          jsonDecode(content),
         );
-        return;
+      } else {
+        _quillController.document = quill.Document()..insert(0, content);
       }
-
-      setState(() {
-        _isListening = true;
-        _voiceText = '';
-      });
-
-      await _speechToText.listen(
-        onResult: (result) {
-          setState(() {
-            _voiceText = result.recognizedWords;
-          });
-
-          if (result.finalResult) {
-            final currentText = _contentController.text;
-            final cursorPosition = _contentController.selection.baseOffset;
-
-            String newText;
-            if (cursorPosition >= 0) {
-              newText =
-                  currentText.substring(0, cursorPosition) +
-                  _voiceText +
-                  currentText.substring(cursorPosition);
-            } else {
-              newText = '$currentText $_voiceText';
-            }
-
-            _contentController.text = newText;
-            _contentController.selection = TextSelection.collapsed(
-              offset: cursorPosition + _voiceText.length,
-            );
-
-            setState(() {
-              _isModified = true;
-              _isListening = false;
-            });
-
-            _debounceAnalysis();
-          }
-        },
-        localeId: _currentLocale,
-        listenFor: const Duration(seconds: 30),
-        pauseFor: const Duration(seconds: 3),
-        partialResults: true,
-        cancelOnError: true,
-      );
     } catch (e) {
-      setState(() {
-        _isListening = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Voice input failed: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _quillController.document = quill.Document()..insert(0, content);
     }
-    setState(() {
-      _showRichToolbar = !_showRichToolbar;
-    });
-
-    if (_showRichToolbar) {
-      _toolbarController.forward();
-    } else {
-      _toolbarController.reverse();
-    }
-  }
-
-  void _applyRichFormatting(String type) {
-    final selection = _contentController.selection;
-    if (!selection.isValid) return;
-
-    final text = _contentController.text;
-    final selectedText = text.substring(selection.start, selection.end);
-
-    String formattedText;
-    switch (type) {
-      case 'bold':
-        formattedText = '**$selectedText**';
-        setState(() {
-          _isBold = !_isBold;
-        });
-        break;
-      case 'italic':
-        formattedText = '*$selectedText*';
-        setState(() {
-          _isItalic = !_isItalic;
-        });
-        break;
-      case 'underline':
-        formattedText = '_${selectedText}_';
-        setState(() {
-          _isUnderline = !_isUnderline;
-        });
-        break;
-      case 'list':
-        formattedText = '• $selectedText';
-        break;
-      case 'checkbox':
-        formattedText = '☐ $selectedText';
-        break;
-      default:
-        formattedText = selectedText;
-    }
-
-    final newText = text.replaceRange(
-      selection.start,
-      selection.end,
-      formattedText,
-    );
-    _contentController.text = newText;
-    _contentController.selection = TextSelection.collapsed(
-      offset: selection.start + formattedText.length,
-    );
-
-    setState(() {
-      _isModified = true;
-    });
-  }
-
-  String _generateSummary(String content) {
-    if (content.length < 100) return '';
-
-    // Simple extractive summary - take first meaningful sentence
-    final sentences = content.split(RegExp(r'[.!?]+'));
-    if (sentences.isNotEmpty) {
-      final firstSentence = sentences.first.trim();
-      if (firstSentence.length > 20) {
-        return '$firstSentence.';
-      }
-    }
-
-    return 'This note contains ${content.split(' ').length} words and covers key topics from your content.';
-  }
-
-  void _togglePin() {
-    setState(() {
-      _isPinned = !_isPinned;
-    });
-
-    HapticFeedback.lightImpact();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isPinned ? 'Note pinned' : 'Note unpinned'),
-        duration: const Duration(seconds: 1),
-      ),
-    );
-  }
-
-  void _saveNote() {
-    final title = _titleController.text.trim();
-    final content = _contentController.text.trim();
-
-    if (title.isEmpty && content.isEmpty) {
-      Navigator.pop(context);
-      return;
-    }
-
-    if (widget.note != null) {
-      // Update existing note
-      final updatedNote = widget.note!.copyWith(
-        title: title.isEmpty ? 'Untitled' : title,
-        content: content,
-        isPinned: _isPinned,
-        updatedAt: DateTime.now(),
-      );
-
-      context.read<NotesBloc>().add(UpdateNoteEvent(updatedNote));
-    } else {
-      // Create new note
-      context.read<NotesBloc>().add(
-        CreateNoteEvent(
-          title: title.isEmpty ? 'Untitled' : title,
-          content: content,
-          isPinned: _isPinned,
-        ),
-      );
-    }
-
-    setState(() {
-      _isModified = false;
-    });
-
-    Navigator.pop(context);
-  }
-
-  void _showMoreOptions() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _buildOptionsSheet(),
-    );
+    _isUndoingOrRedoing = false;
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Focus(
-      onKey: (node, event) {
-        // Ctrl+Z / Cmd+Z for Undo
-        if (event.isKeyPressed(LogicalKeyboardKey.keyZ) &&
-            (event.isControlPressed || event.isMetaPressed) &&
-            !event.isShiftPressed &&
-            _canUndo) {
-          _undo();
-          return KeyEventResult.handled;
-        }
-        // Ctrl+Y / Ctrl+Shift+Z for Redo
-        if ((event.isKeyPressed(LogicalKeyboardKey.keyY) ||
-                (event.isKeyPressed(LogicalKeyboardKey.keyZ) &&
-                    event.isShiftPressed)) &&
-            (event.isControlPressed || event.isMetaPressed) &&
-            _canRedo) {
-          _redo();
-          return KeyEventResult.handled;
-        }
-        return KeyEventResult.ignored;
-      },
-      child: PopScope(
-        canPop: !_isModified,
-        onPopInvokedWithResult: (didPop, result) {
-          if (didPop) return;
-          _showSaveDialog();
+    return BlocProvider.value(
+      value: _editorBloc,
+      child: BlocListener<NoteEditorBloc, NoteEditorState>(
+        listener: (context, state) {
+          if (state is NoteEditorLoaded) {
+            if (state.errorCode != null) {
+              _handleError(state.errorCode!);
+            }
+            if (state.summary != null && state.summary!.isNotEmpty) {
+              _summaryController.forward();
+            }
+            if (state.extractedText != null &&
+                state.extractedText!.isNotEmpty) {
+              _insertExtractedText(state.extractedText!);
+            }
+          }
         },
-        child: BlocListener<NotesBloc, NoteState>(
-          listener: (context, state) {
-            if (state is NoteCreated || state is NoteUpdated) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    state is NoteCreated
-                        ? 'Note created successfully'
-                        : 'Note updated successfully',
-                  ),
-                  backgroundColor: AppColors.primary,
-                ),
-              );
-            } else if (state is NoteError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.red,
-                ),
+        child: BlocBuilder<NoteEditorBloc, NoteEditorState>(
+          builder: (context, state) {
+            if (state is NoteEditorInitial) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
               );
             }
-          },
-          child: Scaffold(
-            backgroundColor: AppColors.getBackgroundColor(
-              Theme.of(context).brightness,
-            ),
-            body: CustomScrollView(
-              slivers: [
-                _buildAppBar(isDark),
-                SliverToBoxAdapter(
-                  child: Container(
-                    constraints: BoxConstraints(maxWidth: 640.w),
-                    margin: EdgeInsets.symmetric(horizontal: 16.w),
-                    child: Column(
-                      children: [
-                        if (_showSummary) _buildSummarySection(),
-                        _buildNoteEditor(),
-                        SizedBox(height: 100.h),
-                      ],
+
+            final params = state.params;
+
+            if (_titleController.text.isEmpty && params.title.isNotEmpty) {
+              _titleController.text = params.title;
+            }
+            if (_quillController.document.isEmpty() &&
+                params.content.isNotEmpty) {
+              _loadContentIntoQuill(params.content);
+            }
+
+            return Stack(
+              children: [
+                Scaffold(
+                  backgroundColor: params.color.toColor(
+                    Theme.of(context).brightness == Brightness.dark,
+                  ),
+                  appBar: _buildAppBar(context, state),
+                  body: Column(
+                    children: [
+                      if (state.summary != null)
+                        _buildSummaryCard(context, state.summary!),
+                      _buildTitleField(context),
+                      Expanded(child: _buildQuillEditor(context, state)),
+                      _buildAttachmentLists(context, state),
+                      if (_contentFocusNode.hasFocus)
+                        _buildFormattingToolbar(context),
+                    ],
+                  ),
+                  bottomNavigationBar: _buildBottomActionButtons(
+                    context,
+                    state,
+                  ),
+                  floatingActionButton: _buildFAB(context, state),
+                ),
+                if (state is NoteEditorLoaded && state.isExtracting)
+                  Container(
+                    color: Colors.black54,
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const CircularProgressIndicator(color: Colors.orange),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Extracting text...',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16.sp,
+                              decoration: TextDecoration.none,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
-            ),
-            floatingActionButton: _buildFloatingActionButton(),
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildAppBar(bool isDark) {
-    return SliverAppBar(
-      floating: true,
-      snap: true,
-      backgroundColor: AppColors.getBackgroundColor(
-        Theme.of(context).brightness,
-      ).withOpacity(0.8),
+  void _insertExtractedText(String text) {
+    if (text.isEmpty) return;
+    final index = _quillController.selection.baseOffset;
+    _quillController.document.insert(index, '\n$text\n');
+  }
+
+  void _handleError(String code) {
+    String message = 'An error occurred';
+    switch (code) {
+      case 'SPEECH_PERMISSION_DENIED':
+        message = 'Microphone permission denied';
+        break;
+      case 'SPEECH_INIT_FAILED':
+        message = 'Speech service failed to start';
+        break;
+      case 'SAVE_FAILED':
+        message = 'Failed to save note';
+        break;
+      case 'EMPTY_NOTE':
+        message = 'Note cannot be empty';
+        break;
+      case 'SUMMARY_FAILED':
+        message = 'AI Summary failed';
+        break;
+      case 'EXTRACTION_FAILED':
+        message = 'Could not extract text from file';
+        break;
+      case 'EXTRACTION_ERROR':
+        message = 'Error during text extraction';
+        break;
+      case 'MEDIA_ADD_FAILED':
+        message = 'Failed to attach media';
+        break;
+      case 'MEDIA_REMOVE_FAILED':
+        message = 'Failed to remove media';
+        break;
+      case 'MEDIA_UPDATE_FAILED':
+        message = 'Failed to update media';
+        break;
+      case 'GENERAL_ERROR':
+      default:
+        message = 'An unexpected error occurred';
+        break;
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: AppColors.errorColor),
+    );
+  }
+
+  AppBar _buildAppBar(BuildContext context, NoteEditorState state) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
       elevation: 0,
-      scrolledUnderElevation: 0,
-      flexibleSpace: ClipRect(
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            color: AppColors.getBackgroundColor(
-              Theme.of(context).brightness,
-            ).withOpacity(0.8),
-          ),
-        ),
-      ),
       leading: IconButton(
-        onPressed: () {
-          if (_isModified) {
-            _showSaveDialog();
-          } else {
-            Navigator.pop(context);
-          }
-        },
-        icon: Icon(
-          Icons.arrow_back_ios_new,
-          color: AppColors.getTextColor(Theme.of(context).brightness),
-          size: 24.sp,
-        ),
-      ),
-      title: Text(
-        widget.note?.title ?? 'New Note',
-        style: TextStyle(
-          fontSize: 18.sp,
-          fontWeight: FontWeight.w600,
-          color: AppColors.getTextColor(Theme.of(context).brightness),
-        ),
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        // Undo Button
         IconButton(
-          onPressed: _canUndo ? _undo : null,
-          icon: Icon(
-            Icons.undo,
-            color: _canUndo
-                ? AppColors.getTextColor(Theme.of(context).brightness)
-                : Colors.grey[500],
-            size: 24.sp,
+          icon: const Icon(Icons.hub),
+          tooltip: 'Knowledge Graph',
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const GraphViewPage()),
           ),
-          tooltip: 'Undo (Ctrl+Z)',
         ),
-
-        // Redo Button
         IconButton(
-          onPressed: _canRedo ? _redo : null,
           icon: Icon(
-            Icons.redo,
-            color: _canRedo
-                ? AppColors.getTextColor(Theme.of(context).brightness)
-                : Colors.grey[500],
-            size: 24.sp,
+            state.params.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
           ),
-          tooltip: 'Redo (Ctrl+Y)',
+          onPressed: () => _editorBloc.add(const PinToggled()),
         ),
-
-        GestureDetector(
-          onTap: _togglePin,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            width: 40.w,
-            height: 40.w,
-            decoration: BoxDecoration(
-              color: _isPinned
-                  ? AppColors.primary.withOpacity(0.1)
-                  : Colors.transparent,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _isPinned ? Icons.push_pin : Icons.push_pin_outlined,
-              color: _isPinned
-                  ? AppColors.primary
-                  : AppColors.getTextColor(Theme.of(context).brightness),
-              size: 24.sp,
-            ),
-          ),
-        ),
-
         IconButton(
-          onPressed: _showMoreOptions,
-          icon: Icon(
-            Icons.more_horiz,
-            color: AppColors.getTextColor(Theme.of(context).brightness),
-            size: 24.sp,
-          ),
+          icon: const Icon(Icons.undo),
+          onPressed: () => _quillController.undo(),
         ),
-
-        SizedBox(width: 8.w),
+        IconButton(
+          icon: const Icon(Icons.redo),
+          onPressed: () => _quillController.redo(),
+        ),
+        IconButton(
+          icon: const Icon(Icons.check),
+          onPressed: () => _saveNote(state),
+        ),
       ],
     );
   }
 
-  Widget _buildSummarySection() {
-    return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-          .animate(
-            CurvedAnimation(
-              parent: _summaryController,
-              curve: Curves.easeOutCubic,
-            ),
-          ),
+  Widget _buildTitleField(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: TextField(
+        controller: _titleController,
+        focusNode: _titleFocusNode,
+        style: AppTypography.heading2(context, AppColors.textPrimary(context)),
+        decoration: const InputDecoration(
+          hintText: 'Title',
+          border: InputBorder.none,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(BuildContext context, String summary) {
+    return SizeTransition(
+      sizeFactor: _summaryController,
       child: Container(
-        margin: EdgeInsets.only(bottom: 24.h, top: 8.h),
-        padding: EdgeInsets.all(20.w),
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: AppColors.primary.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+          color: AppColors.primary.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.auto_awesome, color: AppColors.primary, size: 18.sp),
-                SizedBox(width: 8.w),
+                Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                const SizedBox(width: 8),
                 Text(
-                  'NOTE SUMMARY',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: AppColors.primary,
-                  ),
+                  'AI Summary',
+                  style: AppTypography.heading3(context, AppColors.primary),
+                ),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  onPressed: () => _summaryController.reverse(),
                 ),
               ],
             ),
-
-            if (_generatedSummary.isNotEmpty) ...[
-              SizedBox(height: 12.h),
-              Text(
-                _generatedSummary,
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  color: AppColors.getTextColor(Theme.of(context).brightness),
-                  height: 1.4,
-                ),
-              ),
-            ],
-
-            if (_keyPoints.isNotEmpty) ...[
-              SizedBox(height: 12.h),
-              Text(
-                'Key Points:',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.getSecondaryTextColor(
-                    Theme.of(context).brightness,
-                  ),
-                ),
-              ),
-              SizedBox(height: 4.h),
-              ...(_keyPoints.map(
-                (point) => Padding(
-                  padding: EdgeInsets.only(bottom: 2.h),
-                  child: Text(
-                    point,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: AppColors.getSecondaryTextColor(
-                        Theme.of(context).brightness,
-                      ),
-                    ),
-                  ),
-                ),
-              )),
-            ],
-
-            if (_detectedLinks.isNotEmpty) ...[
-              SizedBox(height: 12.h),
-              Text(
-                'Detected Links:',
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.getSecondaryTextColor(
-                    Theme.of(context).brightness,
-                  ),
-                ),
-              ),
-              SizedBox(height: 4.h),
-              ...(_detectedLinks
-                  .map(
-                    (link) => Padding(
-                      padding: EdgeInsets.only(bottom: 4.h),
-                      child: GestureDetector(
-                        onTap: () {
-                          // TODO: Open link
-                        },
-                        child: Text(
-                          link,
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: AppColors.primary,
-                            decoration: TextDecoration.underline,
-                          ),
-                        ),
-                      ),
-                    ),
-                  )
-                  .toList()),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNoteEditor() {
-    return Column(
-      children: [
-        // Title field
-        TextField(
-          controller: _titleController,
-          focusNode: _titleFocusNode,
-          style: TextStyle(
-            fontSize: 24.sp,
-            fontWeight: FontWeight.w700,
-            color: AppColors.getTextColor(Theme.of(context).brightness),
-            height: 1.2,
-          ),
-          decoration: InputDecoration(
-            hintText: 'Note title',
-            hintStyle: TextStyle(
-              fontSize: 24.sp,
-              fontWeight: FontWeight.w700,
-              color: AppColors.getSecondaryTextColor(
-                Theme.of(context).brightness,
-              ),
-            ),
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
-          ),
-          textInputAction: TextInputAction.next,
-          onSubmitted: (_) => _contentFocusNode.requestFocus(),
-        ),
-
-        SizedBox(height: 16.h),
-
-        // Rich Text Toolbar
-        if (_showRichToolbar) _buildRichTextToolbar(),
-
-        // Content field with enhanced features
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12.r),
-            border: _contentFocusNode.hasFocus
-                ? Border.all(
-                    color: AppColors.primary.withOpacity(0.3),
-                    width: 1,
-                  )
-                : null,
-          ),
-          child: TextField(
-            controller: _contentController,
-            focusNode: _contentFocusNode,
-            maxLines: null,
-            minLines: 10,
-            style: TextStyle(
-              fontSize: 16.sp,
-              color: AppColors.getTextColor(Theme.of(context).brightness),
-              height: 1.6,
-            ),
-            decoration: InputDecoration(
-              hintText:
-                  'Start writing... Tap the toolbar icon for rich text formatting',
-              hintStyle: TextStyle(
-                fontSize: 16.sp,
-                color: AppColors.getSecondaryTextColor(
-                  Theme.of(context).brightness,
-                ),
-              ),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(16.w),
-            ),
-            onChanged: (text) {
-              // Content changed - trigger analysis
-              _debounceAnalysis();
-            },
-          ),
-        ),
-
-        SizedBox(height: 16.h),
-
-        // Quick Actions Row
-        _buildQuickActionsRow(),
-      ],
-    );
-  }
-
-  Widget _buildRichTextToolbar() {
-    return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-          .animate(
-            CurvedAnimation(parent: _toolbarController, curve: Curves.easeOut),
-          ),
-      child: Container(
-        margin: EdgeInsets.only(bottom: 16.h),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: AppColors.getSurfaceColor(Theme.of(context).brightness),
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(
-            color: AppColors.getSecondaryTextColor(
-              Theme.of(context).brightness,
-            ).withOpacity(0.2),
-          ),
-        ),
-        child: Row(
-          children: [
-            _buildToolbarButton(Icons.format_bold, 'bold', _isBold),
-            SizedBox(width: 8.w),
-            _buildToolbarButton(Icons.format_italic, 'italic', _isItalic),
-            SizedBox(width: 8.w),
-            _buildToolbarButton(
-              Icons.format_underlined,
-              'underline',
-              _isUnderline,
-            ),
-            SizedBox(width: 16.w),
-            _buildToolbarButton(Icons.format_list_bulleted, 'list', false),
-            SizedBox(width: 8.w),
-            _buildToolbarButton(
-              Icons.check_box_outline_blank,
-              'checkbox',
-              false,
-            ),
-            const Spacer(),
             Text(
-              'Rich Text',
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: AppColors.getSecondaryTextColor(
-                  Theme.of(context).brightness,
-                ),
-                fontWeight: FontWeight.w500,
+              summary,
+              style: AppTypography.bodyMedium(
+                context,
+                AppColors.textPrimary(context),
               ),
             ),
           ],
@@ -963,283 +404,417 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
     );
   }
 
-  Widget _buildToolbarButton(IconData icon, String type, bool isActive) {
-    return GestureDetector(
-      onTap: () => _applyRichFormatting(type),
+  Widget _buildQuillEditor(BuildContext context, NoteEditorState state) {
+    return quill.QuillEditor.basic(
+      configurations: quill.QuillEditorConfigurations(
+        controller: _quillController,
+        // readOnly: false,
+        placeholder: 'Start typing...',
+        padding: EdgeInsets.zero,
+        autoFocus: false,
+        expands: false, // Set to false when wrapped in SingleChildScrollView
+        // scrollController: _quillScrollController, // Not needed when parent is SingleChildScrollView
+        embedBuilders: FlutterQuillEmbeds.editorBuilders(),
+      ),
+      focusNode: _contentFocusNode,
+    );
+  }
+
+  Widget _buildFormattingToolbar(BuildContext context) {
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(0, 1),
+        end: Offset.zero,
+      ).animate(_toolbarController),
       child: Container(
-        padding: EdgeInsets.all(8.w),
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primary.withOpacity(0.2)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(6.r),
-        ),
-        child: Icon(
-          icon,
-          size: 18.sp,
-          color: isActive
-              ? AppColors.primary
-              : AppColors.getTextColor(Theme.of(context).brightness),
+        color: AppColors.surface(context),
+        child: quill.QuillToolbar.simple(
+          configurations: quill.QuillSimpleToolbarConfigurations(
+            controller: _quillController,
+            showAlignmentButtons: false,
+            showBoldButton: true,
+            showItalicButton: true,
+            showUnderLineButton: true,
+            showListNumbers: true,
+            showListBullets: true,
+            showQuote: true,
+            embedButtons: FlutterQuillEmbeds.toolbarButtons(),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildQuickActionsRow() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
+  Widget _buildBottomActionButtons(
+    BuildContext context,
+    NoteEditorState state,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildQuickAction(Icons.link, 'Link', _showAddLinkDialog),
-          SizedBox(width: 8.w),
-          _buildQuickAction(Icons.image, 'Image', _showAddImageDialog),
-          SizedBox(width: 8.w),
-          _buildQuickAction(Icons.videocam, 'Video', _showAddVideoDialog),
-          SizedBox(width: 8.w),
-          _buildQuickAction(Icons.mic, 'Audio', _showAddAudioDialog),
-          SizedBox(width: 8.w),
-          _buildQuickAction(Icons.alarm, 'Reminder', _showReminderDialog),
-          SizedBox(width: 16.w),
-          Text(
-            '${_contentController.text.split(' ').length} words',
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: AppColors.getSecondaryTextColor(
-                Theme.of(context).brightness,
-              ),
-            ),
+          IconButton(
+            icon: const Icon(Icons.attach_file_outlined),
+            onPressed: _showUnifiedMediaSheet,
+            tooltip: 'Attach Media',
+          ),
+          IconButton(
+            icon: const Icon(Icons.mic_none_outlined),
+            onPressed: () => _editorBloc.add(const VoiceInputToggled()),
+            tooltip: 'Voice Input',
+          ),
+          IconButton(
+            icon: const Icon(Icons.local_offer_outlined),
+            onPressed: _showTagPicker,
+            tooltip: 'Tags',
+          ),
+          IconButton(
+            icon: const Icon(Icons.auto_awesome_outlined),
+            onPressed: () => _editorBloc.add(const GenerateSummaryRequested()),
+            tooltip: 'AI Summary',
+          ),
+          IconButton(
+            icon: const Icon(Icons.more_horiz),
+            onPressed: _showMoreOptions,
+            tooltip: 'More',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildQuickAction(IconData icon, String label, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-        decoration: BoxDecoration(
-          color: AppColors.getSurfaceColor(Theme.of(context).brightness),
-          borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: AppColors.getSecondaryTextColor(
-              Theme.of(context).brightness,
-            ).withOpacity(0.2),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 16.sp,
-              color: AppColors.getSecondaryTextColor(
-                Theme.of(context).brightness,
-              ),
-            ),
-            SizedBox(width: 4.w),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.sp,
-                color: AppColors.getSecondaryTextColor(
-                  Theme.of(context).brightness,
-                ),
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
-        ),
+  Widget _buildFAB(BuildContext context, NoteEditorState state) {
+    return FloatingActionButton(
+      heroTag: 'enhanced_note_editor_fab', // Fix for hero conflict
+      onPressed: () => _saveNote(state),
+      backgroundColor: AppColors.primary,
+      child: state.isSaving
+          ? const CircularProgressIndicator(color: Colors.white)
+          : const Icon(Icons.save),
+    );
+  }
+
+  void _saveNote(NoteEditorState state) {
+    final params = state.params;
+    final noteParams = params.copyWith(
+      title: _titleController.text,
+      content: jsonEncode(_quillController.document.toDelta().toJson()),
+    );
+
+    if (noteParams.title.isEmpty && _quillController.document.isEmpty()) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Note is empty')));
+      return;
+    }
+
+    if (widget.note != null) {
+      context.read<NotesBloc>().add(UpdateNoteEvent(noteParams));
+    } else {
+      context.read<NotesBloc>().add(CreateNoteEvent(params: noteParams));
+    }
+
+    Navigator.pop(context);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Note saved'),
+        backgroundColor: AppColors.successColor,
       ),
     );
   }
 
-  Widget _buildFloatingActionButton() {
-    return FloatingActionButton(
-      onPressed: _saveNote,
-      backgroundColor: AppColors.primary,
-      elevation: 8,
-      child: Icon(Icons.check, color: Colors.white, size: 24.sp),
-    );
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.gallery);
+
+      if (image != null) {
+        _editorBloc.add(MediaAdded(image.path, MediaType.image));
+
+        final index = _quillController.selection.baseOffset;
+        _quillController.document.insert(index, '\n');
+        _quillController.document.insert(
+          index + 1,
+          quill.BlockEmbed.image(image.path),
+        );
+      }
+    } catch (e) {
+      _editorBloc.add(
+        ErrorOccurred('Failed to pick image: $e', code: 'MEDIA_ADD_FAILED'),
+      );
+    }
   }
 
-  Widget _buildOptionsSheet() {
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  Widget _buildBacklinksPanel(NoteEditorState state) {
     return Container(
+      margin: const EdgeInsets.only(top: 24),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.getSurfaceColor(Theme.of(context).brightness),
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(20.r),
-          topRight: Radius.circular(20.r),
-        ),
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.grey400),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.link, size: 20, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Linked References',
+                style: AppTypography.heading3(
+                  context,
+                  AppColors.textPrimary(context),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...state.linkedNotes.map(
+            (note) => InkWell(
+              onTap: () {
+                // Navigation to linked note could be implemented here
+                // For now, maybe just show a snackbar or push a new editor?
+                // Ideally: Navigator.push(context, MaterialPageRoute(builder: (_) => EnhancedNoteEditorScreen(note: note)))
+                // But we need to make sure we don't stack indefinitely.
+                // Let's just push for now.
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => EnhancedNoteEditorScreen(note: note),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            note.title.isNotEmpty
+                                ? note.title
+                                : 'Untitled Note',
+                            style: AppTypography.body1(
+                              context,
+                              AppColors.textPrimary(context),
+                            ).copyWith(fontWeight: FontWeight.w600),
+                          ),
+                          if (note.content.isNotEmpty)
+                            Text(
+                              note.content.length > 50
+                                  ? '${note.content.substring(0, 50)}...'
+                                  : note.content,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.caption(
+                                context,
+                                AppColors.textSecondary(context),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      Icons.chevron_right,
+                      size: 16,
+                      color: AppColors.grey500,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showTagPicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => BlocProvider.value(
+        value: _editorBloc,
+        child: BlocBuilder<NoteEditorBloc, NoteEditorState>(
+          builder: (context, state) {
+            return Container(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Manage Tags',
+                    style: AppTypography.heading3(
+                      context,
+                      AppColors.textPrimary(context),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Wrap(
+                    spacing: 8,
+                    children: state.params.tags
+                        .map(
+                          (tag) => Chip(
+                            label: Text(tag),
+                            onDeleted: () => _editorBloc.add(TagRemoved(tag)),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                  TextField(
+                    decoration: const InputDecoration(hintText: 'Add tag...'),
+                    onSubmitted: (value) {
+                      if (value.isNotEmpty) _editorBloc.add(TagAdded(value));
+                      Navigator.pop(context);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  void _showMoreOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Container(
-            margin: EdgeInsets.only(top: 12.h),
-            height: 4.h,
-            width: 40.w,
-            decoration: BoxDecoration(
-              color: AppColors.getSecondaryTextColor(
-                Theme.of(context).brightness,
-              ),
-              borderRadius: BorderRadius.circular(2.r),
-            ),
-          ),
-
           ListTile(
-            leading: Icon(
-              Icons.share,
-              color: AppColors.getTextColor(Theme.of(context).brightness),
-            ),
-            title: Text(
-              'Share',
-              style: TextStyle(
-                color: AppColors.getTextColor(Theme.of(context).brightness),
-              ),
+            leading: const Icon(Icons.share),
+            title: const Text('Share Note'),
+            onTap: () async {
+              final content = _quillController.document.toPlainText();
+              final state = _editorBloc.state;
+              final media = state.params.media;
+              final title = state.params.title;
+              final tags = state.params.tags;
+
+              String shareText = '';
+              if (title.isNotEmpty) shareText += '$title\n\n';
+              shareText += content;
+              if (tags.isNotEmpty) {
+                shareText += '\n\nTags: ${tags.join(", ")}';
+              }
+
+              Navigator.pop(context);
+
+              if (media.isEmpty) {
+                await Share.share(
+                  shareText,
+                  subject: title.isNotEmpty ? title : null,
+                );
+              } else {
+                final files = media.map((m) => XFile(m.filePath)).toList();
+                await Share.shareXFiles(
+                  files,
+                  text: shareText,
+                  subject: title.isNotEmpty ? title : null,
+                );
+              }
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete, color: Colors.red),
+            title: const Text(
+              'Delete Note',
+              style: TextStyle(color: Colors.red),
             ),
             onTap: () {
-              Navigator.pop(context);
-              _shareNote();
-            },
-          ),
-
-          ListTile(
-            leading: Icon(
-              Icons.copy,
-              color: AppColors.getTextColor(Theme.of(context).brightness),
-            ),
-            title: Text(
-              'Copy to Clipboard',
-              style: TextStyle(
-                color: AppColors.getTextColor(Theme.of(context).brightness),
-              ),
-            ),
-            onTap: () {
-              Navigator.pop(context);
-              Clipboard.setData(ClipboardData(text: _contentController.text));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Copied to clipboard')),
-              );
-            },
-          ),
-
-          if (widget.note != null)
-            ListTile(
-              leading: Icon(Icons.delete, color: AppColors.error),
-              title: Text(
-                'Delete Note',
-                style: TextStyle(color: AppColors.error),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _showDeleteDialog();
-              },
-            ),
-
-          SizedBox(height: MediaQuery.of(context).viewPadding.bottom),
-        ],
-      ),
-    );
-  }
-
-  void _showSaveDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Save changes?'),
-        content: const Text(
-          'You have unsaved changes. Do you want to save them?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.pop(context);
-            },
-            child: const Text('Discard'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _saveNote();
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDeleteDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete note?'),
-        content: const Text('This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
               if (widget.note != null) {
                 context.read<NotesBloc>().add(DeleteNoteEvent(widget.note!.id));
               }
               Navigator.pop(context);
+              Navigator.pop(context);
             },
-            child: Text('Delete', style: TextStyle(color: AppColors.error)),
           ),
         ],
       ),
     );
   }
 
+  void _showUnifiedMediaSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => UniversalMediaSheet(
+        onOptionSelected: (option) {
+          switch (option) {
+            case MediaOption.photoVideo:
+              _pickImage();
+              break;
+            case MediaOption.camera:
+              _takePhoto(); // Need to implement or update _pickImage
+              break;
+            case MediaOption.audio:
+              _openAudioRecorder();
+              break;
+            case MediaOption.scan:
+              _openDocumentScanner();
+              break;
+            case MediaOption.sketch:
+              _openDrawingCanvas();
+              break;
+            case MediaOption.link:
+              _showAddLinkDialog();
+              break;
+          }
+        },
+      ),
+    );
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.camera);
+
+      if (image != null) {
+        _editorBloc.add(MediaAdded(image.path, MediaType.image));
+
+        final index = _quillController.selection.baseOffset;
+        _quillController.document.insert(index, '\n');
+        _quillController.document.insert(
+          index + 1,
+          quill.BlockEmbed.image(image.path),
+        );
+      }
+    } catch (e) {
+      _editorBloc.add(
+        ErrorOccurred('Failed to take photo: $e', code: 'MEDIA_ADD_FAILED'),
+      );
+    }
+  }
+
   void _showAddLinkDialog() {
     final TextEditingController urlController = TextEditingController();
-    final TextEditingController titleController = TextEditingController();
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.getSurfaceColor(
-          Theme.of(context).brightness,
-        ),
-        title: Text(
-          'Add Link',
-          style: TextStyle(
-            color: AppColors.getTextColor(Theme.of(context).brightness),
-          ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: urlController,
-              decoration: InputDecoration(
-                labelText: 'URL',
-                hintText: 'https://example.com',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-              ),
-              keyboardType: TextInputType.url,
-            ),
-            SizedBox(height: 16.h),
-            TextField(
-              controller: titleController,
-              decoration: InputDecoration(
-                labelText: 'Title (optional)',
-                hintText: 'Link description',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.r),
-                ),
-              ),
-            ),
-          ],
+        title: const Text('Add Link'),
+        content: TextField(
+          controller: urlController,
+          decoration: const InputDecoration(hintText: 'https://example.com'),
+          autofocus: true,
         ),
         actions: [
           TextButton(
@@ -1250,34 +825,11 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
             onPressed: () {
               final url = urlController.text.trim();
               if (url.isNotEmpty) {
-                final title = titleController.text.trim();
-                final linkText = title.isNotEmpty ? '[$title]($url)' : url;
-
-                final currentText = _contentController.text;
-                final cursorPosition = _contentController.selection.baseOffset;
-
-                String newText;
-                if (cursorPosition >= 0) {
-                  newText =
-                      currentText.substring(0, cursorPosition) +
-                      linkText +
-                      currentText.substring(cursorPosition);
-                } else {
-                  newText = '$currentText\n$linkText';
-                }
-
-                _contentController.text = newText;
-                _contentController.selection = TextSelection.collapsed(
-                  offset: cursorPosition + linkText.length,
-                );
-
-                setState(() {
-                  _isModified = true;
-                });
-
-                _debounceAnalysis();
-                Navigator.pop(context);
+                // For now, insert as text. Ideally, create a Link object.
+                final index = _quillController.selection.baseOffset;
+                _quillController.document.insert(index, url);
               }
+              Navigator.pop(context);
             },
             child: const Text('Add'),
           ),
@@ -1286,386 +838,402 @@ class _EnhancedNoteEditorScreenState extends State<EnhancedNoteEditorScreen>
     );
   }
 
-  void _showAddImageDialog() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: AppColors.getSurfaceColor(Theme.of(context).brightness),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.r),
-            topRight: Radius.circular(20.r),
-          ),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40.w,
-              height: 4.h,
-              margin: EdgeInsets.symmetric(vertical: 16.h),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade600,
-                borderRadius: BorderRadius.circular(2.r),
-              ),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.camera_alt,
-                color: AppColors.getTextColor(Theme.of(context).brightness),
-              ),
-              title: Text(
-                'Take Photo',
-                style: TextStyle(
-                  color: AppColors.getTextColor(Theme.of(context).brightness),
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.photo_library,
-                color: AppColors.getTextColor(Theme.of(context).brightness),
-              ),
-              title: Text(
-                'Choose from Gallery',
-                style: TextStyle(
-                  color: AppColors.getTextColor(Theme.of(context).brightness),
-                ),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                _pickImage(ImageSource.gallery);
-              },
-            ),
-            SizedBox(height: 20.h),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _pickImage(ImageSource source) async {
-    try {
-      final ImagePicker picker = ImagePicker();
-      final XFile? image = await picker.pickImage(source: source);
-
-      if (image != null) {
-        final imageText = '![Image](${image.path})';
-        final currentText = _contentController.text;
-        final cursorPosition = _contentController.selection.baseOffset;
-
-        String newText;
-        if (cursorPosition >= 0) {
-          newText =
-              currentText.substring(0, cursorPosition) +
-              imageText +
-              currentText.substring(cursorPosition);
-        } else {
-          newText = '$currentText\n$imageText';
-        }
-
-        _contentController.text = newText;
-        _contentController.selection = TextSelection.collapsed(
-          offset: cursorPosition + imageText.length,
-        );
-
-        setState(() {
-          _isModified = true;
-        });
-
-        _debounceAnalysis();
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to pick image: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
-  Future<void> _showAddVideoDialog() async {
-    // Navigate to media picker for video selection
-    final result = await Navigator.of(context).pushNamed(
-      AppRoutes.mediaPicker,
-      arguments: {'mediaType': 'video', 'maxSelection': 1},
-    );
-
-    if (result != null && result is List && result.isNotEmpty) {
-      // Insert video reference into note
-      final videoPath = result.first;
-      final videoText = '\n[Video: $videoPath]\n';
-      final currentText = _contentController.text;
-      final cursorPosition = _contentController.selection.baseOffset;
-
-      String newText;
-      if (cursorPosition >= 0) {
-        newText =
-            currentText.substring(0, cursorPosition) +
-            videoText +
-            currentText.substring(cursorPosition);
-      } else {
-        newText = '$currentText$videoText';
-      }
-
-      _contentController.text = newText;
-      _contentController.selection = TextSelection.collapsed(
-        offset: cursorPosition + videoText.length,
-      );
-
-      setState(() {
-        _isModified = true;
-      });
-
-      _debounceAnalysis();
-    }
-  }
-
-  Future<void> _showAddAudioDialog() async {
-    // Navigate to audio recorder screen
-    final result = await Navigator.of(
+  void _openDrawingCanvas() {
+    Navigator.push(
       context,
-    ).pushNamed(AppRoutes.audioRecorder);
-
-    if (result != null && result is String && result.isNotEmpty) {
-      // Insert audio reference into note
-      final audioText = '\n[Audio Recording: $result]\n';
-      final currentText = _contentController.text;
-      final cursorPosition = _contentController.selection.baseOffset;
-
-      String newText;
-      if (cursorPosition >= 0) {
-        newText =
-            currentText.substring(0, cursorPosition) +
-            audioText +
-            currentText.substring(cursorPosition);
-      } else {
-        newText = '$currentText$audioText';
-      }
-
-      _contentController.text = newText;
-      _contentController.selection = TextSelection.collapsed(
-        offset: cursorPosition + audioText.length,
-      );
-
-      setState(() {
-        _isModified = true;
-      });
-
-      _debounceAnalysis();
-    }
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          appBar: AppBar(title: const Text('Drawing')),
+          body: DrawingCanvasWidget(
+            onDrawingComplete: (image) => _onDrawingComplete(image),
+          ),
+        ),
+      ),
+    );
   }
 
-  void _showReminderDialog() {
+  void _openAudioRecorder() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: 300.h,
-        decoration: BoxDecoration(
-          color: AppColors.getSurfaceColor(Theme.of(context).brightness),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.r),
-            topRight: Radius.circular(20.r),
+      builder: (context) => AudioRecorderWidget(
+        onRecordingComplete: (path, duration) =>
+            _onAudioComplete(path, duration),
+      ),
+    );
+  }
+
+  void _openDocumentScanner() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          body: DocumentScannerWidget(
+            onScanComplete: (doc) => _onScanComplete(doc),
+            onCancel: () => Navigator.pop(context),
           ),
         ),
-        child: Column(
-          children: [
-            Container(
-              width: 40.w,
-              height: 4.h,
-              margin: EdgeInsets.symmetric(vertical: 16.h),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade600,
-                borderRadius: BorderRadius.circular(2.r),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.w),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Set Reminder',
-                    style: TextStyle(
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.getTextColor(
-                        Theme.of(context).brightness,
-                      ),
-                    ),
-                  ),
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Text(
-                      'Cancel',
-                      style: TextStyle(
-                        fontSize: 16.sp,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 20.h),
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildReminderOption(
-                    'In 1 hour',
-                    DateTime.now().add(const Duration(hours: 1)),
-                  ),
-                  _buildReminderOption('This evening (6 PM)', _getTodayAt(18)),
-                  _buildReminderOption(
-                    'Tomorrow morning (9 AM)',
-                    _getTomorrowAt(9),
-                  ),
-                  _buildReminderOption(
-                    'Next week',
-                    DateTime.now().add(const Duration(days: 7)),
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.access_time, color: AppColors.primary),
-                    title: Text(
-                      'Custom time...',
-                      style: TextStyle(
-                        color: AppColors.getTextColor(
-                          Theme.of(context).brightness,
-                        ),
-                      ),
-                    ),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _showCustomReminderPicker();
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
 
-  Widget _buildReminderOption(String title, DateTime dateTime) {
-    return ListTile(
-      leading: Icon(Icons.alarm, color: AppColors.primary),
-      title: Text(
-        title,
-        style: TextStyle(
-          color: AppColors.getTextColor(Theme.of(context).brightness),
-        ),
-      ),
-      onTap: () {
-        Navigator.pop(context);
-        _setReminder(dateTime);
-      },
-    );
-  }
-
-  DateTime _getTodayAt(int hour) {
-    final now = DateTime.now();
-    return DateTime(now.year, now.month, now.day, hour, 0);
-  }
-
-  DateTime _getTomorrowAt(int hour) {
-    final tomorrow = DateTime.now().add(const Duration(days: 1));
-    return DateTime(tomorrow.year, tomorrow.month, tomorrow.day, hour, 0);
-  }
-
-  void _showCustomReminderPicker() async {
-    final date = await showDatePicker(
+  void _openReminderPicker() {
+    showModalBottomSheet(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      isScrollControlled: true,
+      builder: (context) => AddReminderBottomSheet(
+        onReminderCreated: (alarm) => _editorBloc.add(AlarmAdded(alarm)),
+      ),
     );
+  }
 
-    if (date != null) {
-      final time = await showTimePicker(
-        context: context,
-        initialTime: TimeOfDay.now(),
+  void _openTemplateSelector() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(16),
+        child: TemplateSelector(
+          onTemplateSelected: (template) {
+            _editorBloc.add(TemplateApplied(template));
+            Navigator.pop(context);
+          },
+        ),
+      ),
+    );
+  }
+
+  void _openTodoPicker() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => CreateTodoBottomSheet(
+        onTodoCreated: (todo) => _editorBloc.add(TodoAdded(todo)),
+      ),
+    );
+  }
+
+  Future<void> _onDrawingComplete(ui.Image image) async {
+    try {
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+
+      final bytes = byteData.buffer.asUint8List();
+      final tempDir = Directory.systemTemp;
+      final file = File(
+        '${tempDir.path}/drawing_${DateTime.now().millisecondsSinceEpoch}.png',
+      );
+      await file.writeAsBytes(bytes);
+
+      _editorBloc.add(MediaAdded(file.path, MediaType.image));
+
+      // Also insert into Quill
+      final index = _quillController.selection.baseOffset;
+      _quillController.document.insert(index, '\n');
+      _quillController.document.insert(
+        index + 1,
+        quill.BlockEmbed.image(file.path),
       );
 
-      if (time != null) {
-        final dateTime = DateTime(
-          date.year,
-          date.month,
-          date.day,
-          time.hour,
-          time.minute,
-        );
-        _setReminder(dateTime);
-      }
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      _editorBloc.add(
+        ErrorOccurred('Failed to save drawing: $e', code: 'MEDIA_ADD_FAILED'),
+      );
     }
   }
 
-  void _setReminder(DateTime dateTime) {
-    // TODO: Implement actual reminder setting with notifications
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Reminder set for ${dateTime.toString().substring(0, 16)}',
-        ),
-        backgroundColor: AppColors.primary,
-      ),
-    );
-
-    // Add reminder text to note
-    final reminderText =
-        '\n📅 Reminder: ${dateTime.toString().substring(0, 16)}\n';
-    final currentText = _contentController.text;
-    _contentController.text = currentText + reminderText;
-
-    setState(() {
-      _isModified = true;
-    });
-
-    _debounceAnalysis();
-  }
-
-  Future<void> _shareNote() async {
+  Future<void> _pickVideo() async {
     try {
-      final title = _titleController.text.isEmpty
-          ? 'Untitled Note'
-          : _titleController.text;
-      final content = _contentController.text;
+      final picker = ImagePicker();
+      final video = await picker.pickVideo(source: ImageSource.camera);
 
-      // Format the share text
-      final shareText = '$title\n\n$content';
-
-      // Share using the native share sheet
-      await Share.share(shareText, subject: title);
-
-      // Show success feedback
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Note shared successfully'),
-            backgroundColor: AppColors.successGreen,
-            duration: const Duration(seconds: 2),
-          ),
+      if (video != null) {
+        _editorBloc.add(
+          MediaAdded(video.path, MediaType.video, name: video.name),
         );
       }
     } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to share note: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
+      _editorBloc.add(
+        ErrorOccurred('Failed to pick video: $e', code: 'MEDIA_ADD_FAILED'),
+      );
     }
+  }
+
+  void _onAudioComplete(String path, Duration duration) {
+    _editorBloc.add(
+      MediaAdded(
+        path,
+        MediaType.audio,
+        name: 'Audio Recording',
+        duration: duration.inMilliseconds,
+      ),
+    );
+    if (mounted) Navigator.pop(context);
+  }
+
+  void _onScanComplete(ScannedDocument doc) {
+    _editorBloc.add(
+      MediaAdded(doc.filePath, MediaType.image, name: doc.fileName),
+    );
+    Navigator.pop(context);
+  }
+
+  Future<void> _pickDocument() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'],
+      );
+
+      if (result != null) {
+        for (final file in result.files) {
+          if (file.path != null) {
+            _editorBloc.add(
+              MediaAdded(file.path!, MediaType.document, name: file.name),
+            );
+            // Auto-prompt for OCR/Extraction if it's a PDF or Image
+            _showExtractionPrompt(file.path!, file.name);
+          }
+        }
+      }
+    } catch (e) {
+      _editorBloc.add(
+        ErrorOccurred('Failed to pick document: $e', code: 'MEDIA_ADD_FAILED'),
+      );
+    }
+  }
+
+  void _showExtractionPrompt(String path, String name) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Extract Text?'),
+        content: Text(
+          'Do you want to extract text from "$name" and insert it into your note?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _editorBloc.add(TextExtractionRequested(path));
+            },
+            child: const Text('Extract'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAttachmentLists(BuildContext context, NoteEditorState state) {
+    final audioAttachments = state.params.media
+        .where((m) => m.type == MediaType.audio)
+        .map(
+          (m) => AudioMetadata(
+            filePath: m.filePath,
+            fileName: m.name,
+            fileSize: 0,
+            duration: Duration(milliseconds: m.durationMs),
+            createdAt: m.createdAt,
+          ),
+        )
+        .toList();
+
+    final videoAttachments = state.params.media
+        .where((m) => m.type == MediaType.video)
+        .map(
+          (m) => VideoMetadata(
+            filePath: m.filePath,
+            fileName: m.name,
+            fileSize: 0,
+            duration: Duration(milliseconds: m.durationMs),
+            thumbnailPath: m.thumbnailPath,
+            createdAt: m.createdAt,
+          ),
+        )
+        .toList();
+
+    final scannedDocs = state.params.media
+        .where((m) => m.name.startsWith('Scan') || m.filePath.contains('scan'))
+        .map(
+          (m) => ScannedDocument(
+            filePath: m.filePath,
+            fileName: m.name,
+            pageImagePaths: [m.filePath],
+            createdAt: m.createdAt,
+            pageCount: 1,
+          ),
+        )
+        .toList();
+
+    final fileAttachments = state.params.media
+        .where((m) => m.type == MediaType.document)
+        .toList();
+
+    return Column(
+      children: [
+        if (fileAttachments.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Attached Files',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const SizedBox(height: 8),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: fileAttachments.length,
+                  itemBuilder: (context, index) {
+                    final file = fileAttachments[index];
+                    return ListTile(
+                      leading: const Icon(
+                        Icons.description,
+                        color: Colors.orange,
+                      ),
+                      title: Text(file.name),
+                      subtitle: Text(
+                        '${(file.size / 1024).toStringAsFixed(1)} KB',
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.spellcheck),
+                            tooltip: 'Extract Text',
+                            onPressed: () => _editorBloc.add(
+                              TextExtractionRequested(file.filePath),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline),
+                            onPressed: () {
+                              final globalIndex = state.params.media.indexOf(
+                                file,
+                              );
+                              if (globalIndex != -1) {
+                                _editorBloc.add(MediaRemoved(globalIndex));
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                      onTap: () =>
+                          _openMediaViewer(state, index, MediaType.document),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        if (audioAttachments.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: AudioAttachmentsList(
+              audios: audioAttachments,
+              onAudioDelete: (index) {
+                final audio = audioAttachments[index];
+                final globalIndex = state.params.media.indexWhere(
+                  (m) => m.filePath == audio.filePath,
+                );
+                if (globalIndex != -1) {
+                  _editorBloc.add(MediaRemoved(globalIndex));
+                }
+              },
+            ),
+          ),
+        if (videoAttachments.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: VideoAttachmentsList(
+              videos: videoAttachments,
+              onVideoDelete: (index) {
+                final video = videoAttachments[index];
+                final globalIndex = state.params.media.indexWhere(
+                  (m) => m.filePath == video.filePath,
+                );
+                if (globalIndex != -1) {
+                  _editorBloc.add(MediaRemoved(globalIndex));
+                }
+              },
+              onVideoTap: (index) =>
+                  _openMediaViewer(state, index, MediaType.video),
+            ),
+          ),
+        if (scannedDocs.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: DocumentAttachmentsList(
+              documents: scannedDocs,
+              onDocumentDelete: (index) {
+                final doc = scannedDocs[index];
+                final globalIndex = state.params.media.indexWhere(
+                  (m) => m.filePath == doc.filePath,
+                );
+                if (globalIndex != -1) {
+                  _editorBloc.add(MediaRemoved(globalIndex));
+                }
+              },
+              onDocumentTap: (index) =>
+                  _openMediaViewer(state, index, MediaType.image),
+            ),
+          ),
+        _buildImageGallery(state),
+      ],
+    );
+  }
+
+  Widget _buildImageGallery(NoteEditorState state) {
+    final images = state.params.media
+        .where((m) => m.type == MediaType.image)
+        .toList();
+    if (images.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      height: 120,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: images.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          return ImageThumbnailWidget(
+            imagePath: images[index].filePath,
+            onTap: () => _openMediaViewer(state, index, MediaType.image),
+          );
+        },
+      ),
+    );
+  }
+
+  void _openMediaViewer(NoteEditorState state, int index, MediaType type) {
+    final filteredMedia = state.params.media
+        .where((m) => m.type == type)
+        .toList();
+    if (index >= filteredMedia.length) return;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => MediaViewerScreen(
+          mediaItems: filteredMedia,
+          initialIndex: index,
+          onDelete: (media) {
+            final globalIndex = state.params.media.indexWhere(
+              (m) => m.id == media.id,
+            );
+            if (globalIndex != -1) _editorBloc.add(MediaRemoved(globalIndex));
+          },
+          onUpdate: (oldMedia, newMedia) {
+            _editorBloc.add(MediaUpdated(oldMedia, newMedia));
+          },
+        ),
+      ),
+    );
   }
 }
-

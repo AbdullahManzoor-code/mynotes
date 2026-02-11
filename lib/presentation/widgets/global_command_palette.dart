@@ -7,6 +7,7 @@ import '../pages/focus_session_screen.dart';
 import '../pages/enhanced_reminders_list_screen.dart';
 import '../pages/settings_screen.dart';
 import '../pages/daily_highlight_summary_screen.dart';
+import 'quick_add_bottom_sheet.dart';
 
 /// Global Command Palette
 /// Quick access to all app features and recent items
@@ -224,6 +225,20 @@ class _GlobalCommandPaletteState extends State<GlobalCommandPalette>
                 builder: (context) => const EnhancedNoteEditorScreen(),
               ),
             );
+          });
+        },
+      ),
+      _QuickAction(
+        icon: Icons.check_box_outlined,
+        title: 'New Todo',
+        subtitle: 'Add a task to complete',
+        colors: [
+          const Color(0xFF065F46), // bg-emerald-900/30
+          const Color(0xFF6EE7B7), // border and text color
+        ],
+        onTap: () {
+          _closeAndNavigate(() {
+            QuickAddBottomSheet.show(context);
           });
         },
       ),

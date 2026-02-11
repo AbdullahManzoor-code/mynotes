@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/core/error_handling/app_error_handler.dart';
 import 'package:mynotes/core/exceptions/app_exceptions.dart';
-import 'package:mynotes/core/exceptions/location_exceptions.dart';
+import 'package:mynotes/core/exceptions/location_exceptions.dart'
+    hide DatabaseException;
 import 'package:mynotes/presentation/widgets/error_display_components.dart';
 
 /// Global Error Handler Listener
@@ -28,12 +29,8 @@ class _GlobalErrorHandlerListenerState
   }
 
   void _setupErrorHandling() {
-    // Register error listener for UI display
-    _errorHandler.registerErrorListener((error) {
-      _displayError(error);
-    });
-
-    // Register recovery strategies
+    // Only register recovery strategies here
+    // UI display is now handled globally by AppErrorHandler using GlobalUiService
     _setupRecoveryStrategies();
   }
 
@@ -61,37 +58,6 @@ class _GlobalErrorHandlerListenerState
       debugPrint('[GlobalErrorHandler] Biometric fallback to PIN');
       // Recovery logic here
     });
-  }
-
-  void _displayError(AppException error) {
-    if (!mounted) return;
-
-    final context = this.context;
-    final userMessage = ErrorDisplay.getUserMessage(error);
-
-    // Critical errors show dialog
-    if (_isCriticalError(error)) {
-      ErrorDisplay.showErrorDialog(
-        context,
-        title: 'Error',
-        message: userMessage,
-        code: error.code,
-        originalError: error.originalError,
-      );
-    } else {
-      // Non-critical errors show snackbar
-      ErrorDisplay.showErrorSnackbar(
-        context,
-        message: userMessage,
-        code: error.code,
-      );
-    }
-  }
-
-  bool _isCriticalError(AppException error) {
-    return error is DatabaseException ||
-        error is AppInitializationException ||
-        error is BiometricNotAvailableException;
   }
 
   @override

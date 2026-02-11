@@ -1,6 +1,8 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:mynotes/domain/repositories/reminder_template_repository.dart';
+import 'package:mynotes/domain/entities/reminder_template.dart';
+import 'package:uuid/uuid.dart';
 
 // Reminder Templates BLoC - Events
 abstract class ReminderTemplatesEvent extends Equatable {
@@ -166,8 +168,6 @@ class ReminderTemplatesBloc
     },
   ];
 
-  final Set<String> _favorites = {};
-
   ReminderTemplatesBloc({required this.reminderTemplateRepository})
     : super(const ReminderTemplatesInitial()) {
     on<LoadTemplatesEvent>(_onLoadTemplates);
@@ -183,23 +183,52 @@ class ReminderTemplatesBloc
     try {
       emit(const ReminderTemplatesLoading());
 
-      await Future.delayed(const Duration(milliseconds: 500));
+      var templates = await reminderTemplateRepository.loadTemplates();
+
+      // Seed initial data if empty
+      if (templates.isEmpty) {
+        await _seedInitialTemplates();
+        templates = await reminderTemplateRepository.loadTemplates();
+      }
 
       final categories = <String>{'All'};
-      for (var template in _allTemplates) {
-        categories.add(template['category'] as String);
+      for (var template in templates) {
+        categories.add(template.category);
       }
+
+      final templatesData = templates.map((t) => t.toJson()).toList();
+      final favorites = templates
+          .where((t) => t.isFavorite)
+          .map((t) => t.id)
+          .toSet();
 
       emit(
         ReminderTemplatesLoaded(
-          templates: _allTemplates,
-          favoriteIds: _favorites,
+          templates: templatesData,
+          favoriteIds: favorites,
           selectedCategory: 'All',
           categories: categories.toList(),
         ),
       );
     } catch (e) {
       emit(ReminderTemplatesError(message: e.toString()));
+    }
+  }
+
+  Future<void> _seedInitialTemplates() async {
+    for (var template in _allTemplates) {
+      final t = ReminderTemplate(
+        id: const Uuid().v4(),
+        name: template['name'],
+        description: template['description'],
+        time: template['time'],
+        frequency: template['frequency'],
+        duration: template['duration'],
+        category: template['category'],
+        isFavorite: false,
+        createdAt: DateTime.now(),
+      );
+      await reminderTemplateRepository.createTemplate(t);
     }
   }
 
@@ -213,8 +242,8 @@ class ReminderTemplatesBloc
       final currentState = state as ReminderTemplatesLoaded;
 
       final filtered = event.category == 'All'
-          ? _allTemplates
-          : _allTemplates
+          ? currentState.templates
+          : currentState.templates
                 .where((t) => t['category'] == event.category)
                 .toList();
 
@@ -258,20 +287,16 @@ class ReminderTemplatesBloc
 
       final currentState = state as ReminderTemplatesLoaded;
 
-      if (_favorites.contains(event.templateId)) {
-        _favorites.remove(event.templateId);
+      if (currentState.favoriteIds.contains(event.templateId)) {
+        await reminderTemplateRepository.toggleFavorite(
+          event.templateId,
+          false,
+        );
       } else {
-        _favorites.add(event.templateId);
+        await reminderTemplateRepository.toggleFavorite(event.templateId, true);
       }
 
-      emit(
-        ReminderTemplatesLoaded(
-          templates: currentState.templates,
-          favoriteIds: _favorites,
-          selectedCategory: currentState.selectedCategory,
-          categories: currentState.categories,
-        ),
-      );
+      add(const LoadTemplatesEvent());
     } catch (e) {
       emit(ReminderTemplatesError(message: e.toString()));
     }

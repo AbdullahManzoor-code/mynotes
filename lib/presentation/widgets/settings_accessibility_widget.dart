@@ -61,7 +61,7 @@ class StorageSettingsPanel extends StatelessWidget {
                   value: state.autoBackupEnabled,
                   onChanged: (value) {
                     context.read<SettingsBloc>().add(
-                      UpdateStorageSettingsEvent(autoBackupEnabled: value),
+                      UpdateSettingsEvent.toggleCloudSync(state.params),
                     );
                   },
                   contentPadding: EdgeInsets.zero,
@@ -84,7 +84,11 @@ class StorageSettingsPanel extends StatelessWidget {
                       onChanged: (value) {
                         if (value != null) {
                           context.read<SettingsBloc>().add(
-                            UpdateStorageSettingsEvent(backupFrequency: value),
+                            UpdateSettingsEvent(
+                              state.params.copyWith(
+                                notificationFrequency: value,
+                              ),
+                            ),
                           );
                         }
                       },
@@ -142,7 +146,7 @@ class DefaultSettingsPanel extends StatelessWidget {
                     onChanged: (value) {
                       if (value != null) {
                         context.read<SettingsBloc>().add(
-                          UpdateDefaultSettingsEvent(fontFamily: value),
+                          UpdateSettingsEvent(state.params.copyWith()),
                         );
                       }
                     },
@@ -163,7 +167,9 @@ class DefaultSettingsPanel extends StatelessWidget {
                     onChanged: (value) {
                       if (value != null) {
                         context.read<SettingsBloc>().add(
-                          UpdateDefaultSettingsEvent(languageCode: value),
+                          UpdateSettingsEvent(
+                            state.params.copyWith(language: value),
+                          ),
                         );
                       }
                     },
@@ -177,7 +183,7 @@ class DefaultSettingsPanel extends StatelessWidget {
                   value: state.darkModeEnabled,
                   onChanged: (value) {
                     context.read<SettingsBloc>().add(
-                      UpdateDefaultSettingsEvent(darkModeEnabled: value),
+                      UpdateSettingsEvent.toggleDarkMode(state.params),
                     );
                   },
                   contentPadding: EdgeInsets.zero,
@@ -363,9 +369,7 @@ class AccessibilitySettingsWidget extends StatelessWidget {
                   value: state.accessibilityEnabled,
                   onChanged: (value) {
                     context.read<SettingsBloc>().add(
-                      UpdateAccessibilitySettingsEvent(
-                        accessibilityEnabled: value,
-                      ),
+                      UpdateSettingsEvent.toggleNotifications(state.params),
                     );
                   },
                   contentPadding: EdgeInsets.zero,
@@ -388,8 +392,14 @@ class AccessibilitySettingsWidget extends StatelessWidget {
                       label: state.fontSize.toString(),
                       onChanged: (value) {
                         context.read<SettingsBloc>().add(
-                          UpdateAccessibilitySettingsEvent(
-                            fontSize: value.toInt(),
+                          UpdateSettingsEvent(
+                            state.params.copyWith(
+                              fontSizePreference: value < 14
+                                  ? 'small'
+                                  : value > 16
+                                  ? 'large'
+                                  : 'medium',
+                            ),
                           ),
                         );
                       },

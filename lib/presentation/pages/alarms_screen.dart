@@ -1,134 +1,165 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../design_system/design_system.dart';
+import '../../injection_container.dart' show getIt;
 import '../../domain/entities/alarm.dart';
-import '../../core/services/alarm_service.dart';
 import '../bloc/alarms_bloc.dart';
 import '../widgets/alarm_card_widget.dart';
 import '../widgets/create_alarm_bottom_sheet.dart';
 
-class AlarmsScreen extends StatefulWidget {
+class AlarmsScreen extends StatelessWidget {
   const AlarmsScreen({super.key});
 
   @override
-  State<AlarmsScreen> createState() => _AlarmsScreenState();
-}
-
-class _AlarmsScreenState extends State<AlarmsScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 4, vsync: this);
-    context.read<AlarmsBloc>().add(LoadAlarms());
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: AppColors.primaryColor,
-        elevation: 0,
-        title: Text(
-          'Reminders',
-          style: AppTypography.heading2(context).copyWith(color: Colors.white),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.clear_all, color: Colors.white),
-            tooltip: 'Clear Completed',
-            onPressed: () {
-              context.read<AlarmsBloc>().add(ClearCompletedAlarms());
-            },
+    // Initial load
+    context.read<AlarmsBloc>().add(LoadAlarms());
+
+    return DefaultTabController(
+      length: 6, // All, Today, Upcoming, Overdue, Snoozed, Completed
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: AppColors.primaryColor,
+          elevation: 0,
+          title: Text(
+            'Reminders',
+            style: AppTypography.heading2(
+              context,
+            ).copyWith(color: Colors.white),
           ),
-        ],
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: Colors.white,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          onTap: (index) {
-            final filters = [
-              AlarmFilter.overdue,
-              AlarmFilter.dueSoon,
-              AlarmFilter.future,
-              AlarmFilter.completed,
-            ];
-            context.read<AlarmsBloc>().add(FilterAlarms(filters[index]));
-          },
-          tabs: const [
-            Tab(text: 'Overdue', icon: Icon(Icons.warning_amber, size: 20)),
-            Tab(text: 'Soon', icon: Icon(Icons.notifications_active, size: 20)),
-            Tab(text: 'Future', icon: Icon(Icons.schedule, size: 20)),
-            Tab(text: 'Done', icon: Icon(Icons.check_circle, size: 20)),
+          bottom: TabBar(
+            isScrollable: true,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
+            indicatorColor: Colors.white,
+            onTap: (index) {
+              final filters = [
+                AlarmFilter.all,
+                AlarmFilter.today,
+                AlarmFilter.upcoming,
+                AlarmFilter.overdue,
+                AlarmFilter.snoozed,
+                AlarmFilter.completed,
+              ];
+              context.read<AlarmsBloc>().add(FilterAlarms(filters[index]));
+            },
+            tabs: const [
+              Tab(text: 'All', icon: Icon(Icons.list, size: 20)),
+              Tab(text: 'Today', icon: Icon(Icons.today, size: 20)),
+              Tab(text: 'Upcoming', icon: Icon(Icons.event, size: 20)),
+              Tab(text: 'Overdue', icon: Icon(Icons.warning_amber, size: 20)),
+              Tab(text: 'Snoozed', icon: Icon(Icons.snooze, size: 20)),
+              Tab(text: 'Done', icon: Icon(Icons.check_circle, size: 20)),
+            ],
+          ),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white),
+              tooltip: 'Search Reminders',
+              onPressed: () {
+                showSearch(
+                  context: context,
+                  delegate: _AlarmSearchDelegate(context.read<AlarmsBloc>()),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_sweep, color: Colors.white),
+              tooltip: 'Clear Completed',
+              onPressed: () {
+                _showClearCompletedConfirmation(context);
+              },
+            ),
           ],
         ),
-      ),
-      body: BlocBuilder<AlarmsBloc, AlarmsState>(
-        builder: (context, state) {
-          if (state is AlarmsLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state is AlarmsError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
-                  SizedBox(height: 16.h),
-                  Text(
-                    state.message,
-                    style: AppTypography.body2(context),
-                    textAlign: TextAlign.center,
-                  ),
-                  SizedBox(height: 16.h),
-                  ElevatedButton.icon(
-                    onPressed: () =>
-                        context.read<AlarmsBloc>().add(LoadAlarms()),
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          if (state is AlarmsLoaded) {
-            final alarms = state.filteredAlarms;
-
-            if (alarms.isEmpty) {
-              return _buildEmptyState(state.currentFilter);
+        body: BlocBuilder<AlarmsBloc, AlarmsState>(
+          builder: (context, state) {
+            if (state is AlarmsLoading) {
+              return const Center(child: CircularProgressIndicator());
             }
 
-            return _buildAlarmsList(alarms, state.stats);
-          }
+            if (state is AlarmsError) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
+                    SizedBox(height: 16.h),
+                    Text(
+                      state.message,
+                      style: AppTypography.body2(context),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 16.h),
+                    ElevatedButton.icon(
+                      onPressed: () =>
+                          context.read<AlarmsBloc>().add(LoadAlarms()),
+                      icon: const Icon(Icons.refresh),
+                      label: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              );
+            }
 
-          return const SizedBox.shrink();
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showCreateAlarmSheet(context),
-        backgroundColor: AppColors.primaryColor,
-        icon: const Icon(Icons.add_alarm, color: Colors.white),
-        label: Text(
-          'New Reminder',
-          style: AppTypography.body2(context).copyWith(color: Colors.white),
+            if (state is AlarmsLoaded) {
+              final alarms = state.filteredAlarms;
+
+              if (alarms.isEmpty) {
+                return _buildEmptyState(context, state.currentFilter);
+              }
+
+              return Column(
+                children: [
+                  _buildStatsBar(context, state.stats),
+                  Expanded(child: _buildAlarmsList(context, alarms)),
+                ],
+              );
+            }
+
+            return const SizedBox.shrink();
+          },
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _showCreateAlarmSheet(context),
+          backgroundColor: AppColors.primaryColor,
+          icon: const Icon(Icons.add_alarm, color: Colors.white),
+          label: Text(
+            'New Reminder',
+            style: AppTypography.body2(context).copyWith(color: Colors.white),
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildEmptyState(AlarmFilter filter) {
+  void _showClearCompletedConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear Completed'),
+        content: const Text(
+          'Are you sure you want to delete all completed reminders? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<AlarmsBloc>().add(ClearCompletedAlarms());
+              Navigator.pop(context);
+            },
+            child: const Text('Clear All', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, AlarmFilter filter) {
     String message;
     IconData icon;
 
@@ -137,13 +168,17 @@ class _AlarmsScreenState extends State<AlarmsScreen>
         message = 'No overdue reminders!\nYou\'re all caught up.';
         icon = Icons.celebration;
         break;
-      case AlarmFilter.dueSoon:
-        message = 'No reminders due soon.\nEnjoy your free time!';
-        icon = Icons.free_breakfast;
+      case AlarmFilter.today:
+        message = 'No reminders for today.\nEnjoy your day!';
+        icon = Icons.wb_sunny;
         break;
-      case AlarmFilter.future:
-        message = 'No future reminders.\nTap + to create one.';
+      case AlarmFilter.upcoming:
+        message = 'No upcoming reminders.\nTime to relax!';
         icon = Icons.event_available;
+        break;
+      case AlarmFilter.snoozed:
+        message = 'No snoozed reminders.\nStay focused!';
+        icon = Icons.timer_off;
         break;
       case AlarmFilter.completed:
         message = 'No completed reminders yet.';
@@ -173,35 +208,7 @@ class _AlarmsScreenState extends State<AlarmsScreen>
     );
   }
 
-  Widget _buildAlarmsList(List<Alarm> alarms, AlarmStats stats) {
-    return Column(
-      children: [
-        _buildStatsBar(stats),
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-            itemCount: alarms.length,
-            itemBuilder: (context, index) {
-              final alarm = alarms[index];
-              return Padding(
-                padding: EdgeInsets.only(bottom: 12.h),
-                child: AlarmCardWidget(
-                  alarm: alarm,
-                  onTap: () => _handleAlarmTap(alarm),
-                  onToggle: () => _toggleAlarm(alarm),
-                  onSnooze: (preset) => _snoozeAlarm(alarm, preset),
-                  onReschedule: () => _rescheduleAlarm(alarm),
-                  onDelete: () => _deleteAlarm(alarm),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildStatsBar(AlarmStats stats) {
+  Widget _buildStatsBar(BuildContext context, AlarmStats stats) {
     return Container(
       padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
@@ -214,67 +221,139 @@ class _AlarmsScreenState extends State<AlarmsScreen>
           ),
         ],
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildStatItem(
+              context,
+              'Overdue',
+              stats.overdue.toString(),
+              Colors.red.shade700,
+              Icons.warning_amber,
+            ),
+            SizedBox(width: 16.w),
+            _buildStatItem(
+              context,
+              'Today',
+              stats.today.toString(),
+              Colors.blue.shade700,
+              Icons.today,
+            ),
+            SizedBox(width: 16.w),
+            _buildStatItem(
+              context,
+              'Upcoming',
+              stats.upcoming.toString(),
+              Colors.green.shade700,
+              Icons.event,
+            ),
+            SizedBox(width: 16.w),
+            _buildStatItem(
+              context,
+              'Snoozed',
+              stats.snoozed.toString(),
+              Colors.orange.shade700,
+              Icons.snooze,
+            ),
+            SizedBox(width: 16.w),
+            _buildStatItem(
+              context,
+              'Done',
+              stats.completed.toString(),
+              Colors.grey.shade600,
+              Icons.check_circle,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(
+    BuildContext context,
+    String label,
+    String count,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Column(
         children: [
-          _buildStatItem(
-            'Overdue',
-            stats.overdue.toString(),
-            Colors.red.shade700,
-            Icons.warning_amber,
+          Row(
+            children: [
+              Icon(icon, size: 16.sp, color: color),
+              SizedBox(width: 6.w),
+              Text(
+                count,
+                style: AppTypography.heading3(context).copyWith(
+                  color: color,
+                  fontSize: 18.sp,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
           ),
-          _buildStatItem(
-            'Soon',
-            stats.dueSoon.toString(),
-            Colors.orange.shade700,
-            Icons.notifications_active,
-          ),
-          _buildStatItem(
-            'Future',
-            (stats.total - stats.overdue - stats.dueSoon - stats.completed)
-                .toString(),
-            Colors.green.shade700,
-            Icons.schedule,
-          ),
-          _buildStatItem(
-            'Done',
-            stats.completed.toString(),
-            Colors.grey.shade600,
-            Icons.check_circle,
+          SizedBox(height: 2.h),
+          Text(
+            label,
+            style: AppTypography.caption(context).copyWith(
+              color: color,
+              fontSize: 11.sp,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildStatItem(
-    String label,
-    String count,
-    Color color,
-    IconData icon,
-  ) {
-    return Column(
-      children: [
-        Row(
-          children: [
-            Icon(icon, size: 16.sp, color: color),
-            SizedBox(width: 4.w),
-            Text(
-              count,
-              style: AppTypography.heading2(
-                context,
-              ).copyWith(color: color, fontSize: 20.sp),
-            ),
-          ],
-        ),
-        SizedBox(height: 4.h),
-        Text(
-          label,
-          style: AppTypography.caption(
-            context,
-          ).copyWith(color: Colors.grey.shade600, fontSize: 11.sp),
-        ),
-      ],
+  Widget _buildAlarmsList(BuildContext context, List<Alarm> alarms) {
+    return ListView.builder(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+      itemCount: alarms.length,
+      itemBuilder: (context, index) {
+        final alarm = alarms[index];
+        return Padding(
+          padding: EdgeInsets.only(bottom: 12.h),
+          child: AlarmCardWidget(
+            alarm: alarm,
+            onTap: () => _handleAlarmTap(context, alarm),
+            onToggle: () =>
+                context.read<AlarmsBloc>().add(ToggleAlarmEnabled(alarm.id)),
+            onSnooze: (preset) {
+              context.read<AlarmsBloc>().add(SnoozeAlarm(alarm.id, preset));
+              getIt<GlobalUiService>().showInfo('Snoozed: ${preset.name}');
+            },
+            onReschedule: () {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => CreateAlarmBottomSheet(alarm: alarm),
+              );
+            },
+            onDelete: () {
+              context.read<AlarmsBloc>().add(DeleteAlarm(alarm.id));
+              getIt<GlobalUiService>().showInfo(
+                'Reminder deleted',
+                // action: SnackBarAction(
+                //   label: 'UNDO',
+                //   onPressed: () {
+                //     context.read<AlarmsBloc>().add(UndoDeleteAlarm(alarm));
+                  // },
+                // ),
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -287,75 +366,94 @@ class _AlarmsScreenState extends State<AlarmsScreen>
     );
   }
 
-  void _handleAlarmTap(Alarm alarm) {
-    // Navigate to alarm details or linked note
+  void _handleAlarmTap(BuildContext context, Alarm alarm) {
     if (alarm.linkedNoteId != null) {
-      // TODO: Navigate to note detail
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Open note: ${alarm.linkedNoteId}')),
+      // Navigate to note
+      getIt<GlobalUiService>().showInfo(
+        'Opening linked note: ${alarm.linkedNoteId}',
+      );
+      // Implementation: Navigation.pushNamed(context, AppRoutes.noteDetail, arguments: alarm.linkedNoteId);
+    } else if (alarm.linkedTodoId != null) {
+      getIt<GlobalUiService>().showInfo(
+        'Opening linked todo: ${alarm.linkedTodoId}',
+      );
+    } else {
+      // Edit alarm
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (context) => CreateAlarmBottomSheet(alarm: alarm),
       );
     }
   }
-
-  void _toggleAlarm(Alarm alarm) {
-    context.read<AlarmsBloc>().add(ToggleAlarm(alarm.id));
-  }
-
-  void _snoozeAlarm(Alarm alarm, SnoozePreset preset) {
-    context.read<AlarmsBloc>().add(SnoozeAlarm(alarm.id, preset));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Snoozed until ${_formatSnoozeTime(preset)}')),
-    );
-  }
-
-  void _rescheduleAlarm(Alarm alarm) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => CreateAlarmBottomSheet(alarm: alarm),
-    );
-  }
-
-  void _deleteAlarm(Alarm alarm) {
-    context.read<AlarmsBloc>().add(DeleteAlarm(alarm.id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Reminder deleted'),
-        action: SnackBarAction(
-          label: 'UNDO',
-          onPressed: () {
-            context.read<AlarmsBloc>().add(UndoDeleteAlarm(alarm));
-          },
-        ),
-      ),
-    );
-  }
-
-  String _formatSnoozeTime(SnoozePreset preset) {
-    final now = DateTime.now();
-    DateTime snoozeTime;
-
-    switch (preset) {
-      case SnoozePreset.tenMinutes:
-        snoozeTime = now.add(const Duration(minutes: 10));
-        break;
-      case SnoozePreset.oneHour:
-        snoozeTime = now.add(const Duration(hours: 1));
-        break;
-      case SnoozePreset.oneDay:
-        snoozeTime = now.add(const Duration(days: 1));
-        break;
-      case SnoozePreset.tomorrowMorning:
-        snoozeTime = DateTime(now.year, now.month, now.day + 1, 9, 0);
-        break;
-    }
-
-    final hour = snoozeTime.hour;
-    final minute = snoozeTime.minute;
-    final period = hour >= 12 ? 'PM' : 'AM';
-    final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
-    return '$displayHour:${minute.toString().padLeft(2, '0')} $period';
-  }
 }
 
+class _AlarmSearchDelegate extends SearchDelegate<String> {
+  final AlarmsBloc alarmsBloc;
+
+  _AlarmSearchDelegate(this.alarmsBloc);
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: const Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+          alarmsBloc.add(SearchAlarms(''));
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: const Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, '');
+        alarmsBloc.add(SearchAlarms('')); // Reset search on exit
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    alarmsBloc.add(SearchAlarms(query));
+
+    return BlocBuilder<AlarmsBloc, AlarmsState>(
+      bloc: alarmsBloc,
+      builder: (context, state) {
+        if (state is AlarmsLoaded) {
+          final results = state.filteredAlarms;
+          if (results.isEmpty) {
+            return Center(child: Text('No reminders found for "$query"'));
+          }
+
+          return ListView.builder(
+            padding: EdgeInsets.all(16.w),
+            itemCount: results.length,
+            itemBuilder: (context, index) {
+              final alarm = results[index];
+              return ListTile(
+                title: Text(alarm.message),
+                subtitle: Text(alarm.scheduledTime.toString()),
+                onTap: () {
+                  // Handle selection
+                  close(context, alarm.id);
+                },
+              );
+            },
+          );
+        }
+        return const Center(child: CircularProgressIndicator());
+      },
+    );
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return Container(); // Optional: show recent searches or suggestions
+  }
+}

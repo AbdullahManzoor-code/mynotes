@@ -2,6 +2,9 @@
 /// Handles all exceptions across app flows with recovery strategies
 import 'package:flutter/material.dart';
 import 'package:mynotes/core/exceptions/app_exceptions.dart';
+import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/injection_container.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 
 typedef ErrorCallback = Function(AppException error);
 typedef RecoveryCallback = Function();
@@ -16,20 +19,20 @@ class AppErrorHandler {
   final List<ErrorCallback> _errorListeners = [];
   final Map<Type, RecoveryCallback> _recoveryStrategies = {};
 
-  /// Register error listener (UI, analytics, logging)
   void registerErrorListener(ErrorCallback listener) {
-    _errorListeners.add(listener);
+    if (!_errorListeners.contains(listener)) {
+      _errorListeners.add(listener);
+    }
   }
 
   void removeErrorListener(ErrorCallback listener) {
     _errorListeners.remove(listener);
   }
 
-  /// Register recovery strategies for specific exceptions
   void registerRecoveryStrategy<T extends AppException>(
-    RecoveryCallback strategy,
+    RecoveryCallback callback,
   ) {
-    _recoveryStrategies[T] = strategy;
+    _recoveryStrategies[T] = callback;
   }
 
   /// Main error handling method
@@ -38,10 +41,10 @@ class AppErrorHandler {
     String? userMessage,
     bool shouldRecover = true,
   }) async {
-    // Log error
+    // Log error using professional logger
     _logError(error);
 
-    // Notify listeners (UI, analytics)
+    // Notify listeners (analytics, etc.)
     _notifyListeners(error);
 
     // Attempt recovery if applicable
@@ -49,18 +52,17 @@ class AppErrorHandler {
       await _attemptRecovery(error);
     }
 
-    // Show user-friendly message
-    _showUserMessage(userMessage ?? _getUserMessage(error));
+    // Show user-friendly message via Global UI Service
+    final message = userMessage ?? _getUserMessage(error);
+    getIt<GlobalUiService>().showError(message);
   }
 
   void _logError(AppException error) {
-    debugPrint('[ERROR] ${error.code}: ${error.message}');
-    if (error.originalError != null) {
-      debugPrint('[ERROR] Original: ${error.originalError}');
-    }
-    if (error.stackTrace != null) {
-      debugPrint('[ERROR] StackTrace: ${error.stackTrace}');
-    }
+    AppLogger.e(
+      '${error.code}: ${error.message}',
+      error.originalError,
+      error.stackTrace,
+    );
   }
 
   void _notifyListeners(AppException error) {
@@ -173,14 +175,7 @@ class AppErrorHandler {
     final handler = AppErrorHandler();
     final message = handler._getUserMessage(error);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red.shade700,
-        duration: duration,
-        action: SnackBarAction(label: 'Dismiss', onPressed: () {}),
-      ),
-    );
+    getIt<GlobalUiService>().showError(message);
   }
 
   /// Show recovery dialog
@@ -192,8 +187,7 @@ class AppErrorHandler {
     final handler = AppErrorHandler();
     final message = handler._getUserMessage(error);
 
-    return await showDialog<bool>(
-          context: context,
+    return await getIt<GlobalUiService>().showCustomDialog<bool>(
           barrierDismissible: false,
           builder: (context) => AlertDialog(
             title: Text(

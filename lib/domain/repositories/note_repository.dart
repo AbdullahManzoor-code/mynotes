@@ -12,4 +12,10 @@ abstract class NoteRepository {
   Future<void> scheduleReminder(String noteId, DateTime when);
   Future<void> cancelReminder(String noteId);
   Future<List<Note>> searchNotes(String query);
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  Future<void> updateNoteLinks(String sourceId, List<String> targetIds);
+  Future<void> resolveAndSyncLinks(String sourceId, List<String> targetTitles);
+  Future<List<String>> getBacklinks(String noteId);
+  Future<List<String>> getOutgoingLinks(String noteId);
 }

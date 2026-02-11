@@ -1,23 +1,37 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../domain/entities/note.dart';
 import '../design_system/design_system.dart';
 
 /// Enhanced Search Bar for Notes with advanced filtering (ORG-003)
 /// Provides real-time search with tag, color, and content filtering
 class NotesSearchBar extends StatefulWidget {
-  final String? initialQuery;
+  final String? initialSearchQuery;
+  final List<String>? initialSelectedTags;
+  final List<NoteColor>? initialSelectedColors;
+  final bool initialFilterPinned;
+  final bool initialFilterWithMedia;
   final Function(String) onSearchChanged;
   final Function(List<String>)? onTagsSelected;
-  final Function(List<Color>)? onColorsSelected;
+  final Function(List<NoteColor>)? onColorsSelected;
+  final Function(bool)? onPinnedFilterChanged;
+  final Function(bool)? onMediaFilterChanged;
   final VoidCallback? onAdvancedSearch;
   final bool showAdvancedOptions;
 
   const NotesSearchBar({
     super.key,
-    this.initialQuery,
+    this.initialSearchQuery,
+    this.initialSelectedTags,
+    this.initialSelectedColors,
+    this.initialFilterPinned = false,
+    this.initialFilterWithMedia = false,
     required this.onSearchChanged,
     this.onTagsSelected,
     this.onColorsSelected,
+    this.onPinnedFilterChanged,
+    this.onMediaFilterChanged,
     this.onAdvancedSearch,
     this.showAdvancedOptions = true,
   });
@@ -35,8 +49,11 @@ class _NotesSearchBarState extends State<NotesSearchBar>
 
   bool _isExpanded = false;
   bool _showClearButton = false;
-  final List<String> _selectedTags = [];
-  final List<Color> _selectedColors = [];
+  Timer? _debounceTimer;
+  List<String> _selectedTags = [];
+  List<NoteColor> _selectedColors = [];
+  bool _filterPinned = false;
+  bool _filterWithMedia = false;
 
   // Sample tags (in real app, these would come from notes data)
   final List<String> _availableTags = [
@@ -49,24 +66,30 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     'project',
   ];
 
-  // Sample colors for filtering
-  final List<Color> _availableColors = [
-    Colors.blue,
-    Colors.green,
-    Colors.orange,
-    Colors.red,
-    Colors.purple,
-    Colors.teal,
-    Colors.pink,
-    Colors.amber,
+  // Available colors for filtering from NoteColor enum
+  final List<NoteColor> _availableColors = [
+    NoteColor.red,
+    NoteColor.orange,
+    NoteColor.yellow,
+    NoteColor.green,
+    NoteColor.blue,
+    NoteColor.purple,
+    NoteColor.pink,
+    NoteColor.brown,
+    NoteColor.grey,
   ];
 
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialQuery);
+    _controller = TextEditingController(text: widget.initialSearchQuery);
     _focusNode = FocusNode();
     _showClearButton = _controller.text.isNotEmpty;
+
+    _selectedTags = List.from(widget.initialSelectedTags ?? []);
+    _selectedColors = List.from(widget.initialSelectedColors ?? []);
+    _filterPinned = widget.initialFilterPinned;
+    _filterWithMedia = widget.initialFilterWithMedia;
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -81,7 +104,29 @@ class _NotesSearchBarState extends State<NotesSearchBar>
   }
 
   @override
+  void didUpdateWidget(NotesSearchBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialSearchQuery != oldWidget.initialSearchQuery &&
+        widget.initialSearchQuery != _controller.text) {
+      _controller.text = widget.initialSearchQuery ?? '';
+    }
+    if (widget.initialSelectedTags != oldWidget.initialSelectedTags) {
+      _selectedTags = List.from(widget.initialSelectedTags ?? []);
+    }
+    if (widget.initialSelectedColors != oldWidget.initialSelectedColors) {
+      _selectedColors = List.from(widget.initialSelectedColors ?? []);
+    }
+    if (widget.initialFilterPinned != oldWidget.initialFilterPinned) {
+      _filterPinned = widget.initialFilterPinned;
+    }
+    if (widget.initialFilterWithMedia != oldWidget.initialFilterWithMedia) {
+      _filterWithMedia = widget.initialFilterWithMedia;
+    }
+  }
+
+  @override
   void dispose() {
+    _debounceTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     _animationController.dispose();
@@ -93,7 +138,11 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     setState(() {
       _showClearButton = query.isNotEmpty;
     });
-    widget.onSearchChanged(query);
+
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      widget.onSearchChanged(query);
+    });
   }
 
   void _onFocusChanged() {
@@ -126,6 +175,8 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     setState(() {
       _selectedTags.clear();
       _selectedColors.clear();
+      _filterPinned = false;
+      _filterWithMedia = false;
     });
     widget.onSearchChanged('');
     widget.onTagsSelected?.call([]);
@@ -145,7 +196,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     HapticFeedback.lightImpact();
   }
 
-  void _toggleColor(Color color) {
+  void _toggleColor(NoteColor color) {
     setState(() {
       if (_selectedColors.contains(color)) {
         _selectedColors.remove(color);
@@ -281,6 +332,11 @@ class _NotesSearchBarState extends State<NotesSearchBar>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // General Filters (Pinned, Media)
+          _buildGeneralFilters(),
+
+          const SizedBox(height: 16),
+
           // Divider
           Container(
             height: 1,
@@ -372,15 +428,20 @@ class _NotesSearchBarState extends State<NotesSearchBar>
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: _availableColors.map((color) {
-            final isSelected = _selectedColors.contains(color);
+          children: _availableColors.map((noteColor) {
+            final isSelected = _selectedColors.contains(noteColor);
+            final colorValue = Color(
+              noteColor.getColorValue(
+                Theme.of(context).brightness == Brightness.dark,
+              ),
+            );
             return GestureDetector(
-              onTap: () => _toggleColor(color),
+              onTap: () => _toggleColor(noteColor),
               child: Container(
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: color,
+                  color: colorValue,
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isSelected
@@ -397,6 +458,61 @@ class _NotesSearchBarState extends State<NotesSearchBar>
           }).toList(),
         ),
       ],
+    );
+  }
+
+  Widget _buildGeneralFilters() {
+    return Row(
+      children: [
+        _buildFilterChip(
+          label: 'Pinned Only',
+          isSelected: _filterPinned,
+          onTap: () {
+            setState(() => _filterPinned = !_filterPinned);
+            widget.onPinnedFilterChanged?.call(_filterPinned);
+            HapticFeedback.lightImpact();
+          },
+        ),
+        SizedBox(width: 8.w),
+        _buildFilterChip(
+          label: 'With Media',
+          isSelected: _filterWithMedia,
+          onTap: () {
+            setState(() => _filterWithMedia = !_filterWithMedia);
+            widget.onMediaFilterChanged?.call(_filterWithMedia);
+            HapticFeedback.lightImpact();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : AppColors.background(context),
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border(context),
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelSmall(
+            context,
+            isSelected ? AppColors.primary : AppColors.textSecondary(context),
+          ),
+        ),
+      ),
     );
   }
 

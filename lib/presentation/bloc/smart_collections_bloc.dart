@@ -1,6 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:mynotes/domain/repositories/smart_collection_repository.dart';
+import 'package:mynotes/domain/entities/smart_collection.dart';
+import 'package:uuid/uuid.dart';
+import 'params/smart_collections_params.dart';
 
 // Smart Collections BLoC - Events
 abstract class SmartCollectionsEvent extends Equatable {
@@ -13,23 +16,33 @@ class LoadSmartCollectionsEvent extends SmartCollectionsEvent {
   const LoadSmartCollectionsEvent();
 }
 
+class FilterChangedEvent extends SmartCollectionsEvent {
+  final String filter;
+  const FilterChangedEvent(this.filter);
+  @override
+  List<Object?> get props => [filter];
+}
+
 class CreateSmartCollectionEvent extends SmartCollectionsEvent {
   final String name;
   final String description;
-  final List<Map<String, dynamic>> rules;
+  final List<CollectionRule> rules;
+  final String logic;
+
   const CreateSmartCollectionEvent({
     required this.name,
     required this.description,
     required this.rules,
+    this.logic = 'AND',
   });
   @override
-  List<Object?> get props => [name, description, rules];
+  List<Object?> get props => [name, description, rules, logic];
 }
 
 class UpdateSmartCollectionEvent extends SmartCollectionsEvent {
   final String collectionId;
   final String name;
-  final List<Map<String, dynamic>> rules;
+  final List<CollectionRule> rules;
   const UpdateSmartCollectionEvent({
     required this.collectionId,
     required this.name,
@@ -46,6 +59,13 @@ class DeleteSmartCollectionEvent extends SmartCollectionsEvent {
   List<Object?> get props => [collectionId];
 }
 
+class SearchSmartCollectionsEvent extends SmartCollectionsEvent {
+  final String query;
+  const SearchSmartCollectionsEvent({required this.query});
+  @override
+  List<Object?> get props => [query];
+}
+
 class ArchiveSmartCollectionEvent extends SmartCollectionsEvent {
   final String collectionId;
   const ArchiveSmartCollectionEvent({required this.collectionId});
@@ -55,37 +75,29 @@ class ArchiveSmartCollectionEvent extends SmartCollectionsEvent {
 
 // Smart Collections BLoC - States
 abstract class SmartCollectionsState extends Equatable {
-  const SmartCollectionsState();
+  final SmartCollectionsParams params;
+  const SmartCollectionsState(this.params);
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [params];
 }
 
 class SmartCollectionsInitial extends SmartCollectionsState {
-  const SmartCollectionsInitial();
+  const SmartCollectionsInitial() : super(const SmartCollectionsParams());
 }
 
 class SmartCollectionsLoading extends SmartCollectionsState {
-  const SmartCollectionsLoading();
+  const SmartCollectionsLoading(super.params);
 }
 
 class SmartCollectionsLoaded extends SmartCollectionsState {
-  final List<Map<String, dynamic>> collections;
-  final int totalItems;
-
-  const SmartCollectionsLoaded({
-    required this.collections,
-    required this.totalItems,
-  });
-
-  @override
-  List<Object?> get props => [collections, totalItems];
+  const SmartCollectionsLoaded(super.params);
 }
 
 class SmartCollectionsError extends SmartCollectionsState {
   final String message;
-  const SmartCollectionsError({required this.message});
+  const SmartCollectionsError(super.params, {required this.message});
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [params, message];
 }
 
 // Smart Collections BLoC - Implementation
@@ -96,10 +108,32 @@ class SmartCollectionsBloc
   SmartCollectionsBloc({required this.smartCollectionRepository})
     : super(const SmartCollectionsInitial()) {
     on<LoadSmartCollectionsEvent>(_onLoadCollections);
+    on<FilterChangedEvent>(_onFilterChanged);
     on<CreateSmartCollectionEvent>(_onCreateCollection);
     on<UpdateSmartCollectionEvent>(_onUpdateCollection);
     on<DeleteSmartCollectionEvent>(_onDeleteCollection);
     on<ArchiveSmartCollectionEvent>(_onArchiveCollection);
+    on<SearchSmartCollectionsEvent>(_onSearchCollections);
+  }
+
+  void _onFilterChanged(
+    FilterChangedEvent event,
+    Emitter<SmartCollectionsState> emit,
+  ) {
+    emit(
+      SmartCollectionsLoaded(
+        state.params.copyWith(selectedFilter: event.filter),
+      ),
+    );
+  }
+
+  Future<void> _onSearchCollections(
+    SearchSmartCollectionsEvent event,
+    Emitter<SmartCollectionsState> emit,
+  ) async {
+    emit(
+      SmartCollectionsLoaded(state.params.copyWith(searchQuery: event.query)),
+    );
   }
 
   Future<void> _onLoadCollections(
@@ -107,36 +141,22 @@ class SmartCollectionsBloc
     Emitter<SmartCollectionsState> emit,
   ) async {
     try {
-      emit(const SmartCollectionsLoading());
+      emit(SmartCollectionsLoading(state.params.copyWith(isLoading: true)));
 
       final collections = await smartCollectionRepository.loadCollections();
 
-      final collectionsData = collections
-          .map(
-            (c) => {
-              'id': c.id,
-              'name': c.name,
-              'description': c.description,
-              'itemCount': c.itemCount,
-              'lastUpdated': c.lastUpdated.toString(),
-              'isActive': c.isActive,
-            },
-          )
-          .toList();
-
-      final totalItems = collectionsData.fold<int>(
-        0,
-        (sum, c) => sum + (c['itemCount'] as int),
-      );
-
       emit(
         SmartCollectionsLoaded(
-          collections: collectionsData,
-          totalItems: totalItems,
+          state.params.copyWith(collections: collections, isLoading: false),
         ),
       );
     } catch (e) {
-      emit(SmartCollectionsError(message: e.toString()));
+      emit(
+        SmartCollectionsError(
+          state.params.copyWith(isLoading: false),
+          message: e.toString(),
+        ),
+      );
     }
   }
 
@@ -145,12 +165,23 @@ class SmartCollectionsBloc
     Emitter<SmartCollectionsState> emit,
   ) async {
     try {
-      // Create in repository stub (needs proper entity mapping)
-      // await smartCollectionRepository.createCollection(...);
+      final collection = SmartCollection(
+        id: const Uuid().v4(),
+        name: event.name,
+        description: event.description,
+        rules: event.rules,
+        itemCount: 0,
+        lastUpdated: DateTime.now(),
+        isActive: true,
+        logic: event.logic,
+      );
+
+      await smartCollectionRepository.createCollection(collection);
       add(const LoadSmartCollectionsEvent());
     } catch (e) {
       emit(
         SmartCollectionsError(
+          state.params,
           message: 'Failed to create collection: ${e.toString()}',
         ),
       );
@@ -162,11 +193,10 @@ class SmartCollectionsBloc
     Emitter<SmartCollectionsState> emit,
   ) async {
     try {
-      // Update in repository stub
-      // await smartCollectionRepository.updateCollection(...);
+      // Implement update in repository
       add(const LoadSmartCollectionsEvent());
     } catch (e) {
-      emit(SmartCollectionsError(message: e.toString()));
+      emit(SmartCollectionsError(state.params, message: e.toString()));
     }
   }
 
@@ -180,6 +210,7 @@ class SmartCollectionsBloc
     } catch (e) {
       emit(
         SmartCollectionsError(
+          state.params,
           message: 'Failed to delete collection: ${e.toString()}',
         ),
       );
@@ -196,6 +227,7 @@ class SmartCollectionsBloc
     } catch (e) {
       emit(
         SmartCollectionsError(
+          state.params,
           message: 'Failed to archive collection: ${e.toString()}',
         ),
       );

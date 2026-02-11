@@ -9,6 +9,7 @@ class SmartCollection extends Equatable {
   final int itemCount;
   final DateTime lastUpdated;
   final bool isActive;
+  final String logic;
 
   const SmartCollection({
     required this.id,
@@ -18,6 +19,7 @@ class SmartCollection extends Equatable {
     required this.itemCount,
     required this.lastUpdated,
     required this.isActive,
+    this.logic = 'AND',
   });
 
   @override
@@ -29,6 +31,7 @@ class SmartCollection extends Equatable {
     itemCount,
     lastUpdated,
     isActive,
+    logic,
   ];
 
   /// Convert to JSON for storage
@@ -40,6 +43,7 @@ class SmartCollection extends Equatable {
     'itemCount': itemCount,
     'lastUpdated': lastUpdated.toIso8601String(),
     'isActive': isActive,
+    'logic': logic,
   };
 
   /// Create from JSON
@@ -56,6 +60,7 @@ class SmartCollection extends Equatable {
       itemCount: json['itemCount'] as int? ?? 0,
       lastUpdated: DateTime.parse(json['lastUpdated'] as String),
       isActive: json['isActive'] as bool? ?? true,
+      logic: json['logic'] as String? ?? 'AND',
     );
   }
 
@@ -68,6 +73,7 @@ class SmartCollection extends Equatable {
     int? itemCount,
     DateTime? lastUpdated,
     bool? isActive,
+    String? logic,
   }) {
     return SmartCollection(
       id: id ?? this.id,
@@ -77,6 +83,7 @@ class SmartCollection extends Equatable {
       itemCount: itemCount ?? this.itemCount,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       isActive: isActive ?? this.isActive,
+      logic: logic ?? this.logic,
     );
   }
 }

@@ -19,13 +19,11 @@ class _ReflectionHistoryScreenState extends State<ReflectionHistoryScreen> {
   String? _selectedMood;
   final List<String> _moods = [
     'All',
+    'great',
     'happy',
-    'sad',
+    'good',
     'neutral',
-    'stressed',
-    'calm',
-    'grateful',
-    'anxious',
+    'sad',
   ];
 
   @override
@@ -50,195 +48,198 @@ class _ReflectionHistoryScreenState extends State<ReflectionHistoryScreen> {
             : AppColors.lightBackground,
         foregroundColor: isDark ? AppColors.lightText : AppColors.darkText,
       ),
-      body: Column(
-        children: [
-          // Streak Tracker
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
-            margin: EdgeInsets.all(12.w),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.darkCardBackground
-                  : AppColors.lightCardBackground,
-              borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(
-                color: AppColors.primaryColor.withOpacity(0.2),
+      body: BlocBuilder<ReflectionBloc, ReflectionState>(
+        builder: (context, state) {
+          return Column(
+            children: [
+              // Streak Tracker
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
+                margin: EdgeInsets.all(12.w),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.darkCardBackground
+                      : AppColors.lightCardBackground,
+                  borderRadius: BorderRadius.circular(12.r),
+                  border: Border.all(
+                    color: AppColors.primaryColor.withOpacity(0.2),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStreakCard(
+                      icon: Icons.local_fire_department,
+                      label: 'Current Streak',
+                      value: '${state.streakCount} days',
+                      color: Colors.orange,
+                    ),
+                    _buildStreakCard(
+                      icon: Icons.trending_up,
+                      label: 'Longest Streak',
+                      value: '${state.longestStreak} days',
+                      color: AppColors.primaryColor,
+                    ),
+                    _buildStreakCard(
+                      icon: Icons.calendar_today,
+                      label: 'Total Reflections',
+                      value: '${state.totalReflectionsCount}',
+                      color: Colors.green,
+                    ),
+                  ],
+                ),
               ),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStreakCard(
-                  icon: Icons.local_fire_department,
-                  label: 'Current Streak',
-                  value: '7 days',
-                  color: Colors.orange,
-                ),
-                _buildStreakCard(
-                  icon: Icons.trending_up,
-                  label: 'Longest Streak',
-                  value: '14 days',
-                  color: AppColors.primaryColor,
-                ),
-                _buildStreakCard(
-                  icon: Icons.calendar_today,
-                  label: 'Total Reflections',
-                  value: '42',
-                  color: Colors.green,
-                ),
-              ],
-            ),
-          ),
-          // Mood Filter
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-            child: Row(
-              children: _moods
-                  .map(
-                    (mood) => Padding(
-                      padding: EdgeInsets.only(right: 8.w),
-                      child: FilterChip(
-                        label: Text(mood),
-                        selected:
-                            _selectedMood == (mood == 'All' ? null : mood),
-                        onSelected: (selected) {
-                          setState(() {
-                            _selectedMood = selected
-                                ? (mood == 'All' ? null : mood)
-                                : null;
-                          });
-                        },
-                        backgroundColor: isDark
-                            ? AppColors.darkCardBackground
-                            : AppColors.lightCardBackground,
-                        selectedColor: AppColors.primaryColor.withOpacity(0.3),
-                        side: BorderSide(color: AppColors.outlineColor),
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
-          // History List
-          Expanded(
-            child: BlocBuilder<ReflectionBloc, ReflectionState>(
-              builder: (context, state) {
-                if (state is ReflectionLoading) {
-                  return Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        AppColors.primaryColor,
-                      ),
-                    ),
-                  );
-                }
-
-                if (state is ReflectionError) {
-                  return Center(child: Text(state.message));
-                }
-
-                if (state is AllAnswersLoaded) {
-                  var answers = state.answers
-                      .where((a) => a.draft == null)
-                      .toList();
-
-                  // Filter by mood
-                  if (_selectedMood != null) {
-                    answers = answers
-                        .where((a) => a.mood == _selectedMood)
-                        .toList();
-                  }
-
-                  // Sort by date descending
-                  answers.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-                  if (answers.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.history,
-                            size: 48.sp,
-                            color: isDark ? Colors.grey[600] : Colors.grey[400],
-                          ),
-                          SizedBox(height: 16.h),
-                          Text(
-                            'No reflections yet',
-                            style: TextStyle(
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.w500,
+              // Mood Filter
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                child: Row(
+                  children: _moods
+                      .map(
+                        (mood) => Padding(
+                          padding: EdgeInsets.only(right: 8.w),
+                          child: FilterChip(
+                            label: Text(mood),
+                            selected:
+                                _selectedMood == (mood == 'All' ? null : mood),
+                            onSelected: (selected) {
+                              setState(() {
+                                _selectedMood = selected
+                                    ? (mood == 'All' ? null : mood)
+                                    : null;
+                              });
+                            },
+                            backgroundColor: isDark
+                                ? AppColors.darkCardBackground
+                                : AppColors.lightCardBackground,
+                            selectedColor: AppColors.primaryColor.withOpacity(
+                              0.3,
                             ),
+                            side: BorderSide(color: AppColors.outlineColor),
                           ),
-                        ],
-                      ),
-                    );
-                  }
+                        ),
+                      )
+                      .toList(),
+                ),
+              ),
+              // History List
+              Expanded(
+                child: Builder(
+                  builder: (context) {
+                    if (state.isLoading) {
+                      return Center(
+                        child: CircularProgressIndicator(
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primaryColor,
+                          ),
+                        ),
+                      );
+                    }
 
-                  return ListView.builder(
-                    padding: EdgeInsets.all(16.w),
-                    itemCount: answers.length,
-                    itemBuilder: (context, index) {
-                      final answer = answers[index];
-                      final isDateChange =
-                          index == 0 ||
-                          !_isSameDay(
-                            answers[index - 1].createdAt,
-                            answer.createdAt,
-                          );
+                    if (state.error != null) {
+                      return Center(child: Text(state.error!));
+                    }
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (isDateChange) ...[
-                            if (index != 0) SizedBox(height: 20.h),
-                            Padding(
-                              padding: EdgeInsets.only(bottom: 12.h, left: 8.w),
-                              child: Text(
-                                _formatDateHeader(answer.createdAt),
-                                style: TextStyle(
-                                  fontSize: 12.sp,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.primaryColor,
-                                ),
+                    var answers = state.allAnswers
+                        .where((a) => a.draft == null)
+                        .toList();
+
+                    // Filter by mood
+                    if (_selectedMood != null) {
+                      answers = answers
+                          .where((a) => a.mood == _selectedMood)
+                          .toList();
+                    }
+
+                    // Sort by date descending
+                    answers.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+                    if (answers.isEmpty) {
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.history,
+                              size: 48.sp,
+                              color: isDark
+                                  ? Colors.grey[600]
+                                  : Colors.grey[400],
+                            ),
+                            SizedBox(height: 16.h),
+                            Text(
+                              'No reflections yet',
+                              style: TextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                           ],
-                          _buildAnswerCard(isDark, answer),
-                        ],
+                        ),
                       );
-                    },
-                  );
-                }
+                    }
 
-                return const SizedBox.shrink();
-              },
-            ),
-          ),
-        ],
+                    return ListView.builder(
+                      padding: EdgeInsets.all(16.w),
+                      itemCount: answers.length,
+                      itemBuilder: (context, index) {
+                        final answer = answers[index];
+                        final isDateChange =
+                            index == 0 ||
+                            !_isSameDay(
+                              answers[index - 1].createdAt,
+                              answer.createdAt,
+                            );
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (isDateChange) ...[
+                              if (index != 0) SizedBox(height: 20.h),
+                              Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: 12.h,
+                                  left: 8.w,
+                                ),
+                                child: Text(
+                                  _formatDateHeader(answer.createdAt),
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primaryColor,
+                                  ),
+                                ),
+                              ),
+                            ],
+                            _buildAnswerCard(isDark, answer),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
   Widget _buildAnswerCard(bool isDark, ReflectionAnswer answer) {
     const moodIcons = {
-      'happy': Icons.sentiment_very_satisfied,
-      'sad': Icons.sentiment_very_dissatisfied,
+      'great': Icons.sentiment_very_satisfied,
+      'happy': Icons.sentiment_satisfied_alt,
+      'good': Icons.sentiment_satisfied,
       'neutral': Icons.sentiment_neutral,
-      'stressed': Icons.sentiment_very_dissatisfied,
-      'calm': Icons.auto_awesome,
-      'grateful': Icons.favorite,
-      'anxious': Icons.sentiment_satisfied,
+      'sad': Icons.sentiment_very_dissatisfied,
     };
     const moodColors = {
-      'happy': Colors.yellow,
-      'sad': Colors.blue,
+      'great': Colors.orange,
+      'happy': Colors.green,
+      'good': Colors.lightGreen,
       'neutral': Colors.grey,
-      'stressed': Colors.red,
-      'calm': Colors.green,
-      'grateful': Colors.pink,
-      'anxious': Colors.orange,
+      'sad': Colors.blue,
     };
 
     return GestureDetector(
@@ -265,6 +266,26 @@ class _ReflectionHistoryScreenState extends State<ReflectionHistoryScreen> {
                     moodIcons[answer.mood],
                     color: moodColors[answer.mood],
                     size: 18.sp,
+                  ),
+                  SizedBox(width: 8.w),
+                ],
+                if (answer.energyLevel != null) ...[
+                  Icon(Icons.bolt, color: Colors.yellow[700], size: 14.sp),
+                  Text(
+                    '${answer.energyLevel}',
+                    style: TextStyle(fontSize: 10.sp),
+                  ),
+                  SizedBox(width: 8.w),
+                ],
+                if (answer.sleepQuality != null) ...[
+                  Icon(
+                    Icons.bedtime_outlined,
+                    color: Colors.indigo[300],
+                    size: 14.sp,
+                  ),
+                  Text(
+                    '${answer.sleepQuality}',
+                    style: TextStyle(fontSize: 10.sp),
                   ),
                   SizedBox(width: 8.w),
                 ],
@@ -325,22 +346,18 @@ class _ReflectionHistoryScreenState extends State<ReflectionHistoryScreen> {
     ReflectionAnswer answer,
   ) {
     const moodIcons = {
-      'happy': Icons.sentiment_very_satisfied,
-      'sad': Icons.sentiment_very_dissatisfied,
+      'great': Icons.sentiment_very_satisfied,
+      'happy': Icons.sentiment_satisfied_alt,
+      'good': Icons.sentiment_satisfied,
       'neutral': Icons.sentiment_neutral,
-      'stressed': Icons.sentiment_very_dissatisfied,
-      'calm': Icons.auto_awesome,
-      'grateful': Icons.favorite,
-      'anxious': Icons.sentiment_satisfied,
+      'sad': Icons.sentiment_very_dissatisfied,
     };
     const moodColors = {
-      'happy': Colors.yellow,
-      'sad': Colors.blue,
+      'great': Colors.orange,
+      'happy': Colors.green,
+      'good': Colors.lightGreen,
       'neutral': Colors.grey,
-      'stressed': Colors.red,
-      'calm': Colors.green,
-      'grateful': Colors.pink,
-      'anxious': Colors.orange,
+      'sad': Colors.blue,
     };
 
     showDialog(
@@ -364,7 +381,57 @@ class _ReflectionHistoryScreenState extends State<ReflectionHistoryScreen> {
           ],
         ),
         content: SingleChildScrollView(
-          child: Text(answer.answerText, style: TextStyle(fontSize: 13.sp)),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (answer.energyLevel != null ||
+                  answer.sleepQuality != null) ...[
+                Row(
+                  children: [
+                    if (answer.energyLevel != null) ...[
+                      Icon(Icons.bolt, color: Colors.yellow[700], size: 16.sp),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'Energy: ${answer.energyLevel}/5',
+                        style: TextStyle(fontSize: 12.sp),
+                      ),
+                      SizedBox(width: 16.w),
+                    ],
+                    if (answer.sleepQuality != null) ...[
+                      Icon(
+                        Icons.bedtime_outlined,
+                        color: Colors.indigo[300],
+                        size: 16.sp,
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'Sleep: ${answer.sleepQuality}/5',
+                        style: TextStyle(fontSize: 12.sp),
+                      ),
+                    ],
+                  ],
+                ),
+                SizedBox(height: 16.h),
+              ],
+              if (answer.activityTags.isNotEmpty) ...[
+                Wrap(
+                  spacing: 4.w,
+                  children: answer.activityTags
+                      .map(
+                        (tag) => Chip(
+                          label: Text(tag, style: TextStyle(fontSize: 10.sp)),
+                          padding: EdgeInsets.zero,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      )
+                      .toList(),
+                ),
+                SizedBox(height: 16.h),
+              ],
+              Text(answer.answerText, style: TextStyle(fontSize: 13.sp)),
+            ],
+          ),
         ),
         actions: [
           TextButton(

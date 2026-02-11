@@ -6,6 +6,7 @@ import '../widgets/collection_manager_widget.dart';
 import '../widgets/kanban_board_widget.dart';
 import '../design_system/design_system.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/design_system/app_typography.dart'; // Added
 
 /// Integrated Features Screen - Display all advanced features
 /// Includes: Media Gallery, Drawing Canvas, Collections, Kanban Board
@@ -41,10 +42,8 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
       appBar: AppBar(
         title: Text(
           'Advanced Features',
-          style: TextStyle(
-            fontSize: 18.sp,
-            fontWeight: FontWeight.w700,
-            color: AppColors.getTextColor(Theme.of(context).brightness),
+          style: AppTypography.heading3().copyWith(
+            color: isDark ? AppColors.lightText : AppColors.darkText,
           ),
         ),
         backgroundColor: isDark
@@ -55,7 +54,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
           preferredSize: Size.fromHeight(50.h),
           child: TabBar(
             controller: _tabController,
-            isScrollable: false,
+            isScrollable: true, // Made scrollable for smaller screens
             tabs: [
               _buildTab('Media', Icons.image),
               _buildTab('Draw', Icons.brush),
@@ -73,6 +72,10 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
             unselectedLabelColor: AppColors.getSecondaryTextColor(
               Theme.of(context).brightness,
             ),
+            labelStyle: AppTypography.body2().copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+            unselectedLabelStyle: AppTypography.body2(),
           ),
         ),
       ),
@@ -105,7 +108,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
         children: [
           Icon(icon, size: 18.sp),
           SizedBox(width: 6.w),
-          Text(label, style: TextStyle(fontSize: 12.sp)),
+          Text(label),
         ],
       ),
     );
@@ -305,6 +308,14 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
             ),
             SizedBox(height: 16.h),
             _buildHubCard(
+              title: 'Reflection & Gratitude',
+              subtitle: 'Daily prompts for mindfulness',
+              icon: Icons.self_improvement,
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.reflectionHome),
+            ),
+            SizedBox(height: 12.h),
+            _buildHubCard(
               title: 'Smart Recommendations',
               subtitle: 'AI-generated tips for your reminders',
               icon: Icons.lightbulb_outline,
@@ -391,33 +402,24 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 15.sp,
+                    style: AppTypography.body1().copyWith(
                       fontWeight: FontWeight.w600,
-                      color: AppColors.getTextColor(
-                        Theme.of(context).brightness,
-                      ),
+                      color: isDark ? AppColors.lightText : AppColors.darkText,
                     ),
                   ),
                   SizedBox(height: 2.h),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: AppColors.getSecondaryTextColor(
-                        Theme.of(context).brightness,
-                      ),
+                    style: AppTypography.body2().copyWith(
+                      color: isDark
+                          ? AppColors.lightTextSecondary
+                          : AppColors.darkTextSecondary,
                     ),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.chevron_right,
-              color: AppColors.getSecondaryTextColor(
-                Theme.of(context).brightness,
-              ),
-            ),
+            Icon(Icons.chevron_right, color: AppColors.textTertiary(context)),
           ],
         ),
       ),
@@ -427,6 +429,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
   // ==================== Helper Widgets ====================
 
   Widget _buildTabHeader(String title, String subtitle, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -447,22 +450,17 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
                 children: [
                   Text(
                     title,
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.getTextColor(
-                        Theme.of(context).brightness,
-                      ),
+                    style: AppTypography.heading4().copyWith(
+                      color: isDark ? AppColors.lightText : AppColors.darkText,
                     ),
                   ),
                   SizedBox(height: 4.h),
                   Text(
                     subtitle,
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: AppColors.getSecondaryTextColor(
-                        Theme.of(context).brightness,
-                      ),
+                    style: AppTypography.body2().copyWith(
+                      color: isDark
+                          ? AppColors.lightTextSecondary
+                          : AppColors.darkTextSecondary,
                     ),
                   ),
                 ],
@@ -475,6 +473,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
   }
 
   Widget _buildFeatureList(List<String> features) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
@@ -487,10 +486,9 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
         children: [
           Text(
             'Features',
-            style: TextStyle(
-              fontSize: 13.sp,
+            style: AppTypography.body1().copyWith(
               fontWeight: FontWeight.w600,
-              color: AppColors.getTextColor(Theme.of(context).brightness),
+              color: isDark ? AppColors.lightText : AppColors.darkText,
             ),
           ),
           SizedBox(height: 8.h),
@@ -504,7 +502,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
                     '✓',
                     style: TextStyle(
                       fontSize: 12.sp,
-                      color: Colors.green,
+                      color: AppColors.successGreen,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -512,11 +510,10 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
                   Expanded(
                     child: Text(
                       feature,
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: AppColors.getSecondaryTextColor(
-                          Theme.of(context).brightness,
-                        ),
+                      style: AppTypography.body2().copyWith(
+                        color: isDark
+                            ? AppColors.lightTextSecondary
+                            : AppColors.darkTextSecondary,
                       ),
                     ),
                   ),

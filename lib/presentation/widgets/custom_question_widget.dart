@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../injection_container.dart' show getIt;
+import '../../core/services/global_ui_service.dart';
 
 /// Custom reflection question entity (REF-003)
 class CustomQuestion {
@@ -72,16 +74,18 @@ class _CustomQuestionCreatorWidgetState
     'Relationships',
     'Creativity',
     'Goals',
-    'Other'
+    'Other',
   ];
 
   @override
   void initState() {
     super.initState();
-    _questionController =
-        TextEditingController(text: widget.initialQuestion?.question ?? '');
+    _questionController = TextEditingController(
+      text: widget.initialQuestion?.question ?? '',
+    );
     _descriptionController = TextEditingController(
-        text: widget.initialQuestion?.description ?? '');
+      text: widget.initialQuestion?.description ?? '',
+    );
     _selectedCategory = widget.initialQuestion?.category ?? 'Personal';
     _isDailyPrompt = widget.initialQuestion?.isDailyPrompt ?? false;
   }
@@ -95,9 +99,7 @@ class _CustomQuestionCreatorWidgetState
 
   void _createQuestion() {
     if (_questionController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please enter a question')),
-      );
+      getIt<GlobalUiService>().showWarning('Please enter a question');
       return;
     }
 
@@ -170,10 +172,9 @@ class _CustomQuestionCreatorWidgetState
                 DropdownButtonFormField<String>(
                   value: _selectedCategory,
                   items: categories
-                      .map((cat) => DropdownMenuItem(
-                            value: cat,
-                            child: Text(cat),
-                          ))
+                      .map(
+                        (cat) => DropdownMenuItem(value: cat, child: Text(cat)),
+                      )
                       .toList(),
                   onChanged: (value) {
                     if (value != null) {
@@ -208,7 +209,8 @@ class _CustomQuestionCreatorWidgetState
                 CheckboxListTile(
                   title: Text('Use as Daily Prompt'),
                   subtitle: Text(
-                      'Send this question as a daily notification reminder'),
+                    'Send this question as a daily notification reminder',
+                  ),
                   value: _isDailyPrompt,
                   onChanged: (value) {
                     setState(() => _isDailyPrompt = value ?? false);
@@ -240,11 +242,8 @@ class DailyPromptWidget extends StatelessWidget {
   final CustomQuestion prompt;
   final VoidCallback? onAnswerTap;
 
-  const DailyPromptWidget({
-    Key? key,
-    required this.prompt,
-    this.onAnswerTap,
-  }) : super(key: key);
+  const DailyPromptWidget({Key? key, required this.prompt, this.onAnswerTap})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -263,13 +262,16 @@ class DailyPromptWidget extends StatelessWidget {
                     children: [
                       Text(
                         'Daily Prompt',
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: Colors.grey,
-                            ),
+                        style: Theme.of(
+                          context,
+                        ).textTheme.labelSmall?.copyWith(color: Colors.grey),
                       ),
                       SizedBox(height: 4),
                       Container(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.amber.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(4),
@@ -292,17 +294,17 @@ class DailyPromptWidget extends StatelessWidget {
             SizedBox(height: 12),
             Text(
               prompt.question,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
             if (prompt.description != null) ...[
               SizedBox(height: 8),
               Text(
                 prompt.description!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
               ),
             ],
             SizedBox(height: 16),
@@ -352,8 +354,8 @@ class CustomQuestionsListWidget extends StatelessWidget {
                 Text(
                   'Custom Questions',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 if (onAddQuestion != null)
                   IconButton(
@@ -368,9 +370,9 @@ class CustomQuestionsListWidget extends StatelessWidget {
                 child: Center(
                   child: Text(
                     'No custom questions yet',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Colors.grey,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                   ),
                 ),
               )
@@ -414,32 +416,33 @@ class CustomQuestionsListWidget extends StatelessWidget {
                     Text(
                       question.question,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w500,
-                          ),
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                     SizedBox(height: 4),
                     Wrap(
                       spacing: 8,
                       children: [
                         Container(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
                           decoration: BoxDecoration(
                             color: Colors.blue.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
                             question.category,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.blue,
-                            ),
+                            style: TextStyle(fontSize: 11, color: Colors.blue),
                           ),
                         ),
                         if (question.isDailyPrompt)
                           Container(
                             padding: EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 2),
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.amber.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(4),
@@ -447,8 +450,11 @@ class CustomQuestionsListWidget extends StatelessWidget {
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.notifications,
-                                    size: 10, color: Colors.amber),
+                                Icon(
+                                  Icons.notifications,
+                                  size: 10,
+                                  color: Colors.amber,
+                                ),
                                 SizedBox(width: 2),
                                 Text(
                                   'Daily',

@@ -20,11 +20,11 @@ class AISuggestionEngine {
       final suggestions = <Map<String, dynamic>>[];
 
       // 1. Detect time-based patterns
-      final timePatterns = _detectTimePatterns(reminderHistory);
+      final timePatterns = detectTimePatterns(reminderHistory);
       suggestions.addAll(_createTimingBasedSuggestions(timePatterns));
 
       // 2. Detect content patterns
-      final contentPatterns = _detectContentPatterns(reminderHistory);
+      final contentPatterns = detectContentPatterns(reminderHistory);
       suggestions.addAll(_createContentBasedSuggestions(contentPatterns));
 
       // 3. Detect media-based patterns
@@ -33,7 +33,7 @@ class AISuggestionEngine {
       );
 
       // 4. Detect frequency patterns
-      final frequencyPatterns = _detectFrequencyPatterns(reminderHistory);
+      final frequencyPatterns = detectFrequencyPatterns(reminderHistory);
       suggestions.addAll(_createFrequencyBasedSuggestions(frequencyPatterns));
 
       // Score and rank suggestions
@@ -47,7 +47,7 @@ class AISuggestionEngine {
   }
 
   /// Detect recurring time patterns in reminder history
-  Map<String, int> _detectTimePatterns(List<dynamic> reminderHistory) {
+  Map<String, int> detectTimePatterns(List<dynamic> reminderHistory) {
     final timePatterns = <String, int>{};
 
     for (final reminder in reminderHistory) {
@@ -75,7 +75,7 @@ class AISuggestionEngine {
   }
 
   /// Detect content-related patterns
-  Map<String, int> _detectContentPatterns(List<dynamic> reminderHistory) {
+  Map<String, int> detectContentPatterns(List<dynamic> reminderHistory) {
     final patterns = <String, int>{};
 
     for (final reminder in reminderHistory) {
@@ -101,7 +101,7 @@ class AISuggestionEngine {
   }
 
   /// Detect frequency patterns (how often reminders are created)
-  Map<String, dynamic> _detectFrequencyPatterns(List<dynamic> reminderHistory) {
+  Map<String, dynamic> detectFrequencyPatterns(List<dynamic> reminderHistory) {
     if (reminderHistory.isEmpty) {
       return {'avgPerDay': 0, 'avgPerWeek': 0, 'trend': 'stable'};
     }
@@ -304,7 +304,7 @@ class AISuggestionEngine {
     required List<dynamic> reminderHistory,
   }) async {
     try {
-      final patterns = _detectFrequencyPatterns(reminderHistory);
+      final patterns = detectFrequencyPatterns(reminderHistory);
       final avgPerDay = patterns['avgPerDay'] as double? ?? 0;
 
       String strength = 'low';

@@ -9,12 +9,7 @@ class MediaFilteringService {
     return _instance;
   }
 
-  MediaFilteringService._internal([this._repository]);
-
-  final MediaRepository? _repository;
-
-  /// Initialize with repository injection
-  MediaFilteringService.withRepository(this._repository);
+  MediaFilteringService._internal();
 
   /// Advanced filter by multiple criteria
   Future<List<dynamic>> advancedFilter({
@@ -224,8 +219,8 @@ class MediaFilteringService {
           if (date != null) {
             oldest ??= date;
             newest ??= date;
-            if (date.isBefore(oldest!)) oldest = date;
-            if (date.isAfter(newest!)) newest = date;
+            if (date.isBefore(oldest)) oldest = date;
+            if (date.isAfter(newest)) newest = date;
           }
         }
       }
@@ -233,7 +228,7 @@ class MediaFilteringService {
       // Calculate average items per day
       double avgPerDay = 0;
       if (oldest != null && newest != null) {
-        final daysDiff = newest!.difference(oldest!).inDays + 1;
+        final daysDiff = newest.difference(oldest).inDays + 1;
         avgPerDay = mediaItems.length / daysDiff;
       }
 

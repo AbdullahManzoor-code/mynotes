@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/presentation/bloc/params/todo_params.dart';
 import 'package:mynotes/presentation/bloc/todo_state.dart';
 import 'package:mynotes/presentation/bloc/todo_event.dart';
 import '../../domain/entities/todo_item.dart';
@@ -360,9 +361,10 @@ class _KanbanBoardWidgetState extends State<KanbanBoardWidget> {
   void _moveTaskToColumn(TodoItem task, String newStatus) {
     // Update task status based on column
     final newPriority = _getStatusPriority(newStatus);
-    context.read<TodoBloc>().add(
-      UpdateTodoEvent(todo: task.copyWith(priority: newPriority)),
+    final params = TodoParams.fromTodoItem(
+      task.copyWith(priority: newPriority),
     );
+    context.read<TodoBloc>().add(UpdateTodoEvent(params: params));
   }
 
   TodoPriority _getStatusPriority(String status) {

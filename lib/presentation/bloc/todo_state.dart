@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+
 import '../../domain/entities/todo_item.dart';
 import 'todo_event.dart';
 

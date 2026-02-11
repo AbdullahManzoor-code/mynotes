@@ -7,7 +7,9 @@ import '../../domain/entities/alarm.dart';
 import '../../domain/entities/note.dart';
 import '../../presentation/bloc/alarms_bloc.dart';
 import '../../presentation/bloc/note_bloc.dart';
-import '../../core/notifications/notification_service.dart';
+import '../../injection_container.dart' show getIt;
+import '../../core/notifications/notification_service.dart'
+    hide AlarmRecurrence;
 
 class CreateAlarmBottomSheet extends StatefulWidget {
   final Alarm? alarm;
@@ -79,7 +81,7 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
         }
       }
     } catch (e) {
-      debugPrint('Error loading notes: $e');
+      AppLogger.e('Error loading notes: $e');
     }
   }
 
@@ -674,10 +676,8 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
 
     if (_selectedRecurrence == AlarmRecurrence.weekly &&
         _selectedWeekDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one day for weekly recurrence'),
-        ),
+      getIt<GlobalUiService>().showWarning(
+        'Please select at least one day for weekly recurrence',
       );
       return;
     }
@@ -709,20 +709,16 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
 
     Navigator.pop(context);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          widget.alarm == null
-              ? 'Reminder created successfully'
-              : 'Reminder updated successfully',
-        ),
-      ),
+    getIt<GlobalUiService>().showSuccess(
+      widget.alarm == null
+          ? 'Reminder created successfully'
+          : 'Reminder updated successfully',
     );
   }
 
   Future<void> _scheduleNotification(Alarm alarm) async {
     try {
-      final notificationService = NotificationService();
+      final notificationService = LocalNotificationService();
 
       await notificationService.schedule(
         id: int.parse(alarm.id),
@@ -734,13 +730,38 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
               ).title}'
             : 'Reminder notification',
         scheduledTime: alarm.scheduledTime,
-        repeatType: alarm.recurrence,
+        repeatDays: _platformRepeatDays(alarm),
       );
 
-      debugPrint('Platform notification scheduled for alarm: ${alarm.id}');
+      AppLogger.i('Platform notification scheduled for alarm: ${alarm.id}');
     } catch (e) {
-      debugPrint('Error scheduling platform notification: $e');
+      AppLogger.e('Error scheduling platform notification: $e');
       // Continue even if notification fails - alarm is still saved locally
+    }
+  }
+
+  List<int>? _platformRepeatDays(Alarm alarm) {
+    final weekDays = alarm.weekDays;
+    if (weekDays != null && weekDays.isNotEmpty) {
+      final normalized = weekDays
+          .map((day) => day % 7)
+          .where((day) => day >= 0 && day <= 6)
+          .toSet()
+          .toList();
+      if (normalized.isNotEmpty) {
+        return normalized;
+      }
+    }
+
+    switch (alarm.recurrence) {
+      case AlarmRecurrence.daily:
+        return List.generate(7, (index) => index);
+      case AlarmRecurrence.weekly:
+        return [alarm.scheduledTime.weekday % 7];
+      case AlarmRecurrence.monthly:
+      case AlarmRecurrence.yearly:
+      case AlarmRecurrence.none:
+        return null;
     }
   }
 

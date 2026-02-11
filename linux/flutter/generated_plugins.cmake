@@ -5,6 +5,7 @@
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_linux
   file_selector_linux
+  flutter_timezone
   irondash_engine_context
   printing
   record_linux

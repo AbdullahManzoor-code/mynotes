@@ -222,7 +222,10 @@ class NoteLinkingWidget extends StatelessWidget {
         leading: const Icon(Icons.note),
         title: const Text('Linked Note'),
         subtitle: Text(
-          linkedNoteTitle ?? 'Note #${linkedNoteId!.substring(0, 8)}',
+          linkedNoteTitle ??
+              (linkedNoteId != null && linkedNoteId!.length >= 8
+                  ? 'Note #${linkedNoteId!.substring(0, 8)}'
+                  : 'Note #$linkedNoteId'),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),

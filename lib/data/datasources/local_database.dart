@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import '../../domain/entities/note.dart';
@@ -8,7 +10,8 @@ import '../../domain/entities/alarm.dart';
 /// Local SQLite database for notes storage
 class NotesDatabase {
   static const String _databaseName = 'notes.db';
-  static const int _databaseVersion = 4;
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  static const int _databaseVersion = 12;
 
   // P0 Tables
   static const String notesTable = 'notes';
@@ -18,7 +21,9 @@ class NotesDatabase {
 
   // P1 Tables (Phase 2A)
   static const String reflectionsTable = 'reflections';
+  static const String reflectionAnswersTable = 'reflection_answers';
   static const String reflectionQuestionsTable = 'reflection_questions';
+  static const String reflectionDraftsTable = 'reflection_drafts';
   static const String activityTagsTable = 'activity_tags';
   static const String moodEntriesTable = 'mood_entries';
   static const String userSettingsTable = 'user_settings';
@@ -26,9 +31,18 @@ class NotesDatabase {
   // Location-based Reminders (Phase 2B)
   static const String locationRemindersTable = 'location_reminders';
   static const String savedLocationsTable = 'saved_locations';
+  static const String focusSessionsTable = 'focus_sessions';
+
+  // Batch 5 & 7 Tables
+  static const String smartCollectionsTable = 'smart_collections';
+  static const String collectionRulesTable = 'collection_rules';
+  static const String reminderTemplatesTable = 'reminder_templates';
 
   // Full-text search
   static const String notesFtsTable = 'notes_fts';
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  static const String noteLinksTable = 'note_links';
 
   static Database? _database;
 
@@ -151,6 +165,8 @@ class NotesDatabase {
         id TEXT PRIMARY KEY,
         noteId TEXT NOT NULL,
         type TEXT NOT NULL,
+        name TEXT,
+        size INTEGER,
         filePath TEXT NOT NULL,
         originalPath TEXT,
         thumbnailPath TEXT,
@@ -167,6 +183,7 @@ class NotesDatabase {
         media_order INTEGER,
         ocrText TEXT,
         ocrConfidence REAL,
+        metadata TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         isDeleted INTEGER NOT NULL DEFAULT 0,
@@ -211,6 +228,7 @@ class NotesDatabase {
         createdAt TEXT NOT NULL,
         updatedAt TEXT,
         question_order INTEGER,
+        isPinned INTEGER DEFAULT 0,
         isDeleted INTEGER NOT NULL DEFAULT 0
       )
     ''');
@@ -305,6 +323,27 @@ class NotesDatabase {
       )
     ''');
 
+    // Focus Sessions table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $focusSessionsTable (
+        id TEXT PRIMARY KEY,
+        startTime TEXT NOT NULL,
+        endTime TEXT,
+        durationSeconds INTEGER,
+        taskTitle TEXT,
+        category TEXT DEFAULT 'Focus',
+        isCompleted INTEGER DEFAULT 0,
+        rating INTEGER,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+
+    // Create Batch 5 & 7 tables
+    await _migrateToV6(db);
+    await _migrateToV7(db);
+    await _migrateToV11(db);
+
     // Create FTS5 virtual table for full-text search
     try {
       await db.execute('''
@@ -320,10 +359,9 @@ class NotesDatabase {
         )
       ''');
     } catch (e) {
-      // FTS5 may not be available on all Android devices
-      // Log the error but continue without FTS5 support
-      print(
-        'Warning: FTS5 not available. Full-text search will be disabled. Error: $e',
+      // FTS5 may not be available on all devices/environments
+      debugPrint(
+        'Database: FTS5 not available on this device. Search fallback to standard SQL. Error: $e',
       );
     }
 
@@ -428,6 +466,14 @@ class NotesDatabase {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_mood_entries_mood ON $moodEntriesTable(mood)',
     );
+
+    // Focus Sessions indexes
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_focus_sessions_start ON $focusSessionsTable(startTime DESC)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_focus_sessions_category ON $focusSessionsTable(category)',
+    );
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
@@ -459,6 +505,90 @@ class NotesDatabase {
     // v3 → v4: Create new tables for Phase 2A
     if (oldVersion < 4) {
       await _migrateToV4(db);
+    }
+
+    // v4 → v5: Create focus_sessions table
+    if (oldVersion < 5) {
+      await _migrateToV5(db);
+    }
+
+    // v5 → v6: Create Batch 5 & 7 tables
+    if (oldVersion < 6) {
+      await _migrateToV6(db);
+    }
+
+    // v6 → v7: Create reflection_answers and reflection_drafts tables
+    if (oldVersion < 7) {
+      await _migrateToV7(db);
+    }
+
+    // v7 → v8: Add isPinned to reflection_questions
+    if (oldVersion < 8) {
+      await _migrateToV8(db);
+    }
+
+    // v8 → v9: Add rating to focus_sessions
+    if (oldVersion < 9) {
+      await _migrateToV9(db);
+    }
+
+    // v9 → v10: Add metadata to media table
+    if (oldVersion < 10) {
+      await _migrateToV10(db);
+    }
+    // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+    if (oldVersion < 11) {
+      await _migrateToV11(db);
+    }
+
+    // SAFETY MIGRATION: Ensure note_links exists if v11 failed
+    if (oldVersion < 12) {
+      await _migrateToV11(db);
+    }
+  }
+
+  Future<void> _migrateToV10(Database db) async {
+    try {
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN metadata TEXT');
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN name TEXT');
+      await db.execute('ALTER TABLE $mediaTable ADD COLUMN size INTEGER');
+    } catch (e) {
+      // Columns may already exist
+    }
+  }
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  Future<void> _migrateToV11(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS $noteLinksTable (
+        sourceId TEXT NOT NULL,
+        targetId TEXT NOT NULL,
+        type TEXT DEFAULT 'manual',
+        createdAt TEXT NOT NULL,
+        PRIMARY KEY (sourceId, targetId),
+        FOREIGN KEY (sourceId) REFERENCES $notesTable(id) ON DELETE CASCADE,
+        FOREIGN KEY (targetId) REFERENCES $notesTable(id) ON DELETE CASCADE
+      )
+    ''');
+  }
+
+  Future<void> _migrateToV9(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE $focusSessionsTable ADD COLUMN rating INTEGER',
+      );
+    } catch (e) {
+      // Column may already exist
+    }
+  }
+
+  Future<void> _migrateToV8(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE $reflectionQuestionsTable ADD COLUMN isPinned INTEGER DEFAULT 0',
+      );
+    } catch (e) {
+      // Column may already exist
     }
   }
 
@@ -792,6 +922,136 @@ class NotesDatabase {
     await _createFTSTriggers(db);
   }
 
+  Future<void> _migrateToV5(Database db) async {
+    try {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $focusSessionsTable (
+          id TEXT PRIMARY KEY,
+          startTime TEXT NOT NULL,
+          endTime TEXT,
+          durationSeconds INTEGER,
+          taskTitle TEXT,
+          category TEXT DEFAULT 'Focus',
+          isCompleted INTEGER DEFAULT 0,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
+        )
+      ''');
+
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_focus_sessions_start ON $focusSessionsTable(startTime DESC)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_focus_sessions_category ON $focusSessionsTable(category)',
+      );
+    } catch (e) {
+      print('Warning: Migration to V5 failed. Error: $e');
+    }
+  }
+
+  Future<void> _migrateToV6(Database db) async {
+    try {
+      // Smart Collections Table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $smartCollectionsTable (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          itemCount INTEGER DEFAULT 0,
+          lastUpdated TEXT NOT NULL,
+          isActive INTEGER DEFAULT 1,
+          logic TEXT DEFAULT 'AND'
+        )
+      ''');
+
+      // Collection Rules Table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $collectionRulesTable (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          collectionId TEXT NOT NULL,
+          type TEXT NOT NULL,
+          operator TEXT NOT NULL,
+          value TEXT NOT NULL,
+          FOREIGN KEY (collectionId) REFERENCES $smartCollectionsTable(id) ON DELETE CASCADE
+        )
+      ''');
+
+      // Reminder Templates Table
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $reminderTemplatesTable (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          description TEXT,
+          time TEXT,
+          frequency TEXT,
+          duration TEXT,
+          category TEXT,
+          isFavorite INTEGER DEFAULT 0,
+          usageCount INTEGER DEFAULT 0,
+          createdAt TEXT NOT NULL
+        )
+      ''');
+
+      // Create indexes
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_smart_collections_active ON $smartCollectionsTable(isActive)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_collection_rules_cid ON $collectionRulesTable(collectionId)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_reminder_templates_fav ON $reminderTemplatesTable(isFavorite)',
+      );
+    } catch (e) {
+      print('Warning: Migration to V6 failed. Error: $e');
+    }
+  }
+
+  Future<void> _migrateToV7(Database db) async {
+    try {
+      // Reflection Answers Table
+      // This table stores the actual submitted responses
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $reflectionAnswersTable (
+          id TEXT PRIMARY KEY,
+          questionId TEXT NOT NULL,
+          answerText TEXT NOT NULL,
+          mood TEXT,
+          createdAt TEXT NOT NULL,
+          draft TEXT,
+          isDeleted INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (questionId) REFERENCES $reflectionQuestionsTable(id) ON DELETE CASCADE
+        )
+      ''');
+
+      // Reflection Drafts Table
+      // This table stores in-progress reflections
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS $reflectionDraftsTable (
+          id TEXT PRIMARY KEY,
+          questionId TEXT NOT NULL,
+          draftText TEXT,
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL,
+          FOREIGN KEY (questionId) REFERENCES $reflectionQuestionsTable(id) ON DELETE CASCADE
+        )
+      ''');
+
+      // Create indexes for the new tables
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_reflection_answers_qid ON $reflectionAnswersTable(questionId)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_reflection_answers_date ON $reflectionAnswersTable(createdAt DESC)',
+      );
+      await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_reflection_drafts_qid ON $reflectionDraftsTable(questionId)',
+      );
+    } catch (e) {
+      print('Warning: Migration to V7 failed. Error: $e');
+    }
+  }
+
   Future<void> _createFTSTriggers(Database db) async {
     try {
       try {
@@ -927,6 +1187,28 @@ class NotesDatabase {
     return List.generate(maps.length, (i) => _noteFromMap(maps[i]));
   }
 
+  /// Search todos by title or description
+  Future<List<TodoItem>> searchTodos(String query) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      todosTable,
+      where: 'title LIKE ? OR description LIKE ?',
+      whereArgs: ['%$query%', '%$query%'],
+    );
+    return maps.map((map) => _todoFromMap(map)).toList();
+  }
+
+  /// Search alarms by title
+  Future<List<Alarm>> searchAlarms(String query) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      remindersTable,
+      where: 'title LIKE ?',
+      whereArgs: ['%$query%'],
+    );
+    return maps.map((map) => _alarmFromMap(map)).toList();
+  }
+
   /// Add todos to note
   Future<void> addTodos(String noteId, List<TodoItem> todos) async {
     final db = await database;
@@ -952,6 +1234,58 @@ class NotesDatabase {
     );
 
     return List.generate(maps.length, (i) => _todoFromMap(maps[i]));
+  }
+
+  /// Get all todos (standalone or linked)
+  Future<List<TodoItem>> getAllTodos() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      todosTable,
+      where: 'isDeleted = 0',
+      orderBy: 'createdAt DESC',
+    );
+
+    return List.generate(maps.length, (i) => _todoFromMap(maps[i]));
+  }
+
+  /// Get todo by ID
+  Future<TodoItem?> getTodoById(String id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      todosTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isEmpty) return null;
+    return _todoFromMap(maps.first);
+  }
+
+  /// Create a standalone todo
+  Future<void> createTodo(TodoItem todo) async {
+    final db = await database;
+    await db.insert(
+      todosTable,
+      _todoToMap(todo),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Update existing todo
+  Future<void> updateTodo(TodoItem todo) async {
+    final db = await database;
+    await db.update(
+      todosTable,
+      _todoToMap(todo),
+      where: 'id = ?',
+      whereArgs: [todo.id],
+    );
+  }
+
+  /// Delete todo
+  Future<void> deleteTodo(String id) async {
+    final db = await database;
+    await db.delete(todosTable, where: 'id = ?', whereArgs: [id]);
   }
 
   /// Add alarms to note
@@ -983,6 +1317,58 @@ class NotesDatabase {
     );
 
     return List.generate(maps.length, (i) => _alarmFromMap(maps[i]));
+  }
+
+  /// Get all alarms
+  Future<List<Alarm>> getAllAlarms() async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      remindersTable,
+      where: 'isDeleted = 0',
+      orderBy: 'scheduledTime ASC',
+    );
+
+    return List.generate(maps.length, (i) => _alarmFromMap(maps[i]));
+  }
+
+  /// Get alarm by ID
+  Future<Alarm?> getAlarmById(String id) async {
+    final db = await database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      remindersTable,
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+
+    if (maps.isEmpty) return null;
+    return _alarmFromMap(maps.first);
+  }
+
+  /// Create standalone alarm
+  Future<void> createAlarm(Alarm alarm) async {
+    final db = await database;
+    await db.insert(
+      remindersTable,
+      _alarmToMap(alarm),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Update alarm
+  Future<void> updateAlarm(Alarm alarm) async {
+    final db = await database;
+    await db.update(
+      remindersTable,
+      _alarmToMap(alarm),
+      where: 'id = ?',
+      whereArgs: [alarm.id],
+    );
+  }
+
+  /// Delete alarm
+  Future<void> deleteAlarm(String id) async {
+    final db = await database;
+    await db.delete(remindersTable, where: 'id = ?', whereArgs: [id]);
   }
 
   // TodoPriority _parseTodoPriority(int level) {
@@ -1148,9 +1534,12 @@ class NotesDatabase {
       'id': media.id,
       'noteId': noteId,
       'type': media.type.toString().split('.').last,
+      'name': media.name,
+      'size': media.size,
       'filePath': media.filePath,
       'thumbnailPath': media.thumbnailPath,
       'durationMs': media.durationMs,
+      'metadata': jsonEncode(media.metadata),
       'createdAt': media.createdAt.toIso8601String(),
     };
   }
@@ -1175,18 +1564,23 @@ class NotesDatabase {
     return MediaItem(
       id: map['id'],
       type: type,
+      name: map['name'] ?? '',
+      size: map['size'] ?? 0,
       filePath: map['filePath'],
       thumbnailPath: map['thumbnailPath'],
       durationMs: map['durationMs'] ?? 0,
+      metadata: map['metadata'] != null
+          ? jsonDecode(map['metadata'])
+          : const {},
       createdAt: DateTime.parse(map['createdAt']),
     );
   }
 
   /// Convert TodoItem to database map
-  Map<String, dynamic> _todoToMap(TodoItem todo, String noteId) {
+  Map<String, dynamic> _todoToMap(TodoItem todo, [String? noteId]) {
     return {
       'id': todo.id,
-      'noteId': noteId,
+      'noteId': noteId ?? todo.noteId,
       'title': todo.text,
       'description': todo.notes,
       'category': todo.category.displayName,
@@ -1244,4 +1638,54 @@ class NotesDatabase {
       orElse: () => TodoCategory.personal,
     );
   }
-} // End class
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  // Link Helper Methods
+  Future<void> addLink(
+    String sourceId,
+    String targetId, {
+    String type = 'manual',
+  }) async {
+    final db = await database;
+    await db.insert(noteLinksTable, {
+      'sourceId': sourceId,
+      'targetId': targetId,
+      'type': type,
+      'createdAt': DateTime.now().toIso8601String(),
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  Future<void> removeLink(String sourceId, String targetId) async {
+    final db = await database;
+    await db.delete(
+      noteLinksTable,
+      where: 'sourceId = ? AND targetId = ?',
+      whereArgs: [sourceId, targetId],
+    );
+  }
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  Future<List<String>> getBacklinks(String noteId) async {
+    final db = await database;
+    final result = await db.query(
+      noteLinksTable,
+      columns: ['sourceId'],
+      where: 'targetId = ?',
+      whereArgs: [noteId],
+    );
+    return result.map((row) => row['sourceId'] as String).toList();
+  }
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  Future<List<String>> getOutlinks(String noteId) async {
+    final db = await database;
+    final result = await db.query(
+      noteLinksTable,
+      columns: ['targetId'],
+      where: 'sourceId = ?',
+      whereArgs: [noteId],
+    );
+    return result.map((row) => row['targetId'] as String).toList();
+  }
+}

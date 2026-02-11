@@ -16,37 +16,25 @@ class SettingsLoading extends SettingsState {
 }
 
 class SettingsLoaded extends SettingsState {
-  final String storageLocation;
-  final bool autoBackupEnabled;
-  final String backupFrequency;
-  final bool darkModeEnabled;
-  final double fontSize;
-  final String fontFamily;
-  final String languageCode;
-  final bool accessibilityEnabled;
+  final SettingsParams params;
 
-  const SettingsLoaded({
-    required this.storageLocation,
-    required this.autoBackupEnabled,
-    required this.backupFrequency,
-    required this.darkModeEnabled,
-    required this.fontSize,
-    required this.fontFamily,
-    required this.languageCode,
-    required this.accessibilityEnabled,
-  });
+  const SettingsLoaded(this.params);
+
+  // Backup settings accessors
+  bool get autoBackupEnabled => params.cloudSyncEnabled;
+  String get backupFrequency => 'weekly'; // Default frequency
+
+  // Default settings accessors
+  String get fontFamily => 'Roboto';
+  String get languageCode => params.language;
+  bool get darkModeEnabled => params.darkModeEnabled;
+
+  // Accessibility settings accessors
+  bool get accessibilityEnabled => params.notificationsEnabled;
+  double get fontSize => 14.0; // Default size
 
   @override
-  List<Object?> get props => [
-    storageLocation,
-    autoBackupEnabled,
-    backupFrequency,
-    darkModeEnabled,
-    fontSize,
-    fontFamily,
-    languageCode,
-    accessibilityEnabled,
-  ];
+  List<Object?> get props => [params];
 }
 
 class SettingsError extends SettingsState {

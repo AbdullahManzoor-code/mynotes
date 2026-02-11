@@ -1,443 +1,239 @@
-import 'dart:async';
-import 'package:mynotes/presentation/widgets/universal_item_card.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:rxdart/rxdart.dart';
+import '../../injection_container.dart' show getIt;
+import '../../domain/repositories/note_repository.dart';
+import '../../domain/repositories/todo_repository.dart';
+import '../../domain/repositories/alarm_repository.dart';
+import '../../domain/entities/note.dart';
+import '../../domain/entities/todo_item.dart';
+import '../../domain/entities/alarm.dart';
+import '../../presentation/widgets/universal_item_card.dart';
 
-/// Unified Repository
-/// Single source of truth for Notes, Todos, and Reminders
-/// Handles all CRUD operations and cross-feature integration
+/// Unified Repository Facade
+/// Centralizes access to Notes, Todos, and Alarms
 class UnifiedRepository {
-  static UnifiedRepository? _instance;
-  static UnifiedRepository get instance => _instance ??= UnifiedRepository._();
   UnifiedRepository._();
+  static final UnifiedRepository instance = UnifiedRepository._();
 
-  Database? _database;
-  final StreamController<List<UniversalItem>> _itemsController =
-      StreamController<List<UniversalItem>>.broadcast();
-  final StreamController<List<UniversalItem>> _todosController =
-      StreamController<List<UniversalItem>>.broadcast();
-  final StreamController<List<UniversalItem>> _remindersController =
-      StreamController<List<UniversalItem>>.broadcast();
+  final _remindersSubject = BehaviorSubject<List<UniversalItem>>.seeded([]);
+  Stream<List<UniversalItem>> get remindersStream => _remindersSubject.stream;
 
-  // Streams for reactive UI
-  Stream<List<UniversalItem>> get allItemsStream => _itemsController.stream;
-  Stream<List<UniversalItem>> get todosStream => _todosController.stream;
-  Stream<List<UniversalItem>> get remindersStream =>
-      _remindersController.stream;
-
-  Stream<List<UniversalItem>> get notesStream => allItemsStream.map(
-    (items) => items.where((item) => item.isNote).toList(),
-  );
-
-  // Initialize database
   Future<void> initialize() async {
-    if (_database != null) return;
-
-    _database = await openDatabase(
-      'unified_mynotes.db',
-      version: 1,
-      onCreate: _createTables,
-    );
-
-    // Load initial data
-    await _refreshStreams();
+    // Repositories are already initialized via GetIt
+    await refreshReminders();
   }
 
-  Future<void> _createTables(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE unified_items (
-        id TEXT PRIMARY KEY,
-        title TEXT NOT NULL,
-        content TEXT DEFAULT '',
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        is_todo INTEGER DEFAULT 0,
-        is_completed INTEGER DEFAULT 0,
-        reminder_time INTEGER,
-        priority TEXT,
-        category TEXT DEFAULT '',
-        has_voice_note INTEGER DEFAULT 0,
-        has_images INTEGER DEFAULT 0,
-        tags TEXT,
-        is_archived INTEGER DEFAULT 0,
-        is_deleted INTEGER DEFAULT 0,
-        metadata TEXT DEFAULT '{}'
-      )
-    ''');
-
-    // Create indexes for better performance
-    await db.execute('CREATE INDEX idx_is_todo ON unified_items(is_todo)');
-    await db.execute(
-      'CREATE INDEX idx_reminder_time ON unified_items(reminder_time)',
-    );
-    await db.execute('CREATE INDEX idx_category ON unified_items(category)');
-    await db.execute(
-      'CREATE INDEX idx_updated_at ON unified_items(updated_at)',
+  Future<void> refreshReminders() async {
+    final reminders = await searchItems('', types: ['Reminder', 'Todo']);
+    _remindersSubject.add(
+      reminders.where((item) => item.reminderTime != null).toList(),
     );
   }
 
-  // CRUD Operations
+  Future<void> createItem(UniversalItem item) async {
+    if (item.isTodo) {
+      final todo = TodoItem(
+        id: item.id,
+        text: item.title,
+        isCompleted: item.isCompleted,
+        createdAt: item.createdAt,
+        noteId: '',
+        updatedAt: DateTime.now(), // Default or extract if needed
+      );
+      await getIt<TodoRepository>().createTodo(todo);
 
-  /// Create a new item
-  Future<String> createItem(UniversalItem item) async {
-    await _ensureInitialized();
-
-    await _database!.insert('unified_items', _itemToMap(item));
-    await _refreshStreams();
-
-    return item.id;
+      if (item.isReminder && item.reminderTime != null) {
+        final alarm = Alarm(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          message: item.title,
+          scheduledTime: item.reminderTime!,
+          isActive: true,
+          isEnabled: true,
+          linkedTodoId: item.id,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await getIt<AlarmRepository>().createAlarm(alarm);
+      }
+    } else if (item.isReminder && item.reminderTime != null) {
+      final alarm = Alarm(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        message: item.title,
+        scheduledTime: item.reminderTime!,
+        isActive: true,
+        isEnabled: true,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+      await getIt<AlarmRepository>().createAlarm(alarm);
+    } else {
+      final note = Note(
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      );
+      await getIt<NoteRepository>().createNote(note);
+    }
+    await refreshReminders();
   }
 
-  /// Get item by ID
-  Future<UniversalItem?> getItem(String id) async {
-    await _ensureInitialized();
-
-    final maps = await _database!.query(
-      'unified_items',
-      where: 'id = ? AND is_deleted = 0',
-      whereArgs: [id],
-    );
-
-    return maps.isNotEmpty ? _mapToItem(maps.first) : null;
-  }
-
-  /// Update existing item
   Future<void> updateItem(UniversalItem item) async {
-    await _ensureInitialized();
+    if (item.isTodo) {
+      final todo = TodoItem(
+        id: item.id,
+        text: item.title,
+        isCompleted: item.isCompleted,
+        createdAt: item.createdAt,
+        updatedAt: DateTime.now(),
+        noteId: '',
+      );
+      await getIt<TodoRepository>().updateTodo(todo);
 
-    await _database!.update(
-      'unified_items',
-      _itemToMap(item),
-      where: 'id = ?',
-      whereArgs: [item.id],
-    );
+      if (item.reminderTime != null) {
+        // Find existing alarm or create new
+        final alarms = await getIt<AlarmRepository>().getAlarms();
+        final existingAlarm = alarms.firstWhere(
+          (a) => a.linkedTodoId == item.id,
+          orElse: () => Alarm(
+            id: '',
+            message: '',
+            scheduledTime: DateTime.now(),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
 
-    await _refreshStreams();
-  }
-
-  /// Delete item (soft delete)
-  Future<void> deleteItem(String id) async {
-    await _ensureInitialized();
-
-    await _database!.update(
-      'unified_items',
-      {'is_deleted': 1, 'updated_at': DateTime.now().millisecondsSinceEpoch},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    await _refreshStreams();
-  }
-
-  /// Archive item
-  Future<void> archiveItem(String id) async {
-    await _ensureInitialized();
-
-    await _database!.update(
-      'unified_items',
-      {'is_archived': 1, 'updated_at': DateTime.now().millisecondsSinceEpoch},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-
-    await _refreshStreams();
-  }
-
-  // Specialized operations
-
-  /// Toggle todo completion
-  Future<void> toggleTodoCompletion(String id) async {
-    final item = await getItem(id);
-    if (item != null && item.isTodo) {
-      final updatedItem = item.copyWith(isCompleted: !item.isCompleted);
-      await updateItem(updatedItem);
+        if (existingAlarm.id.isNotEmpty) {
+          await getIt<AlarmRepository>().updateAlarm(
+            existingAlarm.copyWith(
+              scheduledTime: item.reminderTime!,
+              message: item.title,
+              updatedAt: DateTime.now(),
+            ),
+          );
+        } else {
+          await getIt<AlarmRepository>().createAlarm(
+            Alarm(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              message: item.title,
+              scheduledTime: item.reminderTime!,
+              isActive: true,
+              isEnabled: true,
+              linkedTodoId: item.id,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+        }
+      }
+    } else if (item.isReminder) {
+      final alarm = Alarm(
+        id: item.id,
+        message: item.title,
+        scheduledTime: item.reminderTime!,
+        isActive: true,
+        isEnabled: true,
+        createdAt: item.createdAt,
+        updatedAt: DateTime.now(),
+      );
+      await getIt<AlarmRepository>().updateAlarm(alarm);
+    } else {
+      final note = Note(
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+        isPinned: false,
+        isArchived: false,
+        tags: [],
+        color: NoteColor.defaultColor,
+      );
+      await getIt<NoteRepository>().updateNote(note);
     }
+    await refreshReminders();
   }
 
-  /// Add reminder to existing item
-  Future<void> addReminderToItem(String id, DateTime reminderTime) async {
-    final item = await getItem(id);
-    if (item != null) {
-      final updatedItem = item.copyWith(reminderTime: reminderTime);
-      await updateItem(updatedItem);
+  Future<void> toggleTodoCompletion(String todoId) async {
+    await getIt<TodoRepository>().toggleTodo(todoId);
+    await refreshReminders();
+  }
+
+  Future<List<UniversalItem>> searchItems(
+    String query, {
+    List<String>? types,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? category,
+    String? sortBy,
+    bool sortDescending = true,
+  }) async {
+    final List<UniversalItem> results = [];
+
+    // 1. Search Notes
+    if (types == null || types.isEmpty || types.contains('Note')) {
+      final notes = await getIt<NoteRepository>().searchNotes(query);
+      results.addAll(notes.map((n) => UniversalItem.fromNote(n)));
     }
-  }
 
-  /// Convert note to todo
-  Future<void> convertNoteToTodo(String id) async {
-    final item = await getItem(id);
-    if (item != null && !item.isTodo) {
-      final updatedItem = item.copyWith(isTodo: true);
-      await updateItem(updatedItem);
+    // 2. Search Todos
+    if (types == null || types.isEmpty || types.contains('Todo')) {
+      final todos = await getIt<TodoRepository>().searchTodos(query);
+      results.addAll(
+        todos.map(
+          (t) => UniversalItem.todo(
+            id: t.id,
+            title: t.text,
+            isCompleted: t.isCompleted,
+            createdAt: t.createdAt,
+          ),
+        ),
+      );
     }
-  }
 
-  // Query operations
-
-  /// Get all active items
-  Future<List<UniversalItem>> getAllItems() async {
-    await _ensureInitialized();
-
-    final maps = await _database!.query(
-      'unified_items',
-      where: 'is_deleted = 0 AND is_archived = 0',
-      orderBy: 'updated_at DESC',
-    );
-
-    return maps.map(_mapToItem).toList();
-  }
-
-  /// Get todos only
-  Future<List<UniversalItem>> getTodos() async {
-    await _ensureInitialized();
-
-    final maps = await _database!.query(
-      'unified_items',
-      where: 'is_todo = 1 AND is_deleted = 0 AND is_archived = 0',
-      orderBy: 'created_at DESC',
-    );
-
-    return maps.map(_mapToItem).toList();
-  }
-
-  /// Get notes only
-  Future<List<UniversalItem>> getNotes() async {
-    await _ensureInitialized();
-
-    final maps = await _database!.query(
-      'unified_items',
-      where:
-          'is_todo = 0 AND reminder_time IS NULL AND is_deleted = 0 AND is_archived = 0',
-      orderBy: 'updated_at DESC',
-    );
-
-    return maps.map(_mapToItem).toList();
-  }
-
-  /// Get reminders only
-  Future<List<UniversalItem>> getReminders() async {
-    await _ensureInitialized();
-
-    final maps = await _database!.query(
-      'unified_items',
-      where: 'reminder_time IS NOT NULL AND is_deleted = 0 AND is_archived = 0',
-      orderBy: 'reminder_time ASC',
-    );
-
-    return maps.map(_mapToItem).toList();
-  }
-
-  /// Get overdue reminders
-  Future<List<UniversalItem>> getOverdueReminders() async {
-    final now = DateTime.now().millisecondsSinceEpoch;
-    await _ensureInitialized();
-
-    final maps = await _database!.query(
-      'unified_items',
-      where:
-          'reminder_time IS NOT NULL AND reminder_time < ? AND is_deleted = 0 AND is_archived = 0',
-      whereArgs: [now],
-      orderBy: 'reminder_time ASC',
-    );
-
-    return maps.map(_mapToItem).toList();
-  }
-
-  /// Search across all items
-  Future<List<UniversalItem>> searchItems(String query) async {
-    await _ensureInitialized();
-
-    final searchQuery = '%${query.toLowerCase()}%';
-    final maps = await _database!.query(
-      'unified_items',
-      where: '''
-        (LOWER(title) LIKE ? OR LOWER(content) LIKE ? OR LOWER(category) LIKE ?)
-        AND is_deleted = 0 AND is_archived = 0
-      ''',
-      whereArgs: [searchQuery, searchQuery, searchQuery],
-      orderBy: 'updated_at DESC',
-    );
-
-    return maps.map(_mapToItem).toList();
-  }
-
-  /// Get items by category
-  Future<List<UniversalItem>> getItemsByCategory(String category) async {
-    await _ensureInitialized();
-
-    final maps = await _database!.query(
-      'unified_items',
-      where: 'LOWER(category) = ? AND is_deleted = 0 AND is_archived = 0',
-      whereArgs: [category.toLowerCase()],
-      orderBy: 'updated_at DESC',
-    );
-
-    return maps.map(_mapToItem).toList();
-  }
-
-  /// Get items by priority
-  Future<List<UniversalItem>> getItemsByPriority(ItemPriority priority) async {
-    await _ensureInitialized();
-
-    final maps = await _database!.query(
-      'unified_items',
-      where: 'priority = ? AND is_deleted = 0 AND is_archived = 0',
-      whereArgs: [priority.toString().split('.').last],
-      orderBy: 'updated_at DESC',
-    );
-
-    return maps.map(_mapToItem).toList();
-  }
-
-  // Analytics and insights
-
-  /// Get item counts by type
-  Future<Map<String, int>> getItemCounts() async {
-    await _ensureInitialized();
-
-    final result = await _database!.rawQuery('''
-      SELECT 
-        SUM(CASE WHEN is_todo = 0 AND reminder_time IS NULL THEN 1 ELSE 0 END) as notes_count,
-        SUM(CASE WHEN is_todo = 1 THEN 1 ELSE 0 END) as todos_count,
-        SUM(CASE WHEN reminder_time IS NOT NULL THEN 1 ELSE 0 END) as reminders_count,
-        SUM(CASE WHEN is_todo = 1 AND is_completed = 1 THEN 1 ELSE 0 END) as completed_todos_count
-      FROM unified_items 
-      WHERE is_deleted = 0 AND is_archived = 0
-    ''');
-
-    final row = result.first;
-    return {
-      'notes': (row['notes_count'] as int?) ?? 0,
-      'todos': (row['todos_count'] as int?) ?? 0,
-      'reminders': (row['reminders_count'] as int?) ?? 0,
-      'completed_todos': (row['completed_todos_count'] as int?) ?? 0,
-    };
-  }
-
-  /// Get productivity insights
-  Future<Map<String, dynamic>> getProductivityInsights() async {
-    final counts = await getItemCounts();
-    final overdueReminders = await getOverdueReminders();
-
-    final completionRate = counts['todos']! > 0
-        ? (counts['completed_todos']! / counts['todos']!) * 100
-        : 0.0;
-
-    return {
-      'total_items': counts.values.reduce((a, b) => a + b),
-      'completion_rate': completionRate.round(),
-      'overdue_reminders': overdueReminders.length,
-      'most_productive_hour': await _getMostProductiveHour(),
-      'top_category': await _getTopCategory(),
-    };
-  }
-
-  // Helper methods
-
-  Map<String, dynamic> _itemToMap(UniversalItem item) {
-    return {
-      'id': item.id,
-      'title': item.title,
-      'content': item.content,
-      'created_at': item.createdAt.millisecondsSinceEpoch,
-      'updated_at': item.updatedAt.millisecondsSinceEpoch,
-      'is_todo': item.isTodo ? 1 : 0,
-      'is_completed': item.isCompleted ? 1 : 0,
-      'reminder_time': item.reminderTime?.millisecondsSinceEpoch,
-      'priority': item.priority?.toString().split('.').last,
-      'category': item.category,
-      'has_voice_note': item.hasVoiceNote ? 1 : 0,
-      'has_images': item.hasImages ? 1 : 0,
-      'tags': item.tags?.join(','),
-      'is_archived': 0,
-      'is_deleted': 0,
-      'metadata': '{}',
-    };
-  }
-
-  UniversalItem _mapToItem(Map<String, dynamic> map) {
-    return UniversalItem(
-      id: map['id'],
-      title: map['title'],
-      content: map['content'] ?? '',
-      createdAt: DateTime.fromMillisecondsSinceEpoch(map['created_at']),
-      updatedAt: DateTime.fromMillisecondsSinceEpoch(map['updated_at']),
-      isTodo: map['is_todo'] == 1,
-      isCompleted: map['is_completed'] == 1,
-      reminderTime: map['reminder_time'] != null
-          ? DateTime.fromMillisecondsSinceEpoch(map['reminder_time'])
-          : null,
-      priority: map['priority'] != null
-          ? ItemPriority.values.firstWhere(
-              (e) => e.toString().split('.').last == map['priority'],
-              orElse: () => ItemPriority.medium,
-            )
-          : null,
-      category: map['category'] ?? '',
-      hasVoiceNote: map['has_voice_note'] == 1,
-      hasImages: map['has_images'] == 1,
-      tags: map['tags']?.isNotEmpty == true ? map['tags'].split(',') : null,
-    );
-  }
-
-  Future<void> _ensureInitialized() async {
-    if (_database == null) {
-      await initialize();
+    // 3. Search Alarms/Reminders
+    if (types == null || types.isEmpty || types.contains('Reminder')) {
+      final alarms = await getIt<AlarmRepository>().searchAlarms(query);
+      results.addAll(
+        alarms.map(
+          (a) => UniversalItem.reminder(
+            id: a.id,
+            title: a.message,
+            reminderTime: a.scheduledTime,
+          ),
+        ),
+      );
     }
-  }
 
-  Future<void> _refreshStreams() async {
-    final allItems = await getAllItems();
-    final todos = allItems.where((item) => item.isTodo).toList();
-    final reminders = allItems.where((item) => item.isReminder).toList();
+    // Filter by date if provided
+    var filteredResults = results;
+    if (startDate != null) {
+      filteredResults = filteredResults
+          .where((item) => item.createdAt.isAfter(startDate))
+          .toList();
+    }
+    if (endDate != null) {
+      filteredResults = filteredResults
+          .where((item) => item.createdAt.isBefore(endDate))
+          .toList();
+    }
 
-    _itemsController.add(allItems);
-    _todosController.add(todos);
-    _remindersController.add(reminders);
-  }
+    // Sort
+    if (sortBy == 'date') {
+      filteredResults.sort(
+        (a, b) => sortDescending
+            ? b.createdAt.compareTo(a.createdAt)
+            : a.createdAt.compareTo(b.createdAt),
+      );
+    } else if (sortBy == 'alphabetical') {
+      filteredResults.sort(
+        (a, b) => sortDescending
+            ? b.title.compareTo(a.title)
+            : a.title.compareTo(b.title),
+      );
+    }
 
-  Future<int> _getMostProductiveHour() async {
-    await _ensureInitialized();
-
-    final result = await _database!.rawQuery(
-      '''
-      SELECT strftime('%H', datetime(created_at/1000, 'unixepoch', 'localtime')) as hour,
-             COUNT(*) as count
-      FROM unified_items 
-      WHERE is_deleted = 0 AND created_at > ?
-      GROUP BY hour 
-      ORDER BY count DESC 
-      LIMIT 1
-    ''',
-      [
-        DateTime.now()
-            .subtract(const Duration(days: 30))
-            .millisecondsSinceEpoch,
-      ],
-    );
-
-    return result.isNotEmpty ? int.parse(result.first['hour'] as String) : 9;
-  }
-
-  Future<String> _getTopCategory() async {
-    await _ensureInitialized();
-
-    final result = await _database!.rawQuery('''
-      SELECT category, COUNT(*) as count
-      FROM unified_items 
-      WHERE is_deleted = 0 AND category != ''
-      GROUP BY category 
-      ORDER BY count DESC 
-      LIMIT 1
-    ''');
-
-    return result.isNotEmpty ? result.first['category'] as String : 'General';
-  }
-
-  // Cleanup
-  void dispose() {
-    _itemsController.close();
-    _todosController.close();
-    _remindersController.close();
-    _database?.close();
+    return filteredResults;
   }
 }

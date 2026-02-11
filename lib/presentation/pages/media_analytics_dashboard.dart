@@ -1,133 +1,203 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/media_gallery_bloc.dart';
-import 'package:mynotes/domain/services/media_filtering_service.dart';
+import '../../injection_container.dart';
+import '../bloc/media_analytics_bloc.dart';
+import '../../domain/repositories/media_repository.dart';
+import '../design_system/app_colors.dart';
+import '../design_system/app_typography.dart';
+import '../../core/services/global_ui_service.dart';
 
 /// Media Analytics Dashboard - Batch 4, Screen 2
-class MediaAnalyticsDashboard extends StatefulWidget {
+/// Refactored to StatelessWidget with BLoC and Design System
+class MediaAnalyticsDashboard extends StatelessWidget {
   const MediaAnalyticsDashboard({Key? key}) : super(key: key);
 
   @override
-  State<MediaAnalyticsDashboard> createState() =>
-      _MediaAnalyticsDashboardState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          MediaAnalyticsBloc(mediaRepository: getIt<MediaRepository>())
+            ..add(LoadMediaAnalyticsEvent()),
+      child: const _MediaAnalyticsDashboardView(),
+    );
+  }
 }
 
-class _MediaAnalyticsDashboardState extends State<MediaAnalyticsDashboard> {
-  final _filtering = MediaFilteringService();
-  late Future<Map<String, dynamic>> _analyticsFuture;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAnalytics();
-  }
-
-  void _loadAnalytics() {
-    // This will be called with actual data from BLoC
-    final state = context.read<MediaGalleryBloc>().state;
-    if (state is MediaGalleryLoaded) {
-      _analyticsFuture = _filtering.getMediaAnalytics(state.mediaItems);
-    }
-  }
+class _MediaAnalyticsDashboardView extends StatelessWidget {
+  const _MediaAnalyticsDashboardView({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text('Media Analytics'),
+        title: Text(
+          'Media Analytics',
+          style: AppTypography.displayMedium(context, AppColors.darkText),
+        ),
         centerTitle: true,
+        backgroundColor: AppColors.lightSurface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.darkText),
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh, color: AppColors.primaryColor),
             onPressed: () {
-              setState(() {
-                _loadAnalytics();
-              });
+              context.read<MediaAnalyticsBloc>().add(LoadMediaAnalyticsEvent());
+              getIt<GlobalUiService>().hapticFeedback();
+              getIt<GlobalUiService>().showSuccess('Analytics updated');
             },
           ),
         ],
       ),
-      body: FutureBuilder<Map<String, dynamic>>(
-        future: _analyticsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+      body: BlocBuilder<MediaAnalyticsBloc, MediaAnalyticsState>(
+        builder: (context, state) {
+          if (state is MediaAnalyticsLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryColor),
+            );
           }
 
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+          if (state is MediaAnalyticsError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      size: 64,
+                      color: Colors.redAccent,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Oops! Something went wrong',
+                      style: AppTypography.heading2(context),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      state.message,
+                      style: AppTypography.bodySmall(
+                        context,
+                        AppColors.secondaryText,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 12,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      onPressed: () => context.read<MediaAnalyticsBloc>().add(
+                        LoadMediaAnalyticsEvent(),
+                      ),
+                      child: Text(
+                        'Retry',
+                        style: AppTypography.button(context, Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
           }
 
-          final analytics = snapshot.data ?? {};
+          if (state is MediaAnalyticsLoaded) {
+            final analytics = state.analytics;
+            return RefreshIndicator(
+              onRefresh: () async {
+                context.read<MediaAnalyticsBloc>().add(
+                  LoadMediaAnalyticsEvent(),
+                );
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Overall Stats
+                    _buildOverallStatsCards(context, analytics),
+                    const SizedBox(height: 24),
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Overall Stats
-                _buildOverallStatsCards(analytics),
-                const SizedBox(height: 24),
+                    // Media Type Breakdown
+                    _buildTypeBreakdownSection(context, analytics),
+                    const SizedBox(height: 24),
 
-                // Media Type Breakdown
-                _buildTypeBreakdownSection(analytics),
-                const SizedBox(height: 24),
+                    // Storage Analysis
+                    _buildStorageAnalysisSection(context, analytics),
+                    const SizedBox(height: 24),
 
-                // Storage Analysis
-                _buildStorageAnalysisSection(analytics),
-                const SizedBox(height: 24),
+                    // Timeline Stats
+                    _buildTimelineStatsSection(context, analytics),
+                    const SizedBox(height: 40),
+                  ],
+                ),
+              ),
+            );
+          }
 
-                // Timeline Stats
-                _buildTimelineStatsSection(analytics),
-              ],
-            ),
-          );
+          return const SizedBox.shrink();
         },
       ),
     );
   }
 
-  Widget _buildOverallStatsCards(Map<String, dynamic> analytics) {
+  Widget _buildOverallStatsCards(
+    BuildContext context,
+    Map<String, dynamic> analytics,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Overall Statistics',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: AppTypography.heading2(context, AppColors.darkText),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
+          physics: const NeverScrollableScrollPhysics(),
+          mainAxisSpacing: 16,
+          crossAxisSpacing: 16,
+          childAspectRatio: 1.1,
           children: [
             _buildStatCard(
+              context,
               'Total Items',
               '${analytics['totalCount'] ?? 0}',
-              Icons.image,
-              Colors.blue,
+              Icons.perm_media_rounded,
+              AppColors.accentBlue,
             ),
             _buildStatCard(
+              context,
               'Total Size',
               _formatBytes(analytics['totalSize'] ?? 0),
-              Icons.storage,
-              Colors.orange,
+              Icons.storage_rounded,
+              AppColors.accentOrange,
             ),
             _buildStatCard(
+              context,
               'Avg Size',
               _formatBytes(analytics['averageSize'] ?? 0),
-              Icons.straighten,
-              Colors.green,
+              Icons.straighten_rounded,
+              AppColors.accentGreen,
             ),
             _buildStatCard(
+              context,
               'Items/Day',
               '${(analytics['averageItemsPerDay'] ?? 0).toStringAsFixed(1)}',
-              Icons.calendar_today,
-              Colors.purple,
+              Icons.insights_rounded,
+              AppColors.accentPurple,
             ),
           ],
         ),
@@ -136,27 +206,44 @@ class _MediaAnalyticsDashboardState extends State<MediaAnalyticsDashboard> {
   }
 
   Widget _buildStatCard(
+    BuildContext context,
     String label,
     String value,
     IconData icon,
     Color color,
   ) {
-    return Card(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 32, color: color),
-          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 28, color: color),
+          ),
+          const SizedBox(height: 12),
           Text(
             value,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: AppTypography.heading1(context, AppColors.darkText),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: Theme.of(context).textTheme.labelSmall,
+            style: AppTypography.labelSmall(context, AppColors.secondaryText),
             textAlign: TextAlign.center,
           ),
         ],
@@ -164,130 +251,233 @@ class _MediaAnalyticsDashboardState extends State<MediaAnalyticsDashboard> {
     );
   }
 
-  Widget _buildTypeBreakdownSection(Map<String, dynamic> analytics) {
-    final typeBreakdown = analytics['typeBreakdown'] as Map<String, dynamic>? ?? {};
+  Widget _buildTypeBreakdownSection(
+    BuildContext context,
+    Map<String, dynamic> analytics,
+  ) {
+    final typeBreakdown =
+        analytics['typeBreakdown'] as Map<String, dynamic>? ?? {};
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Media Type Distribution',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: AppTypography.heading2(context, AppColors.darkText),
         ),
-        const SizedBox(height: 12),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: typeBreakdown.length,
-          itemBuilder: (context, index) {
-            final type = typeBreakdown.keys.elementAt(index);
-            final count = typeBreakdown[type] as int;
-            final total = analytics['totalCount'] as int? ?? 1;
-            final percentage = (count / total * 100).toStringAsFixed(1);
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: ListView.separated(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: typeBreakdown.length,
+            separatorBuilder: (context, index) => const Divider(height: 24),
+            itemBuilder: (context, index) {
+              final type = typeBreakdown.keys.elementAt(index);
+              final count = typeBreakdown[type] as int;
+              final total = analytics['totalCount'] as int? ?? 1;
+              final percentage = (count / total * 100).toStringAsFixed(1);
 
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Column(
+              return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('$type ($count)'),
-                      Text('$percentage%'),
+                      Row(
+                        children: [
+                          Icon(
+                            _getIconForType(type),
+                            size: 18,
+                            color: AppColors.primaryColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            type.toUpperCase(),
+                            style: AppTypography.bodyMedium(
+                              context,
+                              AppColors.darkText,
+                              FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        '$count items ($percentage%)',
+                        style: AppTypography.bodySmall(
+                          context,
+                          AppColors.secondaryText,
+                        ),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: count / total,
                       minHeight: 8,
+                      backgroundColor: AppColors.lightBackground,
+                      valueColor: const AlwaysStoppedAnimation<Color>(
+                        AppColors.primaryColor,
+                      ),
                     ),
                   ),
                 ],
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildStorageAnalysisSection(Map<String, dynamic> analytics) {
+  Widget _buildStorageAnalysisSection(
+    BuildContext context,
+    Map<String, dynamic> analytics,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Storage Analysis',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          style: AppTypography.heading2(context, AppColors.darkText),
         ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text('Total Size'),
-                  trailing: Text(
-                    _formatBytes(analytics['totalSize'] ?? 0),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+        const SizedBox(height: 16),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(
+            children: [
+              ListTile(
+                leading: const Icon(
+                  Icons.circle,
+                  size: 12,
+                  color: AppColors.accentBlue,
+                ),
+                title: Text(
+                  'Total Storage',
+                  style: AppTypography.bodyMedium(context),
+                ),
+                trailing: Text(
+                  _formatBytes(analytics['totalSize'] ?? 0),
+                  style: AppTypography.heading2(
+                    context,
+                    AppColors.primaryColor,
                   ),
                 ),
-                Divider(),
-                ListTile(
-                  title: Text('Average Size per Item'),
-                  trailing: Text(
-                    _formatBytes(analytics['averageSize'] ?? 0),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                child: Divider(),
+              ),
+              ListTile(
+                leading: const Icon(
+                  Icons.circle,
+                  size: 12,
+                  color: AppColors.accentGreen,
+                ),
+                title: Text(
+                  'Average File Size',
+                  style: AppTypography.bodyMedium(context),
+                ),
+                trailing: Text(
+                  _formatBytes(analytics['averageSize'] ?? 0),
+                  style: AppTypography.bodyMedium(
+                    context,
+                    AppColors.darkText,
+                    FontWeight.w600,
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildTimelineStatsSection(Map<String, dynamic> analytics) {
+  Widget _buildTimelineStatsSection(
+    BuildContext context,
+    Map<String, dynamic> analytics,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Timeline',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+          'Timeline Insight',
+          style: AppTypography.heading2(context, AppColors.darkText),
         ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                ListTile(
-                  title: Text('Oldest Item'),
-                  subtitle: Text(analytics['oldestItem']?.toString() ?? 'N/A'),
-                  leading: Icon(Icons.history),
-                ),
-                Divider(),
-                ListTile(
-                  title: Text('Newest Item'),
-                  subtitle: Text(analytics['newestItem']?.toString() ?? 'N/A'),
-                  leading: Icon(Icons.new_releases),
-                ),
-              ],
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: _buildTimelineItem(
+                context,
+                'Oldest Entry',
+                analytics['oldestItem']?.toString() ?? 'N/A',
+                Icons.history_rounded,
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildTimelineItem(
+                context,
+                'Latest Entry',
+                analytics['newestItem']?.toString() ?? 'N/A',
+                Icons.fiber_new_rounded,
+              ),
+            ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildTimelineItem(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.primaryColor, size: 24),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: AppTypography.labelSmall(context, AppColors.secondaryText),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle.split(' ')[0], // Only show date
+            style: AppTypography.bodyMedium(
+              context,
+              AppColors.darkText,
+              FontWeight.w600,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
     );
   }
 
@@ -299,5 +489,17 @@ class _MediaAnalyticsDashboardState extends State<MediaAnalyticsDashboard> {
     }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
-}
 
+  IconData _getIconForType(String type) {
+    switch (type.toLowerCase()) {
+      case 'image':
+        return Icons.image_rounded;
+      case 'video':
+        return Icons.videocam_rounded;
+      case 'audio':
+        return Icons.audiotrack_rounded;
+      default:
+        return Icons.insert_drive_file_rounded;
+    }
+  }
+}

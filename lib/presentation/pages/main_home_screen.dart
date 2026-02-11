@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:mynotes/presentation/widgets/quick_add_bottom_sheet.dart';
 import '../design_system/design_system.dart';
 import '../../core/routes/app_routes.dart';
 import '../widgets/global_command_palette.dart';
 import 'today_dashboard_screen.dart';
 import 'enhanced_notes_list_screen.dart';
-import 'todos_list_screen.dart';
+import '../screens/todos_screen_fixed.dart';
 import 'enhanced_reminders_list_screen.dart';
 import '../screens/reflection_home_screen.dart';
 import 'integrated_features_screen.dart';
@@ -101,7 +102,7 @@ class _MainHomeScreenState extends State<MainHomeScreen>
         children: const [
           TodayDashboardScreen(),
           EnhancedNotesListScreen(),
-          TodosListScreen(),
+          TodosScreen(),
           EnhancedRemindersListScreen(),
           ReflectionHomeScreen(),
           IntegratedFeaturesScreen(),
@@ -143,16 +144,13 @@ class _MainHomeScreenState extends State<MainHomeScreen>
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openCommandPalette,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => QuickAddBottomSheet.show(context),
         backgroundColor: AppColors.primaryColor,
         foregroundColor: Colors.white,
-        icon: const Icon(Icons.search),
-        label: Text(
-          'Quick Actions',
-          style: AppTypography.button(context, Colors.white),
-        ),
-        tooltip: 'Open Command Palette (Ctrl+K)',
+        child: const Icon(Icons.add),
+        tooltip: 'Quick Add',
       ),
     );
   }

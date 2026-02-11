@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/presentation/bloc/template_management_bloc.dart';
-import 'package:mynotes/domain/services/template_conversion_service.dart';
+import 'package:mynotes/core/design_system/app_colors.dart';
+import 'package:mynotes/core/design_system/app_typography.dart';
+import 'package:mynotes/core/design_system/app_spacing.dart';
+import 'package:mynotes/core/services/global_ui_service.dart';
 
 /// Template Editor - Batch 7, Screen 2
+/// Modernized to use Design System and Global UI Services
 class TemplateEditorScreen extends StatefulWidget {
   final dynamic existingTemplate;
 
@@ -17,9 +22,6 @@ class TemplateEditorScreen extends StatefulWidget {
 class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   late TextEditingController _nameController;
   late TextEditingController _descriptionController;
-  String _selectedCategory = 'Personal';
-  List<Map<String, String>> _fields = [];
-  final _templateService = TemplateConversionService();
 
   @override
   void initState() {
@@ -30,10 +32,13 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     _descriptionController = TextEditingController(
       text: widget.existingTemplate?.description ?? '',
     );
-    if (widget.existingTemplate != null) {
-      _selectedCategory = widget.existingTemplate!.category;
-      _fields = List.from(widget.existingTemplate!.fields ?? []);
-    }
+
+    // Initialize BLoC state for editing
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TemplateManagementBloc>().add(
+        StartEditingTemplateEvent(template: widget.existingTemplate),
+      );
+    });
   }
 
   @override
@@ -45,166 +50,279 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.existingTemplate != null ? 'Edit Template' : 'Create Template',
-        ),
-        centerTitle: true,
-        actions: [
-          if (widget.existingTemplate != null)
-            IconButton(
-              icon: Icon(Icons.delete),
-              onPressed: _showDeleteConfirmation,
+    return BlocBuilder<TemplateManagementBloc, TemplateManagementState>(
+      builder: (context, state) {
+        if (state is! TemplatesLoaded) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(color: AppColors.primaryColor),
             ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Template Name
-            _buildSection(
-              'Template Name',
-              TextField(
-                controller: _nameController,
-                decoration: InputDecoration(
-                  hintText: 'Enter template name',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+          );
+        }
+
+        return Scaffold(
+          backgroundColor: AppColors.lightBackground,
+          appBar: AppBar(
+            title: Text(
+              widget.existingTemplate != null
+                  ? 'Edit Template'
+                  : 'New Template',
+              style: AppTypography.displayMedium(context, AppColors.darkText),
+            ),
+            centerTitle: true,
+            backgroundColor: AppColors.lightSurface,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: AppColors.darkText),
+            actions: [
+              if (widget.existingTemplate != null)
+                IconButton(
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppColors.error,
                   ),
+                  onPressed: () => _showDeleteConfirmation(context),
                 ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Description
-            _buildSection(
-              'Description',
-              TextField(
-                controller: _descriptionController,
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Enter template description',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8),
+            ],
+          ),
+          body: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: AppSpacing.paddingAllL,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSection(context, 'Basic Information', [
+                  _buildTextField(
+                    context,
+                    'Template Name',
+                    _nameController,
+                    'e.g. Daily Meeting',
                   ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Category
-            _buildSection('Category', _buildCategorySelector()),
-            const SizedBox(height: 20),
-
-            // Fields
-            _buildSection(
-              'Fields',
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFieldsList(),
-                  const SizedBox(height: 12),
+                  AppSpacing.gapM,
+                  _buildTextField(
+                    context,
+                    'Description',
+                    _descriptionController,
+                    'What is this template for?',
+                    maxLines: 3,
+                  ),
+                ]),
+                AppSpacing.gapL,
+                _buildSection(context, 'Categorization', [
+                  _buildCategorySelector(context, state.editingCategory),
+                ]),
+                AppSpacing.gapL,
+                _buildSection(context, 'Structure & Fields', [
+                  _buildFieldsList(context, state.editingFields),
+                  AppSpacing.gapM,
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _showAddFieldDialog,
-                      icon: Icon(Icons.add),
-                      label: Text('Add Field'),
+                      onPressed: () =>
+                          _showAddFieldDialog(context, state.editingFields),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: AppColors.primaryColor),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                      icon: const Icon(
+                        Icons.add_rounded,
+                        color: AppColors.primaryColor,
+                      ),
+                      label: Text(
+                        'Add Field',
+                        style: AppTypography.button(
+                          context,
+                          AppColors.primaryColor,
+                        ),
+                      ),
                     ),
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Cancel'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _saveTemplate,
-                    child: Text('Save Template'),
-                  ),
-                ),
+                ]),
+                AppSpacing.gapXXL,
+                _buildActionButtons(context, state),
+                AppSpacing.gapXXL,
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSection(String title, Widget child) {
+  Widget _buildSection(
+    BuildContext context,
+    String title,
+    List<Widget> children,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(title, style: AppTypography.heading3(context)),
         ),
-        const SizedBox(height: 8),
-        child,
+        Container(
+          padding: AppSpacing.paddingAllM,
+          decoration: BoxDecoration(
+            color: AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(children: children),
+        ),
       ],
     );
   }
 
-  Widget _buildCategorySelector() {
+  Widget _buildTextField(
+    BuildContext context,
+    String label,
+    TextEditingController controller,
+    String hint, {
+    int maxLines = 1,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.labelSmall(
+            context,
+            AppColors.secondaryText,
+            FontWeight.bold,
+          ),
+        ),
+        AppSpacing.gapS,
+        TextField(
+          controller: controller,
+          maxLines: maxLines,
+          style: AppTypography.bodySmall(context, AppColors.darkText),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: AppTypography.bodySmall(context, AppColors.tertiaryText),
+            filled: true,
+            fillColor: AppColors.lightBackground,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategorySelector(BuildContext context, String currentCategory) {
     final categories = ['Work', 'Personal', 'Health', 'Learning'];
 
     return Wrap(
       spacing: 8,
+      runSpacing: 8,
       children: categories.map((category) {
-        final isSelected = _selectedCategory == category;
+        final isSelected = currentCategory == category;
         return ChoiceChip(
           label: Text(category),
           selected: isSelected,
           onSelected: (selected) {
-            setState(() => _selectedCategory = category);
+            if (selected) {
+              context.read<TemplateManagementBloc>().add(
+                UpdateEditingTemplateEvent(category: category),
+              );
+              getIt<GlobalUiService>().hapticFeedback();
+            }
           },
+          selectedColor: AppColors.primaryColor,
+          backgroundColor: AppColors.lightBackground,
+          labelStyle: AppTypography.labelSmall(
+            context,
+            isSelected ? Colors.white : AppColors.secondaryText,
+            isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: BorderSide(
+              color: isSelected ? Colors.transparent : AppColors.borderLight,
+            ),
+          ),
         );
       }).toList(),
     );
   }
 
-  Widget _buildFieldsList() {
-    if (_fields.isEmpty) {
-      return Card(
-        color: Colors.grey[100],
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Center(child: Text('No fields yet. Add one to get started.')),
+  Widget _buildFieldsList(
+    BuildContext context,
+    List<Map<String, String>> fields,
+  ) {
+    if (fields.isEmpty) {
+      return Container(
+        padding: AppSpacing.paddingAllL,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: AppColors.lightBackground,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          children: [
+            const Icon(
+              Icons.view_headline_rounded,
+              color: AppColors.tertiaryText,
+              size: 32,
+            ),
+            AppSpacing.gapS,
+            Text(
+              'No fields defined yet',
+              style: AppTypography.bodySmall(context, AppColors.tertiaryText),
+            ),
+          ],
         ),
       );
     }
 
-    return ListView.builder(
+    return ListView.separated(
       shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      itemCount: _fields.length,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: fields.length,
+      separatorBuilder: (context, index) => AppSpacing.gapS,
       itemBuilder: (context, index) {
-        final field = _fields[index];
-        return Card(
-          margin: const EdgeInsets.symmetric(vertical: 4),
+        final field = fields[index];
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.lightBackground,
+            borderRadius: BorderRadius.circular(12),
+          ),
           child: ListTile(
-            leading: Icon(Icons.drag_handle),
-            title: Text(field['name'] ?? 'Field'),
-            subtitle: Text(field['type'] ?? 'text'),
+            contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+            leading: const Icon(
+              Icons.drag_indicator_rounded,
+              color: AppColors.tertiaryText,
+            ),
+            title: Text(
+              field['name'] ?? '',
+              style: AppTypography.bodyMedium(
+                context,
+                AppColors.darkText,
+                FontWeight.w600,
+              ),
+            ),
+            subtitle: Text(
+              field['type']?.toUpperCase() ?? '',
+              style: AppTypography.labelSmall(context, AppColors.primaryColor),
+            ),
             trailing: IconButton(
-              icon: Icon(Icons.delete, color: Colors.red),
+              icon: const Icon(
+                Icons.remove_circle_outline_rounded,
+                color: AppColors.error,
+                size: 20,
+              ),
               onPressed: () {
-                setState(() => _fields.removeAt(index));
+                final newFields = List<Map<String, String>>.from(fields);
+                newFields.removeAt(index);
+                context.read<TemplateManagementBloc>().add(
+                  UpdateEditingTemplateEvent(fields: newFields),
+                );
+                getIt<GlobalUiService>().hapticFeedback();
               },
             ),
           ),
@@ -213,108 +331,196 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     );
   }
 
-  void _showAddFieldDialog() {
+  Widget _buildActionButtons(BuildContext context, TemplatesLoaded state) {
+    return Row(
+      children: [
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              side: const BorderSide(color: AppColors.borderLight),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Text(
+              'Cancel',
+              style: AppTypography.button(context, AppColors.secondaryText),
+            ),
+          ),
+        ),
+        AppSpacing.gapM,
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => _saveTemplate(context, state),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryColor,
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            child: Text(
+              'Save Template',
+              style: AppTypography.button(context, Colors.white),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showAddFieldDialog(
+    BuildContext context,
+    List<Map<String, String>> currentFields,
+  ) {
     final fieldNameController = TextEditingController();
-    final defaultValueController = TextEditingController();
     String selectedType = 'text';
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Add Field'),
-        content: SingleChildScrollView(
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (modalContext, setModalState) => Container(
+          decoration: const BoxDecoration(
+            color: AppColors.lightSurface,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          padding: EdgeInsets.only(
+            left: 24,
+            right: 24,
+            top: 32,
+            bottom: MediaQuery.of(modalContext).viewInsets.bottom + 32,
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              TextField(
-                controller: fieldNameController,
-                decoration: InputDecoration(
-                  labelText: 'Field Name',
-                  border: OutlineInputBorder(),
+              Text(
+                'New Data Field',
+                style: AppTypography.heading1(modalContext),
+              ),
+              AppSpacing.gapL,
+              _buildTextField(
+                modalContext,
+                'Field Name',
+                fieldNameController,
+                'e.g. Meeting Minutes',
+              ),
+              AppSpacing.gapL,
+              Text(
+                'Format',
+                style: AppTypography.labelSmall(
+                  modalContext,
+                  AppColors.secondaryText,
+                  FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 12),
+              AppSpacing.gapS,
               DropdownButtonFormField<String>(
                 value: selectedType,
                 decoration: InputDecoration(
-                  labelText: 'Field Type',
-                  border: OutlineInputBorder(),
+                  filled: true,
+                  fillColor: AppColors.lightBackground,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
                 items: ['text', 'number', 'date', 'checkbox']
                     .map(
-                      (type) =>
-                          DropdownMenuItem(value: type, child: Text(type)),
+                      (t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(
+                          t.toUpperCase(),
+                          style: AppTypography.bodySmall(
+                            modalContext,
+                            AppColors.darkText,
+                          ),
+                        ),
+                      ),
                     )
                     .toList(),
-                onChanged: (value) => selectedType = value ?? 'text',
+                onChanged: (v) =>
+                    setModalState(() => selectedType = v ?? 'text'),
               ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: defaultValueController,
-                decoration: InputDecoration(
-                  labelText: 'Default Value (optional)',
-                  border: OutlineInputBorder(),
+              AppSpacing.gapXL,
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (fieldNameController.text.isNotEmpty) {
+                      final newFields = List<Map<String, String>>.from(
+                        currentFields,
+                      );
+                      newFields.add({
+                        'name': fieldNameController.text,
+                        'type': selectedType,
+                      });
+                      context.read<TemplateManagementBloc>().add(
+                        UpdateEditingTemplateEvent(fields: newFields),
+                      );
+                      Navigator.pop(modalContext);
+                      getIt<GlobalUiService>().hapticFeedback();
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ),
+                  child: const Text('Add Field'),
                 ),
               ),
             ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (fieldNameController.text.isNotEmpty) {
-                setState(() {
-                  _fields.add({
-                    'name': fieldNameController.text,
-                    'type': selectedType,
-                    'defaultValue': defaultValueController.text,
-                  });
-                });
-                Navigator.pop(context);
-              }
-            },
-            child: Text('Add'),
-          ),
-        ],
       ),
     );
   }
 
-  void _showDeleteConfirmation() {
+  void _showDeleteConfirmation(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Delete Template?'),
-        content: Text('This action cannot be undone.'),
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Delete Template?'),
+        content: const Text(
+          'This will permanently remove this template from your gallery.',
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () {
               context.read<TemplateManagementBloc>().add(
                 DeleteTemplateEvent(templateId: widget.existingTemplate!.id),
               );
+              Navigator.pop(dialogContext);
               Navigator.pop(context);
-              Navigator.pop(context);
+              getIt<GlobalUiService>().showSuccess('Template deleted');
+              getIt<GlobalUiService>().hapticFeedback();
             },
-            child: Text('Delete'),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _saveTemplate() {
+  void _saveTemplate(BuildContext context, TemplatesLoaded state) {
     if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please enter a template name')));
+      getIt<GlobalUiService>().showWarning('Please enter a template name');
       return;
     }
 
@@ -322,12 +528,11 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       CreateTemplateEvent(
         name: _nameController.text,
         description: _descriptionController.text,
-        category: _selectedCategory,
-        fields: _fields,
+        category: state.editingCategory,
+        fields: state.editingFields,
       ),
     );
-
+    getIt<GlobalUiService>().hapticFeedback();
     Navigator.pop(context);
   }
 }
-

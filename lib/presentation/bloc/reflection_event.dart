@@ -62,15 +62,37 @@ class SubmitAnswerEvent extends ReflectionEvent {
   final String questionId;
   final String answerText;
   final String? mood;
+  final int? moodValue;
+  final int? energyLevel;
+  final int? sleepQuality;
+  final List<String> activityTags;
+  final bool isPrivate;
+  final DateTime reflectionDate;
 
   const SubmitAnswerEvent({
     required this.questionId,
     required this.answerText,
     this.mood,
+    this.moodValue,
+    this.energyLevel,
+    this.sleepQuality,
+    this.activityTags = const [],
+    this.isPrivate = false,
+    required this.reflectionDate,
   });
 
   @override
-  List<Object?> get props => [questionId, answerText, mood];
+  List<Object?> get props => [
+    questionId,
+    answerText,
+    mood,
+    moodValue,
+    energyLevel,
+    sleepQuality,
+    activityTags,
+    isPrivate,
+    reflectionDate,
+  ];
 }
 
 class LoadAnswersEvent extends ReflectionEvent {
@@ -133,4 +155,42 @@ class CreateFromTemplateEvent extends ReflectionEvent {
 
   @override
   List<Object?> get props => [templateId, answers];
+}
+
+class LogMoodEvent extends ReflectionEvent {
+  final String mood;
+  final DateTime timestamp;
+
+  const LogMoodEvent({required this.mood, required this.timestamp});
+
+  @override
+  List<Object?> get props => [mood, timestamp];
+}
+
+class LoadRandomQuestionEvent extends ReflectionEvent {
+  const LoadRandomQuestionEvent();
+}
+
+class PinQuestionEvent extends ReflectionEvent {
+  final String questionId;
+  const PinQuestionEvent(this.questionId);
+
+  @override
+  List<Object?> get props => [questionId];
+}
+
+class UnpinQuestionEvent extends ReflectionEvent {
+  const UnpinQuestionEvent();
+}
+
+class ScheduleReflectionNotificationEvent extends ReflectionEvent {
+  final DateTime time;
+  const ScheduleReflectionNotificationEvent(this.time);
+
+  @override
+  List<Object?> get props => [time];
+}
+
+class CancelReflectionNotificationEvent extends ReflectionEvent {
+  const CancelReflectionNotificationEvent();
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../../core/routes/app_routes.dart';
 import '../design_system/design_system.dart';
 
 /// Empty State Notes Help Screen
@@ -36,17 +38,10 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
 
   PreferredSizeWidget _buildTopAppBar(BuildContext context) {
     return AppBar(
-      title: const Text(
-        'Notes',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
-          letterSpacing: -0.5,
-        ),
-      ),
-      backgroundColor: Theme.of(
-        context,
-      ).scaffoldBackgroundColor.withOpacity(0.8),
+      title: Text('Notes', style: AppTypography.heading3(context)),
+      backgroundColor: AppColors.getBackgroundColor(
+        Theme.of(context).brightness,
+      ).withOpacity(0.8),
       elevation: 0,
       scrolledUnderElevation: 0,
       leadingWidth: 56,
@@ -56,7 +51,7 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
           onPressed: () {
             // Handle menu action
           },
-          icon: const Icon(Icons.menu),
+          icon: Icon(Icons.menu, color: AppColors.textPrimary(context)),
           iconSize: 24,
         ),
       ),
@@ -67,7 +62,10 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
             onPressed: () {
               // Handle settings action
             },
-            icon: const Icon(Icons.settings_outlined),
+            icon: Icon(
+              Icons.settings_outlined,
+              color: AppColors.textPrimary(context),
+            ),
             iconSize: 24,
           ),
         ),
@@ -89,7 +87,7 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
             decoration: BoxDecoration(
               gradient: RadialGradient(
                 colors: [
-                  AppColors.primary.withOpacity(0.1),
+                  AppColors.primaryColor.withOpacity(0.1),
                   Colors.transparent,
                 ],
                 stops: const [0.0, 1.0],
@@ -104,12 +102,9 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
               width: 192.w,
               height: 256.h,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                color: AppColors.surface(context),
                 borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(
-                  color: Theme.of(context).dividerColor,
-                  width: 1,
-                ),
+                border: Border.all(color: AppColors.border(context), width: 1),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -128,7 +123,7 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
                       width: 120.w,
                       height: 8.h,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).dividerColor.withOpacity(0.5),
+                        color: AppColors.border(context).withOpacity(0.5),
                         borderRadius: BorderRadius.circular(4.r),
                       ),
                     ),
@@ -138,7 +133,7 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
                       width: 80.w,
                       height: 8.h,
                       decoration: BoxDecoration(
-                        color: Theme.of(context).dividerColor.withOpacity(0.5),
+                        color: AppColors.border(context).withOpacity(0.5),
                         borderRadius: BorderRadius.circular(4.r),
                       ),
                     ),
@@ -149,7 +144,7 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
                       child: Icon(
                         Icons.edit_note_outlined,
                         size: 32.sp,
-                        color: AppColors.primary.withOpacity(0.4),
+                        color: AppColors.primaryColor.withOpacity(0.4),
                       ),
                     ),
                   ],
@@ -167,10 +162,10 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
                 width: 176.w,
                 height: 240.h,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface.withOpacity(0.6),
+                  color: AppColors.surface(context).withOpacity(0.6),
                   borderRadius: BorderRadius.circular(8.r),
                   border: Border.all(
-                    color: Theme.of(context).dividerColor.withOpacity(0.5),
+                    color: AppColors.border(context).withOpacity(0.5),
                     width: 1,
                   ),
                 ),
@@ -187,23 +182,18 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
       children: [
         Text(
           'Your digital brain is empty.',
-          style: TextStyle(
-            fontSize: 24.sp,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
+          style: AppTypography.heading2(
+            context,
+          ).copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
           textAlign: TextAlign.center,
         ),
         SizedBox(height: 12.h),
         Text(
           'Start with a template to structure your thoughts or begin with a blank canvas.',
-          style: TextStyle(
-            fontSize: 16.sp,
-            color: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.color?.withOpacity(0.7),
-            height: 1.5,
-          ),
+          style: AppTypography.bodyMedium(
+            context,
+            AppColors.textSecondary(context),
+          ).copyWith(height: 1.5),
           textAlign: TextAlign.center,
         ),
       ],
@@ -215,13 +205,10 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
       children: [
         Text(
           'QUICK-START TEMPLATES',
-          style: TextStyle(
-            fontSize: 12.sp,
+          style: AppTypography.captionSmall(context).copyWith(
             fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-            color: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.color?.withOpacity(0.7),
+            color: AppColors.textSecondary(context),
           ),
         ),
         SizedBox(height: 16.h),
@@ -230,24 +217,24 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
           runSpacing: 8.h,
           alignment: WrapAlignment.center,
           children: [
-            _buildTemplateChip('Meeting Notes', Icons.calendar_today),
-            _buildTemplateChip('Daily Journal', Icons.edit_square),
-            _buildTemplateChip('Brainstorm', Icons.lightbulb_outline),
-            _buildTemplateChip('To-do List', Icons.checklist),
+            _buildTemplateChip(context, 'Meeting Notes', Icons.calendar_today),
+            _buildTemplateChip(context, 'Daily Journal', Icons.edit_square),
+            _buildTemplateChip(context, 'Brainstorm', Icons.lightbulb_outline),
+            _buildTemplateChip(context, 'To-do List', Icons.checklist),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildTemplateChip(String label, IconData icon) {
+  Widget _buildTemplateChip(BuildContext context, String label, IconData icon) {
     return Builder(
       builder: (context) => Container(
         height: 40.h,
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          border: Border.all(color: Theme.of(context).dividerColor, width: 1),
+          color: AppColors.surface(context),
+          border: Border.all(color: AppColors.border(context), width: 1),
           borderRadius: BorderRadius.circular(20.r),
           boxShadow: [
             BoxShadow(
@@ -260,11 +247,13 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20.sp, color: AppColors.primary),
+            Icon(icon, size: 20.sp, color: AppColors.primaryColor),
             SizedBox(width: 8.w),
             Text(
               label,
-              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w500),
+              style: AppTypography.bodySmall(
+                context,
+              ).copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -282,21 +271,24 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
           child: ElevatedButton.icon(
             onPressed: () {
               // Navigate to note editor
-              Navigator.pushNamed(context, '/notes/editor');
+              Navigator.pushNamed(context, AppRoutes.noteEditor);
             },
             icon: const Icon(Icons.add),
-            label: const Text(
+            label: Text(
               'Create New Note',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: AppTypography.bodyLarge(
+                context,
+                Colors.white,
+              ).copyWith(fontWeight: FontWeight.w700),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor: AppColors.primaryColor,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12.r),
               ),
               elevation: 8,
-              shadowColor: AppColors.primary.withOpacity(0.3),
+              shadowColor: AppColors.primaryColor.withOpacity(0.3),
             ),
           ),
         ),
@@ -308,17 +300,13 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
           },
           child: Text(
             'Import existing notes',
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.color?.withOpacity(0.7),
-            ),
+            style: AppTypography.bodySmall(
+              context,
+              AppColors.textSecondary(context),
+            ).copyWith(fontWeight: FontWeight.w500),
           ),
         ),
       ],
     );
   }
 }
-

@@ -21,5 +21,12 @@ abstract class ReflectionRepository {
   // Category operations
   Future<List<String>> getAvailableCategories();
   Future<int> getAnswerCountForToday();
-}
 
+  // Stats & Utility
+  Future<int> getStreakCount();
+  Future<int> getLongestStreak();
+  Future<int> getTotalReflectionsCount();
+  Future<ReflectionQuestion?> getRandomQuestion();
+  Future<void> pinQuestion(String questionId);
+  Future<void> unpinAllQuestions();
+}

@@ -149,5 +149,21 @@ class AppColors {
   static const Color darkText = onBackgroundDark;
   static const Color outlineColor =
       outlineLight; // Use light as default, will adapt based on theme
-}
 
+  // Focus Module Colors
+  static const Color focusDeepViolet = Color(0xFF1e1b4b);
+  static const Color focusMidnightBlue = Color(0xFF0f172a);
+  static const Color focusPurpleOrb = Color(0xFF4c1d95);
+  static const Color focusVioletOrb = Color(0xFF5b21b6);
+  static const Color focusBlueOrb = Color(0xFF1e3a8a);
+  static const Color focusAccentGreen = Color(0xFFa7f3d0);
+  static const Color focusIndigoLight = Color(0xFFA5B4FC);
+
+  // Accent Colors for various modules
+  static const Color accentBlue = Color(0xFF3B82F6);
+  static const Color accentGreen = Color(0xFF10B981);
+  static const Color accentPurple = Color(0xFF8B5CF6);
+
+  // Primary Alias
+  static const Color primary = primaryColor;
+}

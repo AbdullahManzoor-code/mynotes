@@ -1,27 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../design_system/design_system.dart';
-
-/// Sort and Filter Options for Notes
-enum NoteSortOption {
-  dateCreated('Date Created', Icons.access_time),
-  dateModified('Date Modified', Icons.update),
-  titleAZ('Title A-Z', Icons.sort_by_alpha),
-  color('Color', Icons.palette);
-
-  const NoteSortOption(this.displayName, this.icon);
-  final String displayName;
-  final IconData icon;
-}
-
-enum NoteViewMode {
-  list('List View', Icons.view_list),
-  grid('Grid View', Icons.grid_view);
-
-  const NoteViewMode(this.displayName, this.icon);
-  final String displayName;
-  final IconData icon;
-}
+import '../bloc/note_state.dart';
 
 /// Notes View Options Bottom Sheet
 /// Provides grid/list toggle, sort options, and filter controls (ORG-001, ORG-002)

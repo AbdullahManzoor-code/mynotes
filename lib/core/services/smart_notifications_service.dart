@@ -39,6 +39,7 @@ class SmartNotificationsService {
   }
 
   void _listenToRemindersStream() {
+    _remindersSubscription?.cancel();
     _remindersSubscription = _repository.remindersStream.listen((reminders) {
       _updatePendingNotifications(reminders);
     });

@@ -65,19 +65,21 @@ class GlassBottomNavBar extends StatelessWidget {
                 final item = items[index];
                 final isSelected = index == currentIndex;
 
-                return _BottomNavBarItem(
-                  icon: item.icon,
-                  activeIcon: item.activeIcon,
-                  label: item.label,
-                  isSelected: isSelected,
-                  onTap: () {
-                    onTap?.call(index);
-                    item.onTap?.call();
-                  },
-                  selectedColor: selectedItemColor ?? AppColors.primary,
-                  unselectedColor:
-                      unselectedItemColor ?? AppColors.textSecondary(context),
-                  showLabel: showLabels,
+                return Expanded(
+                  child: _BottomNavBarItem(
+                    icon: item.icon,
+                    activeIcon: item.activeIcon,
+                    label: item.label,
+                    isSelected: isSelected,
+                    onTap: () {
+                      onTap?.call(index);
+                      item.onTap?.call();
+                    },
+                    selectedColor: selectedItemColor ?? AppColors.primary,
+                    unselectedColor:
+                        unselectedItemColor ?? AppColors.textSecondary(context),
+                    showLabel: showLabels,
+                  ),
                 );
               }),
             ),
@@ -172,7 +174,7 @@ class _BottomNavBarItemState extends State<_BottomNavBarItem>
           scale: _scaleAnimation,
           child: Container(
             padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.md.w,
+              horizontal: AppSpacing.xs.w,
               vertical: AppSpacing.xs.h,
             ),
             child: Column(
@@ -313,19 +315,21 @@ class FloatingBottomNavBar extends StatelessWidget {
                 final item = items[index];
                 final isSelected = index == currentIndex;
 
-                return _BottomNavBarItem(
-                  icon: item.icon,
-                  activeIcon: item.activeIcon,
-                  label: item.label,
-                  isSelected: isSelected,
-                  onTap: () {
-                    onTap?.call(index);
-                    item.onTap?.call();
-                  },
-                  selectedColor: selectedItemColor ?? AppColors.primary,
-                  unselectedColor:
-                      unselectedItemColor ?? AppColors.textSecondary(context),
-                  showLabel: false,
+                return Expanded(
+                  child: _BottomNavBarItem(
+                    icon: item.icon,
+                    activeIcon: item.activeIcon,
+                    label: item.label,
+                    isSelected: isSelected,
+                    onTap: () {
+                      onTap?.call(index);
+                      item.onTap?.call();
+                    },
+                    selectedColor: selectedItemColor ?? AppColors.primary,
+                    unselectedColor:
+                        unselectedItemColor ?? AppColors.textSecondary(context),
+                    showLabel: false,
+                  ),
                 );
               }),
             ),

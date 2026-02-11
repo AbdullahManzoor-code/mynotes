@@ -32,6 +32,9 @@ abstract class SmartCollectionRepository {
   /// Get active collections only
   Future<List<SmartCollection>> getActiveCollections();
 
+  /// Toggle collection status (active/inactive)
+  Future<bool> toggleCollectionStatus(String id, bool isActive);
+
   /// Update collection item count
   Future<bool> updateItemCount(String collectionId, int count);
 }

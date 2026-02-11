@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import '../../core/themes/theme.dart';
+import '../bloc/params/theme_params.dart';
 
 abstract class ThemeEvent extends Equatable {
   const ThemeEvent();
@@ -8,37 +9,41 @@ abstract class ThemeEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class ToggleThemeEvent extends ThemeEvent {
-  const ToggleThemeEvent();
-}
-
-class SetThemeEvent extends ThemeEvent {
-  final bool isDarkMode;
-
-  const SetThemeEvent(this.isDarkMode);
-
-  @override
-  List<Object?> get props => [isDarkMode];
-}
-
 class LoadThemeEvent extends ThemeEvent {
   const LoadThemeEvent();
 }
 
-class ChangeThemeVariantEvent extends ThemeEvent {
-  final AppThemeType themeType;
+class UpdateThemeEvent extends ThemeEvent {
+  final ThemeParams params;
 
-  const ChangeThemeVariantEvent(this.themeType);
+  const UpdateThemeEvent(this.params);
+
+  factory UpdateThemeEvent.toggleDarkMode(ThemeParams params) {
+    return UpdateThemeEvent(params.toggleDarkMode());
+  }
+
+  factory UpdateThemeEvent.setDarkMode(ThemeParams params, bool isDarkMode) {
+    return UpdateThemeEvent(params.copyWith(isDarkMode: isDarkMode));
+  }
+
+  factory UpdateThemeEvent.increaseFontSize(ThemeParams params) {
+    return UpdateThemeEvent(params.increaseFontSize());
+  }
+
+  factory UpdateThemeEvent.decreaseFontSize(ThemeParams params) {
+    return UpdateThemeEvent(params.decreaseFontSize());
+  }
 
   @override
-  List<Object?> get props => [themeType];
+  List<Object?> get props => [params];
 }
 
-class ChangeFontSizeEvent extends ThemeEvent {
-  final double fontSize;
+class ChangeThemeVariantEvent extends ThemeEvent {
+  final ThemeParams params;
+  final AppThemeType themeType;
 
-  const ChangeFontSizeEvent(this.fontSize);
+  const ChangeThemeVariantEvent(this.params, this.themeType);
 
   @override
-  List<Object?> get props => [fontSize];
+  List<Object?> get props => [params, themeType];
 }

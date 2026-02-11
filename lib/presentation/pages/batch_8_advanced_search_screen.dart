@@ -1,237 +1,402 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/bloc/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note_event.dart';
+import 'package:mynotes/presentation/bloc/advanced_search_bloc.dart';
 import 'package:mynotes/domain/services/advanced_search_ranking_service.dart';
+import 'package:mynotes/core/routes/app_routes.dart';
+import 'package:mynotes/presentation/design_system/app_colors.dart';
+import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/design_system/app_spacing.dart';
+import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/injection_container.dart';
 
 /// Advanced Search Interface - Batch 8, Screen 1
-class AdvancedSearchScreen extends StatefulWidget {
+/// Modernized to use Design System, Global UI Services, and BLoC
+class AdvancedSearchScreen extends StatelessWidget {
   const AdvancedSearchScreen({Key? key}) : super(key: key);
 
   @override
-  State<AdvancedSearchScreen> createState() => _AdvancedSearchScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          getIt<AdvancedSearchBloc>()..add(LoadAdvancedSearchHistoryEvent()),
+      child: Scaffold(
+        backgroundColor: AppColors.lightBackground,
+        appBar: AppBar(
+          title: Text(
+            'Advanced Search',
+            style: AppTypography.displayMedium(context, AppColors.darkText),
+          ),
+          centerTitle: true,
+          backgroundColor: AppColors.lightSurface,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: AppColors.darkText),
+        ),
+        body: const _AdvancedSearchBody(),
+      ),
+    );
+  }
 }
 
-class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
-  final _searchController = TextEditingController();
-  final _rankingService = AdvancedSearchRankingService();
-  List<String> _searchHistory = [];
-  List<String> _savedSearches = [];
-  String _selectedSort = 'relevance';
-  String _selectedFilter = 'all';
+class _AdvancedSearchBody extends StatefulWidget {
+  const _AdvancedSearchBody({Key? key}) : super(key: key);
 
   @override
-  void initState() {
-    super.initState();
-    _loadSearchHistory();
-  }
+  State<_AdvancedSearchBody> createState() => _AdvancedSearchBodyState();
+}
 
-  void _loadSearchHistory() {
-    // TODO: Load from storage
-    _searchHistory = ['Flutter', 'Dart', 'BLoC pattern', 'Mobile app'];
-    _savedSearches = ['High priority reminders', 'Recent notes'];
+class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
+  final _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Advanced Search'), centerTitle: true),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Search Field with Suggestions
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: _buildSearchField(),
-            ),
-
-            // Filter and Sort Options
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildFilterOptions(),
-                  const SizedBox(height: 12),
-                  _buildSortOptions(),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Quick Suggestions or History
-            if (_searchController.text.isEmpty) ...[
+    return BlocBuilder<AdvancedSearchBloc, AdvancedSearchState>(
+      builder: (context, state) {
+        return SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Search Field with Suggestions
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildSavedSearches(),
+                padding: AppSpacing.paddingAllM,
+                child: _buildSearchField(context, state),
               ),
-              const SizedBox(height: 16),
+
+              // Filter and Sort Options
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildSearchHistory(),
+                padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildFilterOptions(context, state),
+                    AppSpacing.gapM,
+                    _buildSortOptions(context, state),
+                  ],
+                ),
               ),
+              AppSpacing.gapL,
+
+              // Quick Suggestions or History
+              if (_searchController.text.isEmpty) ...[
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: _buildSavedSearches(context, state),
+                ),
+                AppSpacing.gapM,
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
+                  child: _buildSearchHistory(context, state),
+                ),
+              ],
+              AppSpacing.gapXXXL,
             ],
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSearchField() {
+  Widget _buildSearchField(BuildContext context, AdvancedSearchState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
           controller: _searchController,
-          onChanged: (value) => setState(() {}),
+          style: AppTypography.bodyMedium(context, AppColors.darkText),
+          onChanged: (value) {
+            // Trigger rebuild for clear button visibility
+            context.read<AdvancedSearchBloc>().add(
+              AdvancedSearchQueryChangedEvent(value),
+            );
+          },
+          onSubmitted: (value) {
+            if (value.isNotEmpty) {
+              _performSearch(context, value);
+            }
+          },
           decoration: InputDecoration(
             hintText: 'Search notes, reminders, collections...',
-            prefixIcon: Icon(Icons.search),
-            suffixIcon: _searchController.text.isNotEmpty
-                ? IconButton(
-                    icon: Icon(Icons.clear),
+            hintStyle: AppTypography.bodySmall(context, AppColors.tertiaryText),
+            prefixIcon: const Icon(
+              Icons.search_rounded,
+              color: AppColors.tertiaryText,
+            ),
+            filled: true,
+            fillColor: AppColors.lightSurface,
+            suffixIcon: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_searchController.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.bookmark_add_outlined,
+                      color: AppColors.primaryColor,
+                    ),
+                    tooltip: 'Save Search',
+                    onPressed: () {
+                      context.read<AdvancedSearchBloc>().add(
+                        SaveSearchEvent(_searchController.text),
+                      );
+                      getIt<GlobalUiService>().showSuccess('Search saved');
+                      getIt<GlobalUiService>().hapticFeedback();
+                    },
+                  ),
+                if (_searchController.text.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(
+                      Icons.clear_rounded,
+                      color: AppColors.tertiaryText,
+                    ),
                     onPressed: () {
                       _searchController.clear();
-                      setState(() {});
+                      context.read<AdvancedSearchBloc>().add(
+                        const AdvancedSearchQueryChangedEvent(''),
+                      );
                     },
-                  )
-                : null,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+              ],
+            ),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16.r),
+              borderSide: const BorderSide(color: AppColors.borderLight),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(16.r),
+              borderSide: BorderSide(color: AppColors.primaryColor, width: 2.w),
+            ),
           ),
         ),
         if (_searchController.text.isNotEmpty)
           Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: _buildSearchSuggestions(),
+            padding: EdgeInsets.only(top: 12.h),
+            child: _buildSearchSuggestions(context),
           ),
       ],
     );
   }
 
-  Widget _buildSearchSuggestions() {
-    final suggestions = [
-      'Search by title',
-      'Search by tag',
-      'Search by date',
-      'Search by content',
-    ];
+  Widget _buildSearchSuggestions(BuildContext context) {
+    final suggestions =
+        ['Recent idea', 'Meeting notes', 'Grocery list', 'Project plan']
+            .where(
+              (s) => s.toLowerCase().contains(
+                _searchController.text.toLowerCase(),
+              ),
+            )
+            .toList();
+
+    if (suggestions.isEmpty) return const SizedBox.shrink();
 
     return Container(
       decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(8),
+        color: AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderLight),
       ),
       child: ListView.builder(
         shrinkWrap: true,
+        padding: EdgeInsets.zero,
         itemCount: suggestions.length,
         itemBuilder: (context, index) {
           return ListTile(
-            leading: Icon(Icons.search_outlined),
-            title: Text(suggestions[index]),
-            onTap: () {
-              _searchController.text = suggestions[index];
-              _performSearch();
-            },
+            leading: const Icon(
+              Icons.history_rounded,
+              color: AppColors.tertiaryText,
+              size: 20,
+            ),
+            title: Text(
+              suggestions[index],
+              style: AppTypography.bodySmall(context, AppColors.darkText),
+            ),
+            onTap: () => _performSearch(context, suggestions[index]),
           );
         },
       ),
     );
   }
 
-  Widget _buildFilterOptions() {
+  Widget _buildFilterOptions(BuildContext context, AdvancedSearchState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Filter by Type',
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
+        Text('Filter by Type', style: AppTypography.heading3(context)),
+        AppSpacing.gapS,
         Wrap(
-          spacing: 8,
+          spacing: 8.w,
+          runSpacing: 8.h,
           children: [
-            _buildFilterChip('all', 'All'),
-            _buildFilterChip('notes', 'Notes'),
-            _buildFilterChip('reminders', 'Reminders'),
-            _buildFilterChip('collections', 'Collections'),
-            _buildFilterChip('tags', 'Tags'),
+            _buildFilterChip(context, state, 'all', 'All'),
+            _buildFilterChip(context, state, 'notes', 'Notes'),
+            _buildFilterChip(context, state, 'reminders', 'Reminders'),
+            _buildFilterChip(context, state, 'collections', 'Collections'),
+            _buildFilterChip(context, state, 'tags', 'Tags'),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildFilterChip(String value, String label) {
-    final isSelected = _selectedFilter == value;
+  Widget _buildFilterChip(
+    BuildContext context,
+    AdvancedSearchState state,
+    String value,
+    String label,
+  ) {
+    final isSelected = state.selectedFilter == value;
+
     return FilterChip(
       label: Text(label),
+      labelStyle: AppTypography.labelSmall(
+        context,
+        isSelected ? AppColors.lightSurface : AppColors.secondaryText,
+        isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
       selected: isSelected,
       onSelected: (selected) {
-        setState(() => _selectedFilter = value);
+        context.read<AdvancedSearchBloc>().add(UpdateSearchFilterEvent(value));
+        getIt<GlobalUiService>().hapticFeedback();
       },
+      backgroundColor: AppColors.lightSurface,
+      selectedColor: AppColors.primaryColor,
+      checkmarkColor: AppColors.lightSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10.r),
+        side: BorderSide(
+          color: isSelected ? Colors.transparent : AppColors.borderLight,
+        ),
+      ),
     );
   }
 
-  Widget _buildSortOptions() {
+  Widget _buildSortOptions(BuildContext context, AdvancedSearchState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Sort by',
-          style: Theme.of(
-            context,
-          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        SegmentedButton<String>(
-          segments: const [
-            ButtonSegment(label: Text('Relevance'), value: 'relevance'),
-            ButtonSegment(label: Text('Recent'), value: 'recent'),
-            ButtonSegment(label: Text('Oldest'), value: 'oldest'),
-          ],
-          selected: {_selectedSort},
-          onSelectionChanged: (Set<String> newSelection) {
-            setState(() => _selectedSort = newSelection.first);
-          },
+        Text('Sort by', style: AppTypography.heading3(context)),
+        AppSpacing.gapS,
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              _buildSortOption(context, state, 'Relevance', 'relevance'),
+              AppSpacing.gapS,
+              _buildSortOption(context, state, 'Recent', 'recent'),
+              AppSpacing.gapS,
+              _buildSortOption(context, state, 'Oldest', 'oldest'),
+            ],
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildSavedSearches() {
-    if (_savedSearches.isEmpty) {
-      return SizedBox.shrink();
+  Widget _buildSortOption(
+    BuildContext context,
+    AdvancedSearchState state,
+    String label,
+    String value,
+  ) {
+    final isSelected = state.selectedSort == value;
+    return GestureDetector(
+      onTap: () {
+        context.read<AdvancedSearchBloc>().add(UpdateSearchSortEvent(value));
+        getIt<GlobalUiService>().hapticFeedback();
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primaryColor : AppColors.lightSurface,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: isSelected ? Colors.transparent : AppColors.borderLight,
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTypography.labelSmall(
+            context,
+            isSelected ? AppColors.lightSurface : AppColors.secondaryText,
+            isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSavedSearches(BuildContext context, AdvancedSearchState state) {
+    if (state.savedSearches.isEmpty) {
+      return const SizedBox.shrink();
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Saved Searches',
-          style: Theme.of(
-            context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        ..._savedSearches.map((search) {
+        Text('Saved Searches', style: AppTypography.heading3(context)),
+        AppSpacing.gapS,
+        ...state.savedSearches.map((search) {
           return Card(
+            elevation: 0,
+            color: AppColors.lightSurface,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16.r),
+              side: const BorderSide(color: AppColors.borderLight),
+            ),
+            margin: EdgeInsets.only(bottom: 8.h),
             child: ListTile(
-              leading: Icon(Icons.bookmark, color: Colors.blue),
-              title: Text(search),
-              trailing: PopupMenuButton(
+              leading: const Icon(
+                Icons.bookmark_rounded,
+                color: AppColors.primaryColor,
+                size: 20,
+              ),
+              title: Text(
+                search,
+                style: AppTypography.bodyMedium(
+                  context,
+                  AppColors.primaryText,
+                  FontWeight.bold,
+                ),
+              ),
+              trailing: PopupMenuButton<String>(
+                icon: const Icon(
+                  Icons.more_vert,
+                  color: AppColors.secondaryText,
+                ),
+                onSelected: (value) {
+                  if (value == 'view') {
+                    _performSearch(context, search);
+                  } else if (value == 'delete') {
+                    context.read<AdvancedSearchBloc>().add(
+                      RemoveSavedSearchEvent(search),
+                    );
+                    getIt<GlobalUiService>().hapticFeedback();
+                  }
+                },
                 itemBuilder: (context) => [
                   PopupMenuItem(
-                    child: Text('View'),
-                    onTap: () => _performSearch(search),
+                    value: 'view',
+                    child: Text(
+                      'View',
+                      style: AppTypography.bodySmall(context),
+                    ),
                   ),
                   PopupMenuItem(
-                    child: Text('Delete'),
-                    onTap: () {
-                      setState(() => _savedSearches.remove(search));
-                    },
+                    value: 'delete',
+                    child: Text(
+                      'Delete',
+                      style: AppTypography.bodySmall(
+                        context,
+                        AppColors.errorColor,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -242,9 +407,9 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     );
   }
 
-  Widget _buildSearchHistory() {
-    if (_searchHistory.isEmpty) {
-      return SizedBox.shrink();
+  Widget _buildSearchHistory(BuildContext context, AdvancedSearchState state) {
+    if (state.searchHistory.isEmpty) {
+      return const SizedBox.shrink();
     }
 
     return Column(
@@ -253,28 +418,42 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Recent Searches',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
+            Text('Recent Searches', style: AppTypography.heading3(context)),
             TextButton(
-              onPressed: () => setState(() => _searchHistory.clear()),
-              child: Text('Clear'),
+              onPressed: () {
+                context.read<AdvancedSearchBloc>().add(
+                  const ClearSearchHistoryEvent(),
+                );
+                getIt<GlobalUiService>().hapticFeedback();
+              },
+              child: Text(
+                'Clear',
+                style: AppTypography.labelSmall(context, AppColors.errorColor),
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        AppSpacing.gapS,
         Wrap(
-          spacing: 8,
-          children: _searchHistory.map((search) {
+          spacing: 8.w,
+          runSpacing: 8.h,
+          children: state.searchHistory.map((search) {
             return InputChip(
               label: Text(search),
-              onSelected: (_) => _performSearch(search),
+              labelStyle: AppTypography.bodySmall(context),
+              onSelected: (_) => _performSearch(context, search),
               onDeleted: () {
-                setState(() => _searchHistory.remove(search));
+                context.read<AdvancedSearchBloc>().add(
+                  RemoveFromSearchHistoryEvent(search),
+                );
+                getIt<GlobalUiService>().hapticFeedback();
               },
+              backgroundColor: AppColors.lightSurface,
+              deleteIconColor: AppColors.secondaryText,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                side: const BorderSide(color: AppColors.borderLight),
+              ),
             );
           }).toList(),
         ),
@@ -282,26 +461,19 @@ class _AdvancedSearchScreenState extends State<AdvancedSearchScreen> {
     );
   }
 
-  void _performSearch([String? query]) {
-    final searchQuery = query ?? _searchController.text;
-    if (searchQuery.isEmpty) return;
+  void _performSearch(BuildContext context, String query) {
+    if (query.isEmpty) return;
 
-    // Add to history
-    if (!_searchHistory.contains(searchQuery)) {
-      _searchHistory.insert(0, searchQuery);
-      if (_searchHistory.length > 10) _searchHistory.removeLast();
-    }
+    // Use the controller if provided from outside, but here we just navigate
+    _searchController.text = query;
 
-    // Perform search
-    context.read<NotesBloc>().add(SearchNotesEvent(searchQuery));
+    context.read<AdvancedSearchBloc>().add(AddToSearchHistoryEvent(query));
+    getIt<GlobalUiService>().hapticFeedback();
+
+    // Perform search in NoteBloc
+    context.read<NotesBloc>().add(SearchNotesEvent(query));
 
     // Navigate to results
-    Navigator.pushNamed(context, '/search_results', arguments: searchQuery);
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+    Navigator.pushNamed(context, AppRoutes.searchResults, arguments: query);
   }
 }

@@ -6,13 +6,17 @@ import '../../domain/repositories/reflection_repository.dart';
 import '../../core/exceptions/app_exceptions.dart';
 import 'reflection_event.dart';
 import 'reflection_state.dart';
+import '../../core/notifications/notification_service.dart';
 
 /// Reflection BLoC with comprehensive error handling
 /// Manages reflection questions, answers, and drafts with validation
 class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
   final ReflectionRepository repository;
+  final NotificationService notificationService;
 
-  ReflectionBloc({required this.repository})
+  static const int reflectionNotificationId = 999;
+
+  ReflectionBloc({required this.repository, required this.notificationService})
     : super(const ReflectionInitial()) {
     on<InitializeReflectionEvent>(_onInitializeReflection);
     on<LoadQuestionsEvent>(_onLoadQuestions);
@@ -28,6 +32,64 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
     on<LoadTemplatesEvent>(_onLoadTemplates);
     on<SelectTemplateEvent>(_onSelectTemplate);
     on<CreateFromTemplateEvent>(_onCreateFromTemplate);
+    on<LogMoodEvent>(_onLogMood);
+    on<LoadRandomQuestionEvent>(_onLoadRandomQuestion);
+    on<PinQuestionEvent>(_onPinQuestion);
+    on<UnpinQuestionEvent>(_onUnpinQuestion);
+    on<ScheduleReflectionNotificationEvent>(_onScheduleNotification);
+    on<CancelReflectionNotificationEvent>(_onCancelNotification);
+  }
+
+  Future<void> _onPinQuestion(
+    PinQuestionEvent event,
+    Emitter<ReflectionState> emit,
+  ) async {
+    try {
+      await repository.pinQuestion(event.questionId);
+      add(const LoadRandomQuestionEvent()); // Refresh to show pinned question
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onUnpinQuestion(
+    UnpinQuestionEvent event,
+    Emitter<ReflectionState> emit,
+  ) async {
+    try {
+      await repository.unpinAllQuestions();
+      add(const LoadRandomQuestionEvent());
+    } catch (e) {
+      emit(state.copyWith(error: e.toString()));
+    }
+  }
+
+  Future<void> _onScheduleNotification(
+    ScheduleReflectionNotificationEvent event,
+    Emitter<ReflectionState> emit,
+  ) async {
+    try {
+      await notificationService.schedule(
+        id: reflectionNotificationId,
+        title: 'Daily Reflection',
+        body: 'Time for your daily reflection! Take a moment for yourself.',
+        scheduledTime: event.time,
+        repeatDays: [0, 1, 2, 3, 4, 5, 6], // Daily
+      );
+    } catch (e) {
+      emit(state.copyWith(error: 'Failed to schedule notification: $e'));
+    }
+  }
+
+  Future<void> _onCancelNotification(
+    CancelReflectionNotificationEvent event,
+    Emitter<ReflectionState> emit,
+  ) async {
+    try {
+      await notificationService.cancel(reflectionNotificationId);
+    } catch (e) {
+      emit(state.copyWith(error: 'Failed to cancel notification: $e'));
+    }
   }
 
   /// Validate answer input
@@ -67,25 +129,69 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
     Emitter<ReflectionState> emit,
   ) async {
     try {
-      emit(const ReflectionLoading());
+      emit(state.copyWith(isLoading: true));
       debugPrint('[ReflectionBloc] Initializing reflection');
 
       final questions = await repository.getAllQuestions();
       final answeredToday = await repository.getAnswerCountForToday();
+      final allAnswers = await repository.getAllAnswers();
+      final streakCount = await repository.getStreakCount();
+      final longestStreak = await repository.getLongestStreak();
+      final totalReflectionsCount = await repository.getTotalReflectionsCount();
 
-      emit(QuestionsLoaded(questions: questions, answeredToday: answeredToday));
+      emit(
+        state.copyWith(
+          questions: questions,
+          answeredToday: answeredToday,
+          allAnswers: allAnswers,
+          streakCount: streakCount,
+          longestStreak: longestStreak,
+          totalReflectionsCount: totalReflectionsCount,
+          isLoading: false,
+        ),
+      );
       debugPrint('[ReflectionBloc] Initialization complete');
     } on AppException catch (e) {
       debugPrint('[ReflectionBloc] App exception: ${e.message}');
-      emit(ReflectionError(e.message, code: e.code, exception: e));
+      emit(state.copyWith(error: e.message, isLoading: false));
     } catch (e, stackTrace) {
       debugPrint('[ReflectionBloc] Unexpected error: $e\n$stackTrace');
       emit(
-        ReflectionError(
-          'Failed to initialize reflection: ${e.toString()}',
-          code: 'INIT_ERROR',
+        state.copyWith(
+          error: 'Failed to initialize reflection: ${e.toString()}',
+          isLoading: false,
         ),
       );
+    }
+  }
+
+  Future<void> _onLoadRandomQuestion(
+    LoadRandomQuestionEvent event,
+    Emitter<ReflectionState> emit,
+  ) async {
+    try {
+      emit(state.copyWith(isLoading: true));
+      final question = await repository.getRandomQuestion();
+      final answeredToday = await repository.getAnswerCountForToday();
+      if (question != null) {
+        emit(
+          state.copyWith(
+            questions: [question],
+            answeredToday: answeredToday,
+            isLoading: false,
+          ),
+        );
+      } else {
+        emit(
+          state.copyWith(
+            answeredToday: answeredToday,
+            error: 'No questions available',
+            isLoading: false,
+          ),
+        );
+      }
+    } catch (e) {
+      emit(state.copyWith(error: e.toString(), isLoading: false));
     }
   }
 
@@ -94,23 +200,29 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
     Emitter<ReflectionState> emit,
   ) async {
     try {
-      emit(const ReflectionLoading());
+      emit(state.copyWith(isLoading: true));
       debugPrint('[ReflectionBloc] Loading all questions');
 
       final questions = await repository.getAllQuestions();
       final answeredToday = await repository.getAnswerCountForToday();
 
-      emit(QuestionsLoaded(questions: questions, answeredToday: answeredToday));
+      emit(
+        state.copyWith(
+          questions: questions,
+          answeredToday: answeredToday,
+          isLoading: false,
+        ),
+      );
       debugPrint('[ReflectionBloc] Questions loaded: ${questions.length}');
     } on AppException catch (e) {
       debugPrint('[ReflectionBloc] App exception: ${e.message}');
-      emit(ReflectionError(e.message, code: e.code, exception: e));
+      emit(state.copyWith(error: e.message, isLoading: false));
     } catch (e, stackTrace) {
       debugPrint('[ReflectionBloc] Unexpected error: $e\n$stackTrace');
       emit(
-        ReflectionError(
-          'Failed to load questions: ${e.toString()}',
-          code: 'LOAD_ERROR',
+        state.copyWith(
+          error: 'Failed to load questions: ${e.toString()}',
+          isLoading: false,
         ),
       );
     }
@@ -121,7 +233,7 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
     Emitter<ReflectionState> emit,
   ) async {
     try {
-      emit(const ReflectionLoading());
+      emit(state.copyWith(isLoading: true));
       debugPrint(
         '[ReflectionBloc] Loading questions for category: ${event.category}',
       );
@@ -129,19 +241,25 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       final questions = await repository.getQuestionsByCategory(event.category);
       final answeredToday = await repository.getAnswerCountForToday();
 
-      emit(QuestionsLoaded(questions: questions, answeredToday: answeredToday));
+      emit(
+        state.copyWith(
+          questions: questions,
+          answeredToday: answeredToday,
+          isLoading: false,
+        ),
+      );
       debugPrint(
         '[ReflectionBloc] Category questions loaded: ${questions.length}',
       );
     } on AppException catch (e) {
       debugPrint('[ReflectionBloc] App exception: ${e.message}');
-      emit(ReflectionError(e.message, code: e.code, exception: e));
+      emit(state.copyWith(error: e.message, isLoading: false));
     } catch (e, stackTrace) {
       debugPrint('[ReflectionBloc] Unexpected error: $e\n$stackTrace');
       emit(
-        ReflectionError(
-          'Failed to load category questions: ${e.toString()}',
-          code: 'CATEGORY_LOAD_ERROR',
+        state.copyWith(
+          error: 'Failed to load category questions: ${e.toString()}',
+          isLoading: false,
         ),
       );
     }
@@ -258,7 +376,13 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
         questionId: event.questionId,
         answerText: event.answerText,
         mood: event.mood,
+        moodValue: event.moodValue,
+        energyLevel: event.energyLevel,
+        sleepQuality: event.sleepQuality,
+        activityTags: event.activityTags,
+        isPrivate: event.isPrivate,
         createdAt: DateTime.now(),
+        reflectionDate: event.reflectionDate,
         draft: null,
       );
 
@@ -268,6 +392,8 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
 
       // Reload questions to update answered count
       add(const LoadQuestionsEvent());
+      // Refresh stats (streak, etc.)
+      add(const InitializeReflectionEvent());
     } on AppException catch (e) {
       debugPrint('[ReflectionBloc] App exception: ${e.message}');
       // Treat validation errors differently based on code
@@ -292,23 +418,23 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
     Emitter<ReflectionState> emit,
   ) async {
     try {
-      emit(const ReflectionLoading());
+      emit(state.copyWith(isLoading: true));
       debugPrint(
         '[ReflectionBloc] Loading answers for question: ${event.questionId}',
       );
 
       final answers = await repository.getAnswersByQuestion(event.questionId);
-      emit(AnswersLoaded(answers));
+      emit(state.copyWith(answers: answers, isLoading: false));
       debugPrint('[ReflectionBloc] Answers loaded: ${answers.length}');
     } on AppException catch (e) {
       debugPrint('[ReflectionBloc] App exception: ${e.message}');
-      emit(ReflectionError(e.message, code: e.code, exception: e));
+      emit(state.copyWith(error: e.message, isLoading: false));
     } catch (e, stackTrace) {
       debugPrint('[ReflectionBloc] Unexpected error: $e\n$stackTrace');
       emit(
-        ReflectionError(
-          'Failed to load answers: ${e.toString()}',
-          code: 'LOAD_ANSWERS_ERROR',
+        state.copyWith(
+          error: 'Failed to load answers: ${e.toString()}',
+          isLoading: false,
         ),
       );
     }
@@ -324,9 +450,7 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
       );
 
       await repository.saveDraft(event.questionId, event.draftText);
-      emit(
-        DraftSaved(questionId: event.questionId, draftText: event.draftText),
-      );
+      emit(DraftSaved(draftText: event.draftText));
       debugPrint('[ReflectionBloc] Draft saved');
     } on AppException catch (e) {
       debugPrint('[ReflectionBloc] App exception: ${e.message}');
@@ -373,21 +497,21 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
     Emitter<ReflectionState> emit,
   ) async {
     try {
-      emit(const ReflectionLoading());
+      emit(state.copyWith(isLoading: true));
       debugPrint('[ReflectionBloc] Loading all answers');
 
       final answers = await repository.getAllAnswers();
-      emit(AllAnswersLoaded(answers));
+      emit(state.copyWith(allAnswers: answers, isLoading: false));
       debugPrint('[ReflectionBloc] All answers loaded: ${answers.length}');
     } on AppException catch (e) {
       debugPrint('[ReflectionBloc] App exception: ${e.message}');
-      emit(ReflectionError(e.message, code: e.code, exception: e));
+      emit(state.copyWith(error: e.message, isLoading: false));
     } catch (e, stackTrace) {
       debugPrint('[ReflectionBloc] Unexpected error: $e\n$stackTrace');
       emit(
-        ReflectionError(
-          'Failed to load all answers: ${e.toString()}',
-          code: 'LOAD_ALL_ANSWERS_ERROR',
+        state.copyWith(
+          error: 'Failed to load all answers: ${e.toString()}',
+          isLoading: false,
         ),
       );
     }
@@ -426,7 +550,7 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
     try {
       emit(
         TemplateSelected(
-          templateId: event.templateId,
+          selectedTemplateId: event.templateId,
           templateName: event.templateName,
         ),
       );
@@ -448,6 +572,31 @@ class ReflectionBloc extends Bloc<ReflectionEvent, ReflectionState> {
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(ReflectionError(errorMsg));
+    }
+  }
+
+  Future<void> _onLogMood(
+    LogMoodEvent event,
+    Emitter<ReflectionState> emit,
+  ) async {
+    try {
+      debugPrint('[ReflectionBloc] Logging mood: ${event.mood}');
+      // For now, we save it as an answer to a special "Mood" question
+      final answer = ReflectionAnswer(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        questionId: 'daily_mood',
+        answerText: 'Mood logged: ${event.mood}',
+        mood: event.mood,
+        createdAt: event.timestamp,
+        reflectionDate: event.timestamp,
+      );
+      await repository.saveAnswer(answer);
+      emit(AnswerSaved('Mood logged successfully'));
+
+      // Reload everything to update streak if needed
+      add(const InitializeReflectionEvent());
+    } catch (e) {
+      emit(ReflectionError('Failed to log mood: ${e.toString()}'));
     }
   }
 }

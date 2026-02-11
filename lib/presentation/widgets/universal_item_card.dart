@@ -581,6 +581,34 @@ class UniversalItem {
     );
   }
 
+  factory UniversalItem.fromMap(Map<String, dynamic> map) {
+    return UniversalItem(
+      id: (map['id'] ?? '') as String,
+      title: (map['title'] ?? '') as String,
+      content: (map['content'] ?? '') as String,
+      createdAt: map['createdAt'] != null
+          ? DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.tryParse(map['updatedAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+      isTodo: (map['isTodo'] == 1),
+      isCompleted: (map['isCompleted'] == 1),
+      reminderTime: map['reminderTime'] != null
+          ? DateTime.tryParse(map['reminderTime'] as String)
+          : null,
+      category: (map['category'] ?? '') as String,
+      priority: map['priority'] != null
+          ? ItemPriority.values.firstWhere(
+              (e) => e.name == map['priority'],
+              orElse: () => ItemPriority.medium,
+            )
+          : null,
+      hasVoiceNote: map['hasVoiceNote'] == 1,
+      hasImages: map['hasImages'] == 1,
+    );
+  }
+
   // Utility methods
   bool get isNote => !isTodo && reminderTime == null;
   bool get isReminder => reminderTime != null;
@@ -610,7 +638,22 @@ class UniversalItem {
       category: category ?? this.category,
       hasVoiceNote: hasVoiceNote ?? this.hasVoiceNote,
       hasImages: hasImages ?? this.hasImages,
-      tags: tags,
+    );
+  }
+
+  // Conversion methods
+  Note toNote() {
+    return Note(
+      id: id,
+      title: title,
+      content: content,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+      // Default values for fields not in UniversalItem
+      isPinned: false,
+      isArchived: false,
+      tags: tags ?? [],
+      color: NoteColor.defaultColor,
     );
   }
 }

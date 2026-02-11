@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/injection_container.dart';
 import 'dart:io';
 import 'dart:async';
+import '../../core/services/global_ui_service.dart';
 
 enum BulkExportFormat {
   zip('ZIP Archive', '.zip'),
@@ -404,9 +406,7 @@ class _BulkExportNotesDialogState extends State<BulkExportNotesDialog> {
 
   void _proceedToFormat() {
     if (_selectedNotes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select at least one note')),
-      );
+      getIt<GlobalUiService>().showWarning('Please select at least one note');
       return;
     }
     setState(() => _currentStep = 1);

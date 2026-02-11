@@ -1,75 +1,10 @@
 part of 'analytics_bloc.dart';
 
-class MoodAnalytics {
-  final Map<String, int> moodCounts;
-  final Map<DateTime, String> dailyMoods;
-  final double averageMood;
-  final String mostFrequentMood;
-  final int totalEntries;
-
-  MoodAnalytics({
-    required this.moodCounts,
-    required this.dailyMoods,
-    required this.averageMood,
-    required this.mostFrequentMood,
-    required this.totalEntries,
-  });
-}
-
-class NotesStatistics {
-  final int totalNotes;
-  final int archivedNotes;
-  final int notesWithAttachments;
-  final int totalWords;
-  final double averageNoteLength;
-  final DateTime lastNoteDate;
-
-  NotesStatistics({
-    required this.totalNotes,
-    required this.archivedNotes,
-    required this.notesWithAttachments,
-    required this.totalWords,
-    required this.averageNoteLength,
-    required this.lastNoteDate,
-  });
-}
-
-class ProductivityStatistics {
-  final int totalTodosCompleted;
-  final int totalTodosCreated;
-  final double completionRate;
-  final int consecutiveDaysActive;
-  final Duration averageTaskDuration;
-  final int tasksCompletedThisWeek;
-
-  ProductivityStatistics({
-    required this.totalTodosCompleted,
-    required this.totalTodosCreated,
-    required this.completionRate,
-    required this.consecutiveDaysActive,
-    required this.averageTaskDuration,
-    required this.tasksCompletedThisWeek,
-  });
-}
-
-class ReflectionStatistics {
-  final int totalAnswers;
-  final int answersThisWeek;
-  final List<String> topCategories;
-  final int consecutiveReflectionDays;
-  final Map<String, int> answersPerCategory;
-
-  ReflectionStatistics({
-    required this.totalAnswers,
-    required this.answersThisWeek,
-    required this.topCategories,
-    required this.consecutiveReflectionDays,
-    required this.answersPerCategory,
-  });
-}
-
-abstract class AnalyticsState {
+abstract class AnalyticsState extends Equatable {
   const AnalyticsState();
+
+  @override
+  List<Object?> get props => [];
 }
 
 class AnalyticsInitial extends AnalyticsState {
@@ -80,28 +15,54 @@ class AnalyticsLoading extends AnalyticsState {
   const AnalyticsLoading();
 }
 
+class AnalyticsLoaded extends AnalyticsState {
+  final Map<String, int> itemCounts;
+  final Map<String, double> weeklyActivity;
+  final List<Map<String, dynamic>> categoryBreakdown;
+  final Map<String, dynamic> productivityInsights;
+  final int streak;
+  final List<UniversalItem> recentItems;
+  final List<UniversalItem> overdueItems;
+  final List<String> dailyHighlights;
+
+  const AnalyticsLoaded({
+    required this.itemCounts,
+    required this.weeklyActivity,
+    required this.categoryBreakdown,
+    required this.productivityInsights,
+    required this.streak,
+    required this.recentItems,
+    required this.overdueItems,
+    required this.dailyHighlights,
+  });
+
+  @override
+  List<Object?> get props => [
+    itemCounts,
+    weeklyActivity,
+    categoryBreakdown,
+    productivityInsights,
+    streak,
+    recentItems,
+    overdueItems,
+    dailyHighlights,
+  ];
+}
+
 class MoodAnalyticsLoaded extends AnalyticsState {
-  final MoodAnalytics analytics;
+  final Map<String, int> moodCounts;
+  const MoodAnalyticsLoaded(this.moodCounts);
 
-  const MoodAnalyticsLoaded(this.analytics);
+  @override
+  List<Object?> get props => [moodCounts];
 }
 
-class NotesStatsLoaded extends AnalyticsState {
-  final NotesStatistics stats;
+class AnalyticsError extends AnalyticsState {
+  final String message;
+  const AnalyticsError(this.message);
 
-  const NotesStatsLoaded(this.stats);
-}
-
-class ProductivityStatsLoaded extends AnalyticsState {
-  final ProductivityStatistics stats;
-
-  const ProductivityStatsLoaded(this.stats);
-}
-
-class ReflectionStatsLoaded extends AnalyticsState {
-  final ReflectionStatistics stats;
-
-  const ReflectionStatsLoaded(this.stats);
+  @override
+  List<Object?> get props => [message];
 }
 
 class ExportInProgress extends AnalyticsState {
@@ -113,10 +74,13 @@ class ExportCompleted extends AnalyticsState {
   final String format;
 
   const ExportCompleted({required this.fileName, required this.format});
+
+  @override
+  List<Object?> get props => [fileName, format];
 }
 
-class AnalyticsError extends AnalyticsState {
-  final String message;
-
-  const AnalyticsError(this.message);
+// Keep legacy classes for now to avoid breaking existing imports if any
+class MoodAnalytics {
+  final Map<String, int> moodCounts;
+  MoodAnalytics({required this.moodCounts});
 }

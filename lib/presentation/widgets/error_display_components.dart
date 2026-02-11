@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/core/exceptions/app_exceptions.dart';
-import 'package:mynotes/core/exceptions/location_exceptions.dart';
+import 'package:mynotes/core/exceptions/location_exceptions.dart'
+    hide DatabaseException;
 import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/injection_container.dart' show getIt;
+import 'package:mynotes/core/services/global_ui_service.dart';
 
 /// Global error display component utilities
 /// Provides reusable error snackbars, dialogs, and inline feedback
@@ -15,36 +18,8 @@ class ErrorDisplay {
     VoidCallback? onRetry,
     Duration duration = const Duration(seconds: 4),
   }) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              message,
-              style: AppTypography.body1(context).copyWith(color: Colors.white),
-            ),
-            if (code != null)
-              Text(
-                'Error: $code',
-                style: AppTypography.caption(
-                  context,
-                ).copyWith(color: Colors.white70),
-              ),
-          ],
-        ),
-        backgroundColor: Colors.red.shade700,
-        duration: duration,
-        action: onRetry != null
-            ? SnackBarAction(
-                label: 'RETRY',
-                textColor: Colors.yellow.shade300,
-                onPressed: onRetry,
-              )
-            : null,
-      ),
+    getIt<GlobalUiService>().showError(
+      code != null ? '$message (Error: $code)' : message,
     );
   }
 
@@ -54,17 +29,7 @@ class ErrorDisplay {
     required String message,
     Duration duration = const Duration(seconds: 3),
   }) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: AppTypography.body1(context).copyWith(color: Colors.black87),
-        ),
-        backgroundColor: Colors.amber.shade400,
-        duration: duration,
-      ),
-    );
+    getIt<GlobalUiService>().showWarning(message);
   }
 
   /// Show success snackbar
@@ -73,27 +38,7 @@ class ErrorDisplay {
     required String message,
     Duration duration = const Duration(seconds: 2),
   }) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                message,
-                style: AppTypography.body1(
-                  context,
-                ).copyWith(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
-        backgroundColor: Colors.green.shade700,
-        duration: duration,
-      ),
-    );
+    getIt<GlobalUiService>().showSuccess(message);
   }
 
   /// Show error dialog for critical errors

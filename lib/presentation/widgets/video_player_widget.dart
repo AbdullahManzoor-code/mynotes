@@ -180,6 +180,7 @@ class VideoThumbnailPreview extends StatelessWidget {
   final String filePath;
   final String fileName;
   final Duration duration;
+  final String? thumbnailPath;
   final VoidCallback? onDelete;
 
   const VideoThumbnailPreview({
@@ -187,6 +188,7 @@ class VideoThumbnailPreview extends StatelessWidget {
     required this.filePath,
     required this.fileName,
     required this.duration,
+    this.thumbnailPath,
     this.onDelete,
   }) : super(key: key);
 
@@ -200,10 +202,14 @@ class VideoThumbnailPreview extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.grey.shade300,
             borderRadius: BorderRadius.circular(8),
-            image: DecorationImage(
-              image: FileImage(File(filePath)),
-              fit: BoxFit.cover,
-            ),
+            image: thumbnailPath != null
+                ? DecorationImage(
+                    image: thumbnailPath!.startsWith('assets/')
+                        ? AssetImage(thumbnailPath!) as ImageProvider
+                        : FileImage(File(thumbnailPath!)),
+                    fit: BoxFit.cover,
+                  )
+                : null,
           ),
           child: Container(
             decoration: BoxDecoration(
@@ -307,6 +313,7 @@ class VideoAttachmentsList extends StatelessWidget {
                 filePath: videos[index].filePath,
                 fileName: videos[index].fileName,
                 duration: videos[index].duration,
+                thumbnailPath: videos[index].thumbnailPath,
                 onDelete: () => onVideoDelete(index),
               ),
             );

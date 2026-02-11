@@ -1,42 +1,58 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
+import 'package:mynotes/core/design_system/app_spacing.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
-
+import 'package:mynotes/injection_container.dart';
+import '../design_system/design_system.dart';
+import '../../core/services/global_ui_service.dart';
+import '../bloc/filters_bloc.dart';
 
 /// Advanced Filters Screen (ORG-005)
 /// Complex visual filter builder with multiple conditions
-class AdvancedFiltersScreen extends StatefulWidget {
+class AdvancedFiltersScreen extends StatelessWidget {
   const AdvancedFiltersScreen({Key? key}) : super(key: key);
 
   @override
-  State<AdvancedFiltersScreen> createState() => _AdvancedFiltersScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => FiltersBloc(),
+      child: const _AdvancedFiltersScreenContent(),
+    );
+  }
 }
 
-class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
+class _AdvancedFiltersScreenContent extends StatefulWidget {
+  const _AdvancedFiltersScreenContent({Key? key}) : super(key: key);
+
+  @override
+  State<_AdvancedFiltersScreenContent> createState() =>
+      _AdvancedFiltersScreenContentState();
+}
+
+class _AdvancedFiltersScreenContentState
+    extends State<_AdvancedFiltersScreenContent>
     with SingleTickerProviderStateMixin {
   late TabController tabController;
-  List<Map<String, dynamic>> filterConditions = [];
-  String filterLogic = 'AND'; // AND or OR
-  bool useNot = false;
 
   final savedFilters = [
     {
       'name': 'High Priority Work',
       'conditions': 3,
-      'color': Colors.blue,
+      'color': AppColors.primaryColor,
       'icon': Icons.priority_high,
     },
     {
       'name': 'Personal Goals',
       'conditions': 2,
-      'color': Colors.orange,
+      'color': AppColors.warningColor,
       'icon': Icons.track_changes,
     },
     {
       'name': 'Recent Changes',
       'conditions': 1,
-      'color': Colors.green,
+      'color': AppColors.successColor,
       'icon': Icons.update,
     },
   ];
@@ -45,8 +61,6 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
   void initState() {
     super.initState();
     tabController = TabController(length: 3, vsync: this);
-    // Add default empty condition
-    filterConditions.add({'type': 'tag', 'operator': 'contains', 'value': ''});
   }
 
   @override
@@ -60,7 +74,9 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       appBar: _buildAppBar(context),
       body: TabBarView(
         controller: tabController,
@@ -109,17 +125,15 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
   }
 
   Widget _buildBuilderTab(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _buildLogicSelector(context),
-          SizedBox(height: 16.h),
+          SizedBox(height: AppSpacing.lg),
           _buildConditionsBuilder(context),
-          SizedBox(height: 16.h),
+          SizedBox(height: AppSpacing.lg),
           _buildActionButtons(context),
         ],
       ),
@@ -129,72 +143,83 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
   Widget _buildLogicSelector(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.divider(context), width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Filter Logic',
-            style: AppTypography.body2().copyWith(
-              fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.lightText : AppColors.darkText,
+    return BlocBuilder<FiltersBloc, FiltersState>(
+      builder: (context, state) {
+        return Container(
+          padding: EdgeInsets.all(AppSpacing.lg),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              width: 1.0,
             ),
           ),
-          SizedBox(height: 12.h),
-          Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildLogicButton(
-                  'AND',
-                  filterLogic == 'AND',
-                  () => setState(() => filterLogic = 'AND'),
-                  context,
+              Text(
+                'Filter Logic',
+                style: AppTypography.body2(context).copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? AppColors.lightText : AppColors.darkText,
                 ),
               ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: _buildLogicButton(
-                  'OR',
-                  filterLogic == 'OR',
-                  () => setState(() => filterLogic = 'OR'),
-                  context,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              Icon(
-                Icons.info_outline,
-                size: 16.sp,
-                color: isDark
-                    ? AppColors.lightTextSecondary
-                    : AppColors.darkTextSecondary,
-              ),
-              SizedBox(width: 8.w),
-              Expanded(
-                child: Text(
-                  filterLogic == 'AND'
-                      ? 'All conditions must match'
-                      : 'Any condition can match',
-                  style: AppTypography.caption().copyWith(
-                    color: isDark
-                        ? AppColors.lightTextSecondary
-                        : AppColors.darkTextSecondary,
+              SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildLogicButton(
+                      'AND',
+                      state.logic == 'AND',
+                      () => context.read<FiltersBloc>().add(
+                        UpdateLogicEvent('AND'),
+                      ),
+                      context,
+                    ),
                   ),
-                ),
+                  SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: _buildLogicButton(
+                      'OR',
+                      state.logic == 'OR',
+                      () => context.read<FiltersBloc>().add(
+                        UpdateLogicEvent('OR'),
+                      ),
+                      context,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 16.sp,
+                    color: isDark
+                        ? AppColors.secondaryTextDark
+                        : AppColors.secondaryText,
+                  ),
+                  SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      state.logic == 'AND'
+                          ? 'All conditions must match'
+                          : 'Any condition can match',
+                      style: AppTypography.caption(context).copyWith(
+                        color: isDark
+                            ? AppColors.secondaryTextDark
+                            : AppColors.secondaryText,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -209,14 +234,14 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12.h),
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primaryColor.withOpacity(0.2)
               : isDark
               ? AppColors.darkBg
               : AppColors.lightBg,
-          borderRadius: BorderRadius.circular(8.r),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusMD),
           border: Border.all(
             color: isSelected
                 ? AppColors.primaryColor
@@ -227,7 +252,7 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: AppTypography.body2().copyWith(
+          style: AppTypography.body2(context).copyWith(
             color: isSelected
                 ? AppColors.primaryColor
                 : isDark
@@ -243,70 +268,78 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
   Widget _buildConditionsBuilder(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return BlocBuilder<FiltersBloc, FiltersState>(
+      builder: (context, state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Conditions',
-              style: AppTypography.body2().copyWith(
-                fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.lightText : AppColors.darkText,
-              ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Conditions',
+                  style: AppTypography.body2(context).copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.lightText : AppColors.darkText,
+                  ),
+                ),
+                Text(
+                  '${state.conditions.length}',
+                  style: AppTypography.body2(context).copyWith(
+                    color: AppColors.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
-            Text(
-              '${filterConditions.length}',
-              style: AppTypography.body2().copyWith(
-                color: AppColors.primaryColor,
-                fontWeight: FontWeight.w600,
+            SizedBox(height: AppSpacing.md),
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: state.conditions.length,
+              itemBuilder: (context, index) {
+                return _buildConditionRow(
+                  index,
+                  context,
+                  state.conditions[index],
+                );
+              },
+            ),
+            SizedBox(height: AppSpacing.md),
+            ElevatedButton.icon(
+              onPressed: () {
+                context.read<FiltersBloc>().add(AddConditionEvent());
+              },
+              icon: const Icon(Icons.add),
+              label: const Text('Add Condition'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor.withOpacity(0.2),
+                foregroundColor: AppColors.primaryColor,
               ),
             ),
           ],
-        ),
-        SizedBox(height: 12.h),
-        ListView.builder(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: filterConditions.length,
-          itemBuilder: (context, index) {
-            return _buildConditionRow(index, context);
-          },
-        ),
-        SizedBox(height: 12.h),
-        ElevatedButton.icon(
-          onPressed: () {
-            setState(() {
-              filterConditions.add({
-                'type': 'tag',
-                'operator': 'contains',
-                'value': '',
-              });
-            });
-          },
-          icon: Icon(Icons.add),
-          label: Text('Add Condition'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryColor.withOpacity(0.2),
-            foregroundColor: AppColors.primaryColor,
-          ),
-        ),
-      ],
+        );
+      },
     );
   }
 
-  Widget _buildConditionRow(int index, BuildContext context) {
+  Widget _buildConditionRow(
+    int index,
+    BuildContext context,
+    Map<String, dynamic> condition,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final condition = filterConditions[index];
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(12.w),
+      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      padding: EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: AppColors.divider(context), width: 0.5),
+        borderRadius: BorderRadius.circular(AppSpacing.radiusMD),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          width: 0.5,
+        ),
       ),
       child: Column(
         children: [
@@ -319,12 +352,14 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
                   condition['type'] as String,
                   ['tag', 'date', 'color', 'status'],
                   (value) {
-                    setState(() => filterConditions[index]['type'] = value);
+                    context.read<FiltersBloc>().add(
+                      UpdateConditionEvent(index, 'type', value),
+                    );
                   },
                   context,
                 ),
               ),
-              SizedBox(width: 8.w),
+              SizedBox(width: AppSpacing.sm),
               Expanded(
                 flex: 1,
                 child: _buildDropdown(
@@ -332,37 +367,40 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
                   condition['operator'] as String,
                   ['contains', 'equals', 'before', 'after'],
                   (value) {
-                    setState(() => filterConditions[index]['operator'] = value);
+                    context.read<FiltersBloc>().add(
+                      UpdateConditionEvent(index, 'operator', value),
+                    );
                   },
                   context,
                 ),
               ),
-              SizedBox(width: 8.w),
-              if (filterConditions.length > 1)
-                IconButton(
-                  icon: Icon(Icons.delete, size: 20.sp, color: Colors.red),
-                  onPressed: () {
-                    setState(() => filterConditions.removeAt(index));
-                  },
-                  padding: EdgeInsets.zero,
-                ),
+              SizedBox(width: AppSpacing.sm),
+              IconButton(
+                icon: Icon(Icons.delete, size: 20.sp, color: Colors.red),
+                onPressed: () {
+                  context.read<FiltersBloc>().add(RemoveConditionEvent(index));
+                },
+                padding: EdgeInsets.zero,
+              ),
             ],
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: AppSpacing.sm),
           TextField(
             decoration: InputDecoration(
               hintText: 'Value',
               isDense: true,
               contentPadding: EdgeInsets.symmetric(
-                horizontal: 12.w,
-                vertical: 8.h,
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
               ),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(6.r),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
               ),
             ),
             onChanged: (value) {
-              setState(() => filterConditions[index]['value'] = value);
+              context.read<FiltersBloc>().add(
+                UpdateConditionEvent(index, 'value', value),
+              );
             },
           ),
         ],
@@ -384,13 +422,13 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
       children: [
         Text(
           label,
-          style: AppTypography.caption().copyWith(
+          style: AppTypography.caption(context).copyWith(
             color: isDark
-                ? AppColors.lightTextSecondary
-                : AppColors.darkTextSecondary,
+                ? AppColors.secondaryTextDark
+                : AppColors.secondaryText,
           ),
         ),
-        SizedBox(height: 4.h),
+        SizedBox(height: AppSpacing.xs),
         DropdownButton<String>(
           value: value,
           isExpanded: true,
@@ -400,7 +438,7 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
               value: option,
               child: Text(
                 option,
-                style: AppTypography.body3().copyWith(
+                style: AppTypography.bodySmall(context).copyWith(
                   color: isDark ? AppColors.lightText : AppColors.darkText,
                 ),
               ),
@@ -420,29 +458,20 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
         Expanded(
           child: OutlinedButton.icon(
             onPressed: () {
-              setState(() {
-                filterConditions.clear();
-                filterConditions.add({
-                  'type': 'tag',
-                  'operator': 'contains',
-                  'value': '',
-                });
-              });
+              context.read<FiltersBloc>().add(ResetFiltersEvent());
             },
-            icon: Icon(Icons.refresh),
-            label: Text('Reset'),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reset'),
           ),
         ),
-        SizedBox(width: 12.w),
+        SizedBox(width: AppSpacing.md),
         Expanded(
           child: ElevatedButton.icon(
             onPressed: () {
-              ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(SnackBar(content: Text('Filter applied')));
+              getIt<GlobalUiService>().showSuccess('Filter applied');
             },
-            icon: Icon(Icons.check),
-            label: Text('Apply'),
+            icon: const Icon(Icons.check),
+            label: const Text('Apply'),
           ),
         ),
       ],
@@ -453,24 +482,25 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Quick Filter Presets',
-            style: AppTypography.heading3().copyWith(
+            style: AppTypography.titleLarge(context).copyWith(
               color: isDark ? AppColors.lightText : AppColors.darkText,
             ),
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: AppSpacing.md),
           GridView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
-              mainAxisSpacing: 12.h,
-              crossAxisSpacing: 12.w,
+              mainAxisSpacing: AppSpacing.sm,
+              crossAxisSpacing: AppSpacing.sm,
+              childAspectRatio: 1.5,
             ),
             itemCount: 6,
             itemBuilder: (context, index) {
@@ -487,8 +517,8 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
 
               return GestureDetector(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Applied: ${preset['name']}')),
+                  getIt<GlobalUiService>().showInfo(
+                    '${preset['name']} filter has been applied.',
                   );
                 },
                 child: Container(
@@ -496,10 +526,11 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
                     color: isDark
                         ? AppColors.darkSurface
                         : AppColors.lightSurface,
-                    borderRadius: BorderRadius.circular(12.r),
+                    borderRadius: BorderRadius.circular(AppSpacing.sm),
                     border: Border.all(
-                      color: AppColors.divider(context),
-                      width: 0.5,
+                      color: isDark
+                          ? AppColors.dividerDark
+                          : AppColors.dividerLight,
                     ),
                   ),
                   child: Column(
@@ -507,18 +538,17 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
                     children: [
                       Icon(
                         preset['icon'] as IconData,
-                        size: 32.sp,
                         color: AppColors.primaryColor,
+                        size: 24.sp,
                       ),
-                      SizedBox(height: 8.h),
+                      SizedBox(height: AppSpacing.xs),
                       Text(
                         preset['name'] as String,
-                        textAlign: TextAlign.center,
-                        style: AppTypography.body3().copyWith(
+                        style: AppTypography.bodySmall(context).copyWith(
                           color: isDark
                               ? AppColors.lightText
                               : AppColors.darkText,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
@@ -536,7 +566,7 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
-      padding: EdgeInsets.all(16.w),
+      padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -545,31 +575,40 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
             children: [
               Text(
                 'Saved Filters',
-                style: AppTypography.heading3().copyWith(
+                style: AppTypography.titleLarge(context).copyWith(
                   color: isDark ? AppColors.lightText : AppColors.darkText,
                 ),
               ),
-              IconButton(icon: Icon(Icons.add_circle), onPressed: () {}),
+              IconButton(
+                icon: const Icon(Icons.add_circle),
+                color: AppColors.primaryColor,
+                onPressed: () {
+                  getIt<GlobalUiService>().showInfo(
+                    'Feature coming soon to save current configuration.',
+                  );
+                },
+              ),
             ],
           ),
-          SizedBox(height: 12.h),
+          SizedBox(height: AppSpacing.md),
           ListView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: savedFilters.length,
             itemBuilder: (context, index) {
               final filter = savedFilters[index];
               return Container(
-                margin: EdgeInsets.only(bottom: 12.h),
-                padding: EdgeInsets.all(16.w),
+                margin: EdgeInsets.only(bottom: AppSpacing.md),
+                padding: EdgeInsets.all(AppSpacing.md),
                 decoration: BoxDecoration(
                   color: isDark
                       ? AppColors.darkSurface
                       : AppColors.lightSurface,
-                  borderRadius: BorderRadius.circular(12.r),
+                  borderRadius: BorderRadius.circular(AppSpacing.sm),
                   border: Border.all(
-                    color: AppColors.divider(context),
-                    width: 0.5,
+                    color: isDark
+                        ? AppColors.dividerDark
+                        : AppColors.dividerLight,
                   ),
                 ),
                 child: Row(
@@ -578,8 +617,8 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
                       width: 48.w,
                       height: 48.w,
                       decoration: BoxDecoration(
-                        color: (filter['color'] as Color).withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12.r),
+                        color: (filter['color'] as Color).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(AppSpacing.xs),
                       ),
                       child: Icon(
                         filter['icon'] as IconData,
@@ -587,32 +626,39 @@ class _AdvancedFiltersScreenState extends State<AdvancedFiltersScreen>
                         size: 24.sp,
                       ),
                     ),
-                    SizedBox(width: 16.w),
+                    SizedBox(width: AppSpacing.md),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
                             filter['name'] as String,
-                            style: AppTypography.heading4().copyWith(
+                            style: AppTypography.titleMedium(context).copyWith(
+                              fontWeight: FontWeight.bold,
                               color: isDark
                                   ? AppColors.lightText
                                   : AppColors.darkText,
                             ),
                           ),
-                          SizedBox(height: 4.h),
+                          SizedBox(height: AppSpacing.xs),
                           Text(
                             '${filter['conditions']} conditions',
-                            style: AppTypography.caption().copyWith(
+                            style: AppTypography.caption(context).copyWith(
                               color: isDark
-                                  ? AppColors.lightTextSecondary
-                                  : AppColors.darkTextSecondary,
+                                  ? AppColors.secondaryTextDark
+                                  : AppColors.secondaryText,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    IconButton(icon: Icon(Icons.more_vert), onPressed: () {}),
+                    IconButton(
+                      icon: const Icon(Icons.more_vert),
+                      onPressed: () {},
+                      color: isDark
+                          ? AppColors.secondaryTextDark
+                          : AppColors.secondaryText,
+                    ),
                   ],
                 ),
               );

@@ -280,6 +280,11 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
           color: Colors.grey[500],
           child: const Icon(Icons.audio_file, size: 32, color: Colors.white),
         );
+      case MediaType.document:
+        return Container(
+          color: Colors.grey[600],
+          child: const Icon(Icons.description, size: 32, color: Colors.white),
+        );
     }
   }
 
@@ -288,12 +293,14 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
       MediaType.image: Colors.blue,
       MediaType.video: Colors.orange,
       MediaType.audio: Colors.purple,
+      MediaType.document: Colors.deepOrange,
     };
 
     final icons = {
       MediaType.image: Icons.image,
       MediaType.video: Icons.videocam,
       MediaType.audio: Icons.audiotrack,
+      MediaType.document: Icons.description,
     };
 
     return Container(
@@ -383,6 +390,14 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
                     Navigator.pop(context);
                   },
                 ),
+                FilterChip(
+                  label: const Text('Documents'),
+                  selected: _selectedType == MediaType.document,
+                  onSelected: (selected) {
+                    setState(() => _selectedType = MediaType.document);
+                    Navigator.pop(context);
+                  },
+                ),
               ],
             ),
           ],
@@ -412,4 +427,3 @@ class FilterMediaByTypeEvent extends MediaEvent {
   @override
   List<Object?> get props => [type];
 }
-

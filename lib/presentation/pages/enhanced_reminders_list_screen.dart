@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:mynotes/core/routes/app_routes.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
 import '../design_system/design_system.dart';
 import '../../core/routes/app_routes.dart';
+import '../../domain/entities/alarm.dart';
+import '../bloc/alarms_bloc.dart';
+import '../../core/design_system/app_typography.dart';
+import '../../core/design_system/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import '../widgets/add_reminder_bottom_sheet.dart';
 
 /// Enhanced Smart Reminders List Screen
 /// Advanced reminders management with smart snooze and context awareness
@@ -25,9 +31,9 @@ class _EnhancedRemindersListScreenState
   late Animation<double> _headerAnimation;
   late Animation<Offset> _listSlideAnimation;
 
-  List<Reminder> _todayReminders = [];
-  List<Reminder> _upcomingReminders = [];
-  List<Reminder> _overdueReminders = [];
+  List<Alarm> _todayReminders = [];
+  List<Alarm> _upcomingReminders = [];
+  List<Alarm> _overdueReminders = [];
 
   // Enhanced state management
   final TextEditingController _searchController = TextEditingController();
@@ -66,7 +72,8 @@ class _EnhancedRemindersListScreenState
 
     _scrollController.addListener(_onScroll);
 
-    _loadReminders();
+    // Load alarms from database
+    context.read<AlarmsBloc>().add(LoadAlarms());
     _startAnimations();
     _startRefreshTimer();
   }
@@ -82,76 +89,33 @@ class _EnhancedRemindersListScreenState
     super.dispose();
   }
 
-  void _loadReminders() {
-    // Mock data - replace with actual data loading
+  void _categorizeAlarms(List<Alarm> alarms) {
+    // Categorize alarms by time
     final now = DateTime.now();
+    final todayEnd = DateTime(now.year, now.month, now.day, 23, 59, 59);
 
-    setState(() {
-      _overdueReminders = [
-        Reminder(
-          id: '1',
-          title: 'Call client about project updates',
-          scheduledTime: now.subtract(const Duration(hours: 2)),
-          isCompleted: false,
-          priority: ReminderPriority.high,
-          context: 'Work',
-        ),
-        Reminder(
-          id: '2',
-          title: 'Submit expense report',
-          scheduledTime: now.subtract(const Duration(days: 1)),
-          isCompleted: false,
-          priority: ReminderPriority.medium,
-          context: 'Work',
-        ),
-      ];
+    _overdueReminders = alarms
+        .where(
+          (alarm) => alarm.isOverdue && alarm.status != AlarmStatus.completed,
+        )
+        .toList();
 
-      _todayReminders = [
-        Reminder(
-          id: '3',
-          title: 'Team meeting at 3 PM',
-          scheduledTime: now.add(const Duration(hours: 2)),
-          isCompleted: false,
-          priority: ReminderPriority.high,
-          context: 'Work',
-        ),
-        Reminder(
-          id: '4',
-          title: 'Pick up groceries',
-          scheduledTime: now.add(const Duration(hours: 4)),
-          isCompleted: false,
-          priority: ReminderPriority.low,
-          context: 'Personal',
-        ),
-        Reminder(
-          id: '5',
-          title: 'Call mom',
-          scheduledTime: now.add(const Duration(hours: 6)),
-          isCompleted: false,
-          priority: ReminderPriority.medium,
-          context: 'Personal',
-        ),
-      ];
+    _todayReminders = alarms
+        .where(
+          (alarm) =>
+              !alarm.isOverdue &&
+              alarm.scheduledTime.isBefore(todayEnd) &&
+              alarm.status != AlarmStatus.completed,
+        )
+        .toList();
 
-      _upcomingReminders = [
-        Reminder(
-          id: '6',
-          title: 'Doctor appointment',
-          scheduledTime: now.add(const Duration(days: 1)),
-          isCompleted: false,
-          priority: ReminderPriority.high,
-          context: 'Health',
-        ),
-        Reminder(
-          id: '7',
-          title: 'Review quarterly goals',
-          scheduledTime: now.add(const Duration(days: 3)),
-          isCompleted: false,
-          priority: ReminderPriority.medium,
-          context: 'Work',
-        ),
-      ];
-    });
+    _upcomingReminders = alarms
+        .where(
+          (alarm) =>
+              alarm.scheduledTime.isAfter(todayEnd) &&
+              alarm.status != AlarmStatus.completed,
+        )
+        .toList();
   }
 
   void _startAnimations() async {
@@ -166,22 +130,8 @@ class _EnhancedRemindersListScreenState
   }
 
   void _updateReminderStatus() {
-    final now = DateTime.now();
-    bool needsUpdate = false;
-
-    // Check if any reminders have become overdue
-    for (final reminder in _todayReminders) {
-      if (reminder.scheduledTime.isBefore(now) && !reminder.isCompleted) {
-        needsUpdate = true;
-        break;
-      }
-    }
-
-    if (needsUpdate) {
-      setState(() {
-        _loadReminders();
-      });
-    }
+    // Reload alarms from database to refresh status
+    context.read<AlarmsBloc>().add(LoadAlarms());
   }
 
   void _onScroll() {
@@ -193,91 +143,65 @@ class _EnhancedRemindersListScreenState
     }
   }
 
-  void _completeReminder(Reminder reminder) {
+  void _completeReminder(Alarm alarm) {
     HapticFeedback.lightImpact();
 
-    setState(() {
-      reminder.isCompleted = true;
-    });
-
-    // Remove from lists after animation
-    Future.delayed(const Duration(milliseconds: 300), () {
-      setState(() {
-        _overdueReminders.removeWhere((r) => r.id == reminder.id);
-        _todayReminders.removeWhere((r) => r.id == reminder.id);
-        _upcomingReminders.removeWhere((r) => r.id == reminder.id);
-      });
-    });
+    // Mark alarm as completed in database
+    context.read<AlarmsBloc>().add(MarkAlarmCompleted(alarm.id));
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Reminder completed'),
+        content: Text(
+          'Reminder completed',
+          style: AppTypography.bodySmall(context, Colors.white),
+        ),
         backgroundColor: AppColors.primary,
         action: SnackBarAction(
           label: 'Undo',
           textColor: Colors.white,
           onPressed: () {
-            setState(() {
-              reminder.isCompleted = false;
-            });
+            // Re-activate the alarm
+            context.read<AlarmsBloc>().add(
+              UpdateAlarm(
+                alarm.copyWith(status: AlarmStatus.scheduled, isActive: true),
+              ),
+            );
           },
         ),
       ),
     );
   }
 
-  void _snoozeReminder(Reminder reminder) {
-    _showEnhancedSnoozeOptions(reminder);
+  void _snoozeReminder(Alarm alarm) {
+    _showEnhancedSnoozeOptions(alarm);
   }
 
-  void _showEnhancedSnoozeOptions(Reminder reminder) {
+  void _showEnhancedSnoozeOptions(Alarm alarm) {
     HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (context) => _buildEnhancedSnoozeBottomSheet(reminder),
+      builder: (context) => _buildEnhancedSnoozeBottomSheet(alarm),
     );
   }
 
-  void _applySnooze(
-    Reminder reminder,
-    Duration snoozeDuration,
-    String snoozeLabel,
-  ) {
-    final newTime = DateTime.now().add(snoozeDuration);
-
+  void _applySnooze(Alarm alarm, Duration snoozeDuration, String snoozeLabel) {
     HapticFeedback.lightImpact();
 
-    setState(() {
-      reminder.scheduledTime = newTime;
-      reminder.snoozeCount = (reminder.snoozeCount ?? 0) + 1;
-
-      // Move to appropriate list based on new time
-      _overdueReminders.removeWhere((r) => r.id == reminder.id);
-      _todayReminders.removeWhere((r) => r.id == reminder.id);
-      _upcomingReminders.removeWhere((r) => r.id == reminder.id);
-
-      final now = DateTime.now();
-      if (_isSameDay(newTime, now)) {
-        _todayReminders.add(reminder);
-        _todayReminders.sort(
-          (a, b) => a.scheduledTime.compareTo(b.scheduledTime),
-        );
-      } else {
-        _upcomingReminders.add(reminder);
-        _upcomingReminders.sort(
-          (a, b) => a.scheduledTime.compareTo(b.scheduledTime),
-        );
-      }
-    });
+    // Snooze alarm in database
+    final newTime = DateTime.now().add(snoozeDuration);
+    context.read<AlarmsBloc>().add(RescheduleAlarm(alarm.id, newTime));
 
     Navigator.pop(context);
 
     // Show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Reminder snoozed $snoozeLabel'),
+        content: Text(
+          'Reminder snoozed $snoozeLabel',
+          style: AppTypography.bodySmall(context, Colors.white),
+        ),
         backgroundColor: AppColors.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(
@@ -296,24 +220,33 @@ class _EnhancedRemindersListScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      body: Column(
-        children: [
-          _buildHeader(),
-          Expanded(child: _buildRemindersList()),
-        ],
+    return BlocListener<AlarmsBloc, AlarmsState>(
+      listener: (context, state) {
+        if (state is AlarmsLoaded) {
+          setState(() {
+            _categorizeAlarms(state.alarms);
+          });
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        body: Column(
+          children: [
+            _buildHeader(),
+            Expanded(child: _buildRemindersList()),
+          ],
+        ),
+        floatingActionButton: _showFloatingButton
+            ? _buildFloatingActionButton()
+            : null,
       ),
-      floatingActionButton: _showFloatingButton
-          ? _buildFloatingActionButton()
-          : null,
     );
   }
 
   Widget _buildHeader() {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.darkBackground,
+        color: AppColors.background(context),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -337,7 +270,7 @@ class _EnhancedRemindersListScreenState
                       onTap: () => Navigator.pop(context),
                       child: Icon(
                         Icons.arrow_back,
-                        color: Colors.white,
+                        color: AppColors.textPrimary(context),
                         size: 24.sp,
                       ),
                     ),
@@ -365,11 +298,11 @@ class _EnhancedRemindersListScreenState
                                 SizedBox(width: 4.w),
                                 Text(
                                   'AI Insights',
-                                  style: TextStyle(
-                                    color: AppColors.primary,
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: AppTypography.labelSmall(context)
+                                      .copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                 ),
                               ],
                             ),
@@ -382,7 +315,7 @@ class _EnhancedRemindersListScreenState
                           },
                           child: Icon(
                             Icons.more_vert,
-                            color: Colors.white,
+                            color: AppColors.textPrimary(context),
                             size: 24.sp,
                           ),
                         ),
@@ -395,10 +328,9 @@ class _EnhancedRemindersListScreenState
 
                 Text(
                   'Smart Reminders',
-                  style: TextStyle(
-                    fontSize: 32.sp,
+                  style: AppTypography.heading2().copyWith(
                     fontWeight: FontWeight.w800,
-                    color: Colors.white,
+                    color: AppColors.textPrimary(context),
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -431,8 +363,7 @@ class _EnhancedRemindersListScreenState
             ),
             child: Text(
               '$overdue overdue',
-              style: TextStyle(
-                fontSize: 12.sp,
+              style: AppTypography.captionSmall(context).copyWith(
                 fontWeight: FontWeight.w600,
                 color: Colors.red.shade300,
               ),
@@ -451,11 +382,9 @@ class _EnhancedRemindersListScreenState
             ),
             child: Text(
               '$today today',
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w600,
-                color: AppColors.primary,
-              ),
+              style: AppTypography.captionSmall(
+                context,
+              ).copyWith(fontWeight: FontWeight.w600, color: AppColors.primary),
             ),
           ),
 
@@ -465,16 +394,17 @@ class _EnhancedRemindersListScreenState
           Container(
             padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
             decoration: BoxDecoration(
-              color: Colors.grey.withOpacity(0.2),
+              color: AppColors.textSecondary(context).withOpacity(0.2),
               borderRadius: BorderRadius.circular(12.r),
-              border: Border.all(color: Colors.grey.withOpacity(0.3)),
+              border: Border.all(
+                color: AppColors.textSecondary(context).withOpacity(0.3),
+              ),
             ),
             child: Text(
               '$upcoming upcoming',
-              style: TextStyle(
-                fontSize: 12.sp,
+              style: AppTypography.captionSmall(context).copyWith(
                 fontWeight: FontWeight.w600,
-                color: Colors.grey.shade400,
+                color: AppColors.textSecondary(context),
               ),
             ),
           ),
@@ -493,7 +423,7 @@ class _EnhancedRemindersListScreenState
               child: _buildSection(
                 'Overdue',
                 _overdueReminders,
-                Colors.red.shade300,
+                AppColors.errorColor,
               ),
             ),
 
@@ -507,7 +437,7 @@ class _EnhancedRemindersListScreenState
               child: _buildSection(
                 'Upcoming',
                 _upcomingReminders,
-                Colors.grey.shade400,
+                AppColors.textSecondary(context),
               ),
             ),
 
@@ -524,11 +454,7 @@ class _EnhancedRemindersListScreenState
     );
   }
 
-  Widget _buildSection(
-    String title,
-    List<Reminder> reminders,
-    Color accentColor,
-  ) {
+  Widget _buildSection(String title, List<Alarm> alarms, Color accentColor) {
     return Padding(
       padding: EdgeInsets.all(20.w),
       child: Column(
@@ -536,8 +462,7 @@ class _EnhancedRemindersListScreenState
         children: [
           Text(
             title.toUpperCase(),
-            style: TextStyle(
-              fontSize: 12.sp,
+            style: AppTypography.label(context).copyWith(
               fontWeight: FontWeight.w700,
               letterSpacing: 1.2,
               color: accentColor,
@@ -546,10 +471,10 @@ class _EnhancedRemindersListScreenState
 
           SizedBox(height: 12.h),
 
-          ...reminders.map(
-            (reminder) => Padding(
+          ...alarms.map(
+            (alarm) => Padding(
               padding: EdgeInsets.only(bottom: 12.h),
-              child: _buildReminderCard(reminder, accentColor),
+              child: _buildReminderCard(alarm, accentColor),
             ),
           ),
         ],
@@ -557,18 +482,19 @@ class _EnhancedRemindersListScreenState
     );
   }
 
-  Widget _buildReminderCard(Reminder reminder, Color accentColor) {
+  Widget _buildReminderCard(Alarm alarm, Color accentColor) {
+    final isCompleted = alarm.status == AlarmStatus.completed;
     return AnimatedOpacity(
       duration: const Duration(milliseconds: 300),
-      opacity: reminder.isCompleted ? 0.5 : 1.0,
+      opacity: isCompleted ? 0.5 : 1.0,
       child: Container(
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: AppColors.darkCardBackground,
+          color: AppColors.card(context),
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
-            color: reminder.isCompleted
-                ? Colors.grey.shade800
+            color: isCompleted
+                ? AppColors.border(context)
                 : accentColor.withOpacity(0.3),
             width: 1,
           ),
@@ -578,12 +504,16 @@ class _EnhancedRemindersListScreenState
           children: [
             Row(
               children: [
-                // Priority indicator
+                // Priority indicator (using isOverdue status)
                 Container(
                   width: 8.w,
                   height: 8.w,
                   decoration: BoxDecoration(
-                    color: _getPriorityColor(reminder.priority),
+                    color: alarm.isOverdue
+                        ? AppColors.errorColor
+                        : (alarm.isDueSoon
+                              ? AppColors.warning
+                              : AppColors.success),
                     borderRadius: BorderRadius.circular(4.r),
                   ),
                 ),
@@ -593,14 +523,13 @@ class _EnhancedRemindersListScreenState
                 // Title
                 Expanded(
                   child: Text(
-                    reminder.title,
-                    style: TextStyle(
-                      fontSize: 16.sp,
+                    alarm.message,
+                    style: AppTypography.body1(context).copyWith(
                       fontWeight: FontWeight.w600,
-                      color: reminder.isCompleted
-                          ? Colors.grey.shade600
-                          : Colors.white,
-                      decoration: reminder.isCompleted
+                      color: isCompleted
+                          ? AppColors.textSecondary(context)
+                          : AppColors.textPrimary(context),
+                      decoration: isCompleted
                           ? TextDecoration.lineThrough
                           : null,
                     ),
@@ -609,23 +538,23 @@ class _EnhancedRemindersListScreenState
 
                 // Complete button
                 GestureDetector(
-                  onTap: () => _completeReminder(reminder),
+                  onTap: () => _completeReminder(alarm),
                   child: Container(
                     width: 32.w,
                     height: 32.w,
                     decoration: BoxDecoration(
-                      color: reminder.isCompleted
+                      color: isCompleted
                           ? AppColors.primary
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(16.r),
                       border: Border.all(
-                        color: reminder.isCompleted
+                        color: isCompleted
                             ? AppColors.primary
-                            : Colors.grey.shade600,
+                            : AppColors.textSecondary(context),
                         width: 2,
                       ),
                     ),
-                    child: reminder.isCompleted
+                    child: isCompleted
                         ? Icon(Icons.check, color: Colors.white, size: 16.sp)
                         : null,
                   ),
@@ -641,18 +570,17 @@ class _EnhancedRemindersListScreenState
                 Icon(
                   Icons.access_time,
                   size: 14.sp,
-                  color: Colors.grey.shade500,
+                  color: AppColors.textSecondary(context),
                 ),
                 SizedBox(width: 4.w),
                 Text(
-                  _formatTime(reminder.scheduledTime),
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    color: Colors.grey.shade500,
-                  ),
+                  alarm.timeRemaining,
+                  style: AppTypography.body2(
+                    context,
+                  ).copyWith(color: AppColors.textSecondary(context)),
                 ),
 
-                if (reminder.context.isNotEmpty) ...[
+                if (alarm.linkedNoteId != null) ...[
                   SizedBox(width: 12.w),
                   Container(
                     padding: EdgeInsets.symmetric(
@@ -660,15 +588,13 @@ class _EnhancedRemindersListScreenState
                       vertical: 4.h,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.grey.withOpacity(0.2),
+                      color: AppColors.textSecondary(context).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8.r),
                     ),
-                    child: Text(
-                      reminder.context,
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade400,
-                      ),
+                    child: Icon(
+                      Icons.link,
+                      size: 12.sp,
+                      color: AppColors.textTertiary(context),
                     ),
                   ),
                 ],
@@ -676,24 +602,25 @@ class _EnhancedRemindersListScreenState
                 const Spacer(),
 
                 // Snooze button
-                if (!reminder.isCompleted)
+                if (!isCompleted)
                   GestureDetector(
-                    onTap: () => _snoozeReminder(reminder),
+                    onTap: () => _snoozeReminder(alarm),
                     child: Container(
                       padding: EdgeInsets.symmetric(
                         horizontal: 12.w,
                         vertical: 6.h,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.2),
+                        color: AppColors.textSecondary(
+                          context,
+                        ).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12.r),
                       ),
                       child: Text(
                         'Snooze',
-                        style: TextStyle(
-                          fontSize: 12.sp,
+                        style: AppTypography.bodySmall(context).copyWith(
                           fontWeight: FontWeight.w500,
-                          color: Colors.grey.shade400,
+                          color: AppColors.textSecondary(context),
                         ),
                       ),
                     ),
@@ -706,37 +633,6 @@ class _EnhancedRemindersListScreenState
     );
   }
 
-  Color _getPriorityColor(ReminderPriority priority) {
-    switch (priority) {
-      case ReminderPriority.high:
-        return Colors.red;
-      case ReminderPriority.medium:
-        return Colors.orange;
-      case ReminderPriority.low:
-        return Colors.green;
-    }
-  }
-
-  String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = dateTime.difference(now);
-
-    if (difference.isNegative) {
-      final pastDifference = now.difference(dateTime);
-      if (pastDifference.inHours < 24) {
-        return '${pastDifference.inHours}h ago';
-      } else {
-        return '${pastDifference.inDays}d ago';
-      }
-    } else {
-      if (difference.inHours < 24) {
-        return 'in ${difference.inHours}h';
-      } else {
-        return 'in ${difference.inDays}d';
-      }
-    }
-  }
-
   Widget _buildEmptyState() {
     return Center(
       child: Column(
@@ -745,21 +641,22 @@ class _EnhancedRemindersListScreenState
           Icon(
             Icons.notifications_none,
             size: 80.sp,
-            color: Colors.grey.shade700,
+            color: AppColors.textSecondary(context),
           ),
           SizedBox(height: 16.h),
           Text(
             'No reminders',
-            style: TextStyle(
-              fontSize: 24.sp,
+            style: AppTypography.heading3().copyWith(
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: AppColors.textPrimary(context),
             ),
           ),
           SizedBox(height: 8.h),
           Text(
             'Create your first reminder to get started',
-            style: TextStyle(fontSize: 16.sp, color: Colors.grey.shade500),
+            style: AppTypography.body1(
+              context,
+            ).copyWith(color: AppColors.textSecondary(context)),
           ),
         ],
       ),
@@ -769,14 +666,19 @@ class _EnhancedRemindersListScreenState
   Widget _buildFloatingActionButton() {
     return FloatingActionButton(
       onPressed: () {
-        Navigator.pushNamed(context, AppRoutes.quickAdd);
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => const AddReminderBottomSheet(),
+        );
       },
       backgroundColor: AppColors.primary,
       child: Icon(Icons.add, color: Colors.white, size: 24.sp),
     );
   }
 
-  Widget _buildEnhancedSnoozeBottomSheet(Reminder reminder) {
+  Widget _buildEnhancedSnoozeBottomSheet(Alarm alarm) {
     final snoozeOptions = [
       {
         'label': '5 minutes',
@@ -825,12 +727,12 @@ class _EnhancedRemindersListScreenState
         maxHeight: MediaQuery.of(context).size.height * 0.75,
       ),
       decoration: BoxDecoration(
-        color: AppColors.darkCardBackground,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(24.r),
           topRight: Radius.circular(24.r),
         ),
-        border: Border.all(color: Colors.white.withOpacity(0.1)),
+        border: Border.all(color: AppColors.border(context)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -841,7 +743,7 @@ class _EnhancedRemindersListScreenState
             height: 4.h,
             margin: EdgeInsets.symmetric(vertical: 12.h),
             decoration: BoxDecoration(
-              color: Colors.grey.shade600,
+              color: AppColors.textTertiary(context),
               borderRadius: BorderRadius.circular(2.r),
             ),
           ),
@@ -852,7 +754,7 @@ class _EnhancedRemindersListScreenState
             padding: EdgeInsets.fromLTRB(24.w, 8.h, 24.w, 16.h),
             decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: Colors.white.withOpacity(0.05)),
+                bottom: BorderSide(color: AppColors.divider(context)),
               ),
             ),
             child: Column(
@@ -867,19 +769,17 @@ class _EnhancedRemindersListScreenState
                         children: [
                           Text(
                             'Smart Snooze',
-                            style: TextStyle(
-                              fontSize: 20.sp,
+                            style: AppTypography.heading3().copyWith(
                               fontWeight: FontWeight.w700,
-                              color: Colors.white,
+                              color: AppColors.textPrimary(context),
                             ),
                           ),
                           SizedBox(height: 4.h),
                           Text(
-                            reminder.title,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: Colors.grey.shade400,
-                            ),
+                            alarm.message,
+                            style: AppTypography.body2(
+                              context,
+                            ).copyWith(color: AppColors.textSecondary(context)),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -891,49 +791,20 @@ class _EnhancedRemindersListScreenState
                       child: Container(
                         padding: EdgeInsets.all(8.w),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.05),
+                          color: AppColors.textSecondary(
+                            context,
+                          ).withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12.r),
                         ),
                         child: Icon(
                           Icons.close,
-                          color: Colors.grey.shade400,
+                          color: AppColors.textSecondary(context),
                           size: 20.sp,
                         ),
                       ),
                     ),
                   ],
                 ),
-
-                // Snooze count indicator
-                if ((reminder.snoozeCount ?? 0) > 0) ...[
-                  SizedBox(height: 8.h),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: 8.w,
-                      vertical: 4.h,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8.r),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.snooze, color: Colors.orange, size: 14.sp),
-                        SizedBox(width: 4.w),
-                        Text(
-                          'Snoozed ${reminder.snoozeCount} time${(reminder.snoozeCount ?? 0) > 1 ? 's' : ''}',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            color: Colors.orange,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -947,7 +818,7 @@ class _EnhancedRemindersListScreenState
               itemBuilder: (context, index) {
                 if (index == snoozeOptions.length) {
                   // Custom option
-                  return _buildCustomSnoozeOption(reminder);
+                  return _buildCustomSnoozeOption(alarm);
                 }
 
                 final option = snoozeOptions[index];
@@ -955,7 +826,7 @@ class _EnhancedRemindersListScreenState
                   option['label'] as String,
                   option['duration'] as Duration?,
                   option['icon'] as IconData,
-                  reminder,
+                  alarm,
                 );
               },
             ),
@@ -971,14 +842,14 @@ class _EnhancedRemindersListScreenState
     String title,
     Duration? duration,
     IconData icon,
-    Reminder reminder,
+    Alarm alarm,
   ) {
     final isRecommended =
         title.contains('15 minutes') || title.contains('1 hour');
 
     return GestureDetector(
       onTap: () =>
-          duration != null ? _applySnooze(reminder, duration, title) : null,
+          duration != null ? _applySnooze(alarm, duration, title) : null,
       child: Container(
         width: double.infinity,
         margin: EdgeInsets.only(bottom: 8.h),
@@ -986,12 +857,12 @@ class _EnhancedRemindersListScreenState
         decoration: BoxDecoration(
           color: isRecommended
               ? AppColors.primary.withOpacity(0.1)
-              : Colors.white.withOpacity(0.03),
+              : AppColors.card(context),
           borderRadius: BorderRadius.circular(16.r),
           border: Border.all(
             color: isRecommended
                 ? AppColors.primary.withOpacity(0.3)
-                : Colors.white.withOpacity(0.05),
+                : AppColors.border(context),
           ),
         ),
         child: Row(
@@ -1001,12 +872,14 @@ class _EnhancedRemindersListScreenState
               decoration: BoxDecoration(
                 color: isRecommended
                     ? AppColors.primary.withOpacity(0.2)
-                    : Colors.white.withOpacity(0.05),
+                    : AppColors.textSecondary(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(
                 icon,
-                color: isRecommended ? AppColors.primary : Colors.grey.shade400,
+                color: isRecommended
+                    ? AppColors.primary
+                    : AppColors.textSecondary(context),
                 size: 20.sp,
               ),
             ),
@@ -1019,10 +892,9 @@ class _EnhancedRemindersListScreenState
                     children: [
                       Text(
                         title,
-                        style: TextStyle(
-                          fontSize: 16.sp,
+                        style: AppTypography.body1(context).copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Colors.white,
+                          color: AppColors.textPrimary(context),
                         ),
                       ),
                       if (isRecommended) ...[
@@ -1038,8 +910,7 @@ class _EnhancedRemindersListScreenState
                           ),
                           child: Text(
                             'SMART',
-                            style: TextStyle(
-                              fontSize: 10.sp,
+                            style: AppTypography.captionSmall(context).copyWith(
                               fontWeight: FontWeight.bold,
                               color: AppColors.primary,
                               letterSpacing: 0.5,
@@ -1053,10 +924,9 @@ class _EnhancedRemindersListScreenState
                     SizedBox(height: 4.h),
                     Text(
                       _getSnoozeDescription(duration),
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: Colors.grey.shade500,
-                      ),
+                      style: AppTypography.captionSmall(
+                        context,
+                      ).copyWith(color: AppColors.textSecondary(context)),
                     ),
                   ],
                 ],
@@ -1064,7 +934,7 @@ class _EnhancedRemindersListScreenState
             ),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.grey.shade600,
+              color: AppColors.textTertiary(context),
               size: 16.sp,
             ),
           ],
@@ -1073,29 +943,29 @@ class _EnhancedRemindersListScreenState
     );
   }
 
-  Widget _buildCustomSnoozeOption(Reminder reminder) {
+  Widget _buildCustomSnoozeOption(Alarm alarm) {
     return GestureDetector(
-      onTap: () => _showCustomSnoozeDialog(reminder),
+      onTap: () => _showCustomSnoozeDialog(alarm),
       child: Container(
         width: double.infinity,
         margin: EdgeInsets.only(bottom: 8.h),
         padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.03),
+          color: AppColors.card(context),
           borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
+          border: Border.all(color: AppColors.border(context)),
         ),
         child: Row(
           children: [
             Container(
               padding: EdgeInsets.all(8.w),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.05),
+                color: AppColors.textSecondary(context).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12.r),
               ),
               child: Icon(
                 Icons.edit_calendar,
-                color: Colors.grey.shade400,
+                color: AppColors.textSecondary(context),
                 size: 20.sp,
               ),
             ),
@@ -1103,16 +973,15 @@ class _EnhancedRemindersListScreenState
             Expanded(
               child: Text(
                 'Custom time...',
-                style: TextStyle(
-                  fontSize: 16.sp,
+                style: AppTypography.body1(context).copyWith(
                   fontWeight: FontWeight.w600,
-                  color: Colors.white,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
             ),
             Icon(
               Icons.arrow_forward_ios,
-              color: Colors.grey.shade600,
+              color: AppColors.textTertiary(context),
               size: 16.sp,
             ),
           ],
@@ -1177,26 +1046,38 @@ class _EnhancedRemindersListScreenState
     }
   }
 
-  void _showCustomSnoozeDialog(Reminder reminder) {
+  void _showCustomSnoozeDialog(Alarm alarm) {
     Navigator.pop(context); // Close bottom sheet
 
     // TODO: Implement custom date/time picker dialog
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: AppColors.darkCardBackground,
+        backgroundColor: AppColors.card(context),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16.r),
         ),
-        title: Text('Custom Snooze', style: TextStyle(color: Colors.white)),
+        title: Text(
+          'Custom Snooze',
+          style: AppTypography.heading3().copyWith(
+            color: AppColors.textPrimary(context),
+          ),
+        ),
         content: Text(
           'Custom time picker coming soon!',
-          style: TextStyle(color: Colors.grey.shade300),
+          style: AppTypography.body1(
+            context,
+          ).copyWith(color: AppColors.textSecondary(context)),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('OK', style: TextStyle(color: AppColors.primary)),
+            child: Text(
+              'OK',
+              style: AppTypography.body2(
+                context,
+              ).copyWith(color: AppColors.primary),
+            ),
           ),
         ],
       ),
@@ -1204,25 +1085,4 @@ class _EnhancedRemindersListScreenState
   }
 }
 
-// Models
-class Reminder {
-  final String id;
-  final String title;
-  DateTime scheduledTime; // Changed from final to allow snoozing
-  bool isCompleted;
-  final ReminderPriority priority;
-  final String context;
-  int? snoozeCount; // Track how many times it's been snoozed
-
-  Reminder({
-    required this.id,
-    required this.title,
-    required this.scheduledTime,
-    this.isCompleted = false,
-    required this.priority,
-    this.context = '',
-    this.snoozeCount,
-  });
-}
-
-enum ReminderPriority { high, medium, low }
+// No longer needed - using Alarm entity from domain layer

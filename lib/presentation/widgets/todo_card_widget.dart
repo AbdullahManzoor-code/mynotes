@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/todo_item.dart';
+import '../../core/routes/app_routes.dart';
+import '../../injection_container.dart' show getIt;
 
 /// Todo Card Widget with completion animations (TD-002, TD-003, TD-004)
 /// Features: checkbox toggle, strikethrough animation, swipe to delete
@@ -10,8 +12,10 @@ class TodoCardWidget extends StatefulWidget {
   final Function(TodoItem) onToggleComplete;
   final Function(TodoItem) onEdit;
   final Function(TodoItem) onDelete;
+  final Function(TodoItem)? onStartFocus;
   final bool showCategory;
   final bool isCompact;
+  final bool showFocusButton;
 
   const TodoCardWidget({
     super.key,
@@ -19,8 +23,10 @@ class TodoCardWidget extends StatefulWidget {
     required this.onToggleComplete,
     required this.onEdit,
     required this.onDelete,
+    this.onStartFocus,
     this.showCategory = true,
     this.isCompact = false,
+    this.showFocusButton = true,
   });
 
   @override
@@ -138,17 +144,14 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
         ),
         confirmDismiss: (direction) async {
           // Show 3-second undo snackbar (TD-004)
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Todo deleted: ${widget.todo.text}'),
-              duration: const Duration(seconds: 3),
-              action: SnackBarAction(
-                label: 'Undo',
-                onPressed: () {
-                  // Undo deletion - handled by parent
-                },
-              ),
-            ),
+          getIt<GlobalUiService>().showInfo(
+            'Todo deleted: ${widget.todo.text}',
+            // action: SnackBarAction(
+            //   label: 'Undo',
+            //   onPressed: () {
+            //     // Undo deletion - handled by parent
+            //   },
+            // ),
           );
           return true;
         },
@@ -198,6 +201,12 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
 
                 // Priority indicator
                 _buildPriorityIndicator(),
+
+                // Focus button (only for incomplete tasks)
+                if (widget.showFocusButton && !widget.todo.isCompleted) ...[
+                  const SizedBox(width: 8),
+                  _buildFocusButton(),
+                ],
               ],
             ),
           ),
@@ -329,6 +338,39 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(2),
+      ),
+    );
+  }
+
+  Widget _buildFocusButton() {
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        if (widget.onStartFocus != null) {
+          widget.onStartFocus!(widget.todo);
+        } else {
+          // Navigate to focus session with todo context
+          Navigator.pushNamed(
+            context,
+            AppRoutes.focusSession,
+            arguments: {
+              'todoId': widget.todo.id,
+              'todoTitle': widget.todo.text,
+            },
+          );
+        }
+      },
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: AppColors.primaryColor.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          Icons.timer_outlined,
+          size: 18,
+          color: AppColors.primaryColor,
+        ),
       ),
     );
   }

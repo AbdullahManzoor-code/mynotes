@@ -155,4 +155,85 @@ class NoteRepositoryImpl implements NoteRepository {
       throw Exception('Search failed: $e');
     }
   }
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  @override
+  Future<void> updateNoteLinks(String sourceId, List<String> targetIds) async {
+    try {
+      // Get existing links
+      final currentLinks = await _database.getOutlinks(sourceId);
+
+      // Determine links to add
+      final toAdd = targetIds
+          .where((id) => !currentLinks.contains(id))
+          .toList();
+
+      // Determine links to remove
+      final toRemove = currentLinks
+          .where((id) => !targetIds.contains(id))
+          .toList();
+
+      // Execute updates
+      for (final targetId in toAdd) {
+        await _database.addLink(sourceId, targetId);
+      }
+
+      for (final targetId in toRemove) {
+        await _database.removeLink(sourceId, targetId);
+      }
+    } catch (e) {
+      // Log error but don't fail the whole operation
+      print('Failed to update note links: $e');
+    }
+  }
+
+  @override
+  Future<void> resolveAndSyncLinks(
+    String sourceId,
+    List<String> targetTitles,
+  ) async {
+    try {
+      if (targetTitles.isEmpty) {
+        await updateNoteLinks(sourceId, []);
+        return;
+      }
+
+      final allNotes = await _database.getAllNotes();
+      final targetIds = <String>[];
+
+      for (final title in targetTitles) {
+        final match = allNotes.cast<Note?>().firstWhere(
+          (n) => n?.title.trim().toLowerCase() == title.trim().toLowerCase(),
+          orElse: () => null,
+        );
+        if (match != null) {
+          targetIds.add(match.id);
+        }
+      }
+
+      await updateNoteLinks(sourceId, targetIds);
+    } catch (e) {
+      print('Failed to resolve and sync links: $e');
+    }
+  }
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  @override
+  Future<List<String>> getBacklinks(String noteId) async {
+    try {
+      return await _database.getBacklinks(noteId);
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
+  @override
+  Future<List<String>> getOutgoingLinks(String noteId) async {
+    try {
+      return await _database.getOutlinks(noteId);
+    } catch (e) {
+      return [];
+    }
+  }
 }

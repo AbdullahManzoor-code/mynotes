@@ -4,91 +4,64 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
-import '../bloc/todo_bloc.dart';
-import '../bloc/todo_state.dart';
-import '../bloc/alarm_bloc.dart';
-import '../bloc/alarm_state.dart';
+import '../bloc/todos_bloc.dart';
+import '../bloc/alarms_bloc.dart';
 import '../../domain/entities/note.dart';
+import '../../core/routes/app_routes.dart';
+import '../bloc/params/todo_params.dart';
+import '../bloc/unified_items_bloc.dart';
+import '../bloc/params/unified_items_params.dart';
 
 /// Unified Items Screen - Displays notes, todos, and reminders in one place
 /// Allows filtering by type, priority, and due date
-class UnifiedItemsScreen extends StatefulWidget {
+class UnifiedItemsScreen extends StatelessWidget {
   const UnifiedItemsScreen({super.key});
 
   @override
-  State<UnifiedItemsScreen> createState() => _UnifiedItemsScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => UnifiedItemsBloc(),
+      child: const _UnifiedItemsView(),
+    );
+  }
 }
 
-class _UnifiedItemsScreenState extends State<UnifiedItemsScreen>
-    with TickerProviderStateMixin {
-  final TextEditingController _searchController = TextEditingController();
-
-  // Filter states
-  String _selectedFilter = 'all'; // 'all', 'notes', 'todos', 'reminders'
-  String _sortBy = 'recent'; // 'recent', 'priority', 'due-date'
-  bool _showOnlyPinned = false;
-
-  late AnimationController _filterAnimationController;
-  late AnimationController _fabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _filterAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _fabController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _filterAnimationController.dispose();
-    _fabController.dispose();
-    super.dispose();
-  }
+class _UnifiedItemsView extends StatelessWidget {
+  const _UnifiedItemsView();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.getSurfaceColor(Theme.of(context).brightness),
-      appBar: _buildAppBar(),
+      backgroundColor: AppColors.background(context),
+      appBar: _buildAppBar(context),
       body: Column(
         children: [
-          _buildSearchAndFilterBar(),
-          _buildFilterChips(),
-          Expanded(child: _buildUnifiedItemsList()),
+          _buildSearchAndFilterBar(context),
+          _buildFilterChips(context),
+          Expanded(child: _buildUnifiedItemsList(context)),
         ],
       ),
-      floatingActionButton: _buildFAB(),
+      floatingActionButton: _buildFAB(context),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
     return AppBar(
-      backgroundColor: AppColors.getSurfaceColor(Theme.of(context).brightness),
+      backgroundColor: AppColors.background(context),
       elevation: 0,
       title: Text(
         'All Items',
-        style: TextStyle(
-          fontSize: 24.sp,
-          fontWeight: FontWeight.w700,
-          color: AppColors.getTextColor(Theme.of(context).brightness),
-        ),
+        style: AppTypography.heading2(context, AppColors.textPrimary(context)),
       ),
       actions: [
         Padding(
           padding: EdgeInsets.only(right: 16.w),
           child: Center(
             child: GestureDetector(
-              onTap: _showSortOptions,
+              onTap: () => _showSortOptions(context),
               child: Icon(
                 Icons.sort,
-                color: AppColors.getTextColor(Theme.of(context).brightness),
+                color: AppColors.textPrimary(context),
                 size: 24.sp,
               ),
             ),
@@ -98,160 +71,190 @@ class _UnifiedItemsScreenState extends State<UnifiedItemsScreen>
     );
   }
 
-  Widget _buildSearchAndFilterBar() {
-    return Padding(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        children: [
-          // Search bar
-          TextField(
-            controller: _searchController,
-            style: TextStyle(
-              fontSize: 16.sp,
-              color: AppColors.getTextColor(Theme.of(context).brightness),
-            ),
-            decoration: InputDecoration(
-              hintText: 'Search notes, todos, reminders...',
-              hintStyle: TextStyle(
-                fontSize: 16.sp,
-                color: AppColors.getSecondaryTextColor(
-                  Theme.of(context).brightness,
-                ),
-              ),
-              prefixIcon: Icon(
-                Icons.search,
-                color: AppColors.primary,
-                size: 20.sp,
-              ),
-              suffixIcon: _searchController.text.isNotEmpty
-                  ? GestureDetector(
-                      onTap: () {
-                        _searchController.clear();
-                        setState(() {});
-                      },
-                      child: Icon(
-                        Icons.close,
-                        color: AppColors.getSecondaryTextColor(
-                          Theme.of(context).brightness,
-                        ),
-                        size: 20.sp,
-                      ),
-                    )
-                  : null,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(
-                  color: AppColors.primary.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(
-                  color: AppColors.getSecondaryTextColor(
-                    Theme.of(context).brightness,
-                  ).withOpacity(0.2),
-                  width: 1,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide(color: AppColors.primary, width: 2),
-              ),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: 12.w,
-                vertical: 12.h,
-              ),
-              filled: true,
-              fillColor: AppColors.getSurfaceColor(
-                Theme.of(context).brightness,
-              ),
-            ),
-            onChanged: (_) {
-              setState(() {});
-            },
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildSearchAndFilterBar(BuildContext context) {
+    // We use a local controller to manage the text but sync it with BLoC
+    final TextEditingController searchController = TextEditingController();
 
-  Widget _buildFilterChips() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      child: Row(
-        children: [
-          _buildFilterChip('All', 'all'),
-          SizedBox(width: 8.w),
-          _buildFilterChip('Notes', 'notes'),
-          SizedBox(width: 8.w),
-          _buildFilterChip('Todos', 'todos'),
-          SizedBox(width: 8.w),
-          _buildFilterChip('Reminders', 'reminders'),
-          SizedBox(width: 8.w),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _showOnlyPinned = !_showOnlyPinned;
-              });
-            },
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
-              decoration: BoxDecoration(
-                color: _showOnlyPinned
-                    ? AppColors.primary.withOpacity(0.2)
-                    : Colors.transparent,
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(
-                  color: _showOnlyPinned
-                      ? AppColors.primary
-                      : AppColors.getSecondaryTextColor(
-                          Theme.of(context).brightness,
-                        ).withOpacity(0.3),
+    return BlocBuilder<UnifiedItemsBloc, UnifiedItemsState>(
+      buildWhen: (p, c) => p.params.searchQuery != c.params.searchQuery,
+      builder: (context, state) {
+        // Synchronize controller text with state
+        if (state.params.searchQuery != searchController.text) {
+          searchController.text = state.params.searchQuery;
+          // Set selection to end to avoid cursor jumping
+          searchController.selection = TextSelection.fromPosition(
+            TextPosition(offset: searchController.text.length),
+          );
+        }
+
+        return Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Column(
+            children: [
+              TextField(
+                controller: searchController,
+                style: AppTypography.bodyMedium(
+                  context,
+                  AppColors.textPrimary(context),
                 ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.push_pin,
-                    size: 14.sp,
-                    color: _showOnlyPinned
-                        ? AppColors.primary
-                        : AppColors.getSecondaryTextColor(
-                            Theme.of(context).brightness,
-                          ),
+                decoration: InputDecoration(
+                  hintText: 'Search notes, todos, reminders...',
+                  hintStyle: AppTypography.bodyMedium(
+                    context,
+                    AppColors.textSecondary(context),
                   ),
-                  SizedBox(width: 4.w),
-                  Text(
-                    'Pinned',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      fontWeight: FontWeight.w500,
-                      color: _showOnlyPinned
-                          ? AppColors.primary
-                          : AppColors.getSecondaryTextColor(
-                              Theme.of(context).brightness,
-                            ),
+                  prefixIcon: Icon(
+                    Icons.search,
+                    color: AppColors.primary,
+                    size: 20.sp,
+                  ),
+                  suffixIcon: state.params.searchQuery.isNotEmpty
+                      ? GestureDetector(
+                          onTap: () {
+                            context.read<UnifiedItemsBloc>().add(
+                              const UpdateSearchQueryEvent(''),
+                            );
+                          },
+                          child: Icon(
+                            Icons.close,
+                            color: AppColors.textSecondary(context),
+                            size: 20.sp,
+                          ),
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(
+                      color: AppColors.primary.withOpacity(0.3),
+                      width: 1,
                     ),
                   ),
-                ],
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(
+                      color: AppColors.textSecondary(context).withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: AppColors.primary, width: 2),
+                  ),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 12.h,
+                  ),
+                  filled: true,
+                  fillColor: AppColors.surface(context),
+                ),
+                onChanged: (value) {
+                  context.read<UnifiedItemsBloc>().add(
+                    UpdateSearchQueryEvent(value),
+                  );
+                },
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
-    final isSelected = _selectedFilter == value;
+  Widget _buildFilterChips(BuildContext context) {
+    return BlocBuilder<UnifiedItemsBloc, UnifiedItemsState>(
+      builder: (context, state) {
+        final params = state.params;
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          child: Row(
+            children: [
+              _buildFilterChip(context, 'All', 'all', params.selectedFilter),
+              SizedBox(width: 8.w),
+              _buildFilterChip(
+                context,
+                'Notes',
+                'notes',
+                params.selectedFilter,
+              ),
+              SizedBox(width: 8.w),
+              _buildFilterChip(
+                context,
+                'Todos',
+                'todos',
+                params.selectedFilter,
+              ),
+              SizedBox(width: 8.w),
+              _buildFilterChip(
+                context,
+                'Reminders',
+                'reminders',
+                params.selectedFilter,
+              ),
+              SizedBox(width: 8.w),
+              GestureDetector(
+                onTap: () {
+                  context.read<UnifiedItemsBloc>().add(
+                    const TogglePinnedFilterEvent(),
+                  );
+                },
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 12.w,
+                    vertical: 6.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: params.showOnlyPinned
+                        ? AppColors.primary.withOpacity(0.2)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(8.r),
+                    border: Border.all(
+                      color: params.showOnlyPinned
+                          ? AppColors.primary
+                          : AppColors.textSecondary(context).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.push_pin,
+                        size: 14.sp,
+                        color: params.showOnlyPinned
+                            ? AppColors.primary
+                            : AppColors.textSecondary(context),
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        'Pinned',
+                        style: AppTypography.labelSmall(
+                          context,
+                          params.showOnlyPinned
+                              ? AppColors.primary
+                              : AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFilterChip(
+    BuildContext context,
+    String label,
+    String value,
+    String selectedFilter,
+  ) {
+    final isSelected = selectedFilter == value;
     return GestureDetector(
       onTap: () {
-        setState(() {
-          _selectedFilter = value;
-        });
+        context.read<UnifiedItemsBloc>().add(ChangeFilterEvent(value));
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -263,211 +266,306 @@ class _UnifiedItemsScreenState extends State<UnifiedItemsScreen>
           border: Border.all(
             color: isSelected
                 ? AppColors.primary
-                : AppColors.getSecondaryTextColor(
-                    Theme.of(context).brightness,
-                  ).withOpacity(0.3),
+                : AppColors.textSecondary(context).withOpacity(0.3),
           ),
         ),
         child: Text(
           label,
-          style: TextStyle(
-            fontSize: 12.sp,
-            fontWeight: FontWeight.w500,
-            color: isSelected
-                ? AppColors.primary
-                : AppColors.getSecondaryTextColor(Theme.of(context).brightness),
+          style: AppTypography.labelSmall(
+            context,
+            isSelected ? AppColors.primary : AppColors.textSecondary(context),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildUnifiedItemsList() {
-    // Debug: Current sort strategy is _sortBy (can be expanded for actual sorting)
-    // sortStrategy: recent, priority, due-date
-    return ListView(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      children: [
-        // Notes section
-        if (_selectedFilter == 'all' || _selectedFilter == 'notes')
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Notes',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.getSecondaryTextColor(
-                    Theme.of(context).brightness,
-                  ),
-                ),
-              ),
-              SizedBox(height: 8.h),
+  Widget _buildUnifiedItemsList(BuildContext context) {
+    return BlocBuilder<UnifiedItemsBloc, UnifiedItemsState>(
+      builder: (context, unifiedState) {
+        final params = unifiedState.params;
+
+        return ListView(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+          children: [
+            // Notes section
+            if (params.selectedFilter == 'all' ||
+                params.selectedFilter == 'notes')
               BlocBuilder<NotesBloc, NoteState>(
                 builder: (context, state) {
                   if (state is NotesLoaded) {
                     var notes = state.notes;
-                    // Apply sorting based on _sortBy
-                    if (_sortBy == 'recent') {
+
+                    // Apply search filter
+                    if (params.searchQuery.isNotEmpty) {
+                      notes = notes
+                          .where(
+                            (note) =>
+                                note.title.toLowerCase().contains(
+                                  params.searchQuery.toLowerCase(),
+                                ) ||
+                                note.content.toLowerCase().contains(
+                                  params.searchQuery.toLowerCase(),
+                                ),
+                          )
+                          .toList();
+                    }
+
+                    // Apply pinned filter
+                    if (params.showOnlyPinned) {
+                      notes = notes.where((note) => note.isPinned).toList();
+                    }
+
+                    // Apply sorting based on sortBy
+                    if (params.sortBy == 'recent') {
                       notes = notes.toList()
                         ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
                     }
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: notes.length,
-                      itemBuilder: (context, index) {
-                        return _buildNoteItem(notes[index]);
-                      },
+
+                    if (notes.isEmpty && params.selectedFilter == 'notes') {
+                      return Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.w),
+                          child: Text(
+                            'No notes found',
+                            style: AppTypography.bodyMedium(
+                              context,
+                              AppColors.textSecondary(context),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (notes.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (params.selectedFilter == 'all') ...[
+                          Text(
+                            'Notes',
+                            style: AppTypography.heading3(
+                              context,
+                              AppColors.textSecondary(context),
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                        ],
+                        ...notes.map((note) => _buildNoteItem(context, note)),
+                        if (params.selectedFilter == 'all')
+                          SizedBox(height: 20.h),
+                      ],
                     );
                   }
                   return const SizedBox.shrink();
                 },
               ),
-              SizedBox(height: 20.h),
-            ],
-          ),
 
-        // Todos section
-        if (_selectedFilter == 'all' || _selectedFilter == 'todos')
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Todos',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.getSecondaryTextColor(
-                    Theme.of(context).brightness,
-                  ),
-                ),
-              ),
-              SizedBox(height: 8.h),
-              BlocBuilder<TodoBloc, TodoState>(
+            // Todos section
+            if (params.selectedFilter == 'all' ||
+                params.selectedFilter == 'todos')
+              BlocBuilder<TodosBloc, TodosState>(
                 builder: (context, state) {
                   if (state is TodosLoaded) {
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: state.todos.length,
-                      itemBuilder: (context, index) {
-                        return _buildTodoItem(state.todos[index]);
-                      },
+                    var todos = state.filteredTodos;
+
+                    // Apply search filter
+                    if (params.searchQuery.isNotEmpty) {
+                      todos = todos
+                          .where(
+                            (todo) => todo.text.toLowerCase().contains(
+                              params.searchQuery.toLowerCase(),
+                            ),
+                          )
+                          .toList();
+                    }
+
+                    if (todos.isEmpty && params.selectedFilter == 'todos') {
+                      return Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.w),
+                          child: Text(
+                            'No todos found',
+                            style: AppTypography.bodyMedium(
+                              context,
+                              AppColors.textSecondary(context),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (todos.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (params.selectedFilter == 'all') ...[
+                          Text(
+                            'Todos',
+                            style: AppTypography.heading3(
+                              context,
+                              AppColors.textSecondary(context),
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                        ],
+                        ...todos.map((todo) => _buildTodoItem(context, todo)),
+                        if (params.selectedFilter == 'all')
+                          SizedBox(height: 20.h),
+                      ],
                     );
                   }
                   return const SizedBox.shrink();
                 },
               ),
-              SizedBox(height: 20.h),
-            ],
-          ),
 
-        // Reminders section
-        if (_selectedFilter == 'all' || _selectedFilter == 'reminders')
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Reminders',
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.getSecondaryTextColor(
-                    Theme.of(context).brightness,
-                  ),
-                ),
-              ),
-              SizedBox(height: 8.h),
-              BlocBuilder<AlarmBloc, AlarmState>(
+            // Reminders section
+            if (params.selectedFilter == 'all' ||
+                params.selectedFilter == 'reminders')
+              BlocBuilder<AlarmsBloc, AlarmsState>(
                 builder: (context, state) {
-                  if (state is AlarmSuccess) {
-                    return _buildReminderItem(state.result);
+                  if (state is AlarmsLoaded) {
+                    var alarms = state.filteredAlarms;
+
+                    // Apply search filter
+                    if (params.searchQuery.isNotEmpty) {
+                      alarms = alarms
+                          .where(
+                            (alarm) => alarm.message.toLowerCase().contains(
+                              params.searchQuery.toLowerCase(),
+                            ),
+                          )
+                          .toList();
+                    }
+
+                    if (alarms.isEmpty &&
+                        params.selectedFilter == 'reminders') {
+                      return Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(32.w),
+                          child: Text(
+                            'No reminders found',
+                            style: AppTypography.bodyMedium(
+                              context,
+                              AppColors.textSecondary(context),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    if (alarms.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (params.selectedFilter == 'all') ...[
+                          Text(
+                            'Reminders',
+                            style: AppTypography.heading3(
+                              context,
+                              AppColors.textSecondary(context),
+                            ),
+                          ),
+                          SizedBox(height: 8.h),
+                        ],
+                        ...alarms.map(
+                          (alarm) => _buildReminderItem(context, alarm),
+                        ),
+                      ],
+                    );
                   }
                   return const SizedBox.shrink();
                 },
               ),
-            ],
-          ),
-      ],
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildNoteItem(Note note) {
+  Widget _buildNoteItem(BuildContext context, Note note) {
     final noteColor = note.color is Color
         ? note.color as Color
         : AppColors.primary.withOpacity(0.1);
-    return Container(
-      margin: EdgeInsets.only(bottom: 8.h),
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: noteColor,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(
-          color: AppColors.getSecondaryTextColor(
-            Theme.of(context).brightness,
-          ).withOpacity(0.1),
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: note);
+      },
+      child: Container(
+        margin: EdgeInsets.only(bottom: 8.h),
+        padding: EdgeInsets.all(12.w),
+        decoration: BoxDecoration(
+          color: noteColor,
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(
+            color: AppColors.textSecondary(context).withOpacity(0.1),
+          ),
         ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: Text(
-                  note.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.getTextColor(Theme.of(context).brightness),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    note.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.bodyLarge(
+                      context,
+                      AppColors.textPrimary(context),
+                    ).copyWith(fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-              if (note.isPinned)
-                Icon(Icons.push_pin, size: 14.sp, color: AppColors.primary),
-            ],
-          ),
-          SizedBox(height: 4.h),
-          Text(
-            note.content,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              fontSize: 12.sp,
-              color: AppColors.getSecondaryTextColor(
-                Theme.of(context).brightness,
+                if (note.isPinned)
+                  Icon(Icons.push_pin, size: 14.sp, color: AppColors.primary),
+              ],
+            ),
+            SizedBox(height: 4.h),
+            Text(
+              note.content,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodySmall(
+                context,
+                AppColors.textSecondary(context),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTodoItem(dynamic todo) {
+  Widget _buildTodoItem(BuildContext context, dynamic todo) {
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: AppColors.getSurfaceColor(Theme.of(context).brightness),
-        borderRadius: BorderRadius.circular(8.r),
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: AppColors.getSecondaryTextColor(
-            Theme.of(context).brightness,
-          ).withOpacity(0.1),
+          color: AppColors.textSecondary(context).withOpacity(0.1),
         ),
       ),
       child: Row(
         children: [
           Checkbox(
             value: todo.isCompleted ?? false,
-            onChanged: (_) {},
-            fillColor: MaterialStateProperty.all(AppColors.primary),
+            onChanged: (val) {
+              context.read<TodosBloc>().add(
+                ToggleTodo.toggle(TodoParams.fromTodoItem(todo)),
+              );
+            },
+            fillColor: WidgetStateProperty.all(AppColors.primary),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
           SizedBox(width: 8.w),
           Expanded(
@@ -475,26 +573,25 @@ class _UnifiedItemsScreenState extends State<UnifiedItemsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  todo.title,
+                  todo.text,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.getTextColor(Theme.of(context).brightness),
-                    decoration: (todo.isCompleted ?? false)
-                        ? TextDecoration.lineThrough
-                        : null,
-                  ),
+                  style:
+                      AppTypography.bodyLarge(
+                        context,
+                        AppColors.textPrimary(context),
+                      ).copyWith(
+                        decoration: (todo.isCompleted ?? false)
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
                 ),
                 if (todo.dueDate != null)
                   Text(
-                    'Due: ${todo.dueDate}',
-                    style: TextStyle(
-                      fontSize: 11.sp,
-                      color: AppColors.getSecondaryTextColor(
-                        Theme.of(context).brightness,
-                      ),
+                    'Due: ${todo.dueDate!.day}/${todo.dueDate!.month}',
+                    style: AppTypography.caption(
+                      context,
+                      AppColors.textSecondary(context),
                     ),
                   ),
               ],
@@ -505,13 +602,13 @@ class _UnifiedItemsScreenState extends State<UnifiedItemsScreen>
     );
   }
 
-  Widget _buildReminderItem(dynamic reminder) {
+  Widget _buildReminderItem(BuildContext context, dynamic reminder) {
     return Container(
       margin: EdgeInsets.only(bottom: 8.h),
       padding: EdgeInsets.all(12.w),
       decoration: BoxDecoration(
-        color: AppColors.getSurfaceColor(Theme.of(context).brightness),
-        borderRadius: BorderRadius.circular(8.r),
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(color: AppColors.primary.withOpacity(0.2)),
       ),
       child: Row(
@@ -523,21 +620,18 @@ class _UnifiedItemsScreenState extends State<UnifiedItemsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Reminder',
-                  style: TextStyle(
-                    fontSize: 14.sp,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.getTextColor(Theme.of(context).brightness),
+                  reminder.message,
+                  style: AppTypography.bodyLarge(
+                    context,
+                    AppColors.textPrimary(context),
                   ),
                 ),
                 SizedBox(height: 4.h),
                 Text(
-                  'Scheduled reminder',
-                  style: TextStyle(
-                    fontSize: 12.sp,
-                    color: AppColors.getSecondaryTextColor(
-                      Theme.of(context).brightness,
-                    ),
+                  '${reminder.scheduledTime.day}/${reminder.scheduledTime.month} ${reminder.scheduledTime.hour}:${reminder.scheduledTime.minute.toString().padLeft(2, '0')}',
+                  style: AppTypography.caption(
+                    context,
+                    AppColors.textSecondary(context),
                   ),
                 ),
               ],
@@ -548,116 +642,111 @@ class _UnifiedItemsScreenState extends State<UnifiedItemsScreen>
     );
   }
 
-  void _showSortOptions() {
+  void _showSortOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
+      builder: (modalContext) => Container(
         decoration: BoxDecoration(
-          color: AppColors.getSurfaceColor(Theme.of(context).brightness),
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(20.r),
-            topRight: Radius.circular(20.r),
-          ),
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 40.w,
-              height: 4.h,
-              margin: EdgeInsets.symmetric(vertical: 12.h),
-              decoration: BoxDecoration(
-                color: Colors.grey,
-                borderRadius: BorderRadius.circular(2.r),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(16.w),
-              child: Text(
-                'Sort By',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.getTextColor(Theme.of(context).brightness),
+        child: BlocProvider.value(
+          value: context.read<UnifiedItemsBloc>(),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40.w,
+                height: 4.h,
+                margin: EdgeInsets.symmetric(vertical: 12.h),
+                decoration: BoxDecoration(
+                  color: AppColors.border(context),
+                  borderRadius: BorderRadius.circular(2.r),
                 ),
               ),
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.schedule,
-                color: AppColors.getTextColor(Theme.of(context).brightness),
-              ),
-              title: Text(
-                'Most Recent',
-                style: TextStyle(
-                  color: AppColors.getTextColor(Theme.of(context).brightness),
+              Padding(
+                padding: EdgeInsets.all(16.w),
+                child: Text(
+                  'Sort By',
+                  style: AppTypography.heading3(
+                    context,
+                    AppColors.textPrimary(context),
+                  ),
                 ),
               ),
-              onTap: () {
-                setState(() {
-                  _sortBy = 'recent';
-                });
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.priority_high,
-                color: AppColors.getTextColor(Theme.of(context).brightness),
-              ),
-              title: Text(
-                'Priority',
-                style: TextStyle(
-                  color: AppColors.getTextColor(Theme.of(context).brightness),
+              ListTile(
+                leading: Icon(
+                  Icons.schedule,
+                  color: AppColors.textPrimary(context),
                 ),
-              ),
-              onTap: () {
-                setState(() {
-                  _sortBy = 'priority';
-                });
-                Navigator.pop(context);
-              },
-            ),
-            ListTile(
-              leading: Icon(
-                Icons.date_range,
-                color: AppColors.getTextColor(Theme.of(context).brightness),
-              ),
-              title: Text(
-                'Due Date',
-                style: TextStyle(
-                  color: AppColors.getTextColor(Theme.of(context).brightness),
+                title: Text(
+                  'Most Recent',
+                  style: AppTypography.bodyLarge(
+                    context,
+                    AppColors.textPrimary(context),
+                  ),
                 ),
+                onTap: () {
+                  context.read<UnifiedItemsBloc>().add(
+                    const ChangeSortEvent('recent'),
+                  );
+                  Navigator.pop(modalContext);
+                },
               ),
-              onTap: () {
-                setState(() {
-                  _sortBy = 'due-date';
-                });
-                Navigator.pop(context);
-              },
-            ),
-            SizedBox(height: 20.h),
-          ],
+              ListTile(
+                leading: Icon(
+                  Icons.priority_high,
+                  color: AppColors.textPrimary(context),
+                ),
+                title: Text(
+                  'Priority',
+                  style: AppTypography.bodyLarge(
+                    context,
+                    AppColors.textPrimary(context),
+                  ),
+                ),
+                onTap: () {
+                  context.read<UnifiedItemsBloc>().add(
+                    const ChangeSortEvent('priority'),
+                  );
+                  Navigator.pop(modalContext);
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.date_range,
+                  color: AppColors.textPrimary(context),
+                ),
+                title: Text(
+                  'Due Date',
+                  style: AppTypography.bodyLarge(
+                    context,
+                    AppColors.textPrimary(context),
+                  ),
+                ),
+                onTap: () {
+                  context.read<UnifiedItemsBloc>().add(
+                    const ChangeSortEvent('due-date'),
+                  );
+                  Navigator.pop(modalContext);
+                },
+              ),
+              SizedBox(height: 20.h),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildFAB() {
-    return ScaleTransition(
-      scale: Tween<double>(
-        begin: 0.8,
-        end: 1.0,
-      ).animate(CurvedAnimation(parent: _fabController, curve: Curves.easeOut)),
-      child: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        onPressed: () {
-          // Open create menu
-        },
-        child: Icon(Icons.add, color: Colors.white, size: 24.sp),
-      ),
+  Widget _buildFAB(BuildContext context) {
+    return FloatingActionButton(
+      backgroundColor: AppColors.primary,
+      onPressed: () {
+        Navigator.pushNamed(context, AppRoutes.quickAdd);
+      },
+      child: Icon(Icons.add, color: Colors.white, size: 24.sp),
     );
   }
 }
-

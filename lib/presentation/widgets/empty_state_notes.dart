@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:mynotes/presentation/pages/enhanced_note_editor_screen.dart';
+import '../../core/routes/app_routes.dart';
 import '../design_system/design_system.dart';
 
 /// Empty State for Notes List
@@ -20,7 +20,7 @@ class EmptyStateNotes extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             // Illustration
-            _buildIllustration(isDark),
+            _buildIllustration(context, isDark),
 
             SizedBox(height: 32.h),
 
@@ -28,11 +28,9 @@ class EmptyStateNotes extends StatelessWidget {
             Text(
               'Your digital brain is empty.',
               textAlign: TextAlign.center,
-              style: AppTypography.titleLarge(
-                null,
-                null,
-                FontWeight.bold,
-              ).copyWith(fontSize: 24.sp),
+              style: AppTypography.heading3(
+                context,
+              ).copyWith(fontSize: 24.sp, fontWeight: FontWeight.bold),
             ),
 
             SizedBox(height: 12.h),
@@ -40,8 +38,9 @@ class EmptyStateNotes extends StatelessWidget {
             Text(
               'Start with a template to structure your thoughts or begin with a blank canvas.',
               textAlign: TextAlign.center,
-              style: AppTypography.bodyMedium(null).copyWith(
-                color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+              style: AppTypography.bodyMedium(
+                context,
+                AppColors.textSecondary(context),
               ),
             ),
 
@@ -50,11 +49,10 @@ class EmptyStateNotes extends StatelessWidget {
             // Section header
             Text(
               'QUICK-START TEMPLATES',
-              style: AppTypography.captionSmall(null).copyWith(
-                color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
+              style: AppTypography.captionSmall(context).copyWith(
+                color: AppColors.textSecondary(context),
                 fontWeight: FontWeight.bold,
                 letterSpacing: 1.5,
-                fontSize: 11.sp,
               ),
             ),
 
@@ -101,21 +99,16 @@ class EmptyStateNotes extends StatelessWidget {
               height: 56.h,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const EnhancedNoteEditorScreen(),
-                    ),
-                  );
+                  Navigator.pushNamed(context, AppRoutes.noteEditor);
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: AppColors.primaryColor,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   elevation: 8,
-                  shadowColor: AppColors.primary.withOpacity(0.3),
+                  shadowColor: AppColors.primaryColor.withOpacity(0.3),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -125,10 +118,9 @@ class EmptyStateNotes extends StatelessWidget {
                     Text(
                       'Create New Note',
                       style: AppTypography.bodyLarge(
-                        null,
+                        context,
                         Colors.white,
-                        FontWeight.bold,
-                      ).copyWith(fontSize: 18.sp),
+                      ).copyWith(fontSize: 18.sp, fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -142,10 +134,10 @@ class EmptyStateNotes extends StatelessWidget {
               onPressed: () {},
               child: Text(
                 'Import existing notes',
-                style: AppTypography.bodySmall(null).copyWith(
-                  color: isDark ? Colors.grey.shade500 : Colors.grey.shade400,
-                  fontWeight: FontWeight.w500,
-                ),
+                style: AppTypography.bodySmall(
+                  context,
+                  AppColors.textSecondary(context),
+                ).copyWith(fontWeight: FontWeight.w500),
               ),
             ),
           ],
@@ -154,7 +146,7 @@ class EmptyStateNotes extends StatelessWidget {
     );
   }
 
-  Widget _buildIllustration(bool isDark) {
+  Widget _buildIllustration(BuildContext context, bool isDark) {
     return SizedBox(
       width: 280.w,
       height: 280.w,
@@ -169,8 +161,8 @@ class EmptyStateNotes extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: RadialGradient(
                 colors: [
-                  AppColors.primary.withOpacity(0.1),
-                  AppColors.primary.withOpacity(0.0),
+                  AppColors.primaryColor.withOpacity(0.1),
+                  AppColors.primaryColor.withOpacity(0.0),
                 ],
               ),
             ),
@@ -185,13 +177,10 @@ class EmptyStateNotes extends StatelessWidget {
                 width: 176.w,
                 height: 240.w,
                 decoration: BoxDecoration(
-                  color: (isDark ? Colors.grey.shade800 : Colors.white)
-                      .withOpacity(0.6),
+                  color: AppColors.surface(context).withOpacity(0.6),
                   borderRadius: BorderRadius.circular(8.r),
                   border: Border.all(
-                    color:
-                        (isDark ? Colors.grey.shade700 : Colors.grey.shade200)
-                            .withOpacity(0.5),
+                    color: AppColors.border(context).withOpacity(0.5),
                   ),
                 ),
               ),
@@ -206,11 +195,9 @@ class EmptyStateNotes extends StatelessWidget {
               height: 256.w,
               padding: EdgeInsets.all(16.w),
               decoration: BoxDecoration(
-                color: isDark ? Colors.grey.shade800 : Colors.white,
+                color: AppColors.surface(context),
                 borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(
-                  color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
-                ),
+                border: Border.all(color: AppColors.border(context)),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -249,7 +236,7 @@ class EmptyStateNotes extends StatelessWidget {
                     child: Icon(
                       Icons.edit_note_rounded,
                       size: 36.sp,
-                      color: AppColors.primary.withOpacity(0.4),
+                      color: AppColors.primaryColor.withOpacity(0.4),
                     ),
                   ),
                 ],
@@ -269,13 +256,10 @@ class EmptyStateNotes extends StatelessWidget {
   ) {
     return InkWell(
       onTap: () {
-        Navigator.push(
+        Navigator.pushNamed(
           context,
-          MaterialPageRoute(
-            builder: (context) => EnhancedNoteEditorScreen(
-              initialContent: _getTemplateContent(label),
-            ),
-          ),
+          AppRoutes.noteEditor,
+          arguments: {'initialContent': _getTemplateContent(label)},
         );
       },
       borderRadius: BorderRadius.circular(20.r),
@@ -283,11 +267,9 @@ class EmptyStateNotes extends StatelessWidget {
         height: 40.h,
         padding: EdgeInsets.symmetric(horizontal: 16.w),
         decoration: BoxDecoration(
-          color: isDark ? Colors.grey.shade800 : Colors.white,
+          color: AppColors.surface(context),
           borderRadius: BorderRadius.circular(20.r),
-          border: Border.all(
-            color: isDark ? Colors.grey.shade700 : Colors.grey.shade200,
-          ),
+          border: Border.all(color: AppColors.border(context)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -299,11 +281,13 @@ class EmptyStateNotes extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 20.sp, color: AppColors.primary),
+            Icon(icon, size: 20.sp, color: AppColors.primaryColor),
             SizedBox(width: 8.w),
             Text(
               label,
-              style: AppTypography.bodySmall(null, null, FontWeight.w500),
+              style: AppTypography.bodySmall(
+                context,
+              ).copyWith(fontWeight: FontWeight.w500),
             ),
           ],
         ),

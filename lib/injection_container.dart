@@ -1,6 +1,6 @@
 import 'package:get_it/get_it.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:mynotes/data/datasources/database_helper.dart';
+
 import 'package:mynotes/data/datasources/local/media_local_datasource.dart';
 import 'package:mynotes/data/datasources/local/media_local_datasource_impl.dart';
 import 'package:mynotes/data/datasources/local/smart_collection_local_datasource.dart';
@@ -9,6 +9,8 @@ import 'package:mynotes/data/datasources/local/smart_reminder_local_datasource.d
 import 'package:mynotes/data/datasources/local/smart_reminder_local_datasource_impl.dart';
 import 'package:mynotes/data/datasources/local/reminder_template_local_datasource.dart';
 import 'package:mynotes/data/datasources/local/reminder_template_local_datasource_impl.dart';
+import 'package:mynotes/core/services/link_parser_service.dart';
+
 import 'package:mynotes/domain/repositories/media_repository.dart';
 import 'package:mynotes/domain/repositories/smart_collection_repository.dart';
 import 'package:mynotes/domain/repositories/smart_reminder_repository.dart';
@@ -20,15 +22,40 @@ import 'package:mynotes/data/repositories/reminder_template_repository_impl.dart
 import 'package:mynotes/presentation/bloc/media_gallery_bloc.dart';
 import 'package:mynotes/presentation/bloc/smart_collections_bloc.dart';
 import 'package:mynotes/presentation/bloc/smart_reminders_bloc.dart';
+import 'package:mynotes/presentation/bloc/unified_items_bloc.dart';
 import 'package:mynotes/presentation/bloc/reminder_templates_bloc.dart';
+import 'package:mynotes/presentation/bloc/advanced_search_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_collection_wizard_bloc.dart';
+import 'package:mynotes/presentation/bloc/rule_builder_bloc.dart';
+import 'package:mynotes/domain/repositories/note_repository.dart';
+import 'package:mynotes/domain/services/ai_suggestion_engine.dart';
+import 'package:mynotes/domain/services/rule_evaluation_engine.dart';
+import 'package:mynotes/domain/repositories/todo_repository.dart';
+import 'package:mynotes/domain/repositories/alarm_repository.dart';
+import 'package:mynotes/data/repositories/note_repository_impl.dart';
+import 'package:mynotes/data/repositories/todo_repository_impl.dart';
+import 'package:mynotes/data/repositories/alarm_repository_impl.dart';
+import 'package:mynotes/data/datasources/local_database.dart';
+import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/core/services/connectivity_service.dart';
 
 /// GetIt service locator instance
 final getIt = GetIt.instance;
 
 /// Initialize all dependencies for dependency injection
 Future<void> setupServiceLocator() async {
+  // ==================== Global Services ====================
+  getIt.registerSingleton<GlobalUiService>(GlobalUiService());
+
+  final connectivityService = ConnectivityService();
+  connectivityService.initialize();
+  getIt.registerSingleton<ConnectivityService>(connectivityService);
+
   // ==================== Database ====================
-  final database = await DatabaseHelper.instance.database;
+  final notesDatabase = NotesDatabase();
+  getIt.registerSingleton<NotesDatabase>(notesDatabase);
+
+  final database = await notesDatabase.database;
   getIt.registerSingleton<Database>(database);
 
   // ==================== LocalDataSources ====================
@@ -52,6 +79,9 @@ Future<void> setupServiceLocator() async {
   getIt.registerSingleton<ReminderTemplateLocalDataSource>(
     ReminderTemplateLocalDataSourceImpl(database: getIt<Database>()),
   );
+
+  /// Link Parser Service
+  getIt.registerSingleton<LinkParserService>(LinkParserService());
 
   // ==================== Repositories ====================
 
@@ -81,6 +111,21 @@ Future<void> setupServiceLocator() async {
     ),
   );
 
+  /// Note Repository
+  getIt.registerSingleton<NoteRepository>(
+    NoteRepositoryImpl(database: getIt<NotesDatabase>()),
+  );
+
+  /// Todo Repository
+  getIt.registerSingleton<TodoRepository>(
+    TodoRepositoryImpl(database: getIt<NotesDatabase>()),
+  );
+
+  /// Alarm Repository
+  getIt.registerSingleton<AlarmRepository>(
+    AlarmRepositoryImpl(database: getIt<NotesDatabase>()),
+  );
+
   // ==================== BLoCs ====================
 
   /// Media Gallery BLoC
@@ -99,14 +144,28 @@ Future<void> setupServiceLocator() async {
   getIt.registerSingleton<SmartRemindersBloc>(
     SmartRemindersBloc(
       smartReminderRepository: getIt<SmartReminderRepository>(),
+      noteRepository: getIt<NoteRepository>(),
+      aiSuggestionEngine: AISuggestionEngine(),
     ),
   );
+
+  /// Unified Items BLoC
+  getIt.registerSingleton<UnifiedItemsBloc>(UnifiedItemsBloc());
 
   /// Reminder Templates BLoC
   getIt.registerSingleton<ReminderTemplatesBloc>(
     ReminderTemplatesBloc(
       reminderTemplateRepository: getIt<ReminderTemplateRepository>(),
     ),
+  );
+
+  /// Advanced Search BLoC
+  getIt.registerSingleton<AdvancedSearchBloc>(AdvancedSearchBloc());
+  getIt.registerSingleton<SmartCollectionWizardBloc>(
+    SmartCollectionWizardBloc(),
+  );
+  getIt.registerSingleton<RuleBuilderBloc>(
+    RuleBuilderBloc(ruleEngine: RuleEvaluationEngine()),
   );
 }
 
@@ -125,6 +184,9 @@ SmartRemindersBloc getSmartRemindersBloc() => getIt<SmartRemindersBloc>();
 /// Reminder Templates BLoC getter
 ReminderTemplatesBloc getReminderTemplatesBloc() =>
     getIt<ReminderTemplatesBloc>();
+
+/// Advanced Search BLoC getter
+AdvancedSearchBloc getAdvancedSearchBloc() => getIt<AdvancedSearchBloc>();
 
 /// Get registered Repositories
 /// Usage: Can use these directly if needed

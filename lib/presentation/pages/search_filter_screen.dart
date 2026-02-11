@@ -31,7 +31,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
   bool _filterTodos = false;
   NoteSortBy _sortBy = NoteSortBy.newest;
 
-  List<Note> _searchResults = [];
+  List<dynamic> _searchResults = [];
 
   @override
   void initState() {
@@ -55,8 +55,18 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     context.read<NotesBloc>().add(SearchNotesEvent(query));
   }
 
-  void _applyFilters(List<Note> notes) {
-    var filtered = notes;
+  void _applyFilters(List<dynamic> results) {
+    // Convert results to Notes if they are in Map format
+    var filtered = results
+        .map((item) {
+          if (item is Note) return item;
+          if (item is Map<String, dynamic> && item['note'] is Note) {
+            return item['note'] as Note;
+          }
+          return null;
+        })
+        .whereType<Note>()
+        .toList();
 
     // Filter by media types
     if (_filterImages) {
@@ -640,4 +650,3 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 }
-

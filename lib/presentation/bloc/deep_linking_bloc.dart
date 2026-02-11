@@ -29,6 +29,7 @@ class DeepLinkingBloc extends Bloc<DeepLinkingEvent, DeepLinkingState> {
       if (link.startsWith('mynotes://')) {
         final uri = Uri.parse(link);
         final scheme = uri.scheme;
+        print(scheme);
         final path = uri.path;
         final segments = path.split('/');
 

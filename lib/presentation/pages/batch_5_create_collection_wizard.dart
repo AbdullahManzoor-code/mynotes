@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/injection_container.dart';
+import 'package:mynotes/domain/entities/smart_collection.dart';
 import 'package:mynotes/presentation/bloc/smart_collections_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_collection_wizard_bloc.dart';
+import 'package:mynotes/core/routes/app_routes.dart';
+import 'package:mynotes/presentation/design_system/app_colors.dart';
+import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/design_system/app_spacing.dart';
+import 'package:mynotes/core/services/global_ui_service.dart';
 
 /// Create Smart Collection Wizard - Batch 5, Screen 1
+/// Refactored to use Design System, Global UI Services, and BLoC
 class CreateSmartCollectionWizard extends StatefulWidget {
   const CreateSmartCollectionWizard({Key? key}) : super(key: key);
 
@@ -14,22 +24,15 @@ class CreateSmartCollectionWizard extends StatefulWidget {
 class _CreateSmartCollectionWizardState
     extends State<CreateSmartCollectionWizard> {
   late PageController _pageController;
-  int _currentStep = 0;
-
-  // Step 1: Basic Info
   final _collectionNameController = TextEditingController();
   final _descriptionController = TextEditingController();
-
-  // Step 2: Rules
-  List<Map<String, dynamic>> _rules = [];
-
-  // Step 3: Logic
-  String _logic = 'AND';
 
   @override
   void initState() {
     super.initState();
     _pageController = PageController();
+    _collectionNameController.addListener(_onNameChanged);
+    _descriptionController.addListener(_onDescriptionChanged);
   }
 
   @override
@@ -40,126 +43,237 @@ class _CreateSmartCollectionWizardState
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Create Smart Collection'),
-        centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // Step Indicator
-          _buildStepIndicator(),
-          // Content
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentStep = index;
-                });
-              },
-              children: [
-                _buildStep1BasicInfo(),
-                _buildStep2AddRules(),
-                _buildStep3ReviewLogic(),
-              ],
-            ),
-          ),
-          // Navigation Buttons
-          _buildNavigationButtons(),
-        ],
+  void _onNameChanged() {
+    context.read<SmartCollectionWizardBloc>().add(
+      UpdateWizardBasicInfoEvent(
+        name: _collectionNameController.text,
+        description: _descriptionController.text,
       ),
     );
   }
 
-  Widget _buildStepIndicator() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
+  void _onDescriptionChanged() {
+    context.read<SmartCollectionWizardBloc>().add(
+      UpdateWizardBasicInfoEvent(
+        name: _collectionNameController.text,
+        description: _descriptionController.text,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider<SmartCollectionWizardBloc>(
+      create: (context) => getIt<SmartCollectionWizardBloc>(),
+      child: BlocBuilder<SmartCollectionWizardBloc, SmartCollectionWizardState>(
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: AppColors.lightBackground,
+            appBar: AppBar(
+              title: Text(
+                'New Smart Collection',
+                style: AppTypography.displayMedium(context, AppColors.darkText),
+              ),
+              backgroundColor: AppColors.lightSurface,
+              centerTitle: true,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: AppColors.darkText),
+            ),
+            body: Column(
+              children: [
+                // Step Indicator
+                _buildStepIndicator(context, state),
+                // Content
+                Expanded(
+                  child: PageView(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      context.read<SmartCollectionWizardBloc>().add(
+                        UpdateWizardStepEvent(step: index),
+                      );
+                    },
+                    physics: const NeverScrollableScrollPhysics(),
+                    children: [
+                      _buildStep1BasicInfo(context),
+                      _buildStep2AddRules(context, state),
+                      _buildStep3ReviewLogic(context, state),
+                    ],
+                  ),
+                ),
+                // Navigation Buttons
+                _buildNavigationButtons(context, state),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildStepIndicator(
+    BuildContext context,
+    SmartCollectionWizardState state,
+  ) {
+    return Container(
+      padding: AppSpacing.paddingAllM,
+      color: AppColors.lightSurface,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
-          _buildStepCircle(0, 'Basic Info'),
-          _buildConnector(),
-          _buildStepCircle(1, 'Add Rules'),
-          _buildConnector(),
-          _buildStepCircle(2, 'Review'),
+          _buildStepCircle(context, 0, 'Info', state.currentStep),
+          _buildConnector(0, state.currentStep),
+          _buildStepCircle(context, 1, 'Rules', state.currentStep),
+          _buildConnector(1, state.currentStep),
+          _buildStepCircle(context, 2, 'Apply', state.currentStep),
         ],
       ),
     );
   }
 
-  Widget _buildStepCircle(int step, String label) {
-    final isCompleted = _currentStep > step;
-    final isCurrent = _currentStep == step;
+  Widget _buildStepCircle(
+    BuildContext context,
+    int step,
+    String label,
+    int currentStep,
+  ) {
+    final isCompleted = currentStep > step;
+    final isCurrent = currentStep == step;
+
+    final Color circleColor = isCompleted || isCurrent
+        ? AppColors.primaryColor
+        : AppColors.borderLight;
+
+    final Color textColor = isCurrent
+        ? AppColors.primaryColor
+        : (isCompleted ? AppColors.darkText : AppColors.secondaryText);
 
     return Column(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 36.w,
+          height: 36.w,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isCompleted || isCurrent ? Colors.blue : Colors.grey,
+            color: isCurrent
+                ? circleColor
+                : (isCompleted ? circleColor : AppColors.lightSurface),
+            border: Border.all(color: circleColor, width: 2.w),
+            boxShadow: isCurrent
+                ? [
+                    BoxShadow(
+                      color: AppColors.primaryColor.withOpacity(0.3),
+                      blurRadius: 8.r,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : null,
           ),
           alignment: Alignment.center,
           child: isCompleted
-              ? Icon(Icons.check, color: Colors.white)
+              ? Icon(Icons.check, color: AppColors.lightSurface, size: 20.sp)
               : Text(
                   '${step + 1}',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTypography.labelSmall(
+                    context,
+                    isCurrent
+                        ? AppColors.lightSurface
+                        : AppColors.secondaryText,
+                    FontWeight.bold,
+                  ).copyWith(fontSize: 14.sp),
                 ),
         ),
-        const SizedBox(height: 4),
-        Text(label, style: Theme.of(context).textTheme.labelSmall),
+        AppSpacing.gapS,
+        Text(
+          label,
+          style: AppTypography.labelSmall(
+            context,
+            textColor,
+            isCurrent ? FontWeight.bold : FontWeight.normal,
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildConnector() {
+  Widget _buildConnector(int index, int currentStep) {
     return Expanded(
       child: Container(
-        height: 2,
-        color: _currentStep > 0 ? Colors.blue : Colors.grey,
-        margin: const EdgeInsets.symmetric(horizontal: 8),
+        height: 2.h,
+        color: currentStep > index
+            ? AppColors.primaryColor
+            : AppColors.borderLight,
+        margin: EdgeInsets.symmetric(horizontal: 8.w, vertical: 18.h),
       ),
     );
   }
 
-  Widget _buildStep1BasicInfo() {
+  Widget _buildStep1BasicInfo(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.paddingAllL,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Collection Details',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+            'Tell us about your collection',
+            style: AppTypography.heading1(context),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.gapS,
+          Text(
+            'These details help you identify your smart collection later.',
+            style: AppTypography.bodyMedium(context, AppColors.secondaryText),
+          ),
+          AppSpacing.gapL,
           TextField(
             controller: _collectionNameController,
+            style: AppTypography.bodyMedium(context, AppColors.darkText),
             decoration: InputDecoration(
               labelText: 'Collection Name',
-              hintText: 'e.g., Important Documents',
-              prefixIcon: Icon(Icons.folder),
-              border: OutlineInputBorder(),
+              hintText: 'e.g., Critical Tasks',
+              prefixIcon: const Icon(
+                Icons.folder_open_rounded,
+                color: AppColors.primaryColor,
+              ),
+              filled: true,
+              fillColor: AppColors.lightSurface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppColors.borderLight),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppColors.borderLight),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppColors.primaryColor),
+              ),
             ),
           ),
-          const SizedBox(height: 16),
+          AppSpacing.gapM,
           TextField(
             controller: _descriptionController,
+            style: AppTypography.bodyMedium(context, AppColors.darkText),
             decoration: InputDecoration(
-              labelText: 'Description',
-              hintText: 'Optional description',
-              prefixIcon: Icon(Icons.description),
-              border: OutlineInputBorder(),
+              labelText: 'Description (Optional)',
+              hintText: 'What notes should this gather?',
+              prefixIcon: const Icon(
+                Icons.description_outlined,
+                color: AppColors.primaryColor,
+              ),
+              filled: true,
+              fillColor: AppColors.lightSurface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppColors.borderLight),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppColors.borderLight),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: const BorderSide(color: AppColors.primaryColor),
+              ),
             ),
             maxLines: 4,
           ),
@@ -168,57 +282,83 @@ class _CreateSmartCollectionWizardState
     );
   }
 
-  Widget _buildStep2AddRules() {
+  Widget _buildStep2AddRules(
+    BuildContext context,
+    SmartCollectionWizardState state,
+  ) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.paddingAllL,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Add Filtering Rules',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              ElevatedButton.icon(
-                icon: Icon(Icons.add),
-                label: Text('Add Rule'),
-                onPressed: _showAddRuleDialog,
+              Text('Add Rules', style: AppTypography.heading1(context)),
+              TextButton.icon(
+                icon: Icon(Icons.add_circle_outline_rounded, size: 20.sp),
+                label: const Text('Add Rule'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primaryColor,
+                  textStyle: AppTypography.button(context),
+                ),
+                onPressed: () => _navigateToRuleBuilder(context, state),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          if (_rules.isEmpty)
-            Center(
-              child: Column(
-                children: [
-                  Icon(Icons.rule, size: 48, color: Colors.grey),
-                  const SizedBox(height: 16),
-                  Text('No rules added yet'),
-                ],
-              ),
-            )
+          AppSpacing.gapS,
+          Text(
+            'Rules define the membership of your smart collection.',
+            style: AppTypography.bodyMedium(context, AppColors.secondaryText),
+          ),
+          AppSpacing.gapL,
+          if (state.rules.isEmpty)
+            _buildEmptyRulesState(context)
           else
-            ListView.builder(
+            ListView.separated(
               shrinkWrap: true,
-              physics: NeverScrollableScrollPhysics(),
-              itemCount: _rules.length,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: state.rules.length,
+              separatorBuilder: (context, index) => AppSpacing.gapS,
               itemBuilder: (context, index) {
-                final rule = _rules[index];
-                return Card(
+                final rule = state.rules[index];
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.lightSurface,
+                    borderRadius: BorderRadius.circular(16.r),
+                    border: Border.all(color: AppColors.borderLight),
+                  ),
                   child: ListTile(
+                    leading: Container(
+                      padding: AppSpacing.paddingAllS,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary10,
+                        borderRadius: BorderRadius.circular(8.r),
+                      ),
+                      child: const Icon(
+                        Icons.filter_list_rounded,
+                        color: AppColors.primaryColor,
+                        size: 20,
+                      ),
+                    ),
                     title: Text(
                       '${rule['field']} ${rule['operator']} ${rule['value']}',
+                      style: AppTypography.bodyMedium(
+                        context,
+                        AppColors.darkText,
+                        FontWeight.w600,
+                      ),
                     ),
                     trailing: IconButton(
-                      icon: Icon(Icons.delete),
+                      icon: const Icon(
+                        Icons.delete_outline_rounded,
+                        color: AppColors.error,
+                      ),
                       onPressed: () {
-                        setState(() {
-                          _rules.removeAt(index);
-                        });
+                        context.read<SmartCollectionWizardBloc>().add(
+                          RemoveWizardRuleEvent(index: index),
+                        );
+                        getIt<GlobalUiService>().hapticFeedback();
                       },
                     ),
                   ),
@@ -230,83 +370,108 @@ class _CreateSmartCollectionWizardState
     );
   }
 
-  Widget _buildStep3ReviewLogic() {
+  Widget _buildEmptyRulesState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: AppSpacing.paddingAllL,
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: const BoxDecoration(
+                color: AppColors.primary10,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.rule_folder_outlined,
+                size: 48.sp,
+                color: AppColors.primaryColor,
+              ),
+            ),
+            AppSpacing.gapM,
+            Text('No rules added yet', style: AppTypography.heading2(context)),
+            AppSpacing.gapS,
+            Text(
+              'Specify how to filter your notes automatically.',
+              textAlign: TextAlign.center,
+              style: AppTypography.bodySmall(context, AppColors.secondaryText),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep3ReviewLogic(
+    BuildContext context,
+    SmartCollectionWizardState state,
+  ) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.paddingAllL,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Review & Confirm',
-            style: Theme.of(
-              context,
-            ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 24),
-          Card(
+          Text('Finalize Collection', style: AppTypography.heading1(context)),
+          AppSpacing.gapL,
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.lightSurface,
+              borderRadius: BorderRadius.circular(16.r),
+              border: Border.all(color: AppColors.borderLight),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: AppSpacing.paddingAllM,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Collection Name',
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                  Text(_collectionNameController.text),
-                  const SizedBox(height: 16),
-                  Text(
+                  _buildReviewItem(context, 'Name', state.name),
+                  Divider(height: 32.h, color: AppColors.borderLight),
+                  _buildReviewItem(
+                    context,
                     'Description',
-                    style: Theme.of(context).textTheme.labelSmall,
+                    state.description.isEmpty ? 'None' : state.description,
                   ),
-                  Text(_descriptionController.text),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Number of Rules',
-                    style: Theme.of(context).textTheme.labelSmall,
+                  Divider(height: 32.h, color: AppColors.borderLight),
+                  _buildReviewItem(
+                    context,
+                    'Rules',
+                    '${state.rules.length} total criteria',
                   ),
-                  Text('${_rules.length} rule(s)'),
-                  const SizedBox(height: 16),
-                  Text('Logic', style: Theme.of(context).textTheme.labelSmall),
-                  Text(_logic),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          AppSpacing.gapL,
+          Text('Selection Logic', style: AppTypography.heading2(context)),
+          AppSpacing.gapS,
           Text(
-            'Logic Type',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            'Choose how rules interact with each other.',
+            style: AppTypography.bodySmall(context, AppColors.secondaryText),
           ),
-          const SizedBox(height: 12),
+          AppSpacing.gapM,
           Row(
             children: [
               Expanded(
-                child: RadioListTile<String>(
-                  title: Text('AND'),
-                  subtitle: Text('All rules must match'),
-                  value: 'AND',
-                  groupValue: _logic,
-                  onChanged: (value) {
-                    setState(() {
-                      _logic = value ?? 'AND';
-                    });
-                  },
+                child: _buildLogicOption(
+                  context,
+                  'AND',
+                  'Matches everything',
+                  state.logic == 'AND',
+                  () => context.read<SmartCollectionWizardBloc>().add(
+                    const UpdateWizardLogicEvent(logic: 'AND'),
+                  ),
                 ),
               ),
+              AppSpacing.gapM,
               Expanded(
-                child: RadioListTile<String>(
-                  title: Text('OR'),
-                  subtitle: Text('Any rule can match'),
-                  value: 'OR',
-                  groupValue: _logic,
-                  onChanged: (value) {
-                    setState(() {
-                      _logic = value ?? 'OR';
-                    });
-                  },
+                child: _buildLogicOption(
+                  context,
+                  'OR',
+                  'Matches anything',
+                  state.logic == 'OR',
+                  () => context.read<SmartCollectionWizardBloc>().add(
+                    const UpdateWizardLogicEvent(logic: 'OR'),
+                  ),
                 ),
               ),
             ],
@@ -316,151 +481,190 @@ class _CreateSmartCollectionWizardState
     );
   }
 
-  Widget _buildNavigationButtons() {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          if (_currentStep > 0)
-            ElevatedButton(
-              onPressed: () {
-                _pageController.previousPage(
-                  duration: Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              },
-              child: Text('Previous'),
-            ),
-          if (_currentStep < 2)
-            ElevatedButton(
-              onPressed: _canProceedToNext()
-                  ? () {
-                      _pageController.nextPage(
-                        duration: Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      );
-                    }
-                  : null,
-              child: Text('Next'),
-            ),
-          if (_currentStep == 2)
-            ElevatedButton(
-              onPressed: _createCollection,
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
-              child: Text('Create Collection'),
-            ),
-        ],
-      ),
+  Widget _buildReviewItem(BuildContext context, String label, String value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: AppTypography.labelSmall(context, AppColors.secondaryText),
+        ),
+        SizedBox(height: 4.h),
+        Text(
+          value,
+          style: AppTypography.bodyMedium(
+            context,
+            AppColors.darkText,
+            FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 
-  bool _canProceedToNext() {
-    if (_currentStep == 0) {
-      return _collectionNameController.text.isNotEmpty;
-    } else if (_currentStep == 1) {
-      return _rules.isNotEmpty;
-    }
-    return true;
-  }
-
-  void _showAddRuleDialog() {
-    final fieldController = TextEditingController();
-    final valueController = TextEditingController();
-    String selectedOperator = '=';
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Add Rule'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+  Widget _buildLogicOption(
+    BuildContext context,
+    String title,
+    String subtitle,
+    bool isSelected,
+    VoidCallback onTap,
+  ) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: AppSpacing.paddingAllM,
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary10 : AppColors.lightSurface,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(
+            color: isSelected ? AppColors.primaryColor : AppColors.borderLight,
+            width: isSelected ? 2.w : 1.w,
+          ),
+        ),
+        child: Column(
           children: [
-            TextField(
-              controller: fieldController,
-              decoration: InputDecoration(
-                labelText: 'Field',
-                hintText: 'e.g., type, size, createdAt',
+            Text(
+              title,
+              style: AppTypography.heading2(
+                context,
+                isSelected ? AppColors.primaryColor : AppColors.darkText,
               ),
             ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: selectedOperator,
-              items: ['=', '~', '>', '<', '^', "\$", '∈']
-                  .map((op) => DropdownMenuItem(value: op, child: Text(op)))
-                  .toList(),
-              onChanged: (value) {
-                selectedOperator = value ?? '=';
-              },
-              decoration: InputDecoration(labelText: 'Operator'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: valueController,
-              decoration: InputDecoration(labelText: 'Value'),
+            SizedBox(height: 4.h),
+            Text(
+              subtitle,
+              style: AppTypography.labelSmall(context, AppColors.secondaryText),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _rules.add({
-                  'field': fieldController.text,
-                  'operator': selectedOperator,
-                  'value': valueController.text,
-                });
-              });
-              Navigator.pop(context);
-            },
-            child: Text('Add'),
+      ),
+    );
+  }
+
+  Widget _buildNavigationButtons(
+    BuildContext context,
+    SmartCollectionWizardState state,
+  ) {
+    return Container(
+      padding: AppSpacing.paddingAllL,
+      decoration: const BoxDecoration(
+        color: AppColors.lightSurface,
+        border: Border(top: BorderSide(color: AppColors.borderLight)),
+      ),
+      child: Row(
+        children: [
+          if (state.currentStep > 0) ...[
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () {
+                  _pageController.previousPage(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                  getIt<GlobalUiService>().hapticFeedback();
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16.h),
+                  side: const BorderSide(color: AppColors.primaryColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                child: Text(
+                  'Previous',
+                  style: AppTypography.button(context, AppColors.primaryColor),
+                ),
+              ),
+            ),
+            AppSpacing.gapM,
+          ],
+          Expanded(
+            flex: 2,
+            child: ElevatedButton(
+              onPressed: state.currentStep < 2
+                  ? (_canProceedToNext(state) ? _nextStep : null)
+                  : () => _createCollection(context, state),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: state.currentStep == 2
+                    ? AppColors.successGreen
+                    : AppColors.primaryColor,
+                padding: EdgeInsets.symmetric(vertical: 16.h),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                elevation: 0,
+              ),
+              child: Text(
+                state.currentStep == 2 ? 'Create Collection' : 'Next Step',
+                style: AppTypography.button(context, AppColors.lightSurface),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  void _createCollection() {
-    if (_collectionNameController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please enter a collection name')));
+  void _nextStep() {
+    _pageController.nextPage(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+    getIt<GlobalUiService>().hapticFeedback();
+  }
+
+  bool _canProceedToNext(SmartCollectionWizardState state) {
+    if (state.currentStep == 0) return state.name.isNotEmpty;
+    if (state.currentStep == 1) return state.rules.isNotEmpty;
+    return true;
+  }
+
+  Future<void> _navigateToRuleBuilder(
+    BuildContext context,
+    SmartCollectionWizardState state,
+  ) async {
+    getIt<GlobalUiService>().hapticFeedback();
+    final result = await Navigator.pushNamed(
+      context,
+      AppRoutes.ruleBuilder,
+      arguments: state.rules,
+    );
+    if (result != null && result is List<Map<String, dynamic>>) {
+      context.read<SmartCollectionWizardBloc>().add(
+        UpdateWizardRulesEvent(rules: result),
+      );
+    }
+  }
+
+  void _createCollection(
+    BuildContext context,
+    SmartCollectionWizardState state,
+  ) {
+    if (state.name.isEmpty) {
+      getIt<GlobalUiService>().showWarning('Please provide a name');
       return;
     }
 
-    // Create collection via BLoC
     context.read<SmartCollectionsBloc>().add(
-      CreateCollectionEvent(
-        name: _collectionNameController.text,
-        description: _descriptionController.text,
-        rules: _rules,
-        logic: _logic,
+      CreateSmartCollectionEvent(
+        name: state.name.trim(),
+        description: state.description.trim(),
+        rules: state.rules
+            .map(
+              (r) => CollectionRule(
+                type: r['field'] ?? r['type'] ?? '',
+                operator: r['operator'] ?? '',
+                value: r['value'] ?? '',
+              ),
+            )
+            .toList(),
+        logic: state.logic,
       ),
     );
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Collection created successfully!')));
-
+    getIt<GlobalUiService>().showSuccess('Smart collection generated');
+    getIt<GlobalUiService>().hapticFeedback();
     Navigator.pop(context);
   }
-}
-
-// Add this event to SmartCollectionsBloc
-class CreateCollectionEvent extends SmartCollectionsEvent {
-  final String name;
-  final String description;
-  final List<Map<String, dynamic>> rules;
-  final String logic;
-
-  CreateCollectionEvent({
-    required this.name,
-    required this.description,
-    required this.rules,
-    required this.logic,
-  });
 }

@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/injection_container.dart';
+import 'package:mynotes/presentation/bloc/params/alarm_params.dart'
+    show AlarmParams;
 import 'package:uuid/uuid.dart';
 import '../../core/constants/app_colors.dart';
 import '../../domain/entities/alarm.dart';
 import '../../domain/entities/note.dart';
 import '../bloc/alarm_bloc.dart';
 import '../bloc/alarm_event.dart';
+import '../../core/services/global_ui_service.dart';
 
 class AlarmBottomSheet extends StatefulWidget {
   final Note note;
@@ -54,9 +58,7 @@ class _AlarmBottomSheetState extends State<AlarmBottomSheet> {
     );
 
     if (scheduledDateTime.isBefore(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a future time')),
-      );
+      getIt<GlobalUiService>().showWarning('Please select a future time');
       return;
     }
 
@@ -72,9 +74,13 @@ class _AlarmBottomSheetState extends State<AlarmBottomSheet> {
     );
 
     if (widget.existingAlarm != null) {
-      context.read<AlarmBloc>().add(UpdateAlarmEvent(alarm));
+      context.read<AlarmBloc>().add(
+        UpdateAlarmEvent(AlarmParams.fromAlarm(alarm)),
+      );
     } else {
-      context.read<AlarmBloc>().add(AddAlarmEvent(alarm));
+      context.read<AlarmBloc>().add(
+        AddAlarmEvent(AlarmParams.fromAlarm(alarm)),
+      );
     }
 
     Navigator.pop(context, alarm); // Return the alarm object

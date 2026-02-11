@@ -14,3 +14,9 @@ export 'app_animations.dart';
 
 // Components
 export 'components/components.dart';
+
+// Modern Utilities
+export '../../core/services/global_ui_service.dart';
+export '../../core/services/app_logger.dart';
+export '../../core/services/connectivity_service.dart';
+export '../../core/utils/form_validators.dart';

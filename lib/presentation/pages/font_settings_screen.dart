@@ -1,181 +1,158 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
 import '../../core/services/theme_customization_service.dart';
+import '../bloc/settings_bloc.dart';
+import '../bloc/params/settings_params.dart';
+import '../../injection_container.dart' show getIt;
 
 /// Font Settings Screen
-/// Allows users to customize font family and font size scaling (THM-002, THM-003)
-class FontSettingsScreen extends StatefulWidget {
+/// Refactored to StatelessWidget using SettingsBloc and Design System
+class FontSettingsScreen extends StatelessWidget {
   const FontSettingsScreen({super.key});
 
   @override
-  State<FontSettingsScreen> createState() => _FontSettingsScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider.value(
+      value: BlocProvider.of<SettingsBloc>(context),
+      child: const _FontSettingsView(),
+    );
+  }
 }
 
-class _FontSettingsScreenState extends State<FontSettingsScreen> {
-  AppFontFamily _selectedFont = AppFontFamily.system;
-  FontSizeScale _selectedScale = FontSizeScale.normal;
-  bool _isLoading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCurrentSettings();
-  }
-
-  Future<void> _loadCurrentSettings() async {
-    try {
-      final font = await ThemeCustomizationService.getFontFamily();
-      final scale = await ThemeCustomizationService.getFontSizeScale();
-      
-      setState(() {
-        _selectedFont = font;
-        _selectedScale = scale;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _updateFont(AppFontFamily font) async {
-    setState(() {
-      _selectedFont = font;
-    });
-    
-    await ThemeCustomizationService.setFontFamily(font);
-    AppTypography.updateFontSettings(font, _selectedScale.scale);
-    
-    if (mounted) {
-      // Trigger a rebuild of the entire app to apply font changes
-      final navigator = Navigator.of(context);
-      if (navigator.mounted) {
-        // Show feedback
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Font changed to ${font.displayName}'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _updateScale(FontSizeScale scale) async {
-    setState(() {
-      _selectedScale = scale;
-    });
-    
-    await ThemeCustomizationService.setFontSizeScale(scale);
-    AppTypography.updateFontSettings(_selectedFont, scale.scale);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Font size changed to ${scale.displayName}'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
+class _FontSettingsView extends StatelessWidget {
+  const _FontSettingsView();
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return Scaffold(
-        backgroundColor: AppColors.surface(context),
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          title: Text(
-            'Font Settings',
-            style: AppTypography.heading2(context, AppColors.textPrimary(context)),
-          ),
-        ),
-        body: const Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
     return Scaffold(
-      backgroundColor: AppColors.surface(context),
+      backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_rounded,
+            color: AppColors.darkText,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text(
           'Font Settings',
-          style: AppTypography.heading2(context, AppColors.textPrimary(context)),
+          style: AppTypography.displayMedium(context),
         ),
         actions: [
-          TextButton(
-            onPressed: _resetToDefaults,
-            child: Text(
-              'Reset',
-              style: AppTypography.labelMedium(context, AppColors.primary),
-            ),
+          BlocBuilder<SettingsBloc, SettingsState>(
+            builder: (context, state) {
+              if (state is SettingsLoaded) {
+                return TextButton(
+                  onPressed: () => _resetToDefaults(context, state.params),
+                  child: Text(
+                    'Reset',
+                    style: AppTypography.button(
+                      context,
+                      AppColors.primaryColor,
+                    ),
+                  ),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Font Family Section
-            _buildSectionHeader('Font Family'),
-            _buildFontFamilyList(),
-            
-            const SizedBox(height: 32),
-            
-            // Font Size Section
-            _buildSectionHeader('Font Size'),
-            _buildFontSizeList(),
-            
-            const SizedBox(height: 32),
-            
-            // Preview Section
-            _buildSectionHeader('Preview'),
-            _buildPreviewSection(),
-          ],
+      body: BlocBuilder<SettingsBloc, SettingsState>(
+        builder: (context, state) {
+          if (state is SettingsInitial || state is SettingsLoading) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (state is SettingsLoaded) {
+            final params = state.params;
+            final selectedFont = AppFontFamily.values.firstWhere(
+              (f) => f.displayName == params.fontFamily,
+              orElse: () => AppFontFamily.system,
+            );
+            final selectedScale = params.fontScale;
+
+            return SingleChildScrollView(
+              padding: AppSpacing.paddingAllL,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Font Family Section
+                  _buildSectionHeader(context, 'Font Family'),
+                  _buildFontFamilyList(context, params, selectedFont),
+
+                  AppSpacing.gapXXXL,
+
+                  // Font Size Section
+                  _buildSectionHeader(context, 'Font Size'),
+                  _buildFontSizeList(
+                    context,
+                    params,
+                    selectedFont,
+                    selectedScale,
+                  ),
+
+                  AppSpacing.gapXXXL,
+
+                  // Preview Section
+                  _buildSectionHeader(context, 'Preview'),
+                  _buildPreviewSection(context, selectedFont, selectedScale),
+                ],
+              ),
+            );
+          }
+
+          return const SizedBox.shrink();
+        },
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16.h),
+      child: Text(
+        title,
+        style: AppTypography.labelSmall(
+          context,
+          AppColors.secondaryText,
+          FontWeight.bold,
         ),
       ),
     );
   }
 
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Text(
-        title,
-        style: AppTypography.labelLarge(context, AppColors.textPrimary(context)),
-      ),
-    );
-  }
-
-  Widget _buildFontFamilyList() {
+  Widget _buildFontFamilyList(
+    BuildContext context,
+    SettingsParams params,
+    AppFontFamily selectedFont,
+  ) {
     return Column(
       children: AppFontFamily.values.map((font) {
-        return _buildFontFamilyOption(font);
+        return _buildFontFamilyOption(context, params, font, selectedFont);
       }).toList(),
     );
   }
 
-  Widget _buildFontFamilyOption(AppFontFamily font) {
-    final isSelected = font == _selectedFont;
-    
+  Widget _buildFontFamilyOption(
+    BuildContext context,
+    SettingsParams params,
+    AppFontFamily font,
+    AppFontFamily selectedFont,
+  ) {
+    final isSelected = font == selectedFont;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: 8.h),
       decoration: BoxDecoration(
-        color: isSelected 
-            ? AppColors.primary.withOpacity(0.1) 
-            : AppColors.surface(context),
-        borderRadius: BorderRadius.circular(12),
+        color: isSelected ? AppColors.primary10 : AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: isSelected 
-              ? AppColors.primary 
-              : AppColors.border(context),
+          color: isSelected ? AppColors.primaryColor : AppColors.borderLight,
           width: isSelected ? 2 : 1,
         ),
       ),
@@ -183,109 +160,126 @@ class _FontSettingsScreenState extends State<FontSettingsScreen> {
         title: Text(
           font.displayName,
           style: font.getTextStyle(
-            fontSize: 16,
+            fontSize: 16.sp,
             fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary(context),
+            color: AppColors.darkText,
           ),
         ),
         subtitle: Text(
           'The quick brown fox jumps over the lazy dog',
           style: font.getTextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary(context),
+            fontSize: 14.sp,
+            color: AppColors.secondaryText,
           ),
         ),
-        trailing: isSelected 
-            ? Icon(Icons.check_circle, color: AppColors.primary)
+        trailing: isSelected
+            ? Icon(Icons.check_circle_rounded, color: AppColors.primaryColor)
             : null,
-        onTap: () => _updateFont(font),
+        onTap: () => _updateFont(context, params, font),
       ),
     );
   }
 
-  Widget _buildFontSizeList() {
+  Widget _buildFontSizeList(
+    BuildContext context,
+    SettingsParams params,
+    AppFontFamily selectedFont,
+    double selectedScale,
+  ) {
     return Column(
       children: FontSizeScale.values.map((scale) {
-        return _buildFontSizeOption(scale);
+        return _buildFontSizeOption(
+          context,
+          params,
+          scale,
+          selectedFont,
+          selectedScale,
+        );
       }).toList(),
     );
   }
 
-  Widget _buildFontSizeOption(FontSizeScale scale) {
-    final isSelected = scale == _selectedScale;
-    
+  Widget _buildFontSizeOption(
+    BuildContext context,
+    SettingsParams params,
+    FontSizeScale scale,
+    AppFontFamily selectedFont,
+    double selectedScale,
+  ) {
+    final isSelected = (scale.scale - selectedScale).abs() < 0.01;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: EdgeInsets.only(bottom: 8.h),
       decoration: BoxDecoration(
-        color: isSelected 
-            ? AppColors.primary.withOpacity(0.1) 
-            : AppColors.surface(context),
-        borderRadius: BorderRadius.circular(12),
+        color: isSelected ? AppColors.primary10 : AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: isSelected 
-              ? AppColors.primary 
-              : AppColors.border(context),
+          color: isSelected ? AppColors.primaryColor : AppColors.borderLight,
           width: isSelected ? 2 : 1,
         ),
       ),
       child: ListTile(
         title: Text(
           scale.displayName,
-          style: _selectedFont.getTextStyle(
-            fontSize: 16 * scale.scale,
+          style: selectedFont.getTextStyle(
+            fontSize: 16.sp * scale.scale,
             fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary(context),
+            color: AppColors.darkText,
           ),
         ),
         subtitle: Text(
           '${(scale.scale * 100).toInt()}% of normal size',
-          style: _selectedFont.getTextStyle(
-            fontSize: 14,
-            color: AppColors.textSecondary(context),
+          style: selectedFont.getTextStyle(
+            fontSize: 14.sp,
+            color: AppColors.secondaryText,
           ),
         ),
-        trailing: isSelected 
-            ? Icon(Icons.check_circle, color: AppColors.primary)
+        trailing: isSelected
+            ? Icon(Icons.check_circle_rounded, color: AppColors.primaryColor)
             : null,
-        onTap: () => _updateScale(scale),
+        onTap: () => _updateScale(context, params, scale),
       ),
     );
   }
 
-  Widget _buildPreviewSection() {
+  Widget _buildPreviewSection(
+    BuildContext context,
+    AppFontFamily selectedFont,
+    double selectedScale,
+  ) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: AppSpacing.paddingAllL,
       decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border(context)),
+        color: AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.borderLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             'Preview Text',
-            style: _selectedFont.getTextStyle(
-              fontSize: 24 * _selectedScale.scale,
+            style: selectedFont.getTextStyle(
+              fontSize: 24.sp * selectedScale,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary(context),
+              color: AppColors.darkText,
             ),
           ),
-          const SizedBox(height: 8),
+          AppSpacing.gapM,
           Text(
             'This is how your text will look with the current font settings. The quick brown fox jumps over the lazy dog.',
-            style: _selectedFont.getTextStyle(
-              fontSize: 16 * _selectedScale.scale,
-              color: AppColors.textPrimary(context),
+            style: selectedFont.getTextStyle(
+              fontSize: 16.sp * selectedScale,
+              color: AppColors.darkText,
               height: 1.5,
             ),
           ),
-          const SizedBox(height: 12),
+          AppSpacing.gapS,
           Text(
             'Small text example for readability testing.',
-            style: _selectedFont.getTextStyle(
-              fontSize: 14 * _selectedScale.scale,
-              color: AppColors.textSecondary(context),
+            style: selectedFont.getTextStyle(
+              fontSize: 14.sp * selectedScale,
+              color: AppColors.secondaryText,
             ),
           ),
         ],
@@ -293,18 +287,41 @@ class _FontSettingsScreenState extends State<FontSettingsScreen> {
     );
   }
 
-  Future<void> _resetToDefaults() async {
-    await _updateFont(AppFontFamily.system);
-    await _updateScale(FontSizeScale.normal);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Font settings reset to defaults'),
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
+  void _updateFont(
+    BuildContext context,
+    SettingsParams params,
+    AppFontFamily font,
+  ) {
+    final newParams = params.copyWith(fontFamily: font.displayName);
+    context.read<SettingsBloc>().add(UpdateSettingsEvent(newParams));
+    AppTypography.updateFontSettings(font, params.fontScale);
+    getIt<GlobalUiService>().showSuccess('Font changed to ${font.displayName}');
+  }
+
+  void _updateScale(
+    BuildContext context,
+    SettingsParams params,
+    FontSizeScale scale,
+  ) {
+    final newParams = params.copyWith(fontScale: scale.scale);
+    context.read<SettingsBloc>().add(UpdateSettingsEvent(newParams));
+    final font = AppFontFamily.values.firstWhere(
+      (f) => f.displayName == params.fontFamily,
+      orElse: () => AppFontFamily.system,
+    );
+    AppTypography.updateFontSettings(font, scale.scale);
+    getIt<GlobalUiService>().showSuccess(
+      'Font size changed to ${scale.displayName}',
+    );
+  }
+
+  void _resetToDefaults(BuildContext context, SettingsParams params) {
+    final newParams = params.copyWith(
+      fontFamily: 'System Default',
+      fontScale: 1.0,
+    );
+    context.read<SettingsBloc>().add(UpdateSettingsEvent(newParams));
+    AppTypography.updateFontSettings(AppFontFamily.system, 1.0);
+    getIt<GlobalUiService>().showSuccess('Font settings reset to defaults');
   }
 }
-

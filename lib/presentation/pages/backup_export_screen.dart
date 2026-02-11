@@ -1,267 +1,396 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../design_system/design_system.dart';
+import 'package:mynotes/core/services/backup_service.dart';
+import 'package:file_picker/file_picker.dart';
+import '../../injection_container.dart' show getIt;
+import '../bloc/backup_bloc.dart';
+import '../bloc/params/backup_params.dart';
 
 /// Backup and Export Start Screen
-/// Configure and initiate data export
-class BackupExportScreen extends StatefulWidget {
+/// Refactored to use Design System, BackupBloc, and Stateless architecture
+class BackupExportScreen extends StatelessWidget {
   const BackupExportScreen({super.key});
 
   @override
-  State<BackupExportScreen> createState() => _BackupExportScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) =>
+          getIt<BackupBloc>()..add(const LoadBackupStatsEvent()),
+      child: const _BackupExportView(),
+    );
+  }
 }
 
-class _BackupExportScreenState extends State<BackupExportScreen> {
-  bool _includeMedia = true;
+class _BackupExportView extends StatelessWidget {
+  const _BackupExportView();
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: AppColors.surface(context),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            _buildHeader(context),
+    return BlocConsumer<BackupBloc, BackupState>(
+      listener: (context, state) {
+        if (state is BackupCompleted) {
+          final statsState = context.read<BackupBloc>().state;
+          double totalSize = 0;
+          if (statsState is BackupStatsLoaded) {
+            totalSize = state.params.includeMedia
+                ? (statsState.dbSize + statsState.mediaSize)
+                : statsState.dbSize;
+          }
 
-            // Content
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Column(
-                  children: [
-                    SizedBox(height: 32.h),
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => BackupCompleteScreen(
+                backupPath: state.backupFile,
+                fileSize: totalSize,
+              ),
+            ),
+          );
+        } else if (state is BackupError) {
+          getIt<GlobalUiService>().showError(state.message);
+        } else if (state is RestoreCompleted) {
+          getIt<GlobalUiService>().showSuccess(state.message);
+        }
+      },
+      builder: (context, state) {
+        bool isLoading = state is BackupInProgress || state is BackupInitial;
+        BackupParams params = const BackupParams();
 
-                    // Illustration
-                    _buildIllustration(isDark),
+        if (state is BackupStatsLoaded) {
+          params = state.params;
+        } else if (state is BackupSettingsUpdated) {
+          params = state.params;
+        }
 
-                    SizedBox(height: 32.h),
+        return Scaffold(
+          backgroundColor: AppColors.lightBackground,
+          body: SafeArea(
+            child: Column(
+              children: [
+                // Header
+                _buildHeader(context),
 
-                    // Title and subtitle
-                    Text(
-                      'Your data, your control',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.titleLarge(
-                        null,
-                        null,
-                        FontWeight.bold,
-                      ).copyWith(fontSize: 30.sp),
-                    ),
+                // Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: AppSpacing.paddingAllL,
+                    child: Column(
+                      children: [
+                        AppSpacing.gapXXXL,
 
-                    SizedBox(height: 8.h),
+                        // Illustration
+                        _buildIllustration(context, isDark),
 
-                    Text(
-                      'Create a complete archive of your productivity workspace.',
-                      textAlign: TextAlign.center,
-                      style: AppTypography.bodySmall(null).copyWith(
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : Colors.grey.shade600,
-                      ),
-                    ),
+                        AppSpacing.gapXXXL,
 
-                    SizedBox(height: 32.h),
+                        // Title and subtitle
+                        Text(
+                          'Your data, your control',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.displayLarge(context),
+                        ),
 
-                    // Section header
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: Padding(
-                        padding: EdgeInsets.only(left: 4.w, bottom: 8.h),
-                        child: Text(
-                          'INCLUDED IN EXPORT',
-                          style: AppTypography.captionSmall(null).copyWith(
-                            color: isDark
-                                ? Colors.grey.shade500
-                                : Colors.grey.shade400,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.5,
+                        AppSpacing.gapS,
+
+                        Text(
+                          'Create a complete archive of your productivity workspace.',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodySmall(
+                            context,
+                            AppColors.secondaryText,
                           ),
                         ),
-                      ),
-                    ),
 
-                    // Include items
-                    _buildIncludeItem(
-                      icon: Icons.description_outlined,
-                      title: 'Notes',
-                      subtitle: 'Formatted text and attached media',
-                      isDark: isDark,
-                    ),
+                        AppSpacing.gapXXXL,
 
-                    SizedBox(height: 4.h),
-
-                    _buildIncludeItem(
-                      icon: Icons.check_circle_outline_rounded,
-                      title: 'Todos & History',
-                      subtitle: 'Task lists and completion logs',
-                      isDark: isDark,
-                    ),
-
-                    SizedBox(height: 4.h),
-
-                    _buildIncludeItem(
-                      icon: Icons.auto_stories_outlined,
-                      title: 'Reflection Journal',
-                      subtitle: 'Daily thoughts and mood tracking',
-                      isDark: isDark,
-                    ),
-
-                    SizedBox(height: 32.h),
-
-                    // Toggle option
-                    Container(
-                      padding: EdgeInsets.all(16.w),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? Colors.grey.shade900.withOpacity(0.5)
-                            : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12.r),
-                        border: Border.all(
-                          color: isDark
-                              ? Colors.grey.shade800
-                              : Colors.grey.shade100,
+                        // Section header
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: EdgeInsets.only(left: 4.w, bottom: 8.h),
+                            child: Text(
+                              'INCLUDED IN EXPORT',
+                              style: AppTypography.labelSmall(
+                                context,
+                                AppColors.secondaryText,
+                                FontWeight.bold,
+                              ).copyWith(letterSpacing: 1.5),
+                            ),
+                          ),
                         ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Include media files',
-                                  style: AppTypography.bodyMedium(
-                                    null,
-                                    null,
-                                    FontWeight.w600,
-                                  ),
-                                ),
-                                SizedBox(height: 4.h),
-                                Text(
-                                  'Significantly increases file size',
-                                  style: AppTypography.captionSmall(null)
-                                      .copyWith(
-                                        color: isDark
-                                            ? Colors.grey.shade400
-                                            : Colors.grey.shade600,
+
+                        // Include items
+                        _buildIncludeItem(
+                          context,
+                          icon: Icons.description_outlined,
+                          title: 'Notes',
+                          subtitle: 'Formatted text and attached media',
+                          isDark: isDark,
+                        ),
+
+                        AppSpacing.gapXS,
+
+                        _buildIncludeItem(
+                          context,
+                          icon: Icons.check_circle_outline_rounded,
+                          title: 'Todos & History',
+                          subtitle: 'Task lists and completion logs',
+                          isDark: isDark,
+                        ),
+
+                        AppSpacing.gapXS,
+
+                        _buildIncludeItem(
+                          context,
+                          icon: Icons.auto_stories_outlined,
+                          title: 'Reflection Journal',
+                          subtitle: 'Daily thoughts and mood tracking',
+                          isDark: isDark,
+                        ),
+
+                        AppSpacing.gapXXXL,
+
+                        // Toggle option
+                        Container(
+                          padding: AppSpacing.paddingAllM,
+                          decoration: BoxDecoration(
+                            color: AppColors.lightSurface,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(color: AppColors.borderLight),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Include media files',
+                                      style: AppTypography.bodyMedium(
+                                        context,
+                                        null,
+                                        FontWeight.w600,
                                       ),
+                                    ),
+                                    AppSpacing.gapXS,
+                                    Text(
+                                      'Significantly increases file size',
+                                      style: AppTypography.labelSmall(
+                                        context,
+                                        AppColors.secondaryText,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Switch(
+                                value: params.includeMedia,
+                                onChanged: (value) {
+                                  context.read<BackupBloc>().add(
+                                    UpdateBackupSettingsEvent(
+                                      params.copyWith(includeMedia: value),
+                                    ),
+                                  );
+                                },
+                                activeColor: AppColors.primaryColor,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        AppSpacing.gapXXXL,
+
+                        // Export Format Section
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Padding(
+                            padding: EdgeInsets.only(
+                              left: 4.w,
+                              top: 8.h,
+                              bottom: 8.h,
+                            ),
+                            child: Text(
+                              'EXPORT FORMAT',
+                              style: AppTypography.labelSmall(
+                                context,
+                                AppColors.secondaryText,
+                                FontWeight.bold,
+                              ).copyWith(letterSpacing: 1.5),
+                            ),
+                          ),
+                        ),
+
+                        Container(
+                          padding: EdgeInsets.symmetric(horizontal: 16.w),
+                          decoration: BoxDecoration(
+                            color: AppColors.lightSurface,
+                            borderRadius: BorderRadius.circular(12.r),
+                            border: Border.all(color: AppColors.borderLight),
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              value: params.exportFormat,
+                              isExpanded: true,
+                              onChanged: (value) {
+                                if (value != null) {
+                                  context.read<BackupBloc>().add(
+                                    UpdateBackupSettingsEvent(
+                                      params.copyWith(exportFormat: value),
+                                    ),
+                                  );
+                                }
+                              },
+                              items: ['ZIP', 'Markdown', 'JSON', 'PDF'].map((
+                                String value,
+                              ) {
+                                return DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(
+                                    value,
+                                    style: AppTypography.bodyMedium(context),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+
+                        AppSpacing.gapXXXL,
+
+                        // Start Export Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56.h,
+                          child: ElevatedButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => _startExport(context, params),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primaryColor,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                if (isLoading)
+                                  const CircularProgressIndicator(
+                                    color: Colors.white,
+                                  )
+                                else ...[
+                                  Text(
+                                    'Start ${params.exportFormat} Export',
+                                    style: AppTypography.button(
+                                      context,
+                                      Colors.white,
+                                    ),
+                                  ),
+                                  AppSpacing.gapS,
+                                  Icon(
+                                    Icons.arrow_forward_rounded,
+                                    size: 20.sp,
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        AppSpacing.gapM,
+
+                        // Import Button
+                        SizedBox(
+                          width: double.infinity,
+                          height: 56.h,
+                          child: OutlinedButton(
+                            onPressed: isLoading
+                                ? null
+                                : () => _importData(context, params),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.darkText,
+                              side: const BorderSide(
+                                color: AppColors.borderLight,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12.r),
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.upload_file_rounded, size: 20.sp),
+                                AppSpacing.gapS,
+                                Text(
+                                  'Import from File',
+                                  style: AppTypography.button(
+                                    context,
+                                    AppColors.darkText,
+                                  ),
                                 ),
                               ],
                             ),
                           ),
-                          Switch(
-                            value: _includeMedia,
-                            onChanged: (value) {
-                              setState(() {
-                                _includeMedia = value;
-                              });
-                            },
-                            activeColor: AppColors.primary,
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    SizedBox(height: 32.h),
-
-                    // Start Export Button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56.h,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const BackupCompleteScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                          ),
-                          elevation: 8,
-                          shadowColor: AppColors.primary.withOpacity(0.2),
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Start Export',
-                              style: AppTypography.bodyLarge(
-                                null,
-                                Colors.white,
-                                FontWeight.bold,
-                              ),
-                            ),
-                            SizedBox(width: 8.w),
-                            Icon(Icons.arrow_forward_rounded, size: 20.sp),
-                          ],
-                        ),
-                      ),
-                    ),
 
-                    SizedBox(height: 16.h),
+                        AppSpacing.gapXXXL,
 
-                    // Privacy notice
-                    Column(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        // Privacy notice
+                        Column(
                           children: [
-                            Icon(
-                              Icons.shield_outlined,
-                              size: 14.sp,
-                              color: isDark
-                                  ? Colors.grey.shade500
-                                  : Colors.grey.shade400,
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.shield_outlined,
+                                  size: 14.sp,
+                                  color: AppColors.secondaryText,
+                                ),
+                                AppSpacing.gapXS,
+                                Text(
+                                  'Privacy First',
+                                  style: AppTypography.labelSmall(
+                                    context,
+                                    AppColors.secondaryText,
+                                  ),
+                                ),
+                              ],
                             ),
-                            SizedBox(width: 6.w),
+                            AppSpacing.gapS,
                             Text(
-                              'Privacy First',
-                              style: AppTypography.captionSmall(null).copyWith(
-                                color: isDark
-                                    ? Colors.grey.shade500
-                                    : Colors.grey.shade400,
-                              ),
+                              'All data is processed locally on your device before being zipped for you. No unencrypted data ever leaves your hardware.',
+                              textAlign: TextAlign.center,
+                              style: AppTypography.labelSmall(
+                                context,
+                                AppColors.secondaryText,
+                              ).copyWith(fontSize: 11.sp, height: 1.4),
                             ),
                           ],
                         ),
-                        SizedBox(height: 8.h),
-                        Text(
-                          'All data is processed locally on your device before being zipped for you. No unencrypted data ever leaves your hardware.',
-                          textAlign: TextAlign.center,
-                          style: AppTypography.captionSmall(null).copyWith(
-                            color: isDark
-                                ? Colors.grey.shade500
-                                : Colors.grey.shade400,
-                            fontSize: 11.sp,
-                            height: 1.4,
-                          ),
-                        ),
+
+                        AppSpacing.gapXXXL,
                       ],
                     ),
-
-                    SizedBox(height: 24.h),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildHeader(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(16.w),
+      padding: AppSpacing.paddingAllM,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -269,30 +398,20 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
             icon: const Icon(Icons.close_rounded),
             onPressed: () => Navigator.pop(context),
           ),
-          Text(
-            'Backup & Export',
-            style: AppTypography.titleMedium(null, null, FontWeight.bold),
-          ),
+          Text('Backup & Export', style: AppTypography.displayMedium(context)),
           SizedBox(width: 40.w),
         ],
       ),
     );
   }
 
-  Widget _buildIllustration(bool isDark) {
+  Widget _buildIllustration(BuildContext context, bool isDark) {
     return Container(
       width: 192.w,
       height: 192.w,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.primary.withOpacity(0.1),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withOpacity(0.05),
-            blurRadius: 80,
-            spreadRadius: 20,
-          ),
-        ],
+        color: AppColors.primaryColor.withOpacity(0.1),
       ),
       child: Stack(
         alignment: Alignment.center,
@@ -301,12 +420,12 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
             width: 128.w,
             height: 128.w,
             decoration: BoxDecoration(
-              color: AppColors.surface(context),
+              color: AppColors.lightSurface,
               borderRadius: BorderRadius.circular(24.r),
-              border: Border.all(color: AppColors.primary, width: 4),
+              border: Border.all(color: AppColors.primaryColor, width: 4),
               boxShadow: [
                 BoxShadow(
-                  color: AppColors.primary.withOpacity(0.3),
+                  color: AppColors.primaryColor.withOpacity(0.3),
                   blurRadius: 40,
                 ),
               ],
@@ -314,23 +433,17 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
             child: Icon(
               Icons.enhanced_encryption_rounded,
               size: 60.sp,
-              color: AppColors.primary,
+              color: AppColors.primaryColor,
             ),
           ),
           Positioned(
             bottom: 16.h,
             right: 16.w,
             child: Container(
-              padding: EdgeInsets.all(8.w),
+              padding: AppSpacing.paddingAllS,
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: AppColors.primaryColor,
                 borderRadius: BorderRadius.circular(12.r),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.5),
-                    blurRadius: 12,
-                  ),
-                ],
               ),
               child: Icon(
                 Icons.cloud_done_rounded,
@@ -344,22 +457,19 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
     );
   }
 
-  Widget _buildIncludeItem({
+  Widget _buildIncludeItem(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
     required bool isDark,
   }) {
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: AppSpacing.paddingAllM,
       decoration: BoxDecoration(
-        color: isDark
-            ? Colors.grey.shade900.withOpacity(0.5)
-            : Colors.grey.shade50,
+        color: AppColors.lightSurface,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(
-          color: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-        ),
+        border: Border.all(color: AppColors.borderLight),
       ),
       child: Row(
         children: [
@@ -367,25 +477,30 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
             width: 48.w,
             height: 48.w,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: AppColors.primary10,
               borderRadius: BorderRadius.circular(8.r),
             ),
-            child: Icon(icon, color: AppColors.primary, size: 24.sp),
+            child: Icon(icon, color: AppColors.primaryColor, size: 24.sp),
           ),
-          SizedBox(width: 16.w),
+          AppSpacing.gapL,
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: AppTypography.bodyMedium(null, null, FontWeight.w600),
+                  style: AppTypography.bodyMedium(
+                    context,
+                    null,
+                    FontWeight.w600,
+                  ),
                 ),
-                SizedBox(height: 2.h),
+                AppSpacing.gapXS,
                 Text(
                   subtitle,
-                  style: AppTypography.captionSmall(null).copyWith(
-                    color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
+                  style: AppTypography.labelSmall(
+                    context,
+                    AppColors.secondaryText,
                   ),
                 ),
               ],
@@ -395,25 +510,53 @@ class _BackupExportScreenState extends State<BackupExportScreen> {
       ),
     );
   }
+
+  void _startExport(BuildContext context, BackupParams params) {
+    context.read<BackupBloc>().add(CreateBackupEvent(params));
+  }
+
+  Future<void> _importData(BuildContext context, BackupParams params) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['zip', 'json'],
+    );
+
+    if (result != null && result.files.single.path != null) {
+      context.read<BackupBloc>().add(
+        RestoreBackupEvent(
+          params: params,
+          backupFilePath: result.files.single.path!,
+        ),
+      );
+    }
+  }
 }
 
 /// Backup Complete Screen
 /// Shows successful export with download/share options
 class BackupCompleteScreen extends StatelessWidget {
-  const BackupCompleteScreen({super.key});
+  final String backupPath;
+  final double fileSize;
+
+  const BackupCompleteScreen({
+    super.key,
+    required this.backupPath,
+    required this.fileSize,
+  });
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final fileName = backupPath.split(Platform.pathSeparator).last;
 
     return Scaffold(
-      backgroundColor: AppColors.surface(context),
+      backgroundColor: AppColors.lightBackground,
       body: SafeArea(
         child: Column(
           children: [
             // Header
             Padding(
-              padding: EdgeInsets.all(16.w),
+              padding: AppSpacing.paddingAllM,
               child: Row(
                 children: [
                   IconButton(
@@ -424,11 +567,7 @@ class BackupCompleteScreen extends StatelessWidget {
                     child: Text(
                       'Backup & Export',
                       textAlign: TextAlign.center,
-                      style: AppTypography.titleMedium(
-                        null,
-                        null,
-                        FontWeight.bold,
-                      ),
+                      style: AppTypography.displayMedium(context),
                     ),
                   ),
                   SizedBox(width: 40.w),
@@ -450,59 +589,43 @@ class BackupCompleteScreen extends StatelessWidget {
                         height: 128.w,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.primary.withOpacity(0.1),
-                          boxShadow: [
-                            BoxShadow(
-                              color: AppColors.primary.withOpacity(0.15),
-                              blurRadius: 40,
-                              spreadRadius: 10,
-                            ),
-                          ],
+                          color: AppColors.primary10,
                         ),
                         child: Icon(
                           Icons.check_circle_rounded,
                           size: 72.sp,
-                          color: AppColors.primary,
+                          color: AppColors.primaryColor,
                         ),
                       ),
 
-                      SizedBox(height: 32.h),
+                      AppSpacing.gapXXXL,
 
                       Text(
                         'Export Ready',
-                        style: AppTypography.titleLarge(
-                          null,
-                          null,
-                          FontWeight.bold,
-                        ).copyWith(fontSize: 32.sp),
+                        style: AppTypography.displayLarge(context),
                       ),
 
-                      SizedBox(height: 8.h),
+                      AppSpacing.gapS,
 
                       Text(
                         'Your archive has been prepared successfully and is ready for download.',
                         textAlign: TextAlign.center,
-                        style: AppTypography.bodyMedium(null).copyWith(
-                          color: isDark
-                              ? Colors.grey.shade400
-                              : Colors.grey.shade600,
+                        style: AppTypography.bodyMedium(
+                          context,
+                          AppColors.secondaryText,
                         ),
                       ),
 
-                      SizedBox(height: 40.h),
+                      AppSpacing.gapXXXL,
 
                       // File info card
                       Container(
                         width: double.infinity,
-                        padding: EdgeInsets.all(16.w),
+                        padding: AppSpacing.paddingAllM,
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.grey.shade800 : Colors.white,
+                          color: AppColors.lightSurface,
                           borderRadius: BorderRadius.circular(12.r),
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.grey.shade700
-                                : Colors.grey.shade100,
-                          ),
+                          border: Border.all(color: AppColors.borderLight),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.05),
@@ -517,22 +640,22 @@ class BackupCompleteScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    '14.2 MB',
-                                    style: AppTypography.titleMedium(
-                                      null,
+                                    '${fileSize.toStringAsFixed(1)} MB',
+                                    style: AppTypography.bodyLarge(
+                                      context,
                                       null,
                                       FontWeight.bold,
                                     ),
                                   ),
-                                  SizedBox(height: 4.h),
+                                  AppSpacing.gapXS,
                                   Text(
-                                    'MyNotes_Backup_2023.zip',
-                                    style: AppTypography.bodySmall(null)
-                                        .copyWith(
-                                          color: isDark
-                                              ? Colors.grey.shade400
-                                              : Colors.grey.shade600,
-                                        ),
+                                    fileName,
+                                    style: AppTypography.labelSmall(
+                                      context,
+                                      AppColors.secondaryText,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ],
                               ),
@@ -541,47 +664,46 @@ class BackupCompleteScreen extends StatelessWidget {
                               width: 64.w,
                               height: 64.w,
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
+                                color: AppColors.primary10,
                                 borderRadius: BorderRadius.circular(8.r),
                               ),
                               child: Icon(
                                 Icons.folder_zip_outlined,
                                 size: 32.sp,
-                                color: AppColors.primary,
+                                color: AppColors.primaryColor,
                               ),
                             ),
                           ],
                         ),
                       ),
 
-                      SizedBox(height: 32.h),
+                      AppSpacing.gapXXXL,
 
                       // Action buttons
                       SizedBox(
                         width: double.infinity,
                         height: 56.h,
                         child: ElevatedButton(
-                          onPressed: () {},
+                          onPressed: () =>
+                              BackupService.shareBackup(backupPath),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
+                            backgroundColor: AppColors.primaryColor,
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.r),
                             ),
-                            elevation: 8,
-                            shadowColor: AppColors.primary.withOpacity(0.2),
+                            elevation: 0,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.download_rounded, size: 20.sp),
-                              SizedBox(width: 8.w),
+                              AppSpacing.gapS,
                               Text(
-                                'Save to Device',
-                                style: AppTypography.bodyLarge(
-                                  null,
+                                'Save or Share',
+                                style: AppTypography.button(
+                                  context,
                                   Colors.white,
-                                  FontWeight.bold,
                                 ),
                               ),
                             ],
@@ -589,25 +711,20 @@ class BackupCompleteScreen extends StatelessWidget {
                         ),
                       ),
 
-                      SizedBox(height: 16.h),
+                      AppSpacing.gapM,
 
                       SizedBox(
                         width: double.infinity,
                         height: 56.h,
                         child: OutlinedButton(
-                          onPressed: () {},
+                          onPressed: () =>
+                              BackupService.shareBackup(backupPath),
                           style: OutlinedButton.styleFrom(
-                            foregroundColor: isDark
-                                ? Colors.white
-                                : Colors.black87,
-                            side: BorderSide(
-                              color: isDark
-                                  ? Colors.grey.shade700
-                                  : Colors.grey.shade300,
+                            foregroundColor: AppColors.darkText,
+                            side: const BorderSide(
+                              color: AppColors.borderLight,
                             ),
-                            backgroundColor: isDark
-                                ? Colors.grey.shade800
-                                : Colors.grey.shade100,
+                            backgroundColor: AppColors.lightBackground,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12.r),
                             ),
@@ -616,13 +733,12 @@ class BackupCompleteScreen extends StatelessWidget {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(Icons.share_rounded, size: 20.sp),
-                              SizedBox(width: 8.w),
+                              AppSpacing.gapS,
                               Text(
                                 'Share Archive',
-                                style: AppTypography.bodyLarge(
-                                  null,
-                                  null,
-                                  FontWeight.bold,
+                                style: AppTypography.button(
+                                  context,
+                                  AppColors.darkText,
                                 ),
                               ),
                             ],
@@ -637,7 +753,7 @@ class BackupCompleteScreen extends StatelessWidget {
 
             // Done button
             Padding(
-              padding: EdgeInsets.all(16.w),
+              padding: AppSpacing.paddingAllM,
               child: TextButton(
                 onPressed: () {
                   Navigator.pop(context);
@@ -645,20 +761,15 @@ class BackupCompleteScreen extends StatelessWidget {
                 },
                 child: Text(
                   'Done',
-                  style: AppTypography.bodyLarge(
-                    null,
-                    AppColors.primary,
-                    FontWeight.bold,
-                  ),
+                  style: AppTypography.button(context, AppColors.primaryColor),
                 ),
               ),
             ),
 
-            SizedBox(height: 32.h),
+            AppSpacing.gapXXXL,
           ],
         ),
       ),
     );
   }
 }
-

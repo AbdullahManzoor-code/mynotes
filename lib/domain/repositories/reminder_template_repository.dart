@@ -5,6 +5,9 @@ abstract class ReminderTemplateRepository {
   /// Load all templates
   Future<List<ReminderTemplate>> loadTemplates();
 
+  /// Get template by ID
+  Future<ReminderTemplate?> getTemplateById(String id);
+
   /// Get templates by category
   Future<List<ReminderTemplate>> getTemplatesByCategory(String category);
 
@@ -25,6 +28,12 @@ abstract class ReminderTemplateRepository {
 
   /// Get all categories
   Future<List<String>> getCategories();
+
+  /// Search templates
+  Future<List<ReminderTemplate>> searchTemplates(String query);
+
+  /// Get most used templates
+  Future<List<ReminderTemplate>> getMostUsedTemplates({int limit = 10});
 
   /// Get template statistics
   Future<Map<String, dynamic>> getTemplateStats();

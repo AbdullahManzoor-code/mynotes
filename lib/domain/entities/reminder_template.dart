@@ -49,7 +49,7 @@ class ReminderTemplate extends Equatable {
     'frequency': frequency,
     'duration': duration,
     'category': category,
-    'isFavorite': isFavorite,
+    'isFavorite': isFavorite ? 1 : 0,
     'createdAt': createdAt.toIso8601String(),
     'usageCount': usageCount,
   };
@@ -64,7 +64,7 @@ class ReminderTemplate extends Equatable {
       frequency: json['frequency'] as String,
       duration: json['duration'] as String,
       category: json['category'] as String,
-      isFavorite: json['isFavorite'] as bool? ?? false,
+      isFavorite: json['isFavorite'] == 1 || json['isFavorite'] == true,
       createdAt: DateTime.parse(json['createdAt'] as String),
       usageCount: json['usageCount'] as int? ?? 0,
     );

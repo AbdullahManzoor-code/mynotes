@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
-import 'package:mynotes/core/design_system/app_spacing.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/presentation/bloc/reminder_templates_bloc.dart';
 
 /// Reminder Templates Screen (ALM-004)
 /// Pre-built reminder templates for quick reminder creation
@@ -15,176 +16,121 @@ class ReminderTemplatesScreen extends StatefulWidget {
 }
 
 class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
-  final templates = [
-    {
-      'name': 'Daily Standup',
-      'description': 'Quick team sync meeting',
-      'time': '10:00 AM',
-      'frequency': 'Weekdays',
-      'duration': '15 min',
-      'icon': Icons.people,
-      'color': Colors.blue,
-      'category': 'Work',
-    },
-    {
-      'name': 'Lunch Break',
-      'description': 'Take a break and eat',
-      'time': '12:30 PM',
-      'frequency': 'Daily',
-      'duration': '60 min',
-      'icon': Icons.restaurant,
-      'color': Colors.orange,
-      'category': 'Personal',
-    },
-    {
-      'name': 'Medication Reminder',
-      'description': 'Take your daily medications',
-      'time': '8:00 AM, 8:00 PM',
-      'frequency': 'Daily',
-      'duration': '5 min',
-      'icon': Icons.health_and_safety,
-      'color': Colors.red,
-      'category': 'Health',
-    },
-    {
-      'name': 'Review Goals',
-      'description': 'Weekly goal review session',
-      'time': 'Friday 5:00 PM',
-      'frequency': 'Weekly',
-      'duration': '30 min',
-      'icon': Icons.flag,
-      'color': Colors.purple,
-      'category': 'Personal',
-    },
-    {
-      'name': 'Team Meeting',
-      'description': 'Weekly team all-hands',
-      'time': '2:00 PM',
-      'frequency': 'Every Tuesday',
-      'duration': '60 min',
-      'icon': Icons.groups,
-      'color': Colors.teal,
-      'category': 'Work',
-    },
-    {
-      'name': 'Workout Session',
-      'description': 'Exercise routine',
-      'time': '6:00 AM',
-      'frequency': 'Mon, Wed, Fri',
-      'duration': '45 min',
-      'icon': Icons.fitness_center,
-      'color': Colors.green,
-      'category': 'Health',
-    },
-    {
-      'name': 'Water Intake',
-      'description': 'Drink a glass of water',
-      'time': 'Every 2 hours',
-      'frequency': 'Daily',
-      'duration': '5 min',
-      'icon': Icons.water_drop,
-      'color': Colors.lightBlue,
-      'category': 'Health',
-    },
-    {
-      'name': 'Project Deadline',
-      'description': 'Submit project deliverables',
-      'time': '4:00 PM',
-      'frequency': 'Custom',
-      'duration': '15 min',
-      'icon': Icons.task_alt,
-      'color': Colors.indigo,
-      'category': 'Work',
-    },
-  ];
-
-  String selectedCategory = 'All';
-  Set<String> favoriteTemplates = {};
+  @override
+  void initState() {
+    super.initState();
+    context.read<ReminderTemplatesBloc>().add(const LoadTemplatesEvent());
+  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final categories = ['All', 'Work', 'Personal', 'Health'];
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: _buildAppBar(context),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            _buildCategoryFilter(categories, context),
-            Padding(
-              padding: EdgeInsets.all(16.w),
+    return BlocBuilder<ReminderTemplatesBloc, ReminderTemplatesState>(
+      builder: (context, state) {
+        if (state is ReminderTemplatesLoading) {
+          return Scaffold(
+            backgroundColor: AppColors.background(context),
+            appBar: _buildAppBar(context, {}),
+            body: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (state is ReminderTemplatesError) {
+          return Scaffold(
+            backgroundColor: AppColors.background(context),
+            appBar: _buildAppBar(context, {}),
+            body: Center(
+              child: Text(
+                'Error: ${state.message}',
+                style: AppTypography.body1(context),
+              ),
+            ),
+          );
+        }
+
+        if (state is ReminderTemplatesLoaded) {
+          return Scaffold(
+            backgroundColor: AppColors.background(context),
+            appBar: _buildAppBar(context, state.favoriteIds),
+            body: SingleChildScrollView(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Available Templates',
-                    style: AppTypography.heading3().copyWith(
-                      color: isDark ? AppColors.lightText : AppColors.darkText,
-                    ),
+                  _buildCategoryFilter(
+                    state.categories,
+                    state.selectedCategory,
+                    context,
                   ),
-                  SizedBox(height: 16.h),
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      mainAxisSpacing: 12.h,
-                      crossAxisSpacing: 12.w,
-                      childAspectRatio: 0.85,
+                  Padding(
+                    padding: EdgeInsets.all(16.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Available Templates',
+                          style: AppTypography.heading3().copyWith(
+                            color: isDark
+                                ? AppColors.lightText
+                                : AppColors.darkText,
+                          ),
+                        ),
+                        SizedBox(height: 16.h),
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 2,
+                                mainAxisSpacing: 12.h,
+                                crossAxisSpacing: 12.w,
+                                childAspectRatio: 0.85,
+                              ),
+                          itemCount: state.templates.length,
+                          itemBuilder: (context, index) {
+                            return _buildTemplateCard(
+                              state.templates[index],
+                              state.favoriteIds.contains(
+                                state.templates[index]['id'],
+                              ),
+                              context,
+                            );
+                          },
+                        ),
+                      ],
                     ),
-                    itemCount: templates
-                        .where(
-                          (t) =>
-                              selectedCategory == 'All' ||
-                              t['category'] == selectedCategory,
-                        )
-                        .length,
-                    itemBuilder: (context, index) {
-                      final filteredTemplates = templates
-                          .where(
-                            (t) =>
-                                selectedCategory == 'All' ||
-                                t['category'] == selectedCategory,
-                          )
-                          .toList();
-                      return _buildTemplateCard(
-                        filteredTemplates[index],
-                        context,
-                      );
-                    },
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
+          );
+        }
+
+        return const SizedBox.shrink();
+      },
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    Set<String> favorites,
+  ) {
+    // isDark removed
 
     return AppBar(
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      backgroundColor: AppColors.surface(context),
       elevation: 0,
       leading: IconButton(
-        icon: Icon(
-          Icons.arrow_back,
-          color: isDark ? AppColors.lightText : AppColors.darkText,
-        ),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
         'Reminder Templates',
         style: AppTypography.heading2().copyWith(
-          color: isDark ? AppColors.lightText : AppColors.darkText,
+          color: AppColors.textPrimary(context),
         ),
       ),
       actions: [
-        if (favoriteTemplates.isNotEmpty)
+        if (favorites.isNotEmpty)
           Padding(
             padding: EdgeInsets.only(right: 8.w),
             child: Center(
@@ -195,8 +141,8 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                   borderRadius: BorderRadius.circular(16.r),
                 ),
                 child: Text(
-                  '${favoriteTemplates.length} saved',
-                  style: AppTypography.body3().copyWith(color: Colors.white),
+                  '${favorites.length} saved',
+                  style: AppTypography.caption().copyWith(color: Colors.white),
                 ),
               ),
             ),
@@ -205,8 +151,12 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
     );
   }
 
-  Widget _buildCategoryFilter(List<String> categories, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildCategoryFilter(
+    List<String> categories,
+    String selectedCategory,
+    BuildContext context,
+  ) {
+    // isDark removed
 
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -223,7 +173,11 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
             return Padding(
               padding: EdgeInsets.only(right: 8.w),
               child: GestureDetector(
-                onTap: () => setState(() => selectedCategory = category),
+                onTap: () {
+                  context.read<ReminderTemplatesBloc>().add(
+                    FilterTemplatesByCategoryEvent(category: category),
+                  );
+                },
                 child: Container(
                   padding: EdgeInsets.symmetric(
                     horizontal: 16.w,
@@ -232,9 +186,7 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppColors.primaryColor
-                        : isDark
-                        ? AppColors.darkSurface
-                        : AppColors.lightSurface,
+                        : AppColors.surface(context),
                     borderRadius: BorderRadius.circular(20.r),
                     border: Border.all(
                       color: isSelected
@@ -245,12 +197,10 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                   ),
                   child: Text(
                     category,
-                    style: AppTypography.body3().copyWith(
+                    style: AppTypography.body2().copyWith(
                       color: isSelected
                           ? Colors.white
-                          : isDark
-                          ? AppColors.lightText
-                          : AppColors.darkText,
+                          : AppColors.textPrimary(context),
                       fontWeight: isSelected
                           ? FontWeight.w600
                           : FontWeight.w500,
@@ -267,16 +217,18 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
 
   Widget _buildTemplateCard(
     Map<String, dynamic> template,
+    bool isFavorite,
     BuildContext context,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isFavorite = favoriteTemplates.contains(template['name']);
+    // isDark removed
+    final categoryColor = _getCategoryColor(template['category']);
+    final categoryIcon = _getCategoryIcon(template['category']);
 
     return GestureDetector(
       onTap: () => _showTemplateDetails(template, context),
       child: Container(
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+          color: AppColors.card(context),
           borderRadius: BorderRadius.circular(12.r),
           border: Border.all(color: AppColors.divider(context), width: 0.5),
         ),
@@ -293,12 +245,12 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                         width: 40.w,
                         height: 40.w,
                         decoration: BoxDecoration(
-                          color: (template['color'] as Color).withOpacity(0.2),
+                          color: categoryColor.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(8.r),
                         ),
                         child: Icon(
-                          template['icon'] as IconData,
-                          color: template['color'] as Color,
+                          categoryIcon,
+                          color: categoryColor,
                           size: 20.sp,
                         ),
                       ),
@@ -311,9 +263,7 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                               template['name'] as String,
                               style: AppTypography.body2().copyWith(
                                 fontWeight: FontWeight.w600,
-                                color: isDark
-                                    ? AppColors.lightText
-                                    : AppColors.darkText,
+                                color: AppColors.textPrimary(context),
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -321,7 +271,7 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                             Text(
                               template['category'] as String,
                               style: AppTypography.caption().copyWith(
-                                color: template['color'] as Color,
+                                color: categoryColor,
                               ),
                             ),
                           ],
@@ -333,9 +283,7 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                   Text(
                     template['description'] as String,
                     style: AppTypography.caption().copyWith(
-                      color: isDark
-                          ? AppColors.lightTextSecondary
-                          : AppColors.darkTextSecondary,
+                      color: AppColors.textSecondary(context),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -364,21 +312,15 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
               right: 8.w,
               child: GestureDetector(
                 onTap: () {
-                  setState(() {
-                    if (isFavorite) {
-                      favoriteTemplates.remove(template['name']);
-                    } else {
-                      favoriteTemplates.add(template['name'] as String);
-                    }
-                  });
+                  context.read<ReminderTemplatesBloc>().add(
+                    ToggleFavoriteTemplateEvent(templateId: template['id']),
+                  );
                 },
                 child: Icon(
                   isFavorite ? Icons.favorite : Icons.favorite_border,
                   color: isFavorite
                       ? Colors.red
-                      : isDark
-                      ? AppColors.lightTextSecondary
-                      : AppColors.darkTextSecondary,
+                      : AppColors.textSecondary(context),
                   size: 20.sp,
                 ),
               ),
@@ -389,34 +331,56 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
     );
   }
 
-  Widget _buildBadge(IconData icon, String label, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Color _getCategoryColor(String category) {
+    // Attempt to get from AppColors categoryColors map
+    final normalized = category.toLowerCase();
+    if (AppColors.categoryColors.containsKey(normalized)) {
+      return AppColors.categoryColors[normalized]!;
+    }
 
+    // Fallback if not found in map (though map covers most)
+    switch (category) {
+      case 'Work':
+        return Colors.blue;
+      case 'Personal':
+        return Colors.orange;
+      case 'Health':
+        return Colors.green;
+      default:
+        return AppColors.accentPurple;
+    }
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'Work':
+        return Icons.people;
+      case 'Personal':
+        return Icons.restaurant;
+      case 'Health':
+        return Icons.health_and_safety;
+      default:
+        return Icons.category;
+    }
+  }
+
+  Widget _buildBadge(IconData icon, String label, BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 3.h),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkBg : AppColors.lightBg,
+        color: AppColors.background(context),
         borderRadius: BorderRadius.circular(4.r),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 10.sp,
-            color: isDark
-                ? AppColors.lightTextSecondary
-                : AppColors.darkTextSecondary,
-          ),
+          Icon(icon, size: 10.sp, color: AppColors.textSecondary(context)),
           SizedBox(width: 2.w),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 9.sp,
-              color: isDark
-                  ? AppColors.lightTextSecondary
-                  : AppColors.darkTextSecondary,
-            ),
+            style: AppTypography.captionSmall(
+              context,
+            ).copyWith(fontSize: 9.sp, color: AppColors.textSecondary(context)),
           ),
         ],
       ),
@@ -427,11 +391,12 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
     Map<String, dynamic> template,
     BuildContext context,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final categoryColor = _getCategoryColor(template['category']);
+    final categoryIcon = _getCategoryIcon(template['category']);
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      backgroundColor: AppColors.surface(context),
       builder: (context) => Container(
         padding: EdgeInsets.all(16.w),
         child: Column(
@@ -444,14 +409,10 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                   width: 56.w,
                   height: 56.w,
                   decoration: BoxDecoration(
-                    color: (template['color'] as Color).withOpacity(0.2),
+                    color: categoryColor.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
-                  child: Icon(
-                    template['icon'] as IconData,
-                    color: template['color'] as Color,
-                    size: 28.sp,
-                  ),
+                  child: Icon(categoryIcon, color: categoryColor, size: 28.sp),
                 ),
                 SizedBox(width: 12.w),
                 Expanded(
@@ -461,15 +422,13 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
                       Text(
                         template['name'] as String,
                         style: AppTypography.heading3().copyWith(
-                          color: isDark
-                              ? AppColors.lightText
-                              : AppColors.darkText,
+                          color: AppColors.textPrimary(context),
                         ),
                       ),
                       Text(
                         template['category'] as String,
-                        style: AppTypography.body3().copyWith(
-                          color: template['color'] as Color,
+                        style: AppTypography.body2().copyWith(
+                          color: categoryColor,
                         ),
                       ),
                     ],
@@ -544,17 +503,9 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
     IconData icon,
     BuildContext context,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 18.sp,
-          color: isDark
-              ? AppColors.lightTextSecondary
-              : AppColors.darkTextSecondary,
-        ),
+        Icon(icon, size: 18.sp, color: AppColors.textSecondary(context)),
         SizedBox(width: 12.w),
         Expanded(
           child: Column(
@@ -563,16 +514,14 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
               Text(
                 label,
                 style: AppTypography.caption().copyWith(
-                  color: isDark
-                      ? AppColors.lightTextSecondary
-                      : AppColors.darkTextSecondary,
+                  color: AppColors.textSecondary(context),
                 ),
               ),
               SizedBox(height: 2.h),
               Text(
                 value,
                 style: AppTypography.body2().copyWith(
-                  color: isDark ? AppColors.lightText : AppColors.darkText,
+                  color: AppColors.textPrimary(context),
                 ),
               ),
             ],
@@ -582,4 +531,3 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
     );
   }
 }
-

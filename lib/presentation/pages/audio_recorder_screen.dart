@@ -2,11 +2,13 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/injection_container.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../design_system/design_system.dart';
+import '../../core/services/global_ui_service.dart';
 
 /// Audio Recorder Screen
 /// Records voice notes with waveform visualization
@@ -71,14 +73,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   Future<void> _initializeRecorder() async {
     final status = await Permission.microphone.request();
     if (status != PermissionStatus.granted) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Microphone permission is required'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      getIt<GlobalUiService>().showError('Microphone permission is required');
     }
   }
 
@@ -138,9 +133,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
         _startWaveformSimulation();
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to start recording: $e')));
+      getIt<GlobalUiService>().showError('Failed to start recording: $e');
     }
   }
 
@@ -636,4 +629,3 @@ class _WaveformPainter extends CustomPainter {
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) => true;
 }
-

@@ -1,23 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
+import '../bloc/recurrence_bloc.dart';
 
 /// Recurring Todo Schedule Screen
-/// Allows users to set up recurring schedules for todos
-class RecurringTodoScheduleScreen extends StatefulWidget {
+/// Refactored to StatelessWidget using RecurrenceBloc and Design System
+class RecurringTodoScheduleScreen extends StatelessWidget {
   const RecurringTodoScheduleScreen({super.key});
 
   @override
-  State<RecurringTodoScheduleScreen> createState() =>
-      _RecurringTodoScheduleScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => RecurrenceBloc(),
+      child: const _RecurrenceView(),
+    );
+  }
 }
 
-class _RecurringTodoScheduleScreenState
-    extends State<RecurringTodoScheduleScreen> {
-  String _selectedFrequency = 'weekly';
-  final Set<int> _selectedDays = {1, 3, 5}; // Mon, Wed, Fri (0=Mon, 6=Sun)
+class _RecurrenceView extends StatelessWidget {
+  const _RecurrenceView();
 
-  final List<String> _weekdayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-  final List<String> _weekdayNames = [
+  final List<String> _weekdayLabels = const ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  final List<String> _weekdayNames = const [
     'Monday',
     'Tuesday',
     'Wednesday',
@@ -29,17 +34,22 @@ class _RecurringTodoScheduleScreenState
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: Column(children: [_buildBackgroundPreview(), _buildBottomSheet()]),
+    return Scaffold(
+      backgroundColor: AppColors.lightBackground,
+      body: Column(
+        children: [
+          _buildBackgroundPreview(context),
+          _buildBottomSheet(context),
+        ],
+      ),
     );
   }
 
-  Widget _buildBackgroundPreview() {
+  Widget _buildBackgroundPreview(BuildContext context) {
     return Expanded(
       flex: 2,
       child: Container(
-        padding: EdgeInsets.all(24.w),
+        padding: AppSpacing.paddingAllL,
         child: Opacity(
           opacity: 0.4,
           child: Column(
@@ -51,18 +61,19 @@ class _RecurringTodoScheduleScreenState
                 children: [
                   Text(
                     'Morning Yoga',
-                    style: TextStyle(
-                      fontSize: 24.sp,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: AppTypography.displayMedium(context),
                   ),
                   const Icon(Icons.more_horiz),
                 ],
               ),
-              SizedBox(height: 32.h),
-              _buildPreviewOption(Icons.calendar_today, 'Due Today'),
-              SizedBox(height: 16.h),
-              _buildPreviewOption(Icons.notifications_outlined, 'Reminder'),
+              AppSpacing.gapXXXL,
+              _buildPreviewOption(context, Icons.calendar_today, 'Due Today'),
+              AppSpacing.gapL,
+              _buildPreviewOption(
+                context,
+                Icons.notifications_outlined,
+                'Reminder',
+              ),
             ],
           ),
         ),
@@ -70,30 +81,35 @@ class _RecurringTodoScheduleScreenState
     );
   }
 
-  Widget _buildPreviewOption(IconData icon, String placeholder) {
+  Widget _buildPreviewOption(
+    BuildContext context,
+    IconData icon,
+    String placeholder,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       height: 48.h,
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
+        color: isDark
             ? Colors.grey.shade800.withOpacity(0.1)
             : Colors.grey.shade100.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12.r),
         border: Border.all(
-          color: Theme.of(context).brightness == Brightness.dark
+          color: isDark
               ? Colors.grey.shade700.withOpacity(0.3)
               : Colors.grey.shade300.withOpacity(0.3),
         ),
       ),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary, size: 24.sp),
-          SizedBox(width: 12.w),
+          Icon(icon, color: AppColors.primaryColor, size: 24.sp),
+          AppSpacing.gapM,
           Container(
             width: 100.w,
             height: 16.h,
             decoration: BoxDecoration(
-              color: Theme.of(context).brightness == Brightness.dark
+              color: isDark
                   ? Colors.grey.shade700.withOpacity(0.3)
                   : Colors.grey.shade200.withOpacity(0.3),
               borderRadius: BorderRadius.circular(8.r),
@@ -104,20 +120,20 @@ class _RecurringTodoScheduleScreenState
     );
   }
 
-  Widget _buildBottomSheet() {
+  Widget _buildBottomSheet(BuildContext context) {
     return Expanded(
       flex: 3,
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
+          color: AppColors.lightSurface,
           borderRadius: BorderRadius.only(
             topLeft: Radius.circular(40.r),
             topRight: Radius.circular(40.r),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.3),
+              color: Colors.black.withOpacity(0.1),
               blurRadius: 20,
               offset: const Offset(0, -4),
             ),
@@ -126,20 +142,24 @@ class _RecurringTodoScheduleScreenState
         child: Column(
           children: [
             _buildBottomSheetHeader(),
-            _buildSectionHeader(),
+            _buildSectionHeader(context),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.symmetric(horizontal: 16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildFrequencyHeader(),
-                    SizedBox(height: 16.h),
-                    _buildFrequencyOptions(),
-                    SizedBox(height: 24.h),
-                    _buildSummary(context),
-                    SizedBox(height: 32.h),
-                  ],
+                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                child: BlocBuilder<RecurrenceBloc, RecurrenceState>(
+                  builder: (context, state) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildFrequencyHeader(context),
+                        AppSpacing.gapL,
+                        _buildFrequencyOptions(context, state),
+                        AppSpacing.gapXXXL,
+                        _buildSummary(context, state),
+                        AppSpacing.gapXXXL,
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -152,23 +172,21 @@ class _RecurringTodoScheduleScreenState
   Widget _buildBottomSheetHeader() {
     return Column(
       children: [
-        SizedBox(height: 12.h),
+        AppSpacing.gapM,
         Container(
           width: 40.w,
           height: 6.h,
           decoration: BoxDecoration(
-            color: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.color?.withOpacity(0.3),
+            color: AppColors.borderLight,
             borderRadius: BorderRadius.circular(3.r),
           ),
         ),
-        SizedBox(height: 8.h),
+        AppSpacing.gapS,
       ],
     );
   }
 
-  Widget _buildSectionHeader() {
+  Widget _buildSectionHeader(BuildContext context) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
       child: Row(
@@ -178,119 +196,100 @@ class _RecurringTodoScheduleScreenState
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w500,
-              ),
+              style: AppTypography.button(context, AppColors.primaryColor),
             ),
           ),
           Text(
             'REPEAT',
-            style: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-              color: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.color?.withOpacity(0.7),
-            ),
+            style: AppTypography.labelSmall(
+              context,
+              AppColors.secondaryText,
+              FontWeight.bold,
+            ).copyWith(letterSpacing: 1.2),
           ),
-          TextButton(
-            onPressed: () {
-              // Handle save
-              Navigator.pop(context, {
-                'frequency': _selectedFrequency,
-                'days': _selectedDays.toList(),
-              });
+          BlocBuilder<RecurrenceBloc, RecurrenceState>(
+            builder: (context, state) {
+              return TextButton(
+                onPressed: () {
+                  Navigator.pop(context, {
+                    'frequency': state.frequency,
+                    'days': state.selectedDays.toList(),
+                  });
+                },
+                child: Text(
+                  'Done',
+                  style: AppTypography.button(
+                    context,
+                    AppColors.primaryColor,
+                    FontWeight.bold,
+                  ),
+                ),
+              );
             },
-            child: Text(
-              'Done',
-              style: TextStyle(
-                color: AppColors.primary,
-                fontSize: 14.sp,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildFrequencyHeader() {
+  Widget _buildFrequencyHeader(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Frequency',
-          style: TextStyle(
-            fontSize: 24.sp,
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-        ),
-        SizedBox(height: 4.h),
+        Text('Frequency', style: AppTypography.displaySmall(context)),
+        AppSpacing.gapXS,
         Text(
           'Choose how often this task repeats',
-          style: TextStyle(
-            fontSize: 14.sp,
-            color: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.color?.withOpacity(0.7),
-          ),
+          style: AppTypography.bodySmall(context, AppColors.secondaryText),
         ),
       ],
     );
   }
 
-  Widget _buildFrequencyOptions() {
+  Widget _buildFrequencyOptions(BuildContext context, RecurrenceState state) {
     return Column(
       children: [
-        _buildFrequencyOption('none', 'Does not repeat'),
-        SizedBox(height: 8.h),
-        _buildFrequencyOption('daily', 'Daily'),
-        SizedBox(height: 8.h),
-        _buildWeeklyOption(),
-        SizedBox(height: 8.h),
-        _buildFrequencyOption('monthly', 'Monthly'),
-        SizedBox(height: 8.h),
-        _buildCustomOption(),
+        _buildFrequencyOption(context, state, 'none', 'Does not repeat'),
+        AppSpacing.gapM,
+        _buildFrequencyOption(context, state, 'daily', 'Daily'),
+        AppSpacing.gapM,
+        _buildWeeklyOption(context, state),
+        AppSpacing.gapM,
+        _buildFrequencyOption(context, state, 'monthly', 'Monthly'),
+        AppSpacing.gapM,
+        _buildCustomOption(context),
       ],
     );
   }
 
-  Widget _buildFrequencyOption(String value, String label) {
-    final isSelected = _selectedFrequency == value;
+  Widget _buildFrequencyOption(
+    BuildContext context,
+    RecurrenceState state,
+    String value,
+    String label,
+  ) {
+    final isSelected = state.frequency == value;
 
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedFrequency = value;
-        });
-      },
+      onTap: () =>
+          context.read<RecurrenceBloc>().add(UpdateFrequencyEvent(value)),
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(16.w),
+        padding: AppSpacing.paddingAllM,
         decoration: BoxDecoration(
           border: Border.all(
-            color: isSelected
-                ? AppColors.primary.withOpacity(0.5)
-                : (Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey.shade700
-                      : Colors.grey.shade300),
+            color: isSelected ? AppColors.primaryColor : AppColors.borderLight,
+            width: isSelected ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12.r),
-          color: isSelected
-              ? AppColors.primary.withOpacity(0.05)
-              : Colors.transparent,
+          color: isSelected ? AppColors.primary10 : Colors.transparent,
         ),
         child: Row(
           children: [
             Expanded(
               child: Text(
                 label,
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w500),
+                style: AppTypography.bodyMedium(context, null, FontWeight.w500),
               ),
             ),
             Container(
@@ -300,10 +299,8 @@ class _RecurringTodoScheduleScreenState
                 shape: BoxShape.circle,
                 border: Border.all(
                   color: isSelected
-                      ? AppColors.primary
-                      : Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey.shade700
-                      : Colors.grey.shade300,
+                      ? AppColors.primaryColor
+                      : AppColors.borderLight,
                   width: 2,
                 ),
               ),
@@ -314,7 +311,7 @@ class _RecurringTodoScheduleScreenState
                         height: 8.h,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: AppColors.primary,
+                          color: AppColors.primaryColor,
                         ),
                       ),
                     )
@@ -326,40 +323,34 @@ class _RecurringTodoScheduleScreenState
     );
   }
 
-  Widget _buildWeeklyOption() {
-    final isSelected = _selectedFrequency == 'weekly';
+  Widget _buildWeeklyOption(BuildContext context, RecurrenceState state) {
+    final isSelected = state.frequency == 'weekly';
 
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: AppSpacing.paddingAllM,
       decoration: BoxDecoration(
         border: Border.all(
-          color: isSelected
-              ? AppColors.primary.withOpacity(0.5)
-              : Theme.of(context).brightness == Brightness.dark
-              ? Colors.grey.shade700
-              : Colors.grey.shade300,
+          color: isSelected ? AppColors.primaryColor : AppColors.borderLight,
+          width: isSelected ? 2 : 1,
         ),
         borderRadius: BorderRadius.circular(12.r),
-        color: isSelected
-            ? AppColors.primary.withOpacity(0.05)
-            : Colors.transparent,
+        color: isSelected ? AppColors.primary10 : Colors.transparent,
       ),
       child: Column(
         children: [
           GestureDetector(
-            onTap: () {
-              setState(() {
-                _selectedFrequency = 'weekly';
-              });
-            },
+            onTap: () => context.read<RecurrenceBloc>().add(
+              const UpdateFrequencyEvent('weekly'),
+            ),
             child: Row(
               children: [
                 Expanded(
                   child: Text(
                     'Weekly',
-                    style: TextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.w600,
+                    style: AppTypography.bodyMedium(
+                      context,
+                      null,
+                      FontWeight.w600,
                     ),
                   ),
                 ),
@@ -370,10 +361,8 @@ class _RecurringTodoScheduleScreenState
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: isSelected
-                          ? AppColors.primary
-                          : (Theme.of(context).brightness == Brightness.dark
-                                ? Colors.grey.shade600
-                                : Colors.grey.shade400),
+                          ? AppColors.primaryColor
+                          : AppColors.borderLight,
                       width: 2,
                     ),
                   ),
@@ -384,7 +373,7 @@ class _RecurringTodoScheduleScreenState
                             height: 8.h,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: AppColors.primary,
+                              color: AppColors.primaryColor,
                             ),
                           ),
                         )
@@ -394,21 +383,20 @@ class _RecurringTodoScheduleScreenState
             ),
           ),
           if (isSelected) ...[
-            SizedBox(height: 16.h),
+            AppSpacing.gapL,
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   'REPEAT ON THESE DAYS',
-                  style: TextStyle(
-                    fontSize: 10.sp,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                    color: AppColors.primary,
-                  ),
+                  style: AppTypography.labelSmall(
+                    context,
+                    AppColors.primaryColor,
+                    FontWeight.bold,
+                  ).copyWith(letterSpacing: 1.2),
                 ),
-                SizedBox(height: 12.h),
-                _buildDayPicker(),
+                AppSpacing.gapM,
+                _buildDayPicker(context, state),
               ],
             ),
           ],
@@ -417,39 +405,30 @@ class _RecurringTodoScheduleScreenState
     );
   }
 
-  Widget _buildDayPicker() {
+  Widget _buildDayPicker(BuildContext context, RecurrenceState state) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: List.generate(7, (index) {
-        final isSelected = _selectedDays.contains(index);
+        final isSelected = state.selectedDays.contains(index);
 
         return GestureDetector(
-          onTap: () {
-            setState(() {
-              if (isSelected) {
-                _selectedDays.remove(index);
-              } else {
-                _selectedDays.add(index);
-              }
-            });
-          },
+          onTap: () =>
+              context.read<RecurrenceBloc>().add(ToggleDayEvent(index)),
           child: Container(
             width: 44.w,
             height: 44.h,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: isSelected ? AppColors.primary : Colors.transparent,
+              color: isSelected ? AppColors.primaryColor : Colors.transparent,
               border: Border.all(
                 color: isSelected
-                    ? AppColors.primary
-                    : Theme.of(context).brightness == Brightness.dark
-                    ? Colors.grey.shade700
-                    : Colors.grey.shade300,
+                    ? AppColors.primaryColor
+                    : AppColors.borderLight,
               ),
               boxShadow: [
                 if (isSelected)
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.3),
+                    color: AppColors.primaryColor.withOpacity(0.3),
                     blurRadius: 4,
                     offset: const Offset(0, 2),
                   ),
@@ -458,14 +437,10 @@ class _RecurringTodoScheduleScreenState
             child: Center(
               child: Text(
                 _weekdayLabels[index],
-                style: TextStyle(
-                  fontSize: 14.sp,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected
-                      ? Colors.white
-                      : Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.color?.withOpacity(0.7),
+                style: AppTypography.bodySmall(
+                  context,
+                  isSelected ? Colors.white : AppColors.secondaryText,
+                  FontWeight.bold,
                 ),
               ),
             ),
@@ -475,20 +450,16 @@ class _RecurringTodoScheduleScreenState
     );
   }
 
-  Widget _buildCustomOption() {
+  Widget _buildCustomOption(BuildContext context) {
     return GestureDetector(
       onTap: () {
         // Handle custom option
       },
       child: Container(
         width: double.infinity,
-        padding: EdgeInsets.all(16.w),
+        padding: AppSpacing.paddingAllM,
         decoration: BoxDecoration(
-          border: Border.all(
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.grey.shade700
-                : Colors.grey.shade300,
-          ),
+          border: Border.all(color: AppColors.borderLight),
           borderRadius: BorderRadius.circular(12.r),
         ),
         child: Row(
@@ -496,14 +467,12 @@ class _RecurringTodoScheduleScreenState
             Expanded(
               child: Text(
                 'Custom...',
-                style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w500),
+                style: AppTypography.bodyMedium(context, null, FontWeight.w500),
               ),
             ),
             Icon(
-              Icons.chevron_right,
-              color: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.color?.withOpacity(0.7),
+              Icons.chevron_right_rounded,
+              color: AppColors.secondaryText,
               size: 24.sp,
             ),
           ],
@@ -512,13 +481,22 @@ class _RecurringTodoScheduleScreenState
     );
   }
 
-  Widget _buildSummary(BuildContext context) {
-    if (_selectedFrequency != 'weekly' || _selectedDays.isEmpty) {
+  Widget _buildSummary(BuildContext context, RecurrenceState state) {
+    if (state.frequency != 'weekly' || state.selectedDays.isEmpty) {
+      if (state.frequency == 'daily') {
+        return _renderSummaryCard(context, 'This task will repeat every day.');
+      }
+      if (state.frequency == 'monthly') {
+        return _renderSummaryCard(
+          context,
+          'This task will repeat once a month.',
+        );
+      }
       return const SizedBox.shrink();
     }
 
     final selectedDayNames =
-        _selectedDays.map((index) => _weekdayNames[index]).toList()..sort(
+        state.selectedDays.map((index) => _weekdayNames[index]).toList()..sort(
           (a, b) =>
               _weekdayNames.indexOf(a).compareTo(_weekdayNames.indexOf(b)),
         );
@@ -535,30 +513,33 @@ class _RecurringTodoScheduleScreenState
           'This task will repeat every ${selectedDayNames.join(', ')}, and $lastDay.';
     }
 
+    return _renderSummaryCard(context, summaryText);
+  }
+
+  Widget _renderSummaryCard(BuildContext context, String text) {
     return Container(
       width: double.infinity,
-      padding: EdgeInsets.all(16.w),
+      padding: AppSpacing.paddingAllM,
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.grey.shade800.withOpacity(0.1)
-            : Colors.grey.shade100.withOpacity(0.1),
+        color: AppColors.primary10,
         borderRadius: BorderRadius.circular(16.r),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.info_outline, color: AppColors.primary, size: 20.sp),
-          SizedBox(width: 12.w),
+          Icon(
+            Icons.info_outline_rounded,
+            color: AppColors.primaryColor,
+            size: 20.sp,
+          ),
+          AppSpacing.gapM,
           Expanded(
             child: Text(
-              summaryText,
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.color?.withOpacity(0.8),
-                height: 1.4,
-              ),
+              text,
+              style: AppTypography.bodySmall(
+                context,
+                AppColors.darkText,
+              ).copyWith(height: 1.4),
             ),
           ),
         ],
@@ -566,4 +547,3 @@ class _RecurringTodoScheduleScreenState
     );
   }
 }
-

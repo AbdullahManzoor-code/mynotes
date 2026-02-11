@@ -42,7 +42,10 @@ class FontSizeScalingPanel extends StatelessWidget {
                   divisions: 14,
                   label: '${(state.fontSize * 100).toStringAsFixed(0)}%',
                   onChanged: (value) {
-                    context.read<ThemeBloc>().add(ChangeFontSizeEvent(value));
+                    final newParams = state.params.copyWith(
+                      fontSizeMultiplier: value,
+                    );
+                    context.read<ThemeBloc>().add(UpdateThemeEvent(newParams));
                   },
                 ),
                 Text(
@@ -63,8 +66,11 @@ class FontSizeScalingPanel extends StatelessWidget {
                   selected: isSelected,
                   onSelected: (selected) {
                     if (selected) {
+                      final newParams = state.params.copyWith(
+                        fontSizeMultiplier: entry.value,
+                      );
                       context.read<ThemeBloc>().add(
-                        ChangeFontSizeEvent(entry.value),
+                        UpdateThemeEvent(newParams),
                       );
                     }
                   },

@@ -7,6 +7,7 @@ class ReflectionQuestion extends Equatable {
   final String questionText;
   final String category; // life, daily, career, mental_health
   final bool isUserCreated;
+  final bool isPinned;
   final String frequency; // daily, weekly, monthly, once
   final DateTime createdAt;
 
@@ -15,6 +16,7 @@ class ReflectionQuestion extends Equatable {
     required this.questionText,
     required this.category,
     this.isUserCreated = false,
+    this.isPinned = false,
     this.frequency = 'daily',
     required this.createdAt,
   });
@@ -24,6 +26,7 @@ class ReflectionQuestion extends Equatable {
     String? questionText,
     String? category,
     bool? isUserCreated,
+    bool? isPinned,
     String? frequency,
     DateTime? createdAt,
   }) {
@@ -32,6 +35,7 @@ class ReflectionQuestion extends Equatable {
       questionText: questionText ?? this.questionText,
       category: category ?? this.category,
       isUserCreated: isUserCreated ?? this.isUserCreated,
+      isPinned: isPinned ?? this.isPinned,
       frequency: frequency ?? this.frequency,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -43,8 +47,32 @@ class ReflectionQuestion extends Equatable {
     questionText,
     category,
     isUserCreated,
+    isPinned,
     frequency,
     createdAt,
   ];
-}
 
+  factory ReflectionQuestion.fromMap(Map<String, dynamic> map) {
+    return ReflectionQuestion(
+      id: map['id'] as String,
+      questionText: (map['questionText'] ?? map['text']) as String,
+      category: map['category'] as String,
+      isUserCreated: (map['isCustom'] ?? 0) == 1,
+      isPinned: (map['isPinned'] ?? 0) == 1,
+      frequency: map['frequency'] as String? ?? 'daily',
+      createdAt: DateTime.parse(map['createdAt'] as String),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'questionText': questionText,
+      'category': category,
+      'isCustom': isUserCreated ? 1 : 0,
+      'isPinned': isPinned ? 1 : 0,
+      'frequency': frequency,
+      'createdAt': createdAt.toIso8601String(),
+    };
+  }
+}

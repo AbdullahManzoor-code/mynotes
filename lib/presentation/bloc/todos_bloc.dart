@@ -1,7 +1,13 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'dart:convert';
 import '../../domain/entities/todo_item.dart';
-import '../../core/services/todo_service.dart';
+import '../../domain/repositories/todo_repository.dart';
+import '../../domain/repositories/alarm_repository.dart';
+import '../../injection_container.dart';
+import 'params/todo_params.dart';
+import '../../domain/entities/alarm.dart';
+import '../../core/notifications/alarm_service.dart';
 
 // Events
 abstract class TodosEvent extends Equatable {
@@ -11,31 +17,49 @@ abstract class TodosEvent extends Equatable {
 
 class LoadTodos extends TodosEvent {}
 
+/// Create todo using Complete Param pattern
 class AddTodo extends TodosEvent {
-  final TodoItem todo;
+  final TodoParams params;
 
-  AddTodo(this.todo);
+  AddTodo(this.params);
+
+  /// Convenience: from TodoItem entity
+  factory AddTodo.fromTodoItem(TodoItem todo) {
+    return AddTodo(TodoParams.fromTodoItem(todo));
+  }
 
   @override
-  List<Object> get props => [todo];
+  List<Object> get props => [params];
 }
 
+/// Update todo using Complete Param pattern
 class UpdateTodo extends TodosEvent {
-  final TodoItem todo;
+  final TodoParams params;
 
-  UpdateTodo(this.todo);
+  UpdateTodo(this.params);
+
+  /// Convenience: from TodoItem entity
+  factory UpdateTodo.fromTodoItem(TodoItem todo) {
+    return UpdateTodo(TodoParams.fromTodoItem(todo));
+  }
 
   @override
-  List<Object> get props => [todo];
+  List<Object> get props => [params];
 }
 
+/// Toggle todo completion using Complete Param pattern
 class ToggleTodo extends TodosEvent {
-  final String todoId;
+  final TodoParams params;
 
-  ToggleTodo(this.todoId);
+  ToggleTodo(this.params);
+
+  /// Convenience: directly toggle
+  factory ToggleTodo.toggle(TodoParams params) {
+    return ToggleTodo(params.toggleCompletion());
+  }
 
   @override
-  List<Object> get props => [todoId];
+  List<Object> get props => [params];
 }
 
 class DeleteTodo extends TodosEvent {
@@ -84,6 +108,47 @@ class UndoDeleteTodo extends TodosEvent {
   List<Object> get props => [todo];
 }
 
+class ToggleImportantTodo extends TodosEvent {
+  final String todoId;
+
+  ToggleImportantTodo(this.todoId);
+
+  @override
+  List<Object> get props => [todoId];
+}
+
+class UpdateSubtasks extends TodosEvent {
+  final String todoId;
+  final List<SubTask> subtasks;
+
+  UpdateSubtasks(this.todoId, this.subtasks);
+
+  @override
+  List<Object> get props => [todoId, subtasks];
+}
+
+class ToggleFilters extends TodosEvent {}
+
+class AddAlarmToTodo extends TodosEvent {
+  final String todoId;
+  final Alarm alarm;
+
+  AddAlarmToTodo(this.todoId, this.alarm);
+
+  @override
+  List<Object> get props => [todoId, alarm];
+}
+
+class RemoveAlarmFromTodo extends TodosEvent {
+  final String todoId;
+  final String alarmId;
+
+  RemoveAlarmFromTodo(this.todoId, this.alarmId);
+
+  @override
+  List<Object> get props => [todoId, alarmId];
+}
+
 // States
 abstract class TodosState extends Equatable {
   @override
@@ -103,6 +168,7 @@ class TodosLoaded extends TodosState {
   final String searchQuery;
   final TodoStats stats;
   final TodoItem? lastDeletedTodo;
+  final bool showFilters;
 
   TodosLoaded({
     required this.allTodos,
@@ -113,6 +179,7 @@ class TodosLoaded extends TodosState {
     this.searchQuery = '',
     required this.stats,
     this.lastDeletedTodo,
+    this.showFilters = false,
   });
 
   @override
@@ -125,6 +192,7 @@ class TodosLoaded extends TodosState {
     searchQuery,
     stats,
     lastDeletedTodo,
+    showFilters,
   ];
 
   TodosLoaded copyWith({
@@ -136,6 +204,7 @@ class TodosLoaded extends TodosState {
     String? searchQuery,
     TodoStats? stats,
     TodoItem? lastDeletedTodo,
+    bool? showFilters,
     bool clearLastDeleted = false,
   }) {
     return TodosLoaded(
@@ -146,6 +215,7 @@ class TodosLoaded extends TodosState {
       sortAscending: sortAscending ?? this.sortAscending,
       searchQuery: searchQuery ?? this.searchQuery,
       stats: stats ?? this.stats,
+      showFilters: showFilters ?? this.showFilters,
       lastDeletedTodo: clearLastDeleted
           ? null
           : (lastDeletedTodo ?? this.lastDeletedTodo),
@@ -164,7 +234,18 @@ class TodosError extends TodosState {
 
 // Bloc
 class TodosBloc extends Bloc<TodosEvent, TodosState> {
-  TodosBloc() : super(TodosInitial()) {
+  final TodoRepository _todoRepository;
+  final AlarmRepository _alarmRepository;
+  final AlarmService _alarmNotificationService;
+
+  TodosBloc({
+    TodoRepository? todoRepository,
+    AlarmRepository? alarmRepository,
+    AlarmService? alarmNotificationService,
+  }) : _todoRepository = todoRepository ?? getIt<TodoRepository>(),
+       _alarmRepository = alarmRepository ?? getIt<AlarmRepository>(),
+       _alarmNotificationService = alarmNotificationService ?? AlarmService(),
+       super(TodosInitial()) {
     on<LoadTodos>(_onLoadTodos);
     on<AddTodo>(_onAddTodo);
     on<UpdateTodo>(_onUpdateTodo);
@@ -174,19 +255,23 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     on<SortTodos>(_onSortTodos);
     on<SearchTodos>(_onSearchTodos);
     on<UndoDeleteTodo>(_onUndoDeleteTodo);
+    on<ToggleImportantTodo>(_onToggleImportantTodo);
+    on<UpdateSubtasks>(_onUpdateSubtasks);
+    on<ToggleFilters>(_onToggleFilters);
+    on<AddAlarmToTodo>(_onAddAlarmToTodo);
+    on<RemoveAlarmFromTodo>(_onRemoveAlarmFromTodo);
   }
 
   Future<void> _onLoadTodos(LoadTodos event, Emitter<TodosState> emit) async {
     try {
       emit(TodosLoading());
 
-      final allTodos = await TodoService.loadTodos();
-      final stats = TodoService.getStats(allTodos);
+      final allTodos = await _todoRepository.getTodos();
+      final stats = allTodos.stats;
 
       // Apply current filters and sorting
-      var filteredTodos = TodoService.filterTodos(allTodos, TodoFilter.all);
-      filteredTodos = TodoService.sortTodos(
-        filteredTodos,
+      var filteredTodos = allTodos.filter(TodoFilter.all);
+      filteredTodos = filteredTodos.sortBy(
         TodoSortOption.createdDate,
         false, // Most recent first
       );
@@ -196,6 +281,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           allTodos: allTodos,
           filteredTodos: filteredTodos,
           stats: stats,
+          showFilters: false,
         ),
       );
     } catch (e) {
@@ -203,12 +289,23 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     }
   }
 
+  void _onToggleFilters(ToggleFilters event, Emitter<TodosState> emit) {
+    if (state is TodosLoaded) {
+      final current = state as TodosLoaded;
+      emit(current.copyWith(showFilters: !current.showFilters));
+    }
+  }
+
   Future<void> _onAddTodo(AddTodo event, Emitter<TodosState> emit) async {
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
-        final allTodos = await TodoService.addTodo(event.todo);
-        final stats = TodoService.getStats(allTodos);
+
+        // Convert params to TodoItem entity
+        final todo = event.params.toTodoItem();
+        await _todoRepository.createTodo(todo);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
 
         var filteredTodos = _applyFiltersAndSort(
           allTodos,
@@ -236,8 +333,15 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
-        final allTodos = await TodoService.updateTodo(event.todo);
-        final stats = TodoService.getStats(allTodos);
+
+        // Convert params to TodoItem entity with updated timestamp
+        final todo = event.params
+            .copyWith(updatedAt: DateTime.now())
+            .toTodoItem();
+
+        await _todoRepository.updateTodo(todo);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
 
         var filteredTodos = _applyFiltersAndSort(
           allTodos,
@@ -264,8 +368,16 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
-        final allTodos = await TodoService.toggleTodo(event.todoId);
-        final stats = TodoService.getStats(allTodos);
+
+        // Find the todo
+        final todo = currentState.allTodos.firstWhere(
+          (t) => t.id == event.params.todoId,
+        );
+
+        final updatedTodo = todo.toggleComplete();
+        await _todoRepository.updateTodo(updatedTodo);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
 
         var filteredTodos = _applyFiltersAndSort(
           allTodos,
@@ -298,8 +410,9 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           (todo) => todo.id == event.todoId,
         );
 
-        final allTodos = await TodoService.deleteTodo(event.todoId);
-        final stats = TodoService.getStats(allTodos);
+        await _todoRepository.deleteTodo(event.todoId);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
 
         var filteredTodos = _applyFiltersAndSort(
           allTodos,
@@ -393,6 +506,81 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     }
   }
 
+  Future<void> _onToggleImportantTodo(
+    ToggleImportantTodo event,
+    Emitter<TodosState> emit,
+  ) async {
+    if (state is TodosLoaded) {
+      try {
+        final currentState = state as TodosLoaded;
+        final todo = currentState.allTodos.firstWhere(
+          (t) => t.id == event.todoId,
+        );
+        final updatedTodo = todo.toggleImportant();
+        await _todoRepository.updateTodo(updatedTodo);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
+
+        var filteredTodos = _applyFiltersAndSort(
+          allTodos,
+          currentState.currentFilter,
+          currentState.currentSort,
+          currentState.sortAscending,
+          currentState.searchQuery,
+        );
+
+        emit(
+          currentState.copyWith(
+            allTodos: allTodos,
+            filteredTodos: filteredTodos,
+            stats: stats,
+          ),
+        );
+      } catch (e) {
+        emit(TodosError('Failed to toggle importance: $e'));
+      }
+    }
+  }
+
+  Future<void> _onUpdateSubtasks(
+    UpdateSubtasks event,
+    Emitter<TodosState> emit,
+  ) async {
+    if (state is TodosLoaded) {
+      try {
+        final currentState = state as TodosLoaded;
+        final todo = currentState.allTodos.firstWhere(
+          (t) => t.id == event.todoId,
+        );
+        final updatedTodo = todo.copyWith(
+          subtasks: event.subtasks,
+          updatedAt: DateTime.now(),
+        );
+        await _todoRepository.updateTodo(updatedTodo);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
+
+        var filteredTodos = _applyFiltersAndSort(
+          allTodos,
+          currentState.currentFilter,
+          currentState.currentSort,
+          currentState.sortAscending,
+          currentState.searchQuery,
+        );
+
+        emit(
+          currentState.copyWith(
+            allTodos: allTodos,
+            filteredTodos: filteredTodos,
+            stats: stats,
+          ),
+        );
+      } catch (e) {
+        emit(TodosError('Failed to update subtasks: $e'));
+      }
+    }
+  }
+
   Future<void> _onUndoDeleteTodo(
     UndoDeleteTodo event,
     Emitter<TodosState> emit,
@@ -400,8 +588,9 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
-        final allTodos = await TodoService.addTodo(event.todo);
-        final stats = TodoService.getStats(allTodos);
+        await _todoRepository.createTodo(event.todo);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
 
         var filteredTodos = _applyFiltersAndSort(
           allTodos,
@@ -425,6 +614,115 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     }
   }
 
+  Future<void> _onAddAlarmToTodo(
+    AddAlarmToTodo event,
+    Emitter<TodosState> emit,
+  ) async {
+    if (state is TodosLoaded) {
+      try {
+        final currentState = state as TodosLoaded;
+        final todo = currentState.allTodos.firstWhere(
+          (t) => t.id == event.todoId,
+        );
+
+        // Update alarm with linked todo ID
+        final alarm = event.alarm.copyWith(linkedTodoId: todo.id);
+
+        // Add to global reminders list (Persistence)
+        await _alarmRepository.createAlarm(alarm);
+
+        // Schedule notification
+        await _alarmNotificationService.scheduleAlarm(
+          dateTime: alarm.scheduledTime,
+          id: alarm.id,
+          title: 'Reminder: ${todo.text}',
+          payload: jsonEncode({
+            'type': 'todo',
+            'id': alarm.id,
+            'linkedTodoId': todo.id,
+          }),
+        );
+
+        // Update todo
+        final updatedTodo = todo.copyWith(
+          hasReminder: true,
+          reminderId: alarm.id,
+          updatedAt: DateTime.now(),
+        );
+
+        await _todoRepository.updateTodo(updatedTodo);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
+
+        var filteredTodos = _applyFiltersAndSort(
+          allTodos,
+          currentState.currentFilter,
+          currentState.currentSort,
+          currentState.sortAscending,
+          currentState.searchQuery,
+        );
+
+        emit(
+          currentState.copyWith(
+            allTodos: allTodos,
+            filteredTodos: filteredTodos,
+            stats: stats,
+          ),
+        );
+      } catch (e) {
+        emit(TodosError('Failed to add alarm to todo: $e'));
+      }
+    }
+  }
+
+  Future<void> _onRemoveAlarmFromTodo(
+    RemoveAlarmFromTodo event,
+    Emitter<TodosState> emit,
+  ) async {
+    if (state is TodosLoaded) {
+      try {
+        final currentState = state as TodosLoaded;
+        final todo = currentState.allTodos.firstWhere(
+          (t) => t.id == event.todoId,
+        );
+
+        // Cancel notification
+        await _alarmNotificationService.cancelAlarm(event.alarmId);
+
+        // Remove from global persistence
+        await _alarmRepository.deleteAlarm(event.alarmId);
+
+        // Update todo
+        final updatedTodo = todo.copyWith(
+          clearReminder: true,
+          updatedAt: DateTime.now(),
+        );
+
+        await _todoRepository.updateTodo(updatedTodo);
+        final allTodos = await _todoRepository.getTodos();
+        final stats = allTodos.stats;
+
+        var filteredTodos = _applyFiltersAndSort(
+          allTodos,
+          currentState.currentFilter,
+          currentState.currentSort,
+          currentState.sortAscending,
+          currentState.searchQuery,
+        );
+
+        emit(
+          currentState.copyWith(
+            allTodos: allTodos,
+            filteredTodos: filteredTodos,
+            stats: stats,
+          ),
+        );
+      } catch (e) {
+        emit(TodosError('Failed to remove alarm from todo: $e'));
+      }
+    }
+  }
+
   List<TodoItem> _applyFiltersAndSort(
     List<TodoItem> todos,
     TodoFilter filter,
@@ -433,7 +731,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     String searchQuery,
   ) {
     // Apply filter
-    var filtered = TodoService.filterTodos(todos, filter);
+    var filtered = todos.filter(filter);
 
     // Apply search
     if (searchQuery.isNotEmpty) {
@@ -449,6 +747,6 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     }
 
     // Apply sort
-    return TodoService.sortTodos(filtered, sortOption, ascending);
+    return filtered.sortBy(sortOption, ascending);
   }
 }

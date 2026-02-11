@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/presentation/bloc/params/todo_params.dart';
+import 'package:mynotes/presentation/bloc/todo_bloc.dart' show TodoBloc;
+import 'package:mynotes/presentation/bloc/todo_event.dart'
+    show AddTodoEvent, ToggleTodoEvent, UpdateTodoEvent;
 import '../widgets/create_todo_bottom_sheet.dart';
 import '../bloc/todos_bloc.dart';
-import '../../core/services/todo_service.dart';
 import '../../domain/entities/todo_item.dart';
+import '../../injection_container.dart' show getIt;
+import '../design_system/design_system.dart';
 
 class TodosScreen extends StatefulWidget {
   const TodosScreen({super.key});
@@ -29,7 +34,8 @@ class _TodosScreenState extends State<TodosScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTodoBottomSheet(
         onTodoCreated: (todo) {
-          context.read<TodosBloc>().add(AddTodo(todo));
+          final params = TodoParams.fromTodoItem(todo);
+          context.read<TodoBloc>().add(AddTodoEvent(params: params));
           Navigator.pop(context);
         },
       ),
@@ -288,7 +294,7 @@ class _TodosScreenState extends State<TodosScreen> {
             child: Column(
               children: [
                 Text(
-                  stats.dueToday.toString(),
+                  stats.today.toString(),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -405,7 +411,8 @@ class _TodosScreenState extends State<TodosScreen> {
         leading: Checkbox(
           value: todo.isCompleted,
           onChanged: (_) {
-            context.read<TodosBloc>().add(ToggleTodo(todo.id));
+            final params = TodoParams.fromTodoItem(todo);
+            context.read<TodoBloc>().add(ToggleTodoEvent(params: params));
           },
         ),
         title: Text(
@@ -462,7 +469,8 @@ class _TodosScreenState extends State<TodosScreen> {
       backgroundColor: Colors.transparent,
       builder: (context) => CreateTodoBottomSheet(
         onTodoCreated: (editedTodo) {
-          context.read<TodosBloc>().add(UpdateTodo(editedTodo));
+          final params = TodoParams.fromTodoItem(editedTodo);
+          context.read<TodoBloc>().add(UpdateTodoEvent(params: params));
           Navigator.pop(context);
         },
         editTodo: todo,
@@ -473,17 +481,12 @@ class _TodosScreenState extends State<TodosScreen> {
   void _deleteTodoWithUndo(TodoItem todo) {
     context.read<TodosBloc>().add(DeleteTodo(todo.id));
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Todo "${todo.text}" deleted'),
-        action: SnackBarAction(
-          label: 'UNDO',
-          onPressed: () {
-            context.read<TodosBloc>().add(UndoDeleteTodo(todo));
-          },
-        ),
-        duration: const Duration(seconds: 4),
-      ),
+    getIt<GlobalUiService>().showSuccess(
+      'Todo "${todo.text}" deleted',
+      actionLabel: 'UNDO',
+      onActionPressed: () {
+        context.read<TodosBloc>().add(UndoDeleteTodo(todo));
+      },
     );
   }
 }

@@ -11,47 +11,59 @@ class LoadSettingsEvent extends SettingsEvent {
   const LoadSettingsEvent();
 }
 
-class UpdateStorageSettingsEvent extends SettingsEvent {
-  final String? storageLocation;
-  final bool? autoBackupEnabled;
-  final String? backupFrequency;
+class UpdateSettingsEvent extends SettingsEvent {
+  final SettingsParams params;
 
-  const UpdateStorageSettingsEvent({
-    this.storageLocation,
-    this.autoBackupEnabled,
-    this.backupFrequency,
-  });
+  const UpdateSettingsEvent(this.params);
+
+  factory UpdateSettingsEvent.toggleNotifications(SettingsParams params) {
+    return UpdateSettingsEvent(params.toggleNotifications());
+  }
+
+  factory UpdateSettingsEvent.toggleSound(SettingsParams params) {
+    return UpdateSettingsEvent(params.toggleSound());
+  }
+
+  factory UpdateSettingsEvent.toggleVibration(SettingsParams params) {
+    return UpdateSettingsEvent(params.toggleVibration());
+  }
+
+  factory UpdateSettingsEvent.toggleDarkMode(SettingsParams params) {
+    return UpdateSettingsEvent(params.toggleDarkMode());
+  }
+
+  factory UpdateSettingsEvent.toggleAutoSave(SettingsParams params) {
+    return UpdateSettingsEvent(params.toggleAutoSave());
+  }
+
+  factory UpdateSettingsEvent.toggleCloudSync(SettingsParams params) {
+    return UpdateSettingsEvent(params.toggleCloudSync());
+  }
 
   @override
-  List<Object?> get props => [storageLocation, autoBackupEnabled, backupFrequency];
+  List<Object?> get props => [params];
 }
 
-class UpdateDefaultSettingsEvent extends SettingsEvent {
-  final bool? darkModeEnabled;
-  final int? fontSize;
-  final String? fontFamily;
-  final String? languageCode;
+class UpdateLanguageEvent extends SettingsEvent {
+  final SettingsParams params;
 
-  const UpdateDefaultSettingsEvent({
-    this.darkModeEnabled,
-    this.fontSize,
-    this.fontFamily,
-    this.languageCode,
-  });
+  const UpdateLanguageEvent(this.params);
 
   @override
-  List<Object?> get props => [darkModeEnabled, fontSize, fontFamily, languageCode];
+  List<Object?> get props => [params];
 }
 
-class UpdateAccessibilitySettingsEvent extends SettingsEvent {
-  final bool? accessibilityEnabled;
-  final int? fontSize;
-
-  const UpdateAccessibilitySettingsEvent({
-    this.accessibilityEnabled,
-    this.fontSize,
-  });
+class RefreshStatsEvent extends SettingsEvent {
+  const RefreshStatsEvent();
 
   @override
-  List<Object?> get props => [accessibilityEnabled, fontSize];
+  List<Object?> get props => [];
+}
+
+class ToggleBiometricEvent extends SettingsEvent {
+  final bool enable;
+  const ToggleBiometricEvent(this.enable);
+
+  @override
+  List<Object?> get props => [enable];
 }

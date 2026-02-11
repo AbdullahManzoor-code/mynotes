@@ -4,7 +4,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../design_system/design_system.dart';
 import '../../core/constants/app_constants.dart';
-import '../../core/notifications/notification_service.dart';
 import '../../core/services/clipboard_service.dart';
 import '../../core/services/biometric_auth_service.dart';
 import '../../core/routes/app_routes.dart';
@@ -72,11 +71,7 @@ class _SplashScreenState extends State<SplashScreen>
         _initStatus = 'Setting up notifications...';
         _progress = 0.4;
       });
-      try {
-        await NotificationService().init();
-      } catch (e) {
-        debugPrint('Notification init error: $e');
-      }
+      // Notification service is already initialized in main.dart
 
       // Step 3: Start clipboard monitoring
       final clipboardService = RepositoryProvider.of<ClipboardService>(context);
@@ -235,4 +230,3 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 }
-

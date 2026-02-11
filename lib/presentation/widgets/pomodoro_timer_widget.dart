@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/constants/app_colors.dart';
+import '../../injection_container.dart' show getIt;
+import '../../core/services/global_ui_service.dart';
 
 /// Enhanced Pomodoro Timer Widget
 /// 25-minute work sessions with 5-minute breaks
@@ -81,17 +83,15 @@ class _PomodoroTimerWidgetState extends State<PomodoroTimerWidget> {
   }
 
   void _showNotification() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _isWorkSession
-              ? '🎉 Break time complete! Ready to focus?'
-              : '⏰ Work session complete! Time for a break!',
-        ),
-        backgroundColor: AppColors.successColor,
-        duration: const Duration(seconds: 3),
-      ),
-    );
+    if (_isWorkSession) {
+      getIt<GlobalUiService>().showSuccess(
+        '🎉 Break time complete! Ready to focus?',
+      );
+    } else {
+      getIt<GlobalUiService>().showInfo(
+        '⏰ Work session complete! Time for a break!',
+      );
+    }
   }
 
   void _skipToBreak() {

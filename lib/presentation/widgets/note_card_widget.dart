@@ -3,6 +3,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/note.dart';
+import '../../domain/entities/media_item.dart';
+import 'dart:io';
 
 /// Note Card Widget
 /// Displays individual note in list or grid view using the new Design System
@@ -103,16 +105,54 @@ class NoteCardWidget extends StatelessWidget {
               ),
             ),
             SizedBox(width: 8.w),
-            Text(
-              _getTimeAgo(note.updatedAt).toUpperCase(),
-              style: AppTypography.caption(
-                AppColors.textMuted,
-                null,
-                FontWeight.w500,
-              ).copyWith(fontSize: 10.sp, letterSpacing: 0.3),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (note.hasAlarms)
+                  Padding(
+                    padding: EdgeInsets.only(right: 6.w),
+                    child: Icon(
+                      Icons.notifications_active_outlined,
+                      size: 14.sp,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                if (note.hasTodos)
+                  Padding(
+                    padding: EdgeInsets.only(right: 6.w),
+                    child: Icon(
+                      Icons.check_circle_outline,
+                      size: 14.sp,
+                      color: AppColors.successGreen,
+                    ),
+                  ),
+                if (note.hasMedia)
+                  Padding(
+                    padding: EdgeInsets.only(right: 6.w),
+                    child: Icon(
+                      Icons.attach_file,
+                      size: 14.sp,
+                      color: AppColors.accentBlue,
+                    ),
+                  ),
+                Text(
+                  _getTimeAgo(note.updatedAt).toUpperCase(),
+                  style: AppTypography.caption(
+                    AppColors.textMuted,
+                    null,
+                    FontWeight.w500,
+                  ).copyWith(fontSize: 10.sp, letterSpacing: 0.3),
+                ),
+              ],
             ),
           ],
         ),
+
+        // Media Preview Strip
+        if (note.hasMedia) ...[
+          SizedBox(height: 8.h),
+          _buildMediaStrip(context, isDark),
+        ],
 
         // Content Preview
         if (note.content.isNotEmpty) ...[
@@ -140,6 +180,46 @@ class NoteCardWidget extends StatelessWidget {
           ),
         ],
       ],
+    );
+  }
+
+  Widget _buildMediaStrip(BuildContext context, bool isDark) {
+    return SizedBox(
+      height: 40.h,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        physics: const NeverScrollableScrollPhysics(),
+        shrinkWrap: true,
+        itemCount: note.media.length.clamp(0, 5),
+        separatorBuilder: (context, index) => SizedBox(width: 4.w),
+        itemBuilder: (context, index) {
+          final media = note.media[index];
+          return Container(
+            width: 40.w,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(4.r),
+              color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+              image: media.type == MediaType.image
+                  ? DecorationImage(
+                      image: FileImage(File(media.filePath)),
+                      fit: BoxFit.cover,
+                    )
+                  : null,
+            ),
+            child: media.type != MediaType.image
+                ? Center(
+                    child: Icon(
+                      media.type == MediaType.video
+                          ? Icons.play_circle_outline
+                          : Icons.mic_outlined,
+                      size: 16.sp,
+                      color: AppColors.textMuted,
+                    ),
+                  )
+                : null,
+          );
+        },
+      ),
     );
   }
 
@@ -206,16 +286,36 @@ class NoteCardWidget extends StatelessWidget {
         ],
 
         // Time at bottom
-        Align(
-          alignment: Alignment.centerRight,
-          child: Text(
-            _getTimeAgo(note.updatedAt).toUpperCase(),
-            style: AppTypography.caption(
-              AppColors.textMuted,
-              null,
-              FontWeight.w500,
-            ).copyWith(fontSize: 9.sp, letterSpacing: 0.2),
-          ),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (note.hasAlarms)
+                  Icon(
+                    Icons.notifications_active_outlined,
+                    size: 12.sp,
+                    color: AppColors.primary,
+                  ),
+                if (note.hasAlarms && note.hasTodos) SizedBox(width: 4.w),
+                if (note.hasTodos)
+                  Icon(
+                    Icons.check_circle_outline,
+                    size: 12.sp,
+                    color: AppColors.successGreen,
+                  ),
+              ],
+            ),
+            Text(
+              _getTimeAgo(note.updatedAt).toUpperCase(),
+              style: AppTypography.caption(
+                AppColors.textMuted,
+                null,
+                FontWeight.w500,
+              ).copyWith(fontSize: 9.sp, letterSpacing: 0.2),
+            ),
+          ],
         ),
       ],
     );

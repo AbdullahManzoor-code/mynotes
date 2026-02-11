@@ -180,7 +180,7 @@ class RuleEvaluationEngine {
       for (final f in fields) {
         if (value is Map) {
           value = value[f];
-        } else if (value is dynamic) {
+        } else {
           try {
             value = (value as dynamic).toMap()[f] ?? value;
           } catch (_) {

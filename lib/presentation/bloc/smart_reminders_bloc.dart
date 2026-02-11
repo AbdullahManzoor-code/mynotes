@@ -1,6 +1,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:mynotes/domain/repositories/smart_reminder_repository.dart';
+import 'package:mynotes/domain/repositories/note_repository.dart';
+import 'package:mynotes/domain/services/ai_suggestion_engine.dart';
+import 'package:mynotes/domain/entities/note.dart';
+import 'params/smart_reminders_params.dart';
 
 // Smart Reminders BLoC - Events
 abstract class SmartRemindersEvent extends Equatable {
@@ -42,145 +46,100 @@ class ToggleLearningEvent extends SmartRemindersEvent {
   List<Object?> get props => [settingKey, isEnabled];
 }
 
-// Smart Reminders BLoC - States
-abstract class SmartRemindersState extends Equatable {
-  const SmartRemindersState();
+class ChangePeriodEvent extends SmartRemindersEvent {
+  final String period;
+  const ChangePeriodEvent({required this.period});
   @override
-  List<Object?> get props => [];
+  List<Object?> get props => [period];
+}
+
+// Smart Reminders BLoC - States
+class SmartRemindersState extends Equatable {
+  final SmartRemindersParams params;
+  const SmartRemindersState({required this.params});
+  @override
+  List<Object?> get props => [params];
 }
 
 class SmartRemindersInitial extends SmartRemindersState {
-  const SmartRemindersInitial();
+  const SmartRemindersInitial() : super(params: const SmartRemindersParams());
 }
 
 class SmartRemindersLoading extends SmartRemindersState {
-  const SmartRemindersLoading();
+  const SmartRemindersLoading({required super.params});
 }
 
-class SuggestionsLoaded extends SmartRemindersState {
-  final List<Map<String, dynamic>> suggestions;
-  final int acceptedCount;
-
-  const SuggestionsLoaded({
-    required this.suggestions,
-    required this.acceptedCount,
-  });
-
-  @override
-  List<Object?> get props => [suggestions, acceptedCount];
-}
-
-class PatternsLoaded extends SmartRemindersState {
-  final List<Map<String, dynamic>> patterns;
-  final double averageCompletionRate;
-
-  const PatternsLoaded({
-    required this.patterns,
-    required this.averageCompletionRate,
-  });
-
-  @override
-  List<Object?> get props => [patterns, averageCompletionRate];
+class SmartRemindersLoaded extends SmartRemindersState {
+  const SmartRemindersLoaded({required super.params});
 }
 
 class SmartRemindersError extends SmartRemindersState {
   final String message;
-  const SmartRemindersError({required this.message});
+  const SmartRemindersError({required this.message, required super.params});
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [message, params];
 }
 
-class SmartRemindersLoaded extends SmartRemindersState {
-  final List<dynamic> reminders;
-  const SmartRemindersLoaded({required this.reminders});
-  @override
-  List<Object?> get props => [reminders];
-}
-
-// Smart Reminders BLoC - Implementation
 class SmartRemindersBloc
     extends Bloc<SmartRemindersEvent, SmartRemindersState> {
   final SmartReminderRepository smartReminderRepository;
+  final NoteRepository noteRepository;
+  final AISuggestionEngine aiSuggestionEngine;
 
-  SmartRemindersBloc({required this.smartReminderRepository})
-    : super(const SmartRemindersInitial()) {
+  SmartRemindersBloc({
+    required this.smartReminderRepository,
+    required this.noteRepository,
+    required this.aiSuggestionEngine,
+  }) : super(const SmartRemindersInitial()) {
     on<LoadSuggestionsEvent>(_onLoadSuggestions);
     on<LoadPatternsEvent>(_onLoadPatterns);
     on<AcceptSuggestionEvent>(_onAcceptSuggestion);
     on<RejectSuggestionEvent>(_onRejectSuggestion);
     on<ToggleLearningEvent>(_onToggleLearning);
+    on<ChangePeriodEvent>(_onChangePeriod);
   }
-
-  // Mock data
-  final List<Map<String, dynamic>> _suggestions = [
-    {
-      'id': '1',
-      'title': 'Team Meeting',
-      'suggestedTime': '2:00 PM',
-      'confidence': 0.92,
-      'frequency': 'Weekly on Tuesday',
-      'reason': 'Based on meeting history',
-    },
-    {
-      'id': '2',
-      'title': 'Project Review',
-      'suggestedTime': '4:30 PM',
-      'confidence': 0.85,
-      'frequency': 'Weekly on Friday',
-      'reason': 'Detected from completion patterns',
-    },
-    {
-      'id': '3',
-      'title': 'Grocery Shopping',
-      'suggestedTime': '6:00 PM',
-      'confidence': 0.78,
-      'frequency': 'Every Saturday',
-      'reason': 'Learned from your routine',
-    },
-  ];
-
-  final List<Map<String, dynamic>> _patterns = [
-    {
-      'id': '1',
-      'title': 'Morning Routine',
-      'time': '8:00 AM',
-      'frequency': 'Daily',
-      'completed': 94,
-      'total': 100,
-      'completionRate': 0.94,
-    },
-    {
-      'id': '2',
-      'title': 'Work Check-in',
-      'time': '10:00 AM',
-      'frequency': 'Weekdays',
-      'completed': 87,
-      'total': 100,
-      'completionRate': 0.87,
-    },
-    {
-      'id': '3',
-      'title': 'Evening Review',
-      'time': '9:00 PM',
-      'frequency': 'Daily',
-      'completed': 76,
-      'total': 100,
-      'completionRate': 0.76,
-    },
-  ];
 
   Future<void> _onLoadSuggestions(
     LoadSuggestionsEvent event,
     Emitter<SmartRemindersState> emit,
   ) async {
+    emit(SmartRemindersLoading(params: state.params.copyWith(isLoading: true)));
     try {
-      emit(const SmartRemindersLoading());
+      final reminders = await _getReminders();
+      final reminderData = reminders
+          .map(
+            (n) => {
+              'id': n.id,
+              'title': n.title,
+              'createdAt': n.createdAt.toIso8601String(),
+              'alarms': n.alarms
+                  ?.map((a) => a.scheduledTime.toIso8601String())
+                  .toList(),
+            },
+          )
+          .toList();
 
-      await Future.delayed(const Duration(milliseconds: 500));
+      final suggestions = await aiSuggestionEngine.generateSuggestions(
+        reminderHistory: reminderData,
+        mediaItems: [],
+      );
 
-      emit(SuggestionsLoaded(suggestions: _suggestions, acceptedCount: 0));
+      emit(
+        SmartRemindersLoaded(
+          params: state.params.copyWith(
+            suggestions: suggestions,
+            reminders: reminderData,
+            isLoading: false,
+          ),
+        ),
+      );
     } catch (e) {
-      emit(SmartRemindersError(message: e.toString()));
+      emit(
+        SmartRemindersError(
+          message: e.toString(),
+          params: state.params.copyWith(isLoading: false),
+        ),
+      );
     }
   }
 
@@ -188,21 +147,57 @@ class SmartRemindersBloc
     LoadPatternsEvent event,
     Emitter<SmartRemindersState> emit,
   ) async {
+    emit(SmartRemindersLoading(params: state.params.copyWith(isLoading: true)));
     try {
-      emit(const SmartRemindersLoading());
+      final reminders = await _getReminders();
+      final reminderData = reminders
+          .map(
+            (n) => {
+              'id': n.id,
+              'title': n.title,
+              'createdAt': n.createdAt.toIso8601String(),
+            },
+          )
+          .toList();
 
-      await Future.delayed(const Duration(milliseconds: 500));
+      final frequencyPatterns = aiSuggestionEngine.detectFrequencyPatterns(
+        reminderData,
+      );
+      final avgPerDay = frequencyPatterns['avgPerDay'] as double? ?? 0;
 
-      final avgRate =
-          _patterns.fold<double>(
-            0,
-            (sum, p) => sum + (p['completionRate'] as double),
-          ) /
-          _patterns.length;
+      final patterns = <Map<String, dynamic>>[];
+      final timePatterns = aiSuggestionEngine.detectTimePatterns(reminderData);
+      timePatterns.forEach((key, count) {
+        if (count >= 2) {
+          patterns.add({
+            'id': 'time_$key',
+            'title': 'Time Pattern: $key',
+            'time': key,
+            'frequency': 'Recurring',
+            'completed': count,
+            'total': count,
+            'completionRate': 1.0,
+          });
+        }
+      });
 
-      emit(PatternsLoaded(patterns: _patterns, averageCompletionRate: avgRate));
+      emit(
+        SmartRemindersLoaded(
+          params: state.params.copyWith(
+            patterns: patterns,
+            reminders: reminderData,
+            averageCompletionRate: avgPerDay,
+            isLoading: false,
+          ),
+        ),
+      );
     } catch (e) {
-      emit(SmartRemindersError(message: e.toString()));
+      emit(
+        SmartRemindersError(
+          message: e.toString(),
+          params: state.params.copyWith(isLoading: false),
+        ),
+      );
     }
   }
 
@@ -211,19 +206,21 @@ class SmartRemindersBloc
     Emitter<SmartRemindersState> emit,
   ) async {
     try {
-      if (state is! SuggestionsLoaded) return;
-
-      final currentState = state as SuggestionsLoaded;
-      _suggestions.removeWhere((s) => s['id'] == event.suggestionId);
+      await smartReminderRepository.acceptSuggestion(event.suggestionId);
+      final suggestions = List<Map<String, dynamic>>.from(
+        state.params.suggestions,
+      )..removeWhere((s) => s['id'] == event.suggestionId);
 
       emit(
-        SuggestionsLoaded(
-          suggestions: _suggestions,
-          acceptedCount: currentState.acceptedCount + 1,
+        SmartRemindersLoaded(
+          params: state.params.copyWith(
+            suggestions: suggestions,
+            acceptedCount: state.params.acceptedCount + 1,
+          ),
         ),
       );
     } catch (e) {
-      emit(SmartRemindersError(message: e.toString()));
+      emit(SmartRemindersError(message: e.toString(), params: state.params));
     }
   }
 
@@ -232,36 +229,50 @@ class SmartRemindersBloc
     Emitter<SmartRemindersState> emit,
   ) async {
     try {
-      if (state is! SuggestionsLoaded) return;
-
-      final currentState = state as SuggestionsLoaded;
-      _suggestions.removeWhere((s) => s['id'] == event.suggestionId);
+      await smartReminderRepository.rejectSuggestion(event.suggestionId);
+      final suggestions = List<Map<String, dynamic>>.from(
+        state.params.suggestions,
+      )..removeWhere((s) => s['id'] == event.suggestionId);
 
       emit(
-        SuggestionsLoaded(
-          suggestions: _suggestions,
-          acceptedCount: currentState.acceptedCount,
+        SmartRemindersLoaded(
+          params: state.params.copyWith(suggestions: suggestions),
         ),
       );
     } catch (e) {
-      emit(SmartRemindersError(message: e.toString()));
+      emit(SmartRemindersError(message: e.toString(), params: state.params));
     }
   }
 
-  Future<void> _onToggleLearning(
+  void _onToggleLearning(
     ToggleLearningEvent event,
     Emitter<SmartRemindersState> emit,
-  ) async {
-    try {
-      // Store setting in SharedPreferences or database
-      // For now, just acknowledge the change
-      if (state is SuggestionsLoaded) {
-        emit(state as SuggestionsLoaded);
-      } else if (state is PatternsLoaded) {
-        emit(state as PatternsLoaded);
-      }
-    } catch (e) {
-      emit(SmartRemindersError(message: e.toString()));
-    }
+  ) {
+    final settings = Map<String, bool>.from(state.params.learningSettings)
+      ..[event.settingKey] = event.isEnabled;
+
+    emit(
+      SmartRemindersLoaded(
+        params: state.params.copyWith(learningSettings: settings),
+      ),
+    );
+  }
+
+  void _onChangePeriod(
+    ChangePeriodEvent event,
+    Emitter<SmartRemindersState> emit,
+  ) {
+    emit(
+      SmartRemindersLoaded(
+        params: state.params.copyWith(selectedPeriod: event.period),
+      ),
+    );
+  }
+
+  Future<List<Note>> _getReminders() async {
+    final notes = await noteRepository.getAllNotes();
+    return notes
+        .where((n) => n.alarms != null && n.alarms!.isNotEmpty)
+        .toList();
   }
 }

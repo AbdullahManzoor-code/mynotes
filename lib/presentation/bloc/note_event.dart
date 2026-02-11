@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/note.dart';
+import 'params/note_params.dart';
+import 'note_state.dart';
 
 /// Events for Notes BLoC
 /// Each event represents a user action or system event
@@ -24,34 +26,52 @@ class LoadNoteByIdEvent extends NoteEvent {
   List<Object?> get props => [noteId];
 }
 
-/// Create new note
+/// Create new note using Complete Param pattern
+/// 📦 Pass the complete NoteParams object instead of individual parameters
 class CreateNoteEvent extends NoteEvent {
-  final String title;
-  final String content;
-  final NoteColor color;
-  final List<String>? tags;
-  final bool isPinned;
+  final NoteParams params;
 
-  const CreateNoteEvent({
-    required this.title,
-    this.content = '',
-    this.color = NoteColor.defaultColor,
-    this.tags,
-    this.isPinned = false,
-  });
+  /// Create with NoteParams (preferred way)
+  const CreateNoteEvent({required this.params});
+
+  /// Convenience constructor for backward compatibility
+  factory CreateNoteEvent.withDefaults({
+    required String title,
+    String content = '',
+    NoteColor color = NoteColor.defaultColor,
+    List<String>? tags,
+    bool isPinned = false,
+  }) {
+    return CreateNoteEvent(
+      params: NoteParams(
+        title: title,
+        content: content,
+        color: color,
+        tags: tags ?? [],
+        isPinned: isPinned,
+      ),
+    );
+  }
 
   @override
-  List<Object?> get props => [title, content, color, tags, isPinned];
+  List<Object?> get props => [params];
 }
 
-/// Update existing note
+/// Update existing note using Complete Param pattern
+/// 📦 Use NoteParams instead of individual fields
 class UpdateNoteEvent extends NoteEvent {
-  final Note note;
+  final NoteParams params;
 
-  const UpdateNoteEvent(this.note);
+  /// Create with NoteParams (preferred way)
+  const UpdateNoteEvent(this.params);
+
+  /// Convenience: update from Note entity
+  factory UpdateNoteEvent.fromNote(Note note) {
+    return UpdateNoteEvent(NoteParams.fromNote(note));
+  }
 
   @override
-  List<Object?> get props => [note];
+  List<Object?> get props => [params];
 }
 
 /// Delete note
@@ -74,46 +94,72 @@ class DeleteMultipleNotesEvent extends NoteEvent {
   List<Object?> get props => [noteIds];
 }
 
-/// Toggle pin status
+/// Toggle pin status using Complete Param pattern
+/// 📦 Use NoteParams instead of separate event
 class TogglePinNoteEvent extends NoteEvent {
-  final String noteId;
+  final NoteParams params;
 
-  const TogglePinNoteEvent(this.noteId);
+  /// Create with updated params
+  const TogglePinNoteEvent(this.params);
+
+  /// Convenience: directly toggle using the helper method
+  factory TogglePinNoteEvent.toggle(NoteParams params) {
+    return TogglePinNoteEvent(params.togglePin());
+  }
 
   @override
-  List<Object?> get props => [noteId];
+  List<Object?> get props => [params];
 }
 
-/// Toggle archive status
+/// Toggle archive status using Complete Param pattern
+/// 📦 Use NoteParams instead of separate event
 class ToggleArchiveNoteEvent extends NoteEvent {
-  final String noteId;
+  final NoteParams params;
 
-  const ToggleArchiveNoteEvent(this.noteId);
+  /// Create with updated params
+  const ToggleArchiveNoteEvent(this.params);
+
+  /// Convenience: directly toggle using the helper method
+  factory ToggleArchiveNoteEvent.toggle(NoteParams params) {
+    return ToggleArchiveNoteEvent(params.toggleArchive());
+  }
 
   @override
-  List<Object?> get props => [noteId];
+  List<Object?> get props => [params];
 }
 
-/// Add tag to note
+/// Add tag to note using Complete Param pattern
+/// 📦 Use NoteParams.withTag() instead of separate event
 class AddTagEvent extends NoteEvent {
-  final String noteId;
-  final String tag;
+  final NoteParams params;
 
-  const AddTagEvent(this.noteId, this.tag);
+  /// Create with tag already added to params
+  const AddTagEvent(this.params);
+
+  /// Convenience: create with tag added
+  factory AddTagEvent.withTag(NoteParams params, String tag) {
+    return AddTagEvent(params.withTag(tag));
+  }
 
   @override
-  List<Object?> get props => [noteId, tag];
+  List<Object?> get props => [params];
 }
 
-/// Remove tag from note
+/// Remove tag from note using Complete Param pattern
+/// 📦 Use NoteParams.withoutTag() instead of separate event
 class RemoveTagEvent extends NoteEvent {
-  final String noteId;
-  final String tag;
+  final NoteParams params;
 
-  const RemoveTagEvent(this.noteId, this.tag);
+  /// Create with tag already removed from params
+  const RemoveTagEvent(this.params);
+
+  /// Convenience: create with tag removed
+  factory RemoveTagEvent.withoutTag(NoteParams params, String tag) {
+    return RemoveTagEvent(params.withoutTag(tag));
+  }
 
   @override
-  List<Object?> get props => [noteId, tag];
+  List<Object?> get props => [params];
 }
 
 /// Search notes
@@ -217,6 +263,44 @@ class BatchUpdateNotesColorEvent extends NoteEvent {
 
   @override
   List<Object?> get props => [noteIds, color];
+}
+
+/// Update note view configuration (filters, sort, mode)
+class UpdateNoteViewConfigEvent extends NoteEvent {
+  final String? searchQuery;
+  final List<String>? selectedTags;
+  final List<NoteColor>? selectedColors;
+  final NoteSortOption? sortBy;
+  final bool? sortDescending;
+  final bool? filterPinned;
+  final bool? filterWithMedia;
+  final bool? filterWithReminders;
+  final NoteViewMode? viewMode;
+
+  const UpdateNoteViewConfigEvent({
+    this.searchQuery,
+    this.selectedTags,
+    this.selectedColors,
+    this.sortBy,
+    this.sortDescending,
+    this.filterPinned,
+    this.filterWithMedia,
+    this.filterWithReminders,
+    this.viewMode,
+  });
+
+  @override
+  List<Object?> get props => [
+    searchQuery,
+    selectedTags,
+    selectedColors,
+    sortBy,
+    sortDescending,
+    filterPinned,
+    filterWithMedia,
+    filterWithReminders,
+    viewMode,
+  ];
 }
 
 /// Sort notes

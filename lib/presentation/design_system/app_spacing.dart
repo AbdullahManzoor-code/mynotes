@@ -32,11 +32,25 @@ class AppSpacing {
   /// 32px - Section spacing
   static double get xxxl => 32.w;
 
-  /// 40px - Major section spacing
-  static double get huge => 40.w;
-
-  /// 48px - Extra huge spacing
+  /// 48px - Massive spacing
   static double get massive => 48.w;
+
+  // ==================== Gap Aliases (Widgets) ====================
+  static Widget get gapXS => SizedBox(width: xs, height: xs);
+  static Widget get gapS => SizedBox(width: sm, height: sm);
+  static Widget get gapM => SizedBox(width: md, height: md);
+  static Widget get gapL => SizedBox(width: lg, height: lg);
+  static Widget get gapXL => SizedBox(width: xl, height: xl);
+  static Widget get gapXXL => SizedBox(width: xxl, height: xxl);
+  static Widget get gapXXXL => SizedBox(width: xxxl, height: xxxl);
+
+  // ==================== Padding Aliases ====================
+  static EdgeInsets get paddingAllXS => EdgeInsets.all(xs);
+  static EdgeInsets get paddingAllS => EdgeInsets.all(sm);
+  static EdgeInsets get paddingAllM => EdgeInsets.all(md);
+  static EdgeInsets get paddingAllL => EdgeInsets.all(lg);
+  static EdgeInsets get paddingAllXL => EdgeInsets.all(xl);
+  static EdgeInsets get paddingAllXXL => EdgeInsets.all(xxl);
 
   // ==================== Specific Use-Case Spacing ====================
 

@@ -1,56 +1,94 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/bloc/smart_reminders_bloc.dart';
-import 'package:mynotes/domain/services/ai_suggestion_engine.dart';
+import 'package:mynotes/core/design_system/app_colors.dart';
+import 'package:mynotes/core/design_system/app_typography.dart';
+import 'package:mynotes/core/design_system/app_spacing.dart';
+import '../../injection_container.dart';
+import '../../core/services/global_ui_service.dart';
 
 /// Frequency Analytics - Batch 6, Screen 3
-class FrequencyAnalyticsScreen extends StatefulWidget {
+/// Modernized to use Design System and converted to StatelessWidget
+class FrequencyAnalyticsScreen extends StatelessWidget {
   const FrequencyAnalyticsScreen({Key? key}) : super(key: key);
-
-  @override
-  State<FrequencyAnalyticsScreen> createState() =>
-      _FrequencyAnalyticsScreenState();
-}
-
-class _FrequencyAnalyticsScreenState extends State<FrequencyAnalyticsScreen> {
-  // Removed unused _aiEngine field
-  String _selectedPeriod = 'week'; // week, month, year
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text('Frequency Analytics'),
+        title: Text(
+          'Frequency Analytics',
+          style: AppTypography.displayMedium(context, AppColors.darkText),
+        ),
         centerTitle: true,
+        backgroundColor: AppColors.lightSurface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.darkText),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.sync_rounded, color: AppColors.primaryColor),
+            onPressed: () {
+              context.read<SmartRemindersBloc>().add(
+                const LoadSuggestionsEvent(),
+              );
+              getIt<GlobalUiService>().hapticFeedback();
+            },
+          ),
+        ],
       ),
       body: BlocBuilder<SmartRemindersBloc, SmartRemindersState>(
         builder: (context, state) {
+          if (state is SmartRemindersLoading) {
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryColor),
+            );
+          }
+
+          if (state is SmartRemindersInitial) {
+            context.read<SmartRemindersBloc>().add(
+              const LoadSuggestionsEvent(),
+            );
+            return const Center(
+              child: CircularProgressIndicator(color: AppColors.primaryColor),
+            );
+          }
+
           if (state is! SmartRemindersLoaded) {
-            return Center(child: CircularProgressIndicator());
+            return Center(
+              child: Text(
+                'Connect reminders to view analytics',
+                style: AppTypography.bodyMedium(
+                  context,
+                  AppColors.secondaryText,
+                ),
+              ),
+            );
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.paddingAllM,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildPeriodSelector(),
-                const SizedBox(height: 24),
+                _buildPeriodSelector(context, state.params.selectedPeriod),
+                AppSpacing.gapL,
 
                 // Main Metrics
-                _buildMainMetrics(state),
-                const SizedBox(height: 24),
+                _buildMainMetrics(context, state),
+                AppSpacing.gapL,
 
                 // Daily Distribution
-                _buildDailyDistribution(),
-                const SizedBox(height: 24),
+                _buildDailyDistribution(context),
+                AppSpacing.gapL,
 
                 // Comparison Card
-                _buildComparisonCard(state),
-                const SizedBox(height: 24),
+                _buildComparisonCard(context, state),
+                AppSpacing.gapL,
 
                 // Projection
-                _buildProjection(),
+                _buildProjection(context),
+                AppSpacing.gapXXL,
               ],
             ),
           );
@@ -59,288 +97,408 @@ class _FrequencyAnalyticsScreenState extends State<FrequencyAnalyticsScreen> {
     );
   }
 
-  Widget _buildPeriodSelector() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Row(
-          children: [
-            Expanded(
-              child: SegmentedButton<String>(
-                segments: const [
-                  ButtonSegment(label: Text('Week'), value: 'week'),
-                  ButtonSegment(label: Text('Month'), value: 'month'),
-                  ButtonSegment(label: Text('Year'), value: 'year'),
-                ],
-                selected: {_selectedPeriod},
-                onSelectionChanged: (Set<String> newSelection) {
-                  setState(() {
-                    _selectedPeriod = newSelection.first;
-                  });
-                },
-              ),
+  Widget _buildPeriodSelector(BuildContext context, String selectedPeriod) {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.borderLight),
+      ),
+      child: Row(
+        children: [
+          _buildSegmentButton(context, 'Week', 'week', selectedPeriod),
+          _buildSegmentButton(context, 'Month', 'month', selectedPeriod),
+          _buildSegmentButton(context, 'Year', 'year', selectedPeriod),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSegmentButton(
+    BuildContext context,
+    String label,
+    String value,
+    String selectedPeriod,
+  ) {
+    final isSelected = selectedPeriod == value;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          context.read<SmartRemindersBloc>().add(
+            ChangePeriodEvent(period: value),
+          );
+          getIt<GlobalUiService>().hapticFeedback();
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: AppTypography.labelSmall(
+              context,
+              isSelected ? Colors.white : AppColors.secondaryText,
+              isSelected ? FontWeight.bold : FontWeight.normal,
             ),
-          ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildMainMetrics(SmartRemindersLoaded state) {
-    final totalReminders = state.reminders.length;
+  Widget _buildMainMetrics(BuildContext context, SmartRemindersLoaded state) {
+    final totalReminders = state.params.reminders.length;
     final avgPerDay = totalReminders / 7;
-    final avgPerWeek = totalReminders.toDouble();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Overall Statistics',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text('Core Metrics', style: AppTypography.heading3(context)),
         ),
-        const SizedBox(height: 12),
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           mainAxisSpacing: 12,
           crossAxisSpacing: 12,
+          childAspectRatio: 1.4,
           children: [
-            _buildStatCard('Total', totalReminders.toString(), Icons.list),
             _buildStatCard(
-              'Per Day',
+              context,
+              'Total Events',
+              totalReminders.toString(),
+              Icons.analytics_rounded,
+            ),
+            _buildStatCard(
+              context,
+              'Daily Average',
               avgPerDay.toStringAsFixed(1),
-              Icons.calendar_today,
+              Icons.today_rounded,
             ),
             _buildStatCard(
-              'Per Week',
-              avgPerWeek.toStringAsFixed(1),
-              Icons.calendar_view_week,
+              context,
+              'Best Streak',
+              '12 Days',
+              Icons.local_fire_department_rounded,
             ),
-            _buildStatCard('Avg Duration', '45 min', Icons.timer),
+            _buildStatCard(context, 'Efficiency', '94%', Icons.speed_rounded),
           ],
         ),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(icon, size: 24, color: Colors.blue),
-            Column(
-              children: [
-                Text(
-                  value,
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(label, style: Theme.of(context).textTheme.bodySmall),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDailyDistribution() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Daily Distribution',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildDayRow('Monday', 8, 12),
-                _buildDayRow('Tuesday', 10, 12),
-                _buildDayRow('Wednesday', 7, 12),
-                _buildDayRow('Thursday', 11, 12),
-                _buildDayRow('Friday', 9, 12),
-                _buildDayRow('Saturday', 6, 12),
-                _buildDayRow('Sunday', 5, 12),
-              ],
-            ),
+  Widget _buildStatCard(
+    BuildContext context,
+    String label,
+    String value,
+    IconData icon,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderLight),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDayRow(String day, int count, int maxCount) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+        ],
+      ),
+      padding: AppSpacing.paddingAllM,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(day, style: TextStyle(fontWeight: FontWeight.w500)),
-              Text('$count', style: TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
-          const SizedBox(height: 4),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: count / maxCount,
-              minHeight: 8,
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation(
-                count > maxCount * 0.7 ? Colors.orange : Colors.blue,
-              ),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: AppColors.primary10,
+              borderRadius: BorderRadius.circular(10),
             ),
+            child: Icon(icon, size: 20, color: AppColors.primaryColor),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: AppTypography.heading1(context, AppColors.darkText),
+              ),
+              Text(
+                label,
+                style: AppTypography.labelSmall(
+                  context,
+                  AppColors.secondaryText,
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildComparisonCard(SmartRemindersLoaded state) {
+  Widget _buildDailyDistribution(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Period Comparison',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text('Weekly Heatmap', style: AppTypography.heading3(context)),
         ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                _buildComparisonRow(
-                  'Current Period',
-                  state.reminders.length,
-                  Colors.blue,
-                ),
-                const SizedBox(height: 16),
-                _buildComparisonRow(
-                  'Previous Period',
-                  (state.reminders.length * 0.85).toInt(),
-                  Colors.grey,
-                ),
-                const SizedBox(height: 16),
-                Divider(),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.trending_up, color: Colors.green),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        '+15% increase from previous period',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildComparisonRow(String label, int value, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          padding: AppSpacing.paddingAllM,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.2),
-            borderRadius: BorderRadius.circular(4),
+            color: AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.borderLight),
           ),
-          child: Text(
-            value.toString(),
-            style: TextStyle(color: color, fontWeight: FontWeight.bold),
+          child: Column(
+            children: [
+              _buildDayRow(context, 'Mon', 0.5),
+              _buildDayRow(context, 'Tue', 0.8),
+              _buildDayRow(context, 'Wed', 0.3),
+              _buildDayRow(context, 'Thu', 0.7),
+              _buildDayRow(context, 'Fri', 0.9),
+              _buildDayRow(context, 'Sat', 0.2),
+              _buildDayRow(context, 'Sun', 0.1),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildProjection() {
+  Widget _buildDayRow(BuildContext context, String day, double progress) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 40,
+            child: Text(
+              day,
+              style: AppTypography.bodySmall(
+                context,
+                AppColors.darkText,
+                FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 10,
+                backgroundColor: AppColors.lightBackground,
+                valueColor: AlwaysStoppedAnimation(
+                  progress > 0.7
+                      ? AppColors.successGreen
+                      : AppColors.primaryColor,
+                ),
+              ),
+            ),
+          ),
+          AppSpacing.gapM,
+          Text(
+            '${(progress * 10).toInt()}',
+            style: AppTypography.labelSmall(context, AppColors.secondaryText),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildComparisonCard(
+    BuildContext context,
+    SmartRemindersLoaded state,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          '30-Day Projection',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'Performance Trend',
+            style: AppTypography.heading3(context),
+          ),
         ),
-        const SizedBox(height: 12),
-        Card(
-          color: Colors.blue[50],
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.info, color: Colors.blue),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Based on current patterns',
-                        style: TextStyle(color: Colors.blue),
+        Container(
+          padding: AppSpacing.paddingAllL,
+          decoration: BoxDecoration(
+            color: AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(
+            children: [
+              _buildComparisonMetric(
+                context,
+                'Current Cycle',
+                state.params.reminders.length.toString(),
+                AppColors.primaryColor,
+              ),
+              AppSpacing.gapM,
+              _buildComparisonMetric(
+                context,
+                'Previous Cycle',
+                (state.params.reminders.length * 0.8).toInt().toString(),
+                AppColors.tertiaryText,
+              ),
+              const Divider(
+                height: 32,
+                thickness: 1,
+                color: AppColors.borderLight,
+              ),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                      color: AppColors.successGreen,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.trending_up_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                  AppSpacing.gapM,
+                  Expanded(
+                    child: Text(
+                      'You performed 20% better than the last cycle!',
+                      style: AppTypography.bodySmall(
+                        context,
+                        AppColors.successGreen,
+                        FontWeight.bold,
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildProjectionRow('Estimated Total', '240 reminders'),
-                const SizedBox(height: 12),
-                _buildProjectionRow('Peak Days', 'Thursday & Friday'),
-                const SizedBox(height: 12),
-                _buildProjectionRow('Best Time', '2-3 PM'),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildProjectionRow(String label, String value) {
+  Widget _buildComparisonMetric(
+    BuildContext context,
+    String label,
+    String value,
+    Color color,
+  ) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontWeight: FontWeight.w500)),
         Text(
-          value,
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+          label,
+          style: AppTypography.bodyMedium(context, AppColors.secondaryText),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(value, style: AppTypography.heading3(context, color)),
         ),
       ],
+    );
+  }
+
+  Widget _buildProjection(BuildContext context) {
+    return Container(
+      padding: AppSpacing.paddingAllL,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primaryColor,
+            AppColors.primaryColor.withOpacity(0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primaryColor.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.auto_awesome_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
+              AppSpacing.gapM,
+              Text(
+                'Smart Projections',
+                style: AppTypography.heading2(context, Colors.white),
+              ),
+            ],
+          ),
+          AppSpacing.gapL,
+          _buildProjectionItem(context, 'Estimated Reach', '52 Reminders'),
+          _buildProjectionItem(context, 'Peak Intensity', 'Tuesday 14:00'),
+          _buildProjectionItem(
+            context,
+            'Goal Progress',
+            '82% of Monthly Target',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProjectionItem(
+    BuildContext context,
+    String label,
+    String value,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: AppTypography.bodySmall(
+              context,
+              Colors.white.withOpacity(0.8),
+            ),
+          ),
+          Text(
+            value,
+            style: AppTypography.bodySmall(
+              context,
+              Colors.white,
+              FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
-

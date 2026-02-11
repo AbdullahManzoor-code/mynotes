@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 
 /// Media Player Widget - Shows play button overlay for audio/video
 class MediaPlayerWidget extends StatelessWidget {
@@ -26,7 +27,9 @@ class MediaPlayerWidget extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         image: thumbnailPath != null
             ? DecorationImage(
-                image: AssetImage(thumbnailPath!),
+                image: thumbnailPath!.startsWith('assets/')
+                    ? AssetImage(thumbnailPath!) as ImageProvider
+                    : FileImage(File(thumbnailPath!)),
                 fit: BoxFit.cover,
               )
             : null,
@@ -133,7 +136,9 @@ class ImageThumbnailWidget extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
           image: DecorationImage(
-            image: AssetImage(imagePath),
+            image: imagePath.startsWith('assets/')
+                ? AssetImage(imagePath) as ImageProvider
+                : FileImage(File(imagePath)),
             fit: BoxFit.cover,
           ),
         ),

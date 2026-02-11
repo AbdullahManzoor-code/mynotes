@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:math' as math;
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../design_system/design_system.dart';
 import '../widgets/universal_item_card.dart';
-import '../../data/repositories/unified_repository.dart';
+import '../bloc/analytics_bloc.dart';
 
 /// Analytics Dashboard Screen
 /// Unified productivity insights across Notes, Todos, and Reminders
-/// Shows the power of integrated data analytics
+/// Implements G3: Overview, Focus, Tasks, Notes, Reflection tabs
 class AnalyticsDashboardScreen extends StatefulWidget {
   const AnalyticsDashboardScreen({super.key});
 
@@ -19,30 +20,20 @@ class AnalyticsDashboardScreen extends StatefulWidget {
 
 class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     with TickerProviderStateMixin {
-  final _repository = UnifiedRepository.instance;
-
+  late TabController _tabController;
   late AnimationController _chartController;
   late AnimationController _statsController;
   late Animation<double> _chartAnimation;
   late Animation<double> _statsAnimation;
 
-  Map<String, int> _itemCounts = {};
-  Map<String, dynamic> _insights = {};
-  List<UniversalItem> _recentItems = [];
-  List<UniversalItem> _overdueItems = [];
-  bool _isLoading = true;
-
-  // Analytics data
-  Map<String, double> _weeklyProgress = {};
-  List<Map<String, dynamic>> _categoryBreakdown = [];
-  double _completionRate = 0.0;
-  int _streak = 0;
-
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 5, vsync: this);
     _initializeAnimations();
-    _loadAnalyticsData();
+    _startAnimations();
+    // derived from user's request to load analytics
+    context.read<AnalyticsBloc>().add(const LoadAnalyticsEvent());
   }
 
   void _initializeAnimations() {
@@ -65,118 +56,18 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     );
   }
 
+  void _startAnimations() async {
+    _statsController.forward();
+    await Future.delayed(const Duration(milliseconds: 300));
+    _chartController.forward();
+  }
+
   @override
   void dispose() {
+    _tabController.dispose();
     _chartController.dispose();
     _statsController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadAnalyticsData() async {
-    setState(() => _isLoading = true);
-
-    try {
-      await _repository.initialize();
-
-      final futures = await Future.wait([
-        _repository.getItemCounts(),
-        _repository.getProductivityInsights(),
-        _repository.getAllItems(),
-        _repository.getOverdueReminders(),
-      ]);
-
-      _itemCounts = futures[0] as Map<String, int>;
-      _insights = futures[1] as Map<String, dynamic>;
-      final allItems = futures[2] as List<UniversalItem>;
-      _overdueItems = futures[3] as List<UniversalItem>;
-
-      // Calculate analytics
-      _calculateWeeklyProgress(allItems);
-      _calculateCategoryBreakdown(allItems);
-      _calculateCompletionRate();
-      _calculateStreak(allItems);
-
-      _recentItems = allItems.take(5).toList();
-
-      setState(() => _isLoading = false);
-
-      // Start animations
-      _statsController.forward();
-      await Future.delayed(const Duration(milliseconds: 300));
-      _chartController.forward();
-    } catch (error) {
-      setState(() => _isLoading = false);
-      debugPrint('Analytics loading error: $error');
-    }
-  }
-
-  void _calculateWeeklyProgress(List<UniversalItem> items) {
-    final now = DateTime.now();
-    final weekStart = now.subtract(Duration(days: now.weekday - 1));
-
-    _weeklyProgress = {};
-    for (int i = 0; i < 7; i++) {
-      final day = weekStart.add(Duration(days: i));
-      final dayKey = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][i];
-
-      final dayItems = items.where((item) {
-        return item.createdAt.year == day.year &&
-            item.createdAt.month == day.month &&
-            item.createdAt.day == day.day;
-      }).length;
-
-      _weeklyProgress[dayKey] = dayItems.toDouble();
-    }
-  }
-
-  void _calculateCategoryBreakdown(List<UniversalItem> items) {
-    final categoryMap = <String, int>{};
-
-    for (final item in items) {
-      final category = item.category.isEmpty ? 'General' : item.category;
-      categoryMap[category] = (categoryMap[category] ?? 0) + 1;
-    }
-
-    final total = items.length;
-    _categoryBreakdown =
-        categoryMap.entries.map((entry) {
-            return {
-              'name': entry.key,
-              'count': entry.value,
-              'percentage': total > 0 ? (entry.value / total) * 100 : 0.0,
-              'color': _getCategoryColor(entry.key),
-            };
-          }).toList()
-          ..sort((a, b) => (b['count'] as int).compareTo(a['count'] as int));
-  }
-
-  void _calculateCompletionRate() {
-    final totalTodos = _itemCounts['todos'] ?? 0;
-    final completedTodos = _itemCounts['completed_todos'] ?? 0;
-    _completionRate = totalTodos > 0
-        ? (completedTodos / totalTodos) * 100
-        : 0.0;
-  }
-
-  void _calculateStreak(List<UniversalItem> items) {
-    final now = DateTime.now();
-    _streak = 0;
-
-    for (int i = 0; i < 30; i++) {
-      final day = now.subtract(Duration(days: i));
-      final hasActivity = items.any(
-        (item) =>
-            item.createdAt.year == day.year &&
-            item.createdAt.month == day.month &&
-            item.createdAt.day == day.day,
-      );
-
-      if (hasActivity) {
-        _streak++;
-      } else {
-        break;
-      }
-    }
   }
 
   Color _getCategoryColor(String category) {
@@ -191,6 +82,8 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
         return Colors.orange;
       case 'finance':
         return Colors.teal;
+      case 'focus':
+        return AppColors.primary;
       default:
         return Colors.grey;
     }
@@ -200,7 +93,58 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      body: _isLoading ? _buildLoadingState() : _buildContent(),
+      appBar: AppBar(
+        title: Text(
+          'Analytics Dashboard',
+          style: AppTypography.heading3(context).copyWith(color: Colors.white),
+        ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.white),
+            onPressed: () => context.read<AnalyticsBloc>().add(
+              const RefreshAnalyticsEvent(),
+            ),
+          ),
+        ],
+        bottom: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          indicatorColor: AppColors.primary,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white60,
+          labelStyle: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+          tabs: const [
+            Tab(text: 'Overview'),
+            Tab(text: 'Focus'),
+            Tab(text: 'Tasks'),
+            Tab(text: 'Notes'),
+            Tab(text: 'Reflection'),
+          ],
+        ),
+      ),
+      body: BlocBuilder<AnalyticsBloc, AnalyticsState>(
+        builder: (context, state) {
+          if (state is AnalyticsLoading) {
+            return _buildLoadingState();
+          } else if (state is AnalyticsLoaded) {
+            return TabBarView(
+              controller: _tabController,
+              children: [
+                _buildOverviewTab(state),
+                _buildFocusTab(state),
+                _buildTasksTab(state),
+                _buildNotesTab(state),
+                _buildReflectionTab(state),
+              ],
+            );
+          } else if (state is AnalyticsError) {
+            return _buildErrorState(state.message);
+          }
+          return _buildLoadingState();
+        },
+      ),
     );
   }
 
@@ -208,86 +152,228 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     return const Center(child: CircularProgressIndicator());
   }
 
-  Widget _buildContent() {
-    return CustomScrollView(
-      slivers: [
-        _buildAppBar(),
-        SliverPadding(
-          padding: EdgeInsets.all(24.w),
-          sliver: SliverList(
-            delegate: SliverChildListDelegate([
-              _buildOverviewCards(),
-              SizedBox(height: 24.h),
-              _buildWeeklyChart(),
-              SizedBox(height: 24.h),
-              _buildCategoryBreakdown(),
-              SizedBox(height: 24.h),
-              _buildInsightsSection(),
-              SizedBox(height: 24.h),
-              _buildRecentActivity(),
-              if (_overdueItems.isNotEmpty) ...[
-                SizedBox(height: 24.h),
-                _buildOverdueSection(),
-              ],
-              SizedBox(height: 100.h), // Bottom padding
-            ]),
+  Widget _buildErrorState(String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, color: Colors.red, size: 64.sp),
+          SizedBox(height: 16.h),
+          Text(
+            'Error loading analytics',
+            style: TextStyle(color: Colors.white, fontSize: 18.sp),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAppBar() {
-    return SliverAppBar(
-      expandedHeight: 120.h,
-      pinned: true,
-      backgroundColor: AppColors.darkBackground,
-      flexibleSpace: FlexibleSpaceBar(
-        title: Text(
-          'Analytics',
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: 20.sp,
-            fontWeight: FontWeight.w700,
+          SizedBox(height: 8.h),
+          Text(
+            message,
+            style: TextStyle(color: Colors.grey, fontSize: 14.sp),
+            textAlign: TextAlign.center,
           ),
-        ),
-        titlePadding: EdgeInsets.only(left: 24.w, bottom: 16.h),
+          SizedBox(height: 24.h),
+          ElevatedButton(
+            onPressed: () =>
+                context.read<AnalyticsBloc>().add(const LoadAnalyticsEvent()),
+            child: const Text('Retry'),
+          ),
+        ],
       ),
-      actions: [
-        IconButton(
-          onPressed: _loadAnalyticsData,
-          icon: Icon(Icons.refresh, color: Colors.white),
-        ),
-      ],
     );
   }
 
-  Widget _buildOverviewCards() {
+  // --- TAB BUILDERS ---
+
+  Widget _buildOverviewTab(AnalyticsLoaded state) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildOverviewCards(state),
+          SizedBox(height: 24.h),
+          _buildWeeklyChart(state.weeklyActivity),
+          SizedBox(height: 24.h),
+          _buildRecentActivity(
+            state.recentItems.take(3).toList(),
+          ), // Show top 3 recent
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFocusTab(AnalyticsLoaded state) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInsightsSection(state.productivityInsights),
+          SizedBox(height: 24.h),
+          _buildMetricCard(
+            'Focus Sessions',
+            '${state.productivityInsights['total_sessions'] ?? 0}', // Assuming this key exists or defaulting
+            Icons.psychology,
+            AppColors.primary,
+            subtitle: 'Total sessions completed',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTasksTab(AnalyticsLoaded state) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildCategoryBreakdown(state.categoryBreakdown),
+          SizedBox(height: 24.h),
+          if (state.overdueItems.isNotEmpty)
+            _buildOverdueSection(state.overdueItems),
+          if (state.overdueItems.isEmpty)
+            Center(
+              child: Text(
+                "No overdue tasks!",
+                style: TextStyle(color: Colors.white60, fontSize: 14.sp),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotesTab(AnalyticsLoaded state) {
+    final notes = state.recentItems.where((i) => i.isNote).toList();
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildMetricCard(
+            'Notes Created',
+            '${state.itemCounts['notes'] ?? 0}',
+            Icons.edit_note,
+            Colors.blue,
+          ),
+          SizedBox(height: 24.h),
+          Text(
+            'Recent Notes',
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          if (notes.isEmpty)
+            Center(
+              child: Text(
+                "No notes created yet.",
+                style: TextStyle(color: Colors.white60, fontSize: 14.sp),
+              ),
+            )
+          else
+            ...notes
+                .take(10)
+                .map(
+                  (item) => Padding(
+                    padding: EdgeInsets.only(bottom: 8.h),
+                    child: UniversalItemCard(item: item, showActions: false),
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReflectionTab(AnalyticsLoaded state) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(24.w),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildMetricCard(
+            'Reflection Streak',
+            '${state.streak} days', // Reusing streak for now
+            Icons.self_improvement,
+            Colors.purple,
+          ),
+          SizedBox(height: 24.h),
+          Text(
+            'Recent Insights',
+            style: TextStyle(
+              fontSize: 18.sp,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          if (state.dailyHighlights.isNotEmpty)
+            ...state.dailyHighlights.map(
+              (h) => Card(
+                color: AppColors.darkCardBackground,
+                margin: EdgeInsets.only(bottom: 8.h),
+                child: Padding(
+                  padding: EdgeInsets.all(16.w),
+                  child: Text(h, style: const TextStyle(color: Colors.white)),
+                ),
+              ),
+            )
+          else
+            const Center(
+              child: Text(
+                'No recent insights recorded.',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // --- REUSED WIDGETS ---
+
+  Widget _buildOverviewCards(AnalyticsLoaded state) {
+    final completionRate = state.productivityInsights['completion_rate'] ?? 0;
+    final focusMinutes = state.productivityInsights['focus_minutes'] ?? 0;
+
     return AnimatedBuilder(
       animation: _statsAnimation,
       builder: (context, child) {
         return Transform.scale(
           scale: _statsAnimation.value,
-          child: Row(
+          child: Column(
             children: [
-              Expanded(
-                child: _buildMetricCard(
-                  'Completion Rate',
-                  '${_completionRate.round()}%',
-                  Icons.trending_up,
-                  AppColors.accentGreen,
-                  subtitle: 'Todos completed',
-                ),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Completion Rate',
+                      '$completionRate%',
+                      Icons.trending_up,
+                      AppColors.accentGreen,
+                      subtitle: 'Todos completed',
+                    ),
+                  ),
+                  SizedBox(width: 16.w),
+                  Expanded(
+                    child: _buildMetricCard(
+                      'Daily Streak',
+                      '${state.streak}',
+                      Icons.local_fire_department,
+                      Colors.orange,
+                      subtitle: state.streak == 1 ? 'day' : 'days',
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: 16.w),
-              Expanded(
-                child: _buildMetricCard(
-                  'Daily Streak',
-                  '$_streak',
-                  Icons.local_fire_department,
-                  Colors.orange,
-                  subtitle: _streak == 1 ? 'day' : 'days',
-                ),
+              SizedBox(height: 16.h),
+              _buildMetricCard(
+                'Deep Focus Time',
+                '$focusMinutes min',
+                Icons.timer,
+                AppColors.primary,
+                subtitle: 'Total minutes focused',
               ),
             ],
           ),
@@ -361,7 +447,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     );
   }
 
-  Widget _buildWeeklyChart() {
+  Widget _buildWeeklyChart(Map<String, double> weeklyActivity) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -404,7 +490,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
           AnimatedBuilder(
             animation: _chartAnimation,
             builder: (context, child) {
-              return _buildBarChart();
+              return _buildBarChart(weeklyActivity);
             },
           ),
         ],
@@ -412,18 +498,29 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     );
   }
 
-  Widget _buildBarChart() {
-    if (_weeklyProgress.isEmpty) return const SizedBox.shrink();
+  Widget _buildBarChart(Map<String, double> weeklyActivity) {
+    if (weeklyActivity.isEmpty) return const SizedBox.shrink();
 
-    final maxValue = _weeklyProgress.values.reduce(math.max);
-    if (maxValue == 0) return const SizedBox.shrink();
+    final maxValue = weeklyActivity.values.reduce(math.max);
+    if (maxValue == 0) {
+      // Show empty state for chart
+      return SizedBox(
+        height: 120.h,
+        child: Center(
+          child: Text(
+            'No activity yet',
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 14.sp),
+          ),
+        ),
+      );
+    }
 
     return SizedBox(
       height: 120.h,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         crossAxisAlignment: CrossAxisAlignment.end,
-        children: _weeklyProgress.entries.map((entry) {
+        children: weeklyActivity.entries.map((entry) {
           final height =
               (entry.value / maxValue) * 80.h * _chartAnimation.value;
           return Column(
@@ -431,7 +528,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             children: [
               Container(
                 width: 24.w,
-                height: height,
+                height: height.clamped(4.h, 80.h),
                 decoration: BoxDecoration(
                   color: AppColors.primary,
                   borderRadius: BorderRadius.circular(4.r),
@@ -449,7 +546,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     );
   }
 
-  Widget _buildCategoryBreakdown() {
+  Widget _buildCategoryBreakdown(List<Map<String, dynamic>> categoryBreakdown) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -469,13 +566,26 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             ),
           ),
           SizedBox(height: 20.h),
-          ..._categoryBreakdown.map((category) => _buildCategoryItem(category)),
+          if (categoryBreakdown.isEmpty)
+            Center(
+              child: Text(
+                'No data recorded',
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 14.sp),
+              ),
+            )
+          else
+            ...categoryBreakdown.map(
+              (category) => _buildCategoryItem(category),
+            ),
         ],
       ),
     );
   }
 
   Widget _buildCategoryItem(Map<String, dynamic> category) {
+    final color = _getCategoryColor(category['name']);
+    final percentage = category['percentage'] as double;
+
     return Padding(
       padding: EdgeInsets.only(bottom: 12.h),
       child: Row(
@@ -484,7 +594,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             width: 12.w,
             height: 12.w,
             decoration: BoxDecoration(
-              color: category['color'],
+              color: color,
               borderRadius: BorderRadius.circular(6.r),
             ),
           ),
@@ -496,7 +606,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             ),
           ),
           Text(
-            '${category['percentage'].round()}%',
+            '${percentage.round()}%',
             style: TextStyle(
               fontSize: 14.sp,
               color: Colors.grey.shade400,
@@ -508,7 +618,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             '${category['count']}',
             style: TextStyle(
               fontSize: 14.sp,
-              color: category['color'],
+              color: color,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -517,7 +627,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     );
   }
 
-  Widget _buildInsightsSection() {
+  Widget _buildInsightsSection(Map<String, dynamic> insights) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -545,17 +655,17 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
           SizedBox(height: 16.h),
           _buildInsightItem(
             'Most Productive Time',
-            '${_insights['most_productive_hour'] ?? 9}:00 AM',
+            '${insights['most_productive_hour'] ?? 9}:00 AM', // Default or real
             Icons.schedule,
           ),
           _buildInsightItem(
             'Top Category',
-            _insights['top_category'] ?? 'General',
+            insights['top_category'] ?? 'N/A',
             Icons.category,
           ),
           _buildInsightItem(
             'Total Items',
-            '${_insights['total_items'] ?? 0}',
+            '${insights['total_items'] ?? 0}',
             Icons.inventory,
           ),
         ],
@@ -588,7 +698,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     );
   }
 
-  Widget _buildRecentActivity() {
+  Widget _buildRecentActivity(List<UniversalItem> recentItems) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -608,7 +718,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             ),
           ),
           SizedBox(height: 16.h),
-          if (_recentItems.isEmpty)
+          if (recentItems.isEmpty)
             Center(
               child: Text(
                 'No recent activity',
@@ -616,7 +726,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
               ),
             )
           else
-            ..._recentItems.map(
+            ...recentItems.map(
               (item) => Padding(
                 padding: EdgeInsets.only(bottom: 8.h),
                 child: UniversalItemCard(item: item, showActions: false),
@@ -627,7 +737,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
     );
   }
 
-  Widget _buildOverdueSection() {
+  Widget _buildOverdueSection(List<UniversalItem> overdueItems) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -658,7 +768,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
                   borderRadius: BorderRadius.circular(8.r),
                 ),
                 child: Text(
-                  '${_overdueItems.length}',
+                  '${overdueItems.length}',
                   style: TextStyle(
                     fontSize: 12.sp,
                     color: Colors.red,
@@ -669,7 +779,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
             ],
           ),
           SizedBox(height: 16.h),
-          ..._overdueItems
+          ...overdueItems
               .take(3)
               .map(
                 (item) => Padding(
@@ -683,3 +793,10 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
   }
 }
 
+extension DoubleClamped on double {
+  double clamped(double min, double max) {
+    if (this < min) return min;
+    if (this > max) return max;
+    return this;
+  }
+}

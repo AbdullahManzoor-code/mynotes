@@ -19,6 +19,7 @@ class AppRoutes {
   static const String notesList = '/notes';
   static const String noteEditor = '/notes/editor';
   static const String advancedNoteEditor = '/notes/advanced-editor';
+  static const String markdownNoteEditor = '/notes/markdown-editor';
   static const String archivedNotes = '/notes/archived';
   static const String globalSearch = '/global-search';
   static const String searchFilter = '/search-filter';
@@ -44,6 +45,8 @@ class AppRoutes {
   static const String savedLocations = '/locations/saved';
   static const String alarms = '/alarms';
   static const String reminderTemplates = '/reminders/templates';
+  static const String createReminder = '/reminders/create';
+  static const String editReminder = '/reminders/edit';
 
   // ==================== Todos Module ====================
   static const String todosList = '/todos';

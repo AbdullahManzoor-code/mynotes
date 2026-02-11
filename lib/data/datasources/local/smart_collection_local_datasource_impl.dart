@@ -37,6 +37,7 @@ class SmartCollectionLocalDataSourceImpl
             itemCount: map['itemCount'] ?? 0,
             lastUpdated: DateTime.parse(map['lastUpdated']),
             isActive: map['isActive'] == 1,
+            logic: map['logic'] ?? 'AND',
           ),
         );
       }
@@ -56,6 +57,7 @@ class SmartCollectionLocalDataSourceImpl
         'itemCount': collection.itemCount,
         'lastUpdated': collection.lastUpdated.toIso8601String(),
         'isActive': collection.isActive ? 1 : 0,
+        'logic': collection.logic,
       });
     } catch (e) {
       throw Exception('Failed to insert collection: $e');
@@ -73,6 +75,7 @@ class SmartCollectionLocalDataSourceImpl
           'itemCount': collection.itemCount,
           'lastUpdated': DateTime.now().toIso8601String(),
           'isActive': collection.isActive ? 1 : 0,
+          'logic': collection.logic,
         },
         where: 'id = ?',
         whereArgs: [collection.id],
@@ -125,6 +128,7 @@ class SmartCollectionLocalDataSourceImpl
         itemCount: map['itemCount'] ?? 0,
         lastUpdated: DateTime.parse(map['lastUpdated']),
         isActive: map['isActive'] == 1,
+        logic: map['logic'] ?? 'AND',
       );
     } catch (e) {
       throw Exception('Failed to get collection: $e');
@@ -160,6 +164,7 @@ class SmartCollectionLocalDataSourceImpl
             itemCount: map['itemCount'] ?? 0,
             lastUpdated: DateTime.parse(map['lastUpdated']),
             isActive: true,
+            logic: map['logic'] ?? 'AND',
           ),
         );
       }
@@ -198,6 +203,7 @@ class SmartCollectionLocalDataSourceImpl
             itemCount: map['itemCount'] ?? 0,
             lastUpdated: DateTime.parse(map['lastUpdated']),
             isActive: false,
+            logic: map['logic'] ?? 'AND',
           ),
         );
       }
@@ -250,6 +256,7 @@ class SmartCollectionLocalDataSourceImpl
             itemCount: map['itemCount'] ?? 0,
             lastUpdated: DateTime.parse(map['lastUpdated']),
             isActive: map['isActive'] == 1,
+            logic: map['logic'] ?? 'AND',
           ),
         );
       }

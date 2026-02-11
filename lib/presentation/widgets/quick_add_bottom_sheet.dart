@@ -1,24 +1,33 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../domain/entities/note.dart';
-import '../../domain/entities/todo_item.dart';
 import '../design_system/design_system.dart';
+import '../bloc/alarms_bloc.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_event.dart';
+import '../bloc/params/note_params.dart';
+import '../bloc/params/todo_params.dart';
+import '../bloc/todos_bloc.dart';
+import 'universal_item_card.dart';
+import '../../injection_container.dart' show getIt;
+import '../../core/utils/smart_voice_parser.dart';
+import '../../domain/entities/alarm.dart';
 
-/// Universal Quick Add Smart Input
-/// AI-powered parsing for notes, todos, and reminders
-/// Based on template: universal_quick_add_smart_input_1
+enum QuickAddTab { note, todo, reminder }
+
 class QuickAddBottomSheet extends StatefulWidget {
-  const QuickAddBottomSheet({super.key});
+  final QuickAddTab initialTab;
 
-  static void show(BuildContext context) {
-    showModalBottomSheet(
+  const QuickAddBottomSheet({super.key, this.initialTab = QuickAddTab.note});
+
+  static Future<T?> show<T>(
+    BuildContext context, {
+    QuickAddTab initialTab = QuickAddTab.note,
+  }) {
+    return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const QuickAddBottomSheet(),
+      builder: (context) => QuickAddBottomSheet(initialTab: initialTab),
     );
   }
 
@@ -28,626 +37,211 @@ class QuickAddBottomSheet extends StatefulWidget {
 
 class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
     with SingleTickerProviderStateMixin {
-  final TextEditingController _inputController = TextEditingController();
-  final FocusNode _inputFocus = FocusNode();
-  late AnimationController _animationController;
-  late Animation<double> _slideAnimation;
-
-  String _selectedType = 'Todo';
-  List<ParsedEntity> _parsedEntities = [];
-  bool _isVoiceListening = false;
+  late TabController _tabController;
+  final TextEditingController _textController = TextEditingController();
+  final FocusNode _focusNode = FocusNode();
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 400),
+    _tabController = TabController(
+      length: 3,
       vsync: this,
+      initialIndex: widget.initialTab.index,
     );
-
-    _slideAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutQuart),
-    );
-
-    _animationController.forward();
-
-    // Auto-focus input
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _inputFocus.requestFocus();
-    });
-
-    // Smart parsing on text change
-    _inputController.addListener(_parseInput);
+    _focusNode.requestFocus();
   }
 
   @override
   void dispose() {
-    _inputController.removeListener(_parseInput);
-    _inputController.dispose();
-    _inputFocus.dispose();
-    _animationController.dispose();
+    _tabController.dispose();
+    _textController.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  void _parseInput() {
-    final text = _inputController.text.toLowerCase();
-    final entities = <ParsedEntity>[];
+  Future<void> _handleSave() async {
+    final text = _textController.text.trim();
+    if (text.isEmpty) return;
 
-    // Smart detection patterns
-    if (text.contains(RegExp(r'\b(todo|task|do)\b'))) {
-      entities.add(
-        ParsedEntity(
-          icon: Icons.check_circle_outline,
-          label: 'Todo detected',
-          type: 'Todo',
-          color: AppColors.primary,
-        ),
-      );
-    }
+    setState(() => _isSaving = true);
 
-    if (text.contains(RegExp(r'\b(remind|reminder|alert)\b'))) {
-      entities.add(
-        ParsedEntity(
-          icon: Icons.notification_add,
-          label: 'Reminder detected',
-          type: 'Reminder',
-          color: AppColors.accentColor,
-        ),
-      );
-    }
+    try {
+      final currentTab = QuickAddTab.values[_tabController.index];
+      final parseResult = SmartVoiceParser.parseComplexVoice(text);
+      final item = parseResult['item'] as UniversalItem;
 
-    if (text.contains(RegExp(r'\b(note|write|remember)\b'))) {
-      entities.add(
-        ParsedEntity(
-          icon: Icons.note_add,
-          label: 'Note detected',
-          type: 'Note',
-          color: AppColors.success,
-        ),
-      );
-    }
-
-    setState(() {
-      _parsedEntities = entities;
-      if (entities.isNotEmpty) {
-        _selectedType = entities.first.type;
+      switch (currentTab) {
+        case QuickAddTab.note:
+          await _createNoteFromItem(item);
+          break;
+        case QuickAddTab.todo:
+          await _createTodoFromItem(item);
+          break;
+        case QuickAddTab.reminder:
+          await _createReminderFromItem(item);
+          break;
       }
-    });
+
+      if (mounted) {
+        Navigator.pop(context, true);
+        getIt<GlobalUiService>().showSuccess(
+          '${currentTab.name.toUpperCase()} added successfully',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        getIt<GlobalUiService>().showError('Error: $e');
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _createNoteFromItem(UniversalItem item) {
+    final title = item.title.isNotEmpty
+        ? item.title
+        : (item.content.isNotEmpty ? item.content : 'Quick Note');
+    final params = NoteParams(
+      noteId: item.id,
+      title: title,
+      content: item.content,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    context.read<NotesBloc>().add(CreateNoteEvent(params: params));
+    return Future.value();
+  }
+
+  Future<void> _createTodoFromItem(UniversalItem item) {
+    final text = item.title.isNotEmpty
+        ? item.title
+        : (item.content.isNotEmpty ? item.content : 'Quick Todo');
+    final params = TodoParams(
+      todoId: item.id,
+      text: text,
+      notes: item.content.isNotEmpty ? item.content : null,
+      dueDate: item.reminderTime,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+    context.read<TodosBloc>().add(AddTodo(params));
+    return Future.value();
+  }
+
+  Future<void> _createReminderFromItem(UniversalItem item) {
+    final now = DateTime.now();
+    final scheduledTime =
+        item.reminderTime ?? now.add(const Duration(hours: 1));
+    final alarm = Alarm(
+      id: item.id,
+      message: item.title.isNotEmpty
+          ? item.title
+          : (item.content.isNotEmpty ? item.content : 'Quick Reminder'),
+      scheduledTime: scheduledTime,
+      createdAt: now,
+      updatedAt: now,
+      recurrence: AlarmRecurrence.none,
+      status: AlarmStatus.scheduled,
+      isEnabled: true,
+      vibrate: true,
+    );
+    context.read<AlarmsBloc>().add(AddAlarm(alarm));
+    return Future.value();
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final bgColor = colorScheme.surface;
-    final textColor = colorScheme.onSurface;
-    final hintColor = colorScheme.onSurfaceVariant;
-    final screenSize = MediaQuery.of(context).size;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return AnimatedBuilder(
-      animation: _slideAnimation,
-      builder: (context, child) => Transform.translate(
-        offset: Offset(
-          0,
-          MediaQuery.of(context).size.height * _slideAnimation.value,
-        ),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-          child: Container(
-            color: AppColors.accentBlueDark.withOpacity(0.2),
-            child: DraggableScrollableSheet(
-              initialChildSize: 0.75,
-              minChildSize: 0.45,
-              maxChildSize: 0.96,
-              snap: true,
-              snapSizes: const [0.45, 0.75, 0.96],
-              builder: (context, scrollController) => Container(
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(32.r),
-                  ),
-                  border: Border(
-                    top: BorderSide(
-                      color: colorScheme.outlineVariant,
-                      width: 1.w,
-                    ),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.shadow.withOpacity(0.25),
-                      blurRadius: 32,
-                      offset: const Offset(0, -12),
-                      spreadRadius: 4,
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    _buildHeader(colorScheme),
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        physics: const BouncingScrollPhysics(),
-                        child: Column(
-                          children: [
-                            _buildInputArea(colorScheme, textColor, hintColor),
-                            if (_parsedEntities.isNotEmpty)
-                              _buildParsePreview(colorScheme),
-                            _buildTypeSelector(colorScheme, textColor),
-                            _buildActionButton(colorScheme),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(ColorScheme colorScheme) {
     return Container(
-      padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-      child: Column(
-        children: [
-          Container(
-            width: 48.w,
-            height: 5.h,
-            decoration: BoxDecoration(
-              color: colorScheme.outlineVariant.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(3.r),
-            ),
-          ),
-          SizedBox(height: AppSpacing.lg),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Create',
-                  style: TextStyle(
-                    fontSize: 28.sp,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(
-                    Icons.close_rounded,
-                    color: colorScheme.onSurfaceVariant,
-                    size: 24.r,
-                  ),
-                  style: IconButton.styleFrom(
-                    backgroundColor: colorScheme.surfaceContainerHighest
-                        .withOpacity(0.5),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12.r),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputArea(
-    ColorScheme colorScheme,
-    Color textColor,
-    Color? hintColor,
-  ) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.lg,
-      ),
-      child: Container(
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(16.r),
-          border: Border.all(color: colorScheme.outlineVariant, width: 1.w),
-          boxShadow: [
-            BoxShadow(
-              color: colorScheme.shadow.withOpacity(0.08),
-              blurRadius: 8.r,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Container(
-                constraints: BoxConstraints(minHeight: 110.h),
-                child: TextField(
-                  controller: _inputController,
-                  focusNode: _inputFocus,
-                  maxLines: null,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 18.sp,
-                    fontWeight: FontWeight.w500,
-                    height: 1.5,
-                  ),
-                  decoration: InputDecoration(
-                    border: InputBorder.none,
-                    hintText: "What's on your mind?",
-                    hintStyle: TextStyle(
-                      color: hintColor,
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w400,
-                    ),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: AppSpacing.lg,
-                      vertical: AppSpacing.lg,
-                    ),
-                  ),
-                  cursorColor: AppColors.primary,
-                  cursorWidth: 2.w,
-                  cursorHeight: 24.h,
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.all(AppSpacing.md),
-              child: GestureDetector(
-                onTap: _toggleVoiceInput,
-                child: Container(
-                  padding: EdgeInsets.all(AppSpacing.md),
-                  decoration: BoxDecoration(
-                    color: _isVoiceListening
-                        ? AppColors.primary.withOpacity(0.2)
-                        : colorScheme.surfaceContainerHighest,
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _isVoiceListening
-                          ? AppColors.primary.withOpacity(0.3)
-                          : Colors.transparent,
-                      width: 2.w,
-                    ),
-                  ),
-                  child: Icon(
-                    _isVoiceListening ? Icons.mic : Icons.mic_none,
-                    color: _isVoiceListening ? AppColors.primary : textColor,
-                    size: 20.r,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildParsePreview(ColorScheme colorScheme) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.lg,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'DETECTED',
-            style: TextStyle(
-              color: colorScheme.onSurfaceVariant,
-              fontSize: 11.sp,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.2,
-            ),
-          ),
-          SizedBox(height: AppSpacing.md),
-          Wrap(
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.md,
-            children: _parsedEntities
-                .map((entity) => _buildEntityChip(entity, colorScheme))
-                .toList(),
-          ),
-          SizedBox(height: AppSpacing.md),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEntityChip(ParsedEntity entity, ColorScheme colorScheme) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.sm,
-      ),
       decoration: BoxDecoration(
-        color: entity.color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(10.r),
-        border: Border.all(color: entity.color.withOpacity(0.3), width: 1.2.w),
-        boxShadow: [
-          BoxShadow(
-            color: entity.color.withOpacity(0.1),
-            blurRadius: 8.r,
-            spreadRadius: 0,
-          ),
-        ],
+        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
-      child: Row(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16.h,
+        left: 16.w,
+        right: 16.w,
+        top: 8.h,
+      ),
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(entity.icon, color: entity.color, size: 16.r),
-          SizedBox(width: AppSpacing.sm),
-          Text(
-            entity.label,
-            style: TextStyle(
-              color: colorScheme.onSurface,
-              fontSize: 13.sp,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          SizedBox(width: AppSpacing.xs),
           Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.xs,
-            ),
+            width: 40.w,
+            height: 4.h,
+            margin: EdgeInsets.only(bottom: 16.h),
             decoration: BoxDecoration(
-              color: entity.color.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(6.r),
-            ),
-            child: Text(
-              entity.type.toUpperCase(),
-              style: TextStyle(
-                color: entity.color,
-                fontSize: 9.sp,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5,
-              ),
+              color: Colors.grey.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(2.r),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypeSelector(ColorScheme colorScheme, Color textColor) {
-    final types = ['Note', 'Todo', 'Reminder'];
-
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
-        vertical: AppSpacing.lg,
-      ),
-      child: Container(
-        height: 52.h,
-        decoration: BoxDecoration(
-          color: colorScheme.surfaceContainer,
-          borderRadius: BorderRadius.circular(14.r),
-          border: Border.all(color: colorScheme.outlineVariant, width: 1.w),
-        ),
-        child: Row(
-          children: types
-              .asMap()
-              .entries
-              .map(
-                (entry) => Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedType = entry.value),
-                    child: Container(
-                      margin: EdgeInsets.all(4.w),
-                      decoration: BoxDecoration(
-                        color: _selectedType == entry.value
-                            ? AppColors.primary
-                            : Colors.transparent,
-                        borderRadius: BorderRadius.circular(11.r),
-                      ),
-                      child: Center(
-                        child: Text(
-                          entry.value,
-                          style: TextStyle(
-                            color: _selectedType == entry.value
-                                ? Colors.white
-                                : textColor,
-                            fontSize: 14.sp,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionButton(ColorScheme colorScheme) {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.md,
-        AppSpacing.lg,
-        AppSpacing.xl,
-      ),
-      child: SizedBox(
-        width: double.infinity,
-        height: 56.h,
-        child: ElevatedButton(
-          onPressed: _inputController.text.isNotEmpty ? _saveItem : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primary,
-            foregroundColor: Colors.white,
-            elevation: _inputController.text.isNotEmpty ? 4 : 0,
-            shadowColor: AppColors.primary.withOpacity(0.4),
-            disabledBackgroundColor: colorScheme.surfaceContainerHighest,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16.r),
-            ),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(_getActionIcon(), size: 20.r),
-              SizedBox(width: AppSpacing.lg),
-              Text(
-                'Save $_selectedType',
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.3,
-                ),
+          TabBar(
+            controller: _tabController,
+            labelColor: AppColors.primary,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: AppColors.primary,
+            dividerColor: Colors.transparent,
+            tabs: const [
+              Tab(text: 'Note', icon: Icon(Icons.note_add_outlined)),
+              Tab(text: 'Todo', icon: Icon(Icons.check_box_outlined)),
+              Tab(
+                text: 'Reminder',
+                icon: Icon(Icons.notification_add_outlined),
               ),
             ],
           ),
-        ),
+          SizedBox(height: 16.h),
+          TextField(
+            controller: _textController,
+            focusNode: _focusNode,
+            maxLines: 5,
+            minLines: 1,
+            decoration: InputDecoration(
+              hintText: 'What\'s on your mind?',
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.r),
+                borderSide: BorderSide.none,
+              ),
+              filled: true,
+              fillColor: isDark ? Colors.grey.shade900 : Colors.grey.shade100,
+            ),
+          ),
+          SizedBox(height: 16.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              SizedBox(width: 8.w),
+              ElevatedButton(
+                onPressed: _isSaving ? null : _handleSave,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                child: _isSaving
+                    ? SizedBox(
+                        width: 20.w,
+                        height: 20.w,
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Text('Add'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
-
-  IconData _getTypeIcon(String type) {
-    switch (type) {
-      case 'Note':
-        return Icons.note_add;
-      case 'Todo':
-        return Icons.check_circle_outline;
-      case 'Reminder':
-        return Icons.notification_add;
-      default:
-        return Icons.add;
-    }
-  }
-
-  IconData _getActionIcon() {
-    switch (_selectedType) {
-      case 'Note':
-        return Icons.description;
-      case 'Todo':
-        return Icons.add_task;
-      case 'Reminder':
-        return Icons.notification_add;
-      default:
-        return Icons.add;
-    }
-  }
-
-  void _toggleVoiceInput() {
-    setState(() {
-      _isVoiceListening = !_isVoiceListening;
-    });
-
-    // TODO: Implement actual voice input
-    if (_isVoiceListening) {
-      // Start voice recognition
-      Future.delayed(const Duration(seconds: 2), () {
-        if (mounted) {
-          setState(() {
-            _isVoiceListening = false;
-          });
-        }
-      });
-    }
-  }
-
-  void _saveItem() {
-    if (_inputController.text.isEmpty) return;
-
-    final text = _inputController.text.trim();
-    final notesBloc = context.read<NotesBloc>();
-    final now = DateTime.now();
-
-    try {
-      if (_selectedType == 'Note') {
-        // Simple note creation using CreateNoteEvent
-        notesBloc.add(
-          CreateNoteEvent(
-            title: text,
-            content: '',
-            color: NoteColor.defaultColor,
-          ),
-        );
-      } else if (_selectedType == 'Todo') {
-        // Create note with embedded todo
-        final todoId = now.millisecondsSinceEpoch.toString();
-
-        final todoItem = TodoItem(
-          id: todoId,
-          text: text,
-          isCompleted: false,
-          priority: TodoPriority.medium,
-          category: TodoCategory.personal,
-          createdAt: now,
-          updatedAt: now,
-        );
-
-        final noteWithTodo = Note(
-          id: now.millisecondsSinceEpoch.toString(),
-          title: text,
-          content: '',
-          todos: [todoItem],
-          color: NoteColor.defaultColor,
-          isPinned: false,
-          isArchived: false,
-          createdAt: now,
-          updatedAt: now,
-        );
-
-        notesBloc.add(UpdateNoteEvent(noteWithTodo));
-      } else if (_selectedType == 'Reminder') {
-        // Create note with reminder tag
-        notesBloc.add(
-          CreateNoteEvent(
-            title: text,
-            content: 'Reminder: $text',
-            color: NoteColor.defaultColor,
-            tags: ['reminder'],
-          ),
-        );
-      }
-
-      // Close the sheet after saving
-      _closeSheet();
-    } catch (e) {
-      // Show error message if something fails
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving $_selectedType: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  void _closeSheet() {
-    _animationController.reverse().then((_) {
-      Navigator.of(context).pop();
-    });
-  }
-}
-
-class ParsedEntity {
-  final IconData icon;
-  final String label;
-  final String type;
-  final Color color;
-
-  ParsedEntity({
-    required this.icon,
-    required this.label,
-    required this.type,
-    required this.color,
-  });
 }

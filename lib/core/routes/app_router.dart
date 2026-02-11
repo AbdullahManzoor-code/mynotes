@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/domain/entities/note.dart';
+import 'package:mynotes/presentation/widgets/create_alarm_bottom_sheet.dart';
+import '../../domain/entities/todo_item.dart';
 import '../../presentation/pages/splash_screen.dart';
 import '../../presentation/pages/onboarding_screen.dart';
 import '../../presentation/pages/today_dashboard_screen.dart';
 import '../../presentation/pages/main_home_screen.dart';
 import '../../presentation/pages/enhanced_notes_list_screen.dart';
 import '../../presentation/pages/enhanced_note_editor_screen.dart';
-import '../../presentation/pages/enhanced_reminders_list_screen.dart';
+// import '../../presentation/pages/enhanced_reminders_list_screen.dart';
 import '../../presentation/screens/todos_screen_fixed.dart';
 import '../../presentation/pages/todo_focus_screen.dart';
 import '../../presentation/pages/advanced_todo_screen.dart';
@@ -22,12 +25,13 @@ import '../../presentation/pages/pin_setup_screen.dart';
 import '../../presentation/pages/focus_session_screen.dart';
 import '../../presentation/pages/focus_celebration_screen.dart';
 import '../../presentation/pages/document_scan_screen.dart';
+import '../../presentation/pages/drawing_canvas_screen.dart';
 import '../../presentation/pages/backup_export_screen.dart';
 import '../../presentation/pages/calendar_integration_screen.dart';
 import '../../presentation/pages/voice_settings_screen.dart';
 import '../../presentation/pages/font_settings_screen.dart';
 import '../../presentation/pages/edit_daily_highlight_screen_new.dart';
-import '../../presentation/pages/daily_highlight_summary_screen.dart';
+
 import '../../presentation/pages/empty_state_notes_help_screen.dart';
 import '../../presentation/pages/empty_state_todos_help_screen.dart';
 import '../../presentation/pages/location_reminder_coming_soon_screen.dart';
@@ -38,14 +42,16 @@ import '../../presentation/pages/home_widgets_screen.dart';
 import '../../presentation/pages/integrated_features_screen.dart';
 import '../../presentation/widgets/quick_add_bottom_sheet.dart';
 import '../../presentation/widgets/global_command_palette.dart';
-import '../../domain/entities/note.dart';
+import '../../domain/entities/alarm.dart';
 import 'app_routes.dart';
 import '../../presentation/pages/media_filter_screen.dart';
 import '../../presentation/pages/batch_4_media_organization_view.dart';
 import '../../presentation/pages/batch_4_media_search_results.dart';
 import '../../presentation/pages/media_analytics_dashboard.dart';
-import '../../presentation/pages/batch_5_create_collection_wizard.dart';
-import '../../presentation/pages/batch_5_rule_builder_screen.dart';
+import '../../presentation/pages/batch_5_create_collection_wizard.dart'
+    hide Center;
+import '../../presentation/pages/batch_5_rule_builder_screen.dart'
+    hide SizedBox;
 import '../../presentation/pages/batch_5_collection_details_screen.dart';
 import '../../presentation/pages/batch_5_collection_management_screen.dart';
 import '../../presentation/pages/batch_6_suggestion_recommendations_screen.dart';
@@ -69,7 +75,6 @@ import '../../presentation/pages/full_media_gallery_screen.dart';
 import '../../presentation/pages/video_trimming_screen.dart';
 import '../../presentation/pages/advanced_settings_screen.dart';
 import '../../presentation/pages/tag_management_screen.dart';
-import '../../presentation/pages/drawing_canvas_screen.dart';
 import '../../presentation/pages/pdf_annotation_screen.dart';
 import '../../presentation/screens/answer_screen.dart';
 import '../../presentation/screens/reflection_history_screen.dart';
@@ -80,9 +85,13 @@ import '../../presentation/pages/search_operators_screen.dart';
 import '../../presentation/pages/sort_customization_screen.dart';
 import '../../presentation/pages/quick_add_confirmation_screen.dart';
 import '../../presentation/pages/fixed_universal_quick_add_screen.dart';
-import '../../domain/entities/reflection_question.dart'; // Added for ReflectionQuestion
+import '../../domain/entities/reflection_question.dart';
+import '../../presentation/pages/daily_focus_highlight_screen.dart';
 
 class AppRouter {
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
+
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case AppRoutes.splash:
@@ -113,10 +122,24 @@ class AppRouter {
         );
 
       case AppRoutes.noteEditor:
+      case AppRoutes.advancedNoteEditor:
+      case AppRoutes.markdownNoteEditor:
         final args = settings.arguments;
+        if (args is Note) {
+          return MaterialPageRoute(
+            builder: (_) => EnhancedNoteEditorScreen(note: args),
+          );
+        } else if (args is Map<String, dynamic>) {
+          return MaterialPageRoute(
+            builder: (_) => EnhancedNoteEditorScreen(
+              note: args['note'],
+              template: args['template'],
+              initialContent: args['initialContent'] ?? args['content'],
+            ),
+          );
+        }
         return MaterialPageRoute(
-          builder: (_) =>
-              EnhancedNoteEditorScreen(note: args is Note ? args : null),
+          builder: (_) => const EnhancedNoteEditorScreen(),
         );
 
       case AppRoutes.archivedNotes:
@@ -211,8 +234,43 @@ class AppRouter {
 
       // ==================== Reminders Module ====================
       case AppRoutes.remindersList:
-        return MaterialPageRoute(
-          builder: (_) => const EnhancedRemindersListScreen(),
+        return MaterialPageRoute(builder: (_) => const AlarmsScreen());
+
+      case AppRoutes.createReminder:
+        return PageRouteBuilder(
+          opaque: false,
+          pageBuilder: (context, _, __) => const SizedBox(),
+          transitionsBuilder: (context, _, __, child) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              showModalBottomSheet(
+                context: context,
+                isScrollControlled: true,
+                backgroundColor: Colors.transparent,
+                builder: (context) => const CreateAlarmBottomSheet(),
+              );
+            });
+            return child;
+          },
+        );
+
+      case AppRoutes.editReminder:
+        final args = settings.arguments;
+        return PageRouteBuilder(
+          opaque: false,
+          pageBuilder: (context, _, __) => const SizedBox(),
+          transitionsBuilder: (context, _, __, child) {
+            if (args is Alarm) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => CreateAlarmBottomSheet(alarm: args),
+                );
+              });
+            }
+            return child;
+          },
         );
 
       case AppRoutes.calendarIntegration:
@@ -277,9 +335,9 @@ class AppRouter {
 
       case AppRoutes.advancedTodo:
         final args = settings.arguments;
-        if (args is Note) {
+        if (args is TodoItem) {
           return MaterialPageRoute(
-            builder: (_) => AdvancedTodoScreen(note: args),
+            builder: (_) => AdvancedTodoScreen(todo: args),
           );
         }
         return _errorRoute();
@@ -408,7 +466,7 @@ class AppRouter {
 
       case AppRoutes.dailyHighlightSummary:
         return MaterialPageRoute(
-          builder: (_) => const DailyHighlightSummaryScreen(),
+          builder: (_) => const DailyFocusHighlightScreen(),
         );
 
       case AppRoutes.editDailyHighlight:

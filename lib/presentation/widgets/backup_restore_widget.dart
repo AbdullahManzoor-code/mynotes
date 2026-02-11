@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/injection_container.dart';
 import 'dart:io';
-import 'dart:convert';
 import '../bloc/backup_bloc.dart';
+import '../bloc/params/backup_params.dart';
+import '../../core/services/global_ui_service.dart';
 
 /// Database backup service (FIL-003) - LEGACY (deprecated, use BackupBloc)
 class BackupService extends ChangeNotifier {
@@ -189,7 +191,9 @@ class BackupRestoreWidget extends StatelessWidget {
                                   style: Theme.of(context).textTheme.labelSmall,
                                 ),
                                 Text(
-                                  _formatDate(state.lastBackupDate),
+                                  _formatDate(
+                                    state.lastBackupDate.toIso8601String(),
+                                  ),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                               ],
@@ -218,7 +222,9 @@ class BackupRestoreWidget extends StatelessWidget {
                           icon: Icon(Icons.backup),
                           label: Text('Create Backup'),
                           onPressed: () {
-                            context.read<BackupBloc>().add(CreateBackupEvent());
+                            context.read<BackupBloc>().add(
+                              CreateBackupEvent.withDefaults(),
+                            );
                             onBackupComplete?.call();
                           },
                         ),
@@ -229,7 +235,10 @@ class BackupRestoreWidget extends StatelessWidget {
                         label: Text('Restore'),
                         onPressed: () {
                           context.read<BackupBloc>().add(
-                            RestoreBackupEvent('path/to/backup'),
+                            RestoreBackupEvent(
+                              params: const BackupParams(),
+                              backupFilePath: 'path/to/backup',
+                            ),
                           );
                           onRestoreComplete?.call();
                         },
@@ -381,8 +390,8 @@ class CacheManagementWidget extends StatelessWidget {
                                     ClearCacheEvent(),
                                   );
                                   Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Cache cleared')),
+                                  getIt<GlobalUiService>().showInfo(
+                                    'Cache cleared',
                                   );
                                 },
                                 child: Text('Clear'),

@@ -35,7 +35,9 @@ class ThemeToggleButton extends StatelessWidget {
               ? 'Switch to Light Mode'
               : 'Switch to Dark Mode',
           onPressed: () {
-            context.read<ThemeBloc>().add(const ToggleThemeEvent());
+            context.read<ThemeBloc>().add(
+              UpdateThemeEvent.toggleDarkMode(state.params),
+            );
           },
         );
       },

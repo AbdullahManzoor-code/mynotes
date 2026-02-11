@@ -49,7 +49,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
       ),
       body: BlocBuilder<ReflectionBloc, ReflectionState>(
         builder: (context, state) {
-          if (state is ReflectionLoading) {
+          if (state.isLoading) {
             return Center(
               child: CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(
@@ -59,11 +59,11 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
             );
           }
 
-          if (state is ReflectionError) {
-            return Center(child: Text(state.message));
+          if (state.error != null) {
+            return Center(child: Text(state.error!));
           }
 
-          if (state is QuestionsLoaded) {
+          if (state.questions.isNotEmpty || state.error == null) {
             if (state.questions.isEmpty) {
               return Center(
                 child: Column(
@@ -142,12 +142,29 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(
-                    question.questionText,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
+                  child: Row(
+                    children: [
+                      if (question.isPinned)
+                        Padding(
+                          padding: EdgeInsets.only(right: 8.w),
+                          child: Icon(
+                            Icons.push_pin,
+                            size: 14.sp,
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
+                      Expanded(
+                        child: Text(
+                          question.questionText,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            fontWeight: question.isPinned
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 SizedBox(width: 8.w),
@@ -223,6 +240,25 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            ListTile(
+              leading: Icon(
+                question.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                color: AppColors.primaryColor,
+              ),
+              title: Text(question.isPinned ? 'Unpin' : 'Pin as Daily Prompt'),
+              onTap: () {
+                Navigator.pop(context);
+                if (question.isPinned) {
+                  context.read<ReflectionBloc>().add(
+                    const UnpinQuestionEvent(),
+                  );
+                } else {
+                  context.read<ReflectionBloc>().add(
+                    PinQuestionEvent(question.id),
+                  );
+                }
+              },
+            ),
             ListTile(
               leading: Icon(Icons.edit, color: AppColors.primaryColor),
               title: const Text('Edit'),

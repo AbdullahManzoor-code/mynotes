@@ -1,144 +1,107 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import 'package:mynotes/presentation/bloc/params/todo_params.dart';
+import 'package:mynotes/presentation/bloc/todos_bloc.dart'
+    show
+        TodosBloc,
+        SortTodos,
+        TodosLoaded,
+        TodosState,
+        FilterTodos,
+        SearchTodos,
+        TodosError,
+        TodosLoading,
+        LoadTodos,
+        UndoDeleteTodo,
+        DeleteTodo,
+        AddTodo,
+        ToggleFilters,
+        ToggleTodo,
+        UpdateTodo;
+import '../../domain/entities/todo_item.dart'
+    show TodoItem, TodoFilter, TodoSortOption, TodoStats;
 import '../widgets/todo_card_widget.dart';
 import '../widgets/create_todo_bottom_sheet.dart';
-import '../bloc/todos_bloc.dart';
-import '../../core/services/todo_service.dart';
 import '../design_system/design_system.dart';
+import '../../injection_container.dart' show getIt;
 
-class TodosScreen extends StatefulWidget {
+class TodosScreen extends StatelessWidget {
   const TodosScreen({super.key});
 
   @override
-  State<TodosScreen> createState() => _TodosScreenState();
-}
-
-class _TodosScreenState extends State<TodosScreen>
-    with TickerProviderStateMixin {
-  final TextEditingController _searchController = TextEditingController();
-  late AnimationController _fabAnimationController;
-  late AnimationController _filterAnimationController;
-  late Animation<double> _fabAnimation;
-  bool _showFilters = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _fabAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
+  Widget build(BuildContext context) {
+    return BlocBuilder<TodosBloc, TodosState>(
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: AppColors.background(context),
+          appBar: AppBar(
+            title: Text(
+              'My Todos',
+              style: AppTypography.heading2(context, Colors.white),
+            ),
+            backgroundColor: AppColors.primaryColor,
+            foregroundColor: Colors.white,
+            actions: [
+              IconButton(
+                icon: Icon(
+                  (state is TodosLoaded && state.showFilters)
+                      ? Icons.filter_list
+                      : Icons.filter_list_off,
+                ),
+                onPressed: () => context.read<TodosBloc>().add(ToggleFilters()),
+              ),
+              if (state is TodosLoaded)
+                IconButton(
+                  icon: const Icon(Icons.sort),
+                  onPressed: () => _showSortOptions(context, state),
+                ),
+            ],
+          ),
+          body: Column(
+            children: [
+              if (state is TodosLoaded && state.showFilters)
+                _buildFilterChips(context, state),
+              _buildSearchBar(context, state),
+              if (state is TodosLoaded && state.stats.total > 0)
+                _buildStatsBar(context, state.stats),
+              Expanded(child: _buildTodosContent(context, state)),
+            ],
+          ),
+          floatingActionButton: AnimatedScale(
+            scale: 1.0,
+            duration: const Duration(milliseconds: 300),
+            child: FloatingActionButton.extended(
+              onPressed: () => _showCreateTodo(context),
+              backgroundColor: AppColors.primaryColor,
+              foregroundColor: Colors.white,
+              label: const Text(
+                'Add Todo',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+              icon: const Icon(Icons.add),
+            ),
+          ),
+        );
+      },
     );
-    _filterAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _fabAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _fabAnimationController,
-        curve: Curves.elasticOut,
-      ),
-    );
-
-    _fabAnimationController.forward();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _fabAnimationController.dispose();
-    _filterAnimationController.dispose();
-    super.dispose();
-  }
-
-  void _toggleFilters() {
-    setState(() {
-      _showFilters = !_showFilters;
-    });
-
-    if (_showFilters) {
-      _filterAnimationController.forward();
-    } else {
-      _filterAnimationController.reverse();
-    }
-  }
-
-  void _showCreateTodo() {
+  void _showCreateTodo(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => CreateTodoBottomSheet(
+      builder: (sheetContext) => CreateTodoBottomSheet(
         onTodoCreated: (todo) {
-          context.read<TodosBloc>().add(AddTodo(todo));
-          Navigator.pop(context);
+          final params = TodoParams.fromTodoItem(todo);
+          context.read<TodosBloc>().add(AddTodo(params));
+          Navigator.pop(sheetContext);
         },
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        title: Text(
-          'My Todos',
-          style: AppTypography.heading2(context, Colors.white),
-        ),
-        backgroundColor: AppColors.primaryColor,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _showFilters ? Icons.filter_list : Icons.filter_list_off,
-            ),
-            onPressed: _toggleFilters,
-          ),
-          BlocBuilder<TodosBloc, TodosState>(
-            builder: (context, state) {
-              if (state is TodosLoaded) {
-                return IconButton(
-                  icon: const Icon(Icons.sort),
-                  onPressed: () => _showSortOptions(state),
-                );
-              }
-              return const SizedBox.shrink();
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<TodosBloc, TodosState>(
-        builder: (context, state) {
-          return Column(
-            children: [
-              if (_showFilters && state is TodosLoaded)
-                _buildFilterChips(state),
-              _buildSearchBar(),
-              if (state is TodosLoaded && state.stats.total > 0)
-                _buildStatsBar(state.stats),
-              Expanded(child: _buildTodosList(state)),
-            ],
-          );
-        },
-      ),
-      floatingActionButton: ScaleTransition(
-        scale: _fabAnimation,
-        child: FloatingActionButton.extended(
-          onPressed: _showCreateTodo,
-          backgroundColor: AppColors.primaryColor,
-          foregroundColor: Colors.white,
-          label: const Text(
-            'Add Todo',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          icon: const Icon(Icons.add),
-        ),
-      ),
-    );
-  }
-
-  void _showSortOptions(TodosLoaded state) {
+  void _showSortOptions(BuildContext context, TodosLoaded state) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface(context),
@@ -153,8 +116,7 @@ class _TodosScreenState extends State<TodosScreen>
           children: [
             Text(
               'Sort by',
-              style: AppTypography.heading3(context, AppColors.primaryColor,
-              ),
+              style: AppTypography.heading3(context, AppColors.primaryColor),
             ),
             const SizedBox(height: 16),
             ...TodoSortOption.values.map((option) {
@@ -231,7 +193,7 @@ class _TodosScreenState extends State<TodosScreen>
     }
   }
 
-  Widget _buildFilterChips(TodosLoaded state) {
+  Widget _buildFilterChips(BuildContext context, TodosLoaded state) {
     return Container(
       height: 60,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -280,11 +242,12 @@ class _TodosScreenState extends State<TodosScreen>
     }
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(BuildContext context, TodosState state) {
+    final query = state is TodosLoaded ? state.searchQuery : '';
     return Padding(
       padding: const EdgeInsets.all(16),
       child: TextField(
-        controller: _searchController,
+        onChanged: (value) => context.read<TodosBloc>().add(SearchTodos(value)),
         decoration: InputDecoration(
           hintText: 'Search todos...',
           hintStyle: AppTypography.bodyMedium(
@@ -294,16 +257,14 @@ class _TodosScreenState extends State<TodosScreen>
             Icons.search,
             color: AppColors.textSecondary(context),
           ),
-          suffixIcon: _searchController.text.isNotEmpty
+          suffixIcon: query.isNotEmpty
               ? IconButton(
                   icon: Icon(
                     Icons.clear,
                     color: AppColors.textSecondary(context),
                   ),
-                  onPressed: () {
-                    _searchController.clear();
-                    context.read<TodosBloc>().add(SearchTodos(''));
-                  },
+                  onPressed: () =>
+                      context.read<TodosBloc>().add(SearchTodos('')),
                 )
               : null,
           border: OutlineInputBorder(
@@ -313,14 +274,11 @@ class _TodosScreenState extends State<TodosScreen>
           filled: true,
           fillColor: AppColors.surface(context),
         ),
-        onChanged: (query) {
-          context.read<TodosBloc>().add(SearchTodos(query));
-        },
       ),
     );
   }
 
-  Widget _buildStatsBar(TodoStats stats) {
+  Widget _buildStatsBar(BuildContext context, TodoStats stats) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -337,240 +295,263 @@ class _TodosScreenState extends State<TodosScreen>
       ),
       child: Row(
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${stats.completed}/${stats.total}',
-                  style: AppTypography.heading3(context, AppColors.primaryColor,
-                  ),
-                ),
-                Text(
-                  'Completed',
-                  style: AppTypography.bodyMedium(
-                    context,
-                  ).copyWith(color: AppColors.textSecondary(context)),
-                ),
-              ],
-            ),
+          _buildStatItem(
+            context,
+            '${stats.completed}/${stats.total}',
+            'Completed',
+            AppColors.primaryColor,
           ),
-          Container(
-            width: 1,
-            height: 40,
-            color: AppColors.textSecondary(context).withOpacity(0.2),
+          _buildDivider(context),
+          _buildStatItem(
+            context,
+            '${stats.overdue}',
+            'Overdue',
+            AppColors.errorColor,
           ),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  stats.overdue.toString(),
-                  style: AppTypography.heading3(context, AppColors.errorColor,
-                  ),
-                ),
-                Text(
-                  'Overdue',
-                  style: AppTypography.bodyMedium(
-                    context,
-                  ).copyWith(color: AppColors.textSecondary(context)),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            color: AppColors.textSecondary(context).withOpacity(0.2),
-          ),
-          Expanded(
-            child: Column(
-              children: [
-                Text(
-                  stats.dueToday.toString(),
-                  style: AppTypography.heading3(context, AppColors.warningColor,
-                  ),
-                ),
-                Text(
-                  'Due Today',
-                  style: AppTypography.bodyMedium(
-                    context,
-                  ).copyWith(color: AppColors.textSecondary(context)),
-                ),
-              ],
-            ),
+          _buildDivider(context),
+          _buildStatItem(
+            context,
+            '${stats.today}',
+            'Due Today',
+            AppColors.warningColor,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTodosList(TodosState state) {
+  Widget _buildStatItem(
+    BuildContext context,
+    String value,
+    String label,
+    Color color,
+  ) {
+    return Expanded(
+      child: Column(
+        children: [
+          Text(value, style: AppTypography.heading3(context, color)),
+          Text(
+            label,
+            style: AppTypography.bodyMedium(
+              context,
+            ).copyWith(color: AppColors.textSecondary(context)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDivider(BuildContext context) {
+    return Container(
+      width: 1,
+      height: 40,
+      color: AppColors.textSecondary(context).withOpacity(0.2),
+    );
+  }
+
+  Widget _buildTodosContent(BuildContext context, TodosState state) {
     if (state is TodosLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-
     if (state is TodosError) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.error_outline,
-              size: 64,
-              color: AppColors.errorColor.withOpacity(0.6),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Error loading todos',
-              style: AppTypography.heading3(context, AppColors.errorColor,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              state.message,
-              style: AppTypography.bodyMedium(
-                context,
-              ).copyWith(color: AppColors.textSecondary(context)),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                context.read<TodosBloc>().add(LoadTodos());
-              },
-              child: const Text('Retry'),
-            ),
-          ],
-        ),
-      );
+      return _buildErrorState(context, state.message);
     }
-
     if (state is TodosLoaded) {
       if (state.filteredTodos.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                state.searchQuery.isNotEmpty
-                    ? Icons.search_off
-                    : Icons.check_circle_outline,
-                size: 64,
-                color: AppColors.textSecondary(context).withOpacity(0.4),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                state.searchQuery.isNotEmpty
-                    ? 'No todos match your search'
-                    : state.currentFilter == TodoFilter.all
-                    ? 'No todos yet'
-                    : 'No ${_getFilterLabel(state.currentFilter).toLowerCase()} todos',
-                style: AppTypography.heading3(
-                  context,
-                ).copyWith(color: AppColors.textSecondary(context)),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                state.searchQuery.isNotEmpty
-                    ? 'Try adjusting your search terms'
-                    : state.currentFilter == TodoFilter.all
-                    ? 'Tap the + button to create your first todo'
-                    : 'Try changing the filter or create a new todo',
-                style: AppTypography.bodyMedium(context).copyWith(
-                  color: AppColors.textSecondary(context).withOpacity(0.5),
-                ),
-                textAlign: TextAlign.center,
-              ),
-              if (state.searchQuery.isNotEmpty ||
-                  state.currentFilter != TodoFilter.all) ...[
-                const SizedBox(height: 16),
-                TextButton(
-                  onPressed: () {
-                    _searchController.clear();
-                    context.read<TodosBloc>().add(SearchTodos(''));
-                    context.read<TodosBloc>().add(FilterTodos(TodoFilter.all));
-                  },
-                  child: const Text('Clear filters'),
-                ),
-              ],
-            ],
-          ),
-        );
+        return _buildEmptyState(context, state);
       }
-
-      return Padding(
-        padding: const EdgeInsets.all(16),
-        child: AnimationLimiter(
-          child: ListView.builder(
-            itemCount: state.filteredTodos.length,
-            itemBuilder: (context, index) {
-              final todo = state.filteredTodos[index];
-              return AnimationConfiguration.staggeredList(
-                position: index,
-                duration: const Duration(milliseconds: 375),
-                child: SlideAnimation(
-                  verticalOffset: 50.0,
-                  child: FadeInAnimation(
-                    child: Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: TodoCardWidget(
-                        todo: todo,
-                        onEdit: (editedTodo) {
-                          context.read<TodosBloc>().add(UpdateTodo(editedTodo));
-                        },
-                        onToggleComplete: (toggledTodo) {
-                          context.read<TodosBloc>().add(ToggleTodo(todo.id));
-                        },
-                        onDelete: (deletedTodo) {
-                          _deleteTodoWithUndo(deletedTodo);
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      );
+      return _buildSectionedList(context, state);
     }
-
-    return const Center(child: Text('Unknown state'));
+    return const SizedBox.shrink();
   }
 
-  void _showEditTodo(dynamic todo) {
+  Widget _buildSectionedList(BuildContext context, TodosLoaded state) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+
+    final overdue = state.filteredTodos
+        .where(
+          (t) =>
+              !t.isCompleted && t.dueDate != null && t.dueDate!.isBefore(today),
+        )
+        .toList();
+
+    final todayTasks = state.filteredTodos
+        .where(
+          (t) =>
+              !t.isCompleted &&
+              t.dueDate != null &&
+              t.dueDate!.isAfter(today.subtract(const Duration(seconds: 1))) &&
+              t.dueDate!.isBefore(tomorrow),
+        )
+        .toList();
+
+    final upcoming = state.filteredTodos
+        .where(
+          (t) =>
+              !t.isCompleted &&
+              t.dueDate != null &&
+              t.dueDate!.isAfter(tomorrow.subtract(const Duration(seconds: 1))),
+        )
+        .toList();
+
+    final anytime = state.filteredTodos
+        .where((t) => !t.isCompleted && t.dueDate == null)
+        .toList();
+
+    final completed = state.filteredTodos.where((t) => t.isCompleted).toList();
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        if (overdue.isNotEmpty) ...[
+          _buildSectionHeader(context, 'Overdue', AppColors.errorColor),
+          ...overdue.map((t) => _buildTodoCard(context, t)),
+        ],
+        if (todayTasks.isNotEmpty) ...[
+          _buildSectionHeader(context, 'Today', AppColors.primaryColor),
+          ...todayTasks.map((t) => _buildTodoCard(context, t)),
+        ],
+        if (upcoming.isNotEmpty) ...[
+          _buildSectionHeader(context, 'Upcoming', AppColors.accentPurple),
+          ...upcoming.map((t) => _buildTodoCard(context, t)),
+        ],
+        if (anytime.isNotEmpty) ...[
+          _buildSectionHeader(
+            context,
+            'Anytime',
+            AppColors.textSecondary(context),
+          ),
+          ...anytime.map((t) => _buildTodoCard(context, t)),
+        ],
+        if (completed.isNotEmpty) ...[
+          ExpansionTile(
+            title: _buildSectionHeader(
+              context,
+              'Completed',
+              AppColors.successGreen,
+              isExpansion: true,
+            ),
+            children: completed.map((t) => _buildTodoCard(context, t)).toList(),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title,
+    Color color, {
+    bool isExpansion = false,
+  }) {
+    final header = Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          Container(
+            width: 4,
+            height: 16,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Text(title, style: AppTypography.heading3(context, color)),
+        ],
+      ),
+    );
+    return isExpansion ? header : header;
+  }
+
+  Widget _buildTodoCard(BuildContext context, TodoItem todo) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: TodoCardWidget(
+        todo: todo,
+        onEdit: (t) => _onEditTodo(context, t),
+        onToggleComplete: (t) => context.read<TodosBloc>().add(
+          ToggleTodo(TodoParams.fromTodoItem(t)),
+        ),
+        onDelete: (t) => _deleteTodoWithUndo(context, t),
+      ),
+    );
+  }
+
+  void _onEditTodo(BuildContext context, TodoItem todo) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => CreateTodoBottomSheet(
+      builder: (sheetContext) => CreateTodoBottomSheet(
         onTodoCreated: (editedTodo) {
-          context.read<TodosBloc>().add(UpdateTodo(editedTodo));
-          Navigator.pop(context);
+          final params = TodoParams.fromTodoItem(editedTodo);
+          context.read<TodosBloc>().add(UpdateTodo(params));
+          Navigator.pop(sheetContext);
         },
         editTodo: todo,
       ),
     );
   }
 
-  void _deleteTodoWithUndo(dynamic todo) {
+  void _deleteTodoWithUndo(BuildContext context, TodoItem todo) {
     context.read<TodosBloc>().add(DeleteTodo(todo.id));
+    getIt<GlobalUiService>().showInfo(
+      'Todo "${todo.text}" deleted',
+      // action: SnackBarAction(
+      // label: 'UNDO',
+      // onPressed: () => context.read<TodosBloc>().add(UndoDeleteTodo(todo)),
+      // ),
+    );
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Todo "${todo.text}" deleted'),
-        backgroundColor: AppColors.surface(context),
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: 'UNDO',
-          textColor: AppColors.primaryColor,
-          onPressed: () {
-            context.read<TodosBloc>().add(UndoDeleteTodo(todo));
-          },
-        ),
-        duration: const Duration(seconds: 4),
+  Widget _buildErrorState(BuildContext context, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: AppColors.errorColor),
+          const SizedBox(height: 16),
+          Text(message, style: AppTypography.bodyMedium(context)),
+          ElevatedButton(
+            onPressed: () => context.read<TodosBloc>().add(LoadTodos()),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, TodosLoaded state) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.check_circle_outline,
+            size: 64,
+            color: AppColors.textSecondary(context).withOpacity(0.4),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            state.searchQuery.isNotEmpty
+                ? 'No todos match your search'
+                : 'All caught up!',
+            style: AppTypography.heading3(context),
+          ),
+          if (state.searchQuery.isNotEmpty ||
+              state.currentFilter != TodoFilter.all)
+            TextButton(
+              onPressed: () {
+                context.read<TodosBloc>().add(SearchTodos(''));
+                context.read<TodosBloc>().add(FilterTodos(TodoFilter.all));
+              },
+              child: const Text('Clear Filters'),
+            ),
+        ],
       ),
     );
   }
 }
-

@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
 import '../../domain/entities/media_item.dart';
 import '../widgets/voice_message_widget.dart';
+import '../widgets/video_player_widget.dart';
+import '../widgets/note_overlay_widget.dart';
+import '../../domain/entities/annotation_stroke.dart';
+import 'image_editor_screen.dart';
+import 'video_editor_screen.dart';
+import 'text_editor_screen.dart';
 
 /// Media Viewer Screen
 /// Full-screen viewer for images, videos, and audio
@@ -11,12 +17,14 @@ class MediaViewerScreen extends StatefulWidget {
   final List<MediaItem> mediaItems;
   final int initialIndex;
   final Function(MediaItem)? onDelete;
+  final Function(MediaItem oldItem, MediaItem newItem)? onUpdate;
 
   const MediaViewerScreen({
     super.key,
     required this.mediaItems,
     this.initialIndex = 0,
     this.onDelete,
+    this.onUpdate,
   });
 
   @override
@@ -26,12 +34,46 @@ class MediaViewerScreen extends StatefulWidget {
 class _MediaViewerScreenState extends State<MediaViewerScreen> {
   late PageController _pageController;
   late int _currentIndex;
+  bool _isMarkupEnabled = false;
+  late Map<int, List<AnnotationStroke>> _annotationsByPage;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
     _pageController = PageController(initialPage: _currentIndex);
+    _annotationsByPage = {};
+    _loadAnnotations();
+  }
+
+  void _loadAnnotations() {
+    for (int i = 0; i < widget.mediaItems.length; i++) {
+      final media = widget.mediaItems[i];
+      if (media.metadata.containsKey('annotations')) {
+        final list = media.metadata['annotations'] as List;
+        _annotationsByPage[i] = list
+            .map(
+              (item) => AnnotationStroke.fromJson(item as Map<String, dynamic>),
+            )
+            .toList();
+      } else {
+        _annotationsByPage[i] = [];
+      }
+    }
+  }
+
+  void _saveAnnotations() {
+    final media = widget.mediaItems[_currentIndex];
+    final strokes = _annotationsByPage[_currentIndex] ?? [];
+    final updatedMedia = media.copyWith(
+      metadata: {
+        ...media.metadata,
+        'annotations': strokes.map((s) => s.toJson()).toList(),
+      },
+    );
+    if (widget.onUpdate != null) {
+      widget.onUpdate!(media, updatedMedia);
+    }
   }
 
   @override
@@ -54,6 +96,67 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     }
   }
 
+  void _editCurrentMedia() {
+    final media = widget.mediaItems[_currentIndex];
+    if (media.type == MediaType.image) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ImageEditorScreen(
+            mediaItem: media,
+            onSave: (editedPath) {
+              final updatedMedia = media.copyWith(filePath: editedPath);
+              if (widget.onUpdate != null) {
+                widget.onUpdate!(media, updatedMedia);
+              }
+              // Update local state to reflect changes in viewer
+              setState(() {
+                widget.mediaItems[_currentIndex] = updatedMedia;
+              });
+            },
+          ),
+        ),
+      );
+    } else if (media.type == MediaType.video) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VideoEditorScreen(
+            mediaItem: media,
+            onSave: (editedPath) {
+              final updatedMedia = media.copyWith(filePath: editedPath);
+              if (widget.onUpdate != null) {
+                widget.onUpdate!(media, updatedMedia);
+              }
+              setState(() {
+                widget.mediaItems[_currentIndex] = updatedMedia;
+              });
+            },
+          ),
+        ),
+      );
+    } else if (media.type == MediaType.document &&
+        media.name.endsWith('.txt')) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SimpleTextEditorScreen(
+            mediaItem: media,
+            onSave: (editedPath) {
+              final updatedMedia = media.copyWith(filePath: editedPath);
+              if (widget.onUpdate != null) {
+                widget.onUpdate!(media, updatedMedia);
+              }
+              setState(() {
+                widget.mediaItems[_currentIndex] = updatedMedia;
+              });
+            },
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -69,6 +172,28 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _isMarkupEnabled ? Icons.brush : Icons.brush_outlined,
+              color: _isMarkupEnabled ? Colors.orange : Colors.white,
+            ),
+            onPressed: () {
+              setState(() {
+                _isMarkupEnabled = !_isMarkupEnabled;
+              });
+              if (!_isMarkupEnabled) {
+                _saveAnnotations();
+              }
+            },
+          ),
+          if (widget.mediaItems[_currentIndex].type == MediaType.image ||
+              widget.mediaItems[_currentIndex].type == MediaType.video ||
+              (widget.mediaItems[_currentIndex].type == MediaType.document &&
+                  widget.mediaItems[_currentIndex].name.endsWith('.txt')))
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.white),
+              onPressed: _editCurrentMedia,
+            ),
           if (widget.onDelete != null)
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.white),
@@ -82,7 +207,23 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
         itemCount: widget.mediaItems.length,
         itemBuilder: (context, index) {
           final media = widget.mediaItems[index];
-          return _buildMediaView(media);
+          return Stack(
+            children: [
+              _buildMediaView(media),
+              NoteOverlayWidget(
+                strokes: _annotationsByPage[index] ?? [],
+                isDrawingMode: _isMarkupEnabled && _currentIndex == index,
+                onStrokeAdded: (stroke) {
+                  setState(() {
+                    _annotationsByPage[index] = [
+                      ...(_annotationsByPage[index] ?? []),
+                      stroke,
+                    ];
+                  });
+                },
+              ),
+            ],
+          );
         },
       ),
       bottomNavigationBar: _buildBottomInfo(),
@@ -97,6 +238,8 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
         return _buildVideoView(media);
       case MediaType.audio:
         return _buildAudioView(media);
+      case MediaType.document:
+        return _buildDocumentView(media);
     }
   }
 
@@ -105,42 +248,88 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
       minScale: 0.5,
       maxScale: 4.0,
       child: Center(
-        child: Image.file(
-          File(media.filePath),
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => _buildErrorWidget(),
-        ),
+        child: media.filePath.startsWith('assets/')
+            ? Image.asset(
+                media.filePath,
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => _buildErrorWidget(),
+              )
+            : Image.file(
+                File(media.filePath),
+                fit: BoxFit.contain,
+                errorBuilder: (_, __, ___) => _buildErrorWidget(),
+              ),
       ),
     );
   }
 
   Widget _buildVideoView(MediaItem media) {
-    // TODO: Integrate video_player package for full video playback
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (media.thumbnailPath.isNotEmpty)
-            Image.file(File(media.thumbnailPath), fit: BoxFit.contain),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              // TODO: Open video player
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Video player integration pending'),
-                ),
-              );
-            },
-            icon: const Icon(Icons.play_arrow),
-            label: const Text('Play Video'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primaryColor,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      child: VideoPlayerWidget(
+        video: VideoMetadata(
+          filePath: media.filePath,
+          fileName: media.name,
+          fileSize: media.size,
+          duration: Duration(milliseconds: media.durationMs),
+          thumbnailPath: media.thumbnailPath,
+          createdAt: media.createdAt,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDocumentView(MediaItem media) {
+    return Center(
+      child: Container(
+        margin: const EdgeInsets.all(32),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white10,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.description_outlined,
+              color: Colors.orange,
+              size: 80,
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            Text(
+              media.name,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${(media.size / 1024).toStringAsFixed(1)} KB',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.6),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              onPressed: () {
+                // TODO: Open with external app or show preview
+              },
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Open Document'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -294,6 +483,8 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
         return Icons.videocam;
       case MediaType.audio:
         return Icons.audiotrack;
+      case MediaType.document:
+        return Icons.description;
     }
   }
 
@@ -305,6 +496,8 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
         return AppColors.videoColor;
       case MediaType.audio:
         return AppColors.audioColor;
+      case MediaType.document:
+        return Colors.orange;
     }
   }
 
@@ -316,7 +509,8 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
         return 'Video';
       case MediaType.audio:
         return 'Audio Recording';
+      case MediaType.document:
+        return 'Document';
     }
   }
 }
-

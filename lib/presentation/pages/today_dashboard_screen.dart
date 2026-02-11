@@ -3,23 +3,19 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
+import 'package:mynotes/domain/entities/alarm.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/todo_item.dart';
-import '../../domain/entities/reflection_answer.dart';
 import '../bloc/note_bloc.dart';
-import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
-import '../bloc/alarm_bloc.dart';
-import '../bloc/alarm_state.dart';
+import '../bloc/note_state.dart';
+import '../bloc/alarms_bloc.dart';
 import '../bloc/reflection_bloc.dart';
+import '../bloc/reflection_event.dart';
 import '../bloc/reflection_state.dart';
+import '../bloc/todos_bloc.dart';
+import '../bloc/params/todo_params.dart';
 import '../design_system/design_system.dart';
-import '../screens/reflection_home_screen.dart';
-import 'enhanced_reminders_list_screen.dart';
-import 'focus_session_screen.dart';
-import 'daily_highlight_summary_screen.dart';
-import 'analytics_dashboard_screen.dart';
-import 'settings_screen.dart';
 import '../widgets/quick_add_bottom_sheet.dart';
 import '../widgets/global_command_palette.dart';
 
@@ -34,6 +30,22 @@ class TodayDashboardScreen extends StatefulWidget {
 }
 
 class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Load data on initialization
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDashboardData();
+    });
+  }
+
+  void _loadDashboardData() {
+    context.read<NotesBloc>().add(const LoadNotesEvent());
+    context.read<AlarmsBloc>().add(LoadAlarms());
+    context.read<ReflectionBloc>().add(const InitializeReflectionEvent());
+    context.read<TodosBloc>().add(LoadTodos());
+  }
+
   @override
   Widget build(BuildContext context) {
     final now = DateTime.now();
@@ -57,243 +69,279 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
         },
         child: Scaffold(
           backgroundColor: AppColors.background(context),
-          body: CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // Top App Bar / Greeting Header
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.screenPaddingHorizontal,
-                    AppSpacing.screenPaddingVertical * 2,
-                    AppSpacing.screenPaddingHorizontal,
-                    AppSpacing.lg,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      // Greeting
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              greeting,
-                              style: AppTypography.heading1(
-                                context,
-                                AppColors.textPrimary(context),
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              "Here's your focus for today.",
-                              style: AppTypography.bodyMedium(
-                                context,
-                                AppColors.textSecondary(context),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Profile Avatar + Command Palette Button
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => showGlobalCommandPalette(context),
-                            child: Container(
-                              width: 40,
-                              height: 40,
-                              margin: const EdgeInsets.only(right: 12),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: AppColors.primary.withOpacity(0.2),
-                                  width: 1,
+          body: RefreshIndicator(
+            onRefresh: () async {
+              context.read<NotesBloc>().add(const LoadNotesEvent());
+              context.read<AlarmsBloc>().add(LoadAlarms());
+              context.read<ReflectionBloc>().add(
+                const InitializeReflectionEvent(),
+              );
+              context.read<TodosBloc>().add(LoadTodos());
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+            color: AppColors.primary,
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(
+                parent: BouncingScrollPhysics(),
+              ),
+              slivers: [
+                // Top App Bar / Greeting Header
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSpacing.screenPaddingHorizontal,
+                      AppSpacing.screenPaddingVertical * 2,
+                      AppSpacing.screenPaddingHorizontal,
+                      AppSpacing.lg,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Greeting
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                greeting,
+                                style: AppTypography.heading1(
+                                  context,
+                                  AppColors.textPrimary(context),
                                 ),
                               ),
-                              child: Icon(
-                                Icons.search,
-                                color: AppColors.primary,
-                                size: 20,
-                              ),
-                            ),
-                          ),
-                          PopupMenuButton<String>(
-                            icon: Icon(
-                              Icons.more_vert,
-                              color: AppColors.primary,
-                            ),
-                            onSelected: (value) => _handleTodayMenu(value),
-                            itemBuilder: (BuildContext context) => [
-                              const PopupMenuItem(
-                                value: 'analytics',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.analytics, size: 20),
-                                    SizedBox(width: 12),
-                                    Text('Analytics'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'reminders',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.notifications, size: 20),
-                                    SizedBox(width: 12),
-                                    Text('Reminders'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'highlights',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.star, size: 20),
-                                    SizedBox(width: 12),
-                                    Text('Daily Highlights'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuItem(
-                                value: 'reflection',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.psychology, size: 20),
-                                    SizedBox(width: 12),
-                                    Text('Daily Reflection'),
-                                  ],
-                                ),
-                              ),
-                              const PopupMenuDivider(),
-                              const PopupMenuItem(
-                                value: 'settings',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.settings, size: 20),
-                                    SizedBox(width: 12),
-                                    Text('Settings'),
-                                  ],
+                              const SizedBox(height: 4),
+                              Text(
+                                "Here's your focus for today.",
+                                style: AppTypography.bodyMedium(
+                                  context,
+                                  AppColors.textSecondary(context),
                                 ),
                               ),
                             ],
                           ),
-                          _buildProfileAvatar(context),
-                        ],
+                        ),
+
+                        // Command Palette & Profile Actions
+                        Row(
+                          children: [
+                            // Search / Command Palette
+                            GestureDetector(
+                              onTap: () => showGlobalCommandPalette(context),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.primary.withOpacity(0.2),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.search,
+                                  color: AppColors.primary,
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+
+                            // Profile / Settings
+                            GestureDetector(
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                AppRoutes.settings,
+                              ),
+                              child: Container(
+                                width: 40,
+                                height: 40,
+                                margin: const EdgeInsets.only(right: 8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface(context),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: AppColors.border(context),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.person_outline,
+                                  color: AppColors.textPrimary(context),
+                                  size: 20,
+                                ),
+                              ),
+                            ),
+
+                            // More Menu
+                            PopupMenuButton<String>(
+                              icon: Icon(
+                                Icons.more_vert,
+                                color: AppColors.textSecondary(context),
+                              ),
+                              onSelected: (value) => _handleTodayMenu(value),
+                              itemBuilder: (BuildContext context) => [
+                                const PopupMenuItem(
+                                  value: 'analytics',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.analytics, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Analytics'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'reminders',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.notifications, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Reminders'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'highlights',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.star, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Daily Highlights'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuItem(
+                                  value: 'reflection',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.psychology, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Daily Reflection'),
+                                    ],
+                                  ),
+                                ),
+                                const PopupMenuDivider(),
+                                const PopupMenuItem(
+                                  value: 'settings',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.settings, size: 20),
+                                      SizedBox(width: 12),
+                                      Text('Settings'),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Stats Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
+                    ),
+                    child: DashboardStats(),
+                  ),
+                ),
+
+                // Quick Actions Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
+                    ),
+                    child: const DashboardQuickActions(),
+                  ),
+                ),
+
+                // Daily Highlight Section
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
+                    ),
+                    child: DashboardHighlight(),
+                  ),
+                ),
+
+                // Daily Reflection Prompt
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
+                    ),
+                    child: DashboardReflection(),
+                  ),
+                ),
+
+                // Section: Your Day
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
+                    ).copyWith(bottom: AppSpacing.md),
+                    child: Text(
+                      'Your Day',
+                      style: AppTypography.heading2(
+                        context,
+                        AppColors.textPrimary(context),
                       ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Stats Section
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPaddingHorizontal,
-                  ).copyWith(bottom: AppSpacing.lg),
-                  child: _buildStatsSection(context),
-                ),
-              ),
-
-              // Quick Actions Section
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPaddingHorizontal,
-                  ).copyWith(bottom: AppSpacing.lg),
-                  child: _buildQuickActionsSection(context),
-                ),
-              ),
-
-              // Daily Highlight Section
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPaddingHorizontal,
-                  ).copyWith(bottom: AppSpacing.lg),
-                  child: _buildDailyHighlight(context),
-                ),
-              ),
-
-              // Daily Reflection Prompt
-              BlocBuilder<ReflectionBloc, ReflectionState>(
-                builder: (context, state) {
-                  // Handle different reflection states appropriately
-                  // For the dashboard, we always show the reflection prompt regardless of state
-                  return SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.screenPaddingHorizontal,
-                      ).copyWith(bottom: AppSpacing.lg),
-                      child: _buildDailyReflection(context, state),
-                    ),
-                  );
-                },
-              ),
-
-              // Section: Your Day
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPaddingHorizontal,
-                  ).copyWith(bottom: AppSpacing.md),
-                  child: Text(
-                    'Your Day',
-                    style: AppTypography.heading2(
-                      context,
-                      AppColors.textPrimary(context),
                     ),
                   ),
                 ),
-              ),
 
-              // Next Reminders Card
-              BlocBuilder<AlarmBloc, AlarmState>(
-                builder: (context, state) {
-                  // Handle different alarm states appropriately
-                  // For the dashboard, we show a simplified view regardless of state
-                  return SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.screenPaddingHorizontal,
-                      ).copyWith(bottom: AppSpacing.md),
-                      child: _buildRemindersCard(context, state),
+                // Next Reminders Card
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
                     ),
-                  );
-                },
-              ),
-
-              // Todos Card
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSpacing.screenPaddingHorizontal,
-                  ).copyWith(bottom: AppSpacing.lg),
-                  child: _buildTodosCard(context),
+                    child: DashboardReminders(),
+                  ),
                 ),
-              ),
 
-              // Continue Writing (Recent Notes)
-              BlocBuilder<NotesBloc, NoteState>(
-                builder: (context, state) {
-                  return SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: AppSpacing.screenPaddingHorizontal,
-                      ).copyWith(bottom: AppSpacing.lg),
-                      child: _buildContinueWriting(context, state),
+                // Todos Card
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
                     ),
-                  );
-                },
-              ),
+                    child: DashboardTodos(),
+                  ),
+                ),
 
-              // Bottom Spacing
-              SliverToBoxAdapter(child: SizedBox(height: 80)),
-            ],
+                // Continue Writing (Recent Notes)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
+                    ),
+                    child: DashboardNotes(),
+                  ),
+                ),
+
+                // Mood Check-In
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSpacing.screenPaddingHorizontal,
+                    ),
+                    child: DashboardMoodCheckIn(),
+                  ),
+                ),
+
+                // Bottom Spacing
+                SliverToBoxAdapter(child: SizedBox(height: 80)),
+              ],
+            ),
           ),
         ),
       ),
@@ -306,154 +354,138 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
     return 'Good evening';
   }
 
-  Widget _buildProfileAvatar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: AppColors.primary.withOpacity(0.2),
-        border: Border.all(
-          color: isDark ? AppColors.surface(context) : Colors.white,
-          width: 2,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Icon(
-        Icons.person,
-        size: 24,
-        color: isDark ? AppColors.surface(context) : Colors.white,
-      ),
-    );
+  void _handleTodayMenu(String value) {
+    switch (value) {
+      case 'analytics':
+        // Navigate to analytics
+        break;
+      case 'reminders':
+        Navigator.pushNamed(context, AppRoutes.remindersList);
+        break;
+      case 'highlights':
+        Navigator.pushNamed(context, AppRoutes.dailyHighlightSummary);
+        break;
+      case 'reflection':
+        Navigator.pushNamed(context, AppRoutes.reflectionHome);
+        break;
+      case 'settings':
+        Navigator.pushNamed(context, AppRoutes.settings);
+        break;
+    }
   }
+}
 
-  Widget _buildStatsSection(BuildContext context) {
+// --- MODULAR DASHBOARD WIDGETS (Systemic Refactor) ---
+
+class DashboardStats extends StatelessWidget {
+  const DashboardStats({super.key});
+
+  @override
+  Widget build(BuildContext context) {
     return BlocBuilder<NotesBloc, NoteState>(
       builder: (context, noteState) {
-        return BlocBuilder<ReflectionBloc, ReflectionState>(
-          builder: (context, reflectionState) {
-            final notesProgress = _calculateNotesProgress(noteState);
-            final todosProgress = _calculateTodosProgress(noteState);
-            final reflectionsProgress = _calculateReflectionsProgress(context);
+        return BlocBuilder<TodosBloc, TodosState>(
+          builder: (context, todosState) {
+            return BlocBuilder<ReflectionBloc, ReflectionState>(
+              builder: (context, reflectionState) {
+                final stats = _calculateStats(
+                  noteState,
+                  todosState,
+                  reflectionState,
+                );
 
-            int totalTodosCount = 0;
-            int completedTodosCount = 0;
-            if (noteState is NotesLoaded) {
-              for (var note in noteState.notes) {
-                if (note.todos != null &&
-                    note.createdAt.day == DateTime.now().day) {
-                  totalTodosCount += note.todos!.length;
-                  completedTodosCount += note.todos!
-                      .where((t) => t.isCompleted)
-                      .length;
-                }
-              }
-            }
-
-            return Column(
-              children: [
-                // Progress Ring Card
-                Container(
-                  padding: EdgeInsets.all(20.w),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface(context),
-                    borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-                    border: Border.all(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? AppColors.borderDark.withOpacity(0.2)
-                          : AppColors.borderLight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(
-                          Theme.of(context).brightness == Brightness.dark
-                              ? 0.3
-                              : 0.05,
+                return Column(
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(20.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface(context),
+                        borderRadius: BorderRadius.circular(
+                          AppSpacing.radiusXL,
                         ),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Today\'s Progress',
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textMuted,
-                          letterSpacing: 0.5,
+                        border: Border.all(
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? AppColors.borderDark.withOpacity(0.2)
+                              : AppColors.borderLight,
                         ),
-                      ),
-                      SizedBox(height: 20.h),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [
-                          // Notes Ring
-                          _buildProgressRing(
-                            context,
-                            title: 'Notes',
-                            progress: notesProgress,
-                            color: AppColors.primary,
-                            icon: Icons.note,
-                          ),
-                          // Todos Ring
-                          _buildProgressRing(
-                            context,
-                            title: 'Todos',
-                            progress: todosProgress,
-                            color: AppColors.accentGreen,
-                            icon: Icons.check_circle,
-                          ),
-                          // Reflections Ring
-                          _buildProgressRing(
-                            context,
-                            title: 'Reflections',
-                            progress: reflectionsProgress,
-                            color: AppColors.accentPurple,
-                            icon: Icons.psychology,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(
+                              Theme.of(context).brightness == Brightness.dark
+                                  ? 0.3
+                                  : 0.05,
+                            ),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
                           ),
                         ],
                       ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 16.h),
-                // Stats Cards
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        label: 'REFLECTION STREAK',
-                        value: '${_getReflectionStreak(reflectionState)} Days',
-                        trend: 'Keep it up!',
-                        trendColor: AppColors.successGreen,
+                      child: Column(
+                        children: [
+                          Text(
+                            'Today\'s Progress',
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.textMuted,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          SizedBox(height: 20.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              DashboardProgressRing(
+                                title: 'Notes',
+                                progress: stats.notesProgress,
+                                color: AppColors.primary,
+                                icon: Icons.note,
+                              ),
+                              DashboardProgressRing(
+                                title: 'Todos',
+                                progress: stats.todosProgress,
+                                color: AppColors.accentGreen,
+                                icon: Icons.check_circle,
+                              ),
+                              DashboardProgressRing(
+                                title: 'Reflections',
+                                progress: stats.reflectionsProgress,
+                                color: AppColors.accentPurple,
+                                icon: Icons.psychology,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        label: 'TODOS DONE',
-                        value: '$completedTodosCount/$totalTodosCount',
-                        trend: totalTodosCount == 0
-                            ? 'No todos'
-                            : '${todosProgress * 100 > 0 ? (todosProgress * 100).toStringAsFixed(0) : 0}% complete',
-                        trendColor: AppColors.successGreen,
-                      ),
+                    SizedBox(height: 16.h),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DashboardStatCard(
+                            label: 'REFLECTION STREAK',
+                            value: '${stats.streak} Days',
+                            trend: 'Keep it up!',
+                            trendColor: AppColors.successGreen,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DashboardStatCard(
+                            label: 'TODOS DONE',
+                            value:
+                                '${stats.completedTodos}/${stats.totalTodos}',
+                            trend: stats.totalTodos == 0
+                                ? 'No todos'
+                                : '${(stats.todosProgress * 100).toStringAsFixed(0)}% complete',
+                            trendColor: AppColors.successGreen,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                ),
-              ],
+                );
+              },
             );
           },
         );
@@ -461,13 +493,119 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
     );
   }
 
-  Widget _buildProgressRing(
-    BuildContext context, {
-    required String title,
-    required double progress,
-    required Color color,
-    required IconData icon,
-  }) {
+  _DashboardStatsData _calculateStats(
+    NoteState noteState,
+    TodosState todosState,
+    ReflectionState reflectionState,
+  ) {
+    double notesProgress = 0;
+    double todosProgress = 0;
+    int totalTodos = 0;
+    int completedTodos = 0;
+
+    if (noteState is NotesLoaded) {
+      final todayNotes = noteState.notes
+          .where(
+            (note) =>
+                note.createdAt.day == DateTime.now().day &&
+                (note.todos?.isEmpty ?? true) &&
+                !note.isArchived,
+          )
+          .length;
+      notesProgress = todayNotes > 0 ? (todayNotes / 5).clamp(0.0, 1.0) : 0.0;
+    }
+
+    if (todosState is TodosLoaded) {
+      totalTodos = todosState.filteredTodos.length;
+      completedTodos = todosState.filteredTodos
+          .where((t) => t.isCompleted)
+          .length;
+      todosProgress = totalTodos == 0
+          ? 0.0
+          : (completedTodos / totalTodos).clamp(0.0, 1.0);
+    }
+
+    final answers = reflectionState.allAnswers.isNotEmpty
+        ? reflectionState.allAnswers
+        : reflectionState.answers;
+
+    int reflectedTodayCount = reflectionState.answeredToday > 0
+        ? reflectionState.answeredToday
+        : answers
+              .where(
+                (r) =>
+                    r.createdAt.year == DateTime.now().year &&
+                    r.createdAt.month == DateTime.now().month &&
+                    r.createdAt.day == DateTime.now().day,
+              )
+              .length;
+
+    double reflectionsProgress = (reflectedTodayCount / 3).clamp(0.0, 1.0);
+
+    int streak = 0;
+    if (answers.isNotEmpty) {
+      final now = DateTime.now();
+      for (int i = 0; i < 365; i++) {
+        final date = now.subtract(Duration(days: i));
+        final hasReflection = answers.any(
+          (r) =>
+              r.createdAt.year == date.year &&
+              r.createdAt.month == date.month &&
+              r.createdAt.day == date.day,
+        );
+        if (hasReflection) {
+          streak++;
+        } else {
+          break;
+        }
+      }
+    }
+
+    return _DashboardStatsData(
+      notesProgress: notesProgress,
+      todosProgress: todosProgress,
+      reflectionsProgress: reflectionsProgress,
+      totalTodos: totalTodos,
+      completedTodos: completedTodos,
+      streak: streak,
+    );
+  }
+}
+
+class _DashboardStatsData {
+  final double notesProgress;
+  final double todosProgress;
+  final double reflectionsProgress;
+  final int totalTodos;
+  final int completedTodos;
+  final int streak;
+
+  _DashboardStatsData({
+    required this.notesProgress,
+    required this.todosProgress,
+    required this.reflectionsProgress,
+    required this.totalTodos,
+    required this.completedTodos,
+    required this.streak,
+  });
+}
+
+class DashboardProgressRing extends StatelessWidget {
+  final String title;
+  final double progress;
+  final Color color;
+  final IconData icon;
+
+  const DashboardProgressRing({
+    super.key,
+    required this.title,
+    required this.progress,
+    required this.color,
+    required this.icon,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       children: [
         SizedBox(
@@ -476,24 +614,21 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Background ring
               CircularProgressIndicator(
                 value: 1.0,
-                strokeWidth: 4.sp,
+                strokeWidth: 4,
                 backgroundColor: color.withOpacity(0.1),
                 valueColor: AlwaysStoppedAnimation<Color>(
                   color.withOpacity(0.3),
                 ),
               ),
-              // Progress ring
               CircularProgressIndicator(
                 value: progress,
-                strokeWidth: 4.sp,
+                strokeWidth: 4,
                 backgroundColor: Colors.transparent,
                 valueColor: AlwaysStoppedAnimation<Color>(color),
               ),
-              // Icon in center
-              Icon(icon, color: color, size: 28.sp),
+              Icon(icon, color: color, size: 28),
             ],
           ),
         ),
@@ -518,114 +653,24 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
       ],
     );
   }
+}
 
-  Widget _buildQuickActionsSection(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildQuickActionButton(
-            context,
-            icon: Icons.add,
-            label: 'Quick Note',
-            onTap: () {
-              showModalBottomSheet(
-                context: context,
-                isScrollControlled: true,
-                backgroundColor: Colors.transparent,
-                builder: (context) => const QuickAddBottomSheet(),
-              );
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickActionButton(
-            context,
-            icon: Icons.timer,
-            label: 'Focus',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const FocusSessionScreen(),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickActionButton(
-            context,
-            icon: Icons.auto_awesome,
-            label: 'Highlights',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const DailyHighlightSummaryScreen(),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
+class DashboardStatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final String trend;
+  final Color trendColor;
 
-  Widget _buildQuickActionButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  const DashboardStatCard({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.trend,
+    required this.trendColor,
+  });
 
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: AppColors.surface(context),
-          borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-          border: Border.all(
-            color: isDark
-                ? AppColors.borderDark.withOpacity(0.2)
-                : AppColors.borderLight,
-            width: 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Icon(icon, size: 24, color: AppColors.primary),
-            const SizedBox(height: 8),
-            Text(
-              label,
-              style: AppTypography.captionLarge(
-                context,
-                AppColors.textPrimary(context),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(
-    BuildContext context, {
-    required String label,
-    required String value,
-    required String trend,
-    required Color trendColor,
-  }) {
+  @override
+  Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -664,227 +709,543 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
       ),
     );
   }
+}
 
-  Widget _buildDailyReflection(BuildContext context, ReflectionState state) {
-    final question =
-        "What is one thing you want to achieve today that will make you feel proud?";
+class DashboardQuickActions extends StatelessWidget {
+  const DashboardQuickActions({super.key});
 
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary.withOpacity(0.1),
-            AppColors.primary.withOpacity(0.05),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
-                ),
-                child: Icon(
-                  Icons.self_improvement,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Daily Reflection',
-                style: AppTypography.heading3(
-                  context,
-                  AppColors.textPrimary(context),
-                ),
-              ),
-            ],
+          _QuickActionButton(
+            icon: Icons.note_add,
+            label: 'New Note',
+            onTap: () => Navigator.pushNamed(context, AppRoutes.noteEditor),
           ),
-          const SizedBox(height: 16),
-          Text(
-            question,
-            style: AppTypography.bodyLarge(
-              context,
-              AppColors.textPrimary(context),
-            ),
+          const SizedBox(width: 12),
+          _QuickActionButton(
+            icon: Icons.assignment_outlined,
+            label: 'New Task',
+            onTap: () => QuickAddBottomSheet.show(context),
           ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ReflectionHomeScreen(),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
-                ),
-                elevation: 0,
-              ),
-              child: Text(
-                'Answer',
-                style: AppTypography.buttonMedium(context, Colors.white),
-              ),
-            ),
+          const SizedBox(width: 12),
+          _QuickActionButton(
+            icon: Icons.timer_outlined,
+            label: 'Focus',
+            onTap: () => Navigator.pushNamed(context, AppRoutes.focusSession),
+          ),
+          const SizedBox(width: 12),
+          _QuickActionButton(
+            icon: Icons.notifications_active_outlined,
+            label: 'Reminder',
+            onTap: () => Navigator.pushNamed(context, AppRoutes.remindersList),
+          ),
+          const SizedBox(width: 12),
+          _QuickActionButton(
+            icon: Icons.scanner_outlined,
+            label: 'Scan',
+            onTap: () => Navigator.pushNamed(context, AppRoutes.documentScan),
+          ),
+          const SizedBox(width: 12),
+          _QuickActionButton(
+            icon: Icons.psychology,
+            label: 'Reflect',
+            onTap: () =>
+                Navigator.pushNamed(context, AppRoutes.reflectionEditor),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildRemindersCard(BuildContext context, AlarmState state) {
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Note: This uses the AlarmBloc which has AlarmState (not AlarmsLoaded)
-    // For upcoming reminders, we show a simplified view
-    final upcomingReminders = <dynamic>[];
 
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 80.w,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+          border: Border.all(
+            color: isDark
+                ? AppColors.borderDark.withOpacity(0.2)
+                : AppColors.borderLight,
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 24, color: AppColors.primary),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: AppTypography.captionLarge(
+                context,
+                AppColors.textPrimary(context),
+              ).copyWith(fontSize: 10.sp),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DashboardTodos extends StatelessWidget {
+  const DashboardTodos({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TodosBloc, TodosState>(
+      builder: (context, state) {
+        final todos = state is TodosLoaded
+            ? state.filteredTodos.where((t) => !t.isCompleted).toList()
+            : <TodoItem>[];
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+            border: Border.all(color: AppColors.border(context), width: 1.w),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(
+                  Theme.of(context).brightness == Brightness.dark ? 0.3 : 0.05,
+                ),
+                blurRadius: 8.r,
+                offset: Offset(0, 2.h),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.check_box_outlined,
+                      color: AppColors.accentGreen,
+                      size: 20.sp,
+                    ),
+                    // 12.horizontalSpace,
+                    Text(
+                      "Today's Todos",
+                      style: AppTypography.labelLarge(
+                        context,
+                        AppColors.textPrimary(context),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (todos.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Text(
+                          '${todos.length} pending',
+                          style: TextStyle(
+                            color: AppColors.accentGreen,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              if (todos.isEmpty)
+                _buildEmptyState(context, 'All clear! No pending tasks.')
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: todos.length > 5 ? 5 : todos.length,
+                  separatorBuilder: (_, __) =>
+                      Divider(height: 1, color: AppColors.border(context)),
+                  itemBuilder: (context, index) =>
+                      _TodoItemWidget(todo: todos[index]),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, String message) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 32),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.done_all,
+              size: 32,
+              color: AppColors.accentGreen.withOpacity(0.3),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message,
+              style: AppTypography.bodySmall(
+                context,
+                AppColors.textSecondary(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TodoItemWidget extends StatelessWidget {
+  final TodoItem todo;
+
+  const _TodoItemWidget({required this.todo});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Checkbox(
+        value: todo.isCompleted,
+        onChanged: (val) {
+          context.read<TodosBloc>().add(
+            ToggleTodo(TodoParams.fromTodoItem(todo)),
+          );
+        },
+        activeColor: AppColors.accentGreen,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      title: Text(
+        todo.text,
+        style: todo.isCompleted
+            ? AppTypography.bodyMedium(
+                context,
+                AppColors.textPrimary(context),
+              ).copyWith(
+                decoration: TextDecoration.lineThrough,
+                color: Colors.grey,
+              )
+            : AppTypography.bodyMedium(context, AppColors.textPrimary(context)),
+      ),
+      trailing: todo.isImportant
+          ? Icon(Icons.star, color: Colors.amber, size: 16.sp)
+          : null,
+      onTap: () =>
+          Navigator.pushNamed(context, AppRoutes.advancedTodo, arguments: todo),
+    );
+  }
+}
+
+class DashboardNotes extends StatelessWidget {
+  const DashboardNotes({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        final recentNotes = state is NotesLoaded
+            ? state.notes.take(5).toList()
+            : <Note>[];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                'CONTINUE WRITING',
+                style: AppTypography.labelSmall(
+                  context,
+                  AppColors.textSecondary(context),
+                ),
+              ),
+            ),
+            if (recentNotes.isEmpty)
+              _buildEmptyState(context)
+            else
+              SizedBox(
+                height: 120,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: recentNotes.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 12),
+                  itemBuilder: (context, index) =>
+                      _NoteCardItem(note: recentNotes[index]),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.symmetric(vertical: 48),
+      child: Center(
+        child: Column(
+          children: [
+            Icon(
+              Icons.description_outlined,
+              size: 32,
+              color: AppColors.textSecondary(context).withOpacity(0.5),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'No notes yet',
+              style: AppTypography.bodyMedium(
+                context,
+                AppColors.textSecondary(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NoteCardItem extends StatelessWidget {
+  final Note note;
+
+  const _NoteCardItem({required this.note});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () =>
+          Navigator.pushNamed(context, AppRoutes.noteEditor, arguments: note),
+      child: Container(
+        width: 160,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface(context),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              note.title.isEmpty ? 'Untitled' : note.title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.labelLarge(
+                context,
+                AppColors.textPrimary(context),
+              ),
+            ),
+            Text(
+              DateFormat('MMM d').format(note.updatedAt),
+              style: AppTypography.captionSmall(
+                context,
+                AppColors.textSecondary(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DashboardMoodCheckIn extends StatelessWidget {
+  const DashboardMoodCheckIn({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-        border: Border.all(color: AppColors.border(context), width: 1),
+        border: Border.all(color: AppColors.border(context)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Next Reminders',
-                  style: AppTypography.labelLarge(
-                    context,
-                    AppColors.textSecondary(context),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const EnhancedRemindersListScreen(),
-                      ),
-                    );
-                  },
-                  child: Text(
-                    'See all',
-                    style: AppTypography.labelMedium(
-                      context,
-                      AppColors.primary,
-                    ),
-                  ),
-                ),
-              ],
+          Text(
+            'How are you feeling?',
+            style: AppTypography.labelLarge(
+              context,
+              AppColors.textPrimary(context),
             ),
           ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _MoodEmojiItem(emoji: '😔', label: 'Sad', mood: 'Sad'),
+              _MoodEmojiItem(emoji: '😐', label: 'Neutral', mood: 'Neutral'),
+              _MoodEmojiItem(emoji: '🙂', label: 'Good', mood: 'Good'),
+              _MoodEmojiItem(emoji: '😊', label: 'Happy', mood: 'Happy'),
+              _MoodEmojiItem(emoji: '🤩', label: 'Awesome', mood: 'Awesome'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
 
-          // Reminders List
-          if (upcomingReminders.isEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 32),
-              decoration: BoxDecoration(
-                border: Border(
-                  top: BorderSide(color: AppColors.border(context)),
-                ),
+class _MoodEmojiItem extends StatelessWidget {
+  final String emoji;
+  final String label;
+  final String mood;
+
+  const _MoodEmojiItem({
+    required this.emoji,
+    required this.label,
+    required this.mood,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        context.read<ReflectionBloc>().add(
+          LogMoodEvent(mood: mood, timestamp: DateTime.now()),
+        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Logged: $mood')));
+      },
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 32)),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: AppTypography.captionSmall(
+              context,
+              AppColors.textSecondary(context),
+            ),
+          ),
+        ],
+      ).paddingAll,
+    );
+  }
+}
+
+class DashboardHighlight extends StatelessWidget {
+  const DashboardHighlight({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        String todayHighlight = "";
+        if (state is NotesLoaded) {
+          final highlightNote = state.notes.firstWhere(
+            (note) =>
+                note.tags.contains('highlight') &&
+                note.createdAt.day == DateTime.now().day &&
+                !note.isArchived,
+            orElse: () => Note(id: '', title: '', content: ''),
+          );
+          todayHighlight = highlightNote.content;
+        }
+
+        final hasHighlight = todayHighlight.isNotEmpty;
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+
+        return GestureDetector(
+          onTap: () =>
+              Navigator.pushNamed(context, AppRoutes.dailyHighlightSummary),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withOpacity(0.1),
+                  AppColors.primary.withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-              child: Center(
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.notifications_none,
-                      size: 32,
-                      color: AppColors.textSecondary(context).withOpacity(0.5),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'No upcoming reminders',
-                      style: AppTypography.bodyMedium(
-                        context,
-                        AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ],
-                ),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.2),
+                width: 1,
               ),
-            )
-          else
-            ...upcomingReminders.map((reminder) {
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  border: Border(
-                    top: BorderSide(color: AppColors.border(context)),
-                  ),
-                ),
-                child: Row(
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    // Icon
                     Container(
-                      width: 40.w,
-                      height: 40.w,
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(
-                          AppSpacing.radiusLG,
-                        ),
+                        color: AppColors.primary.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(10),
                       ),
                       child: Icon(
-                        Icons.schedule,
+                        Icons.star_rounded,
                         color: AppColors.primary,
-                        size: 20.sp,
+                        size: 20,
                       ),
                     ),
-                    SizedBox(width: 12.w),
-
-                    // Title & Time
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            reminder.title ?? 'Reminder',
+                            "Today's Highlight",
                             style: AppTypography.labelLarge(
                               context,
                               AppColors.textPrimary(context),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
-                          SizedBox(height: 2.h),
                           Text(
-                            DateFormat('h:mm a').format(reminder.time),
+                            "Your main focus for today",
                             style: AppTypography.captionLarge(
                               context,
                               AppColors.textSecondary(context),
@@ -893,210 +1254,218 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                         ],
                       ),
                     ),
-
-                    // Snooze button
-                    IconButton(
-                      onPressed: () {},
-                      icon: Icon(
-                        Icons.notifications_paused,
-                        size: 20.sp,
-                        color: AppColors.textPrimary(context),
+                    GestureDetector(
+                      onTap: () => Navigator.pushNamed(
+                        context,
+                        AppRoutes.editDailyHighlight,
                       ),
-                      padding: EdgeInsets.all(8.w),
-                      constraints: const BoxConstraints(),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Icon(
+                          hasHighlight ? Icons.edit_outlined : Icons.add,
+                          color: AppColors.primary,
+                          size: 18,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-              );
-            }),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContinueWriting(BuildContext context, NoteState state) {
-    final recentNotes = state is NotesLoaded
-        ? state.notes.take(5).toList()
-        : <Note>[];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Section Header
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Text(
-            'CONTINUE WRITING',
-            style: AppTypography.labelSmall(
-              context,
-              AppColors.textSecondary(context),
+                const SizedBox(height: 16),
+                if (hasHighlight) ...[
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: AppColors.surface(context),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColors.borderDark.withOpacity(0.3)
+                            : AppColors.borderLight,
+                      ),
+                    ),
+                    child: Text(
+                      todayHighlight,
+                      style: AppTypography.bodyMedium(
+                        context,
+                        AppColors.textPrimary(context),
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 16,
+                      horizontal: 20,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface(context),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? AppColors.borderDark.withOpacity(0.3)
+                            : AppColors.borderLight,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.add,
+                          color: AppColors.textSecondary(context),
+                          size: 20,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          "Set your daily highlight",
+                          style: AppTypography.bodyMedium(
+                            context,
+                            AppColors.textSecondary(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-        ),
+        );
+      },
+    );
+  }
+}
 
-        // Horizontal scrolling cards
-        if (recentNotes.isEmpty)
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 48),
-            child: Center(
-              child: Column(
+class DashboardReflection extends StatelessWidget {
+  const DashboardReflection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ReflectionBloc, ReflectionState>(
+      builder: (context, state) {
+        final hasQuestions = state.questions.isNotEmpty;
+        final questionText = hasQuestions
+            ? state.questions.first.questionText
+            : "No reflection questions available today.";
+
+        return Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                AppColors.primary.withOpacity(0.1),
+                AppColors.primary.withOpacity(0.05),
+              ],
+            ),
+            borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
+            border: Border.all(
+              color: AppColors.primary.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Icon(
-                    Icons.description_outlined,
-                    size: 32,
-                    color: AppColors.textSecondary(context).withOpacity(0.5),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+                    ),
+                    child: const Icon(
+                      Icons.self_improvement,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(width: 12),
                   Text(
-                    'No notes yet',
-                    style: AppTypography.bodyMedium(
+                    'Daily Reflection',
+                    style: AppTypography.heading3(
                       context,
-                      AppColors.textSecondary(context),
+                      AppColors.textPrimary(context),
                     ),
                   ),
                 ],
               ),
-            ),
-          )
-        else
-          SizedBox(
-            height: 120,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              physics: const BouncingScrollPhysics(),
-              itemCount: recentNotes.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final note = recentNotes[index];
-                return _buildNoteCard(context, note);
-              },
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildNoteCard(BuildContext context, Note note) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final timeDiff = DateTime.now().difference(note.createdAt);
-    final timeAgo = timeDiff.inHours < 24
-        ? '${timeDiff.inHours}h ago'
-        : timeDiff.inDays == 1
-        ? 'Yesterday'
-        : DateFormat('MMM d').format(note.createdAt);
-
-    return Container(
-      width: 160,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-        border: Border.all(color: AppColors.border(context), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Icon and time
-          Row(
-            children: [
-              Icon(Icons.description, size: 14, color: AppColors.primary),
-              const SizedBox(width: 6),
+              const SizedBox(height: 16),
               Text(
-                timeAgo,
-                style: AppTypography.captionSmall(context, AppColors.primary),
+                questionText,
+                style: AppTypography.bodyLarge(
+                  context,
+                  AppColors.textPrimary(context),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (hasQuestions) {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.reflectionEditor,
+                        arguments: state.questions.first,
+                      );
+                    } else {
+                      Navigator.pushNamed(context, AppRoutes.reflectionHome);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Answer',
+                    style: AppTypography.buttonMedium(context, Colors.white),
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
-
-          // Title
-          Text(
-            note.title.isEmpty ? 'Untitled' : note.title,
-            style: AppTypography.labelLarge(
-              context,
-              AppColors.textPrimary(context),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-          const SizedBox(height: 4),
-
-          // Content preview
-          Expanded(
-            child: Text(
-              note.content.isEmpty ? 'No content' : note.content,
-              style: AppTypography.bodySmall(
-                context,
-                AppColors.textSecondary(context),
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
+}
 
-  void _handleTodayMenu(String value) {
-    switch (value) {
-      case 'analytics':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const AnalyticsDashboardScreen()),
-        );
-        break;
-      case 'reminders':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const EnhancedRemindersListScreen(),
-          ),
-        );
-        break;
-      case 'highlights':
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const DailyHighlightSummaryScreen(),
-          ),
-        );
-        break;
-      case 'reflection':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ReflectionHomeScreen()),
-        );
-        break;
-      case 'settings':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const SettingsScreen()),
-        );
-        break;
-    }
-  }
+class DashboardReminders extends StatelessWidget {
+  const DashboardReminders({super.key});
 
-  Widget _buildTodosCard(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return BlocBuilder<NotesBloc, NoteState>(
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<AlarmsBloc, AlarmsState>(
       builder: (context, state) {
-        // Collect all todos from notes created today
-        final todos = <TodoItem>[];
-        if (state is NotesLoaded) {
-          for (var note in state.notes) {
-            if (note.todos != null &&
-                note.createdAt.day == DateTime.now().day) {
-              todos.addAll(note.todos!);
-            }
-          }
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        List<Alarm> upcomingReminders = [];
+        if (state is AlarmsLoaded) {
+          final now = DateTime.now();
+          upcomingReminders = state.alarms
+              .where(
+                (alarm) =>
+                    alarm.status != AlarmStatus.completed &&
+                    (alarm.scheduledTime.year == now.year &&
+                            alarm.scheduledTime.month == now.month &&
+                            alarm.scheduledTime.day == now.day ||
+                        alarm.scheduledTime.isAfter(now)),
+              )
+              .toList();
+          upcomingReminders.sort(
+            (a, b) => a.scheduledTime.compareTo(b.scheduledTime),
+          );
+          upcomingReminders = upcomingReminders.take(3).toList();
         }
 
         return Container(
@@ -1113,29 +1482,25 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
             ],
           ),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      "Today's Todos",
+                      'Next Reminders',
                       style: AppTypography.labelLarge(
                         context,
                         AppColors.textSecondary(context),
                       ),
                     ),
                     GestureDetector(
-                      onTap: () {
-                        showModalBottomSheet(
-                          context: context,
-                          builder: (context) => const QuickAddBottomSheet(),
-                        );
-                      },
+                      onTap: () =>
+                          Navigator.pushNamed(context, AppRoutes.remindersList),
                       child: Text(
-                        '+ Add',
+                        'See all',
                         style: AppTypography.labelMedium(
                           context,
                           AppColors.primary,
@@ -1145,8 +1510,7 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                   ],
                 ),
               ),
-              // Todo List
-              if (todos.isEmpty)
+              if (upcomingReminders.isEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   decoration: BoxDecoration(
@@ -1158,7 +1522,7 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                     child: Column(
                       children: [
                         Icon(
-                          Icons.done_all,
+                          Icons.notifications_none,
                           size: 32,
                           color: AppColors.textSecondary(
                             context,
@@ -1166,7 +1530,7 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          'No todos for today',
+                          'No upcoming reminders',
                           style: AppTypography.bodyMedium(
                             context,
                             AppColors.textSecondary(context),
@@ -1177,332 +1541,96 @@ class _TodayDashboardScreenState extends State<TodayDashboardScreen> {
                   ),
                 )
               else
-                ...todos.map((todo) {
-                  final isCompleted = todo.isCompleted;
-                  return Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border(
-                        top: BorderSide(color: AppColors.border(context)),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            // Find the note containing this todo and update it
-                            if (state is NotesLoaded) {
-                              for (var note in state.notes) {
-                                if (note.todos?.any((t) => t.id == todo.id) ??
-                                    false) {
-                                  final updatedTodos = note.todos!
-                                      .map(
-                                        (t) => t.id == todo.id
-                                            ? t.copyWith(
-                                                isCompleted: !isCompleted,
-                                                updatedAt: DateTime.now(),
-                                              )
-                                            : t,
-                                      )
-                                      .toList();
-                                  context.read<NotesBloc>().add(
-                                    UpdateNoteEvent(
-                                      note.copyWith(
-                                        todos: updatedTodos,
-                                        updatedAt: DateTime.now(),
-                                      ),
-                                    ),
-                                  );
-                                  break;
-                                }
-                              }
-                            }
-                          },
-                          child: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: isCompleted
-                                  ? AppColors.primary
-                                  : Colors.transparent,
-                              border: Border.all(
-                                color: isCompleted
-                                    ? AppColors.primary
-                                    : AppColors.primary.withOpacity(0.4),
-                                width: 2,
-                              ),
-                            ),
-                            child: isCompleted
-                                ? const Icon(
-                                    Icons.check,
-                                    size: 16,
-                                    color: Colors.white,
-                                  )
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            todo.text,
-                            style: isCompleted
-                                ? AppTypography.bodyMedium(
-                                    context,
-                                    AppColors.textPrimary(context),
-                                  ).copyWith(
-                                    decoration: TextDecoration.lineThrough,
-                                  )
-                                : AppTypography.bodyMedium(
-                                    context,
-                                    AppColors.textPrimary(context),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                ...upcomingReminders.map(
+                  (alarm) => _ReminderItem(alarm: alarm),
+                ),
             ],
           ),
         );
       },
     );
   }
+}
 
-  Widget _buildDailyHighlight(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final todayHighlight =
-        "Complete project proposal and send to stakeholders"; // This would come from storage
-    final hasHighlight = todayHighlight.isNotEmpty;
+class _ReminderItem extends StatelessWidget {
+  final Alarm alarm;
+  const _ReminderItem({required this.alarm});
 
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppColors.primary.withOpacity(0.1),
-            AppColors.primary.withOpacity(0.05),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-        border: Border.all(color: AppColors.primary.withOpacity(0.2), width: 1),
+        border: Border(top: BorderSide(color: AppColors.border(context))),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.star_rounded,
-                  color: AppColors.primary,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Today's Highlight",
-                      style: AppTypography.labelLarge(
-                        context,
-                        AppColors.textPrimary(context),
-                      ),
-                    ),
-                    Text(
-                      "Your main focus for today",
-                      style: AppTypography.captionLarge(
-                        context,
-                        AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              GestureDetector(
-                onTap: () {
-                  Navigator.pushNamed(context, AppRoutes.editDailyHighlight);
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(6),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Icon(
-                    hasHighlight ? Icons.edit_outlined : Icons.add,
-                    color: AppColors.primary,
-                    size: 18,
-                  ),
-                ),
-              ),
-            ],
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
+            ),
+            child: Icon(Icons.schedule, color: AppColors.primary, size: 20),
           ),
-          const SizedBox(height: 16),
-          if (hasHighlight) ...[
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.surface(context),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: isDark
-                      ? AppColors.borderDark.withOpacity(0.3)
-                      : AppColors.borderLight,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  alarm.message,
+                  style: AppTypography.labelLarge(
+                    context,
+                    AppColors.textPrimary(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              child: Text(
-                todayHighlight,
-                style: AppTypography.bodyMedium(
-                  context,
-                  AppColors.textPrimary(context),
-                ),
-              ),
-            ),
-          ] else ...[
-            GestureDetector(
-              onTap: () {
-                Navigator.pushNamed(context, AppRoutes.editDailyHighlight);
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 16,
-                  horizontal: 20,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surface(context),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isDark
-                        ? AppColors.borderDark.withOpacity(0.3)
-                        : AppColors.borderLight,
+                const SizedBox(height: 2),
+                Text(
+                  _formatDateTime(alarm.scheduledTime),
+                  style: AppTypography.bodySmall(
+                    context,
+                    AppColors.textSecondary(context),
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.add,
-                      color: AppColors.textSecondary(context),
-                      size: 20,
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      "Set your daily highlight",
-                      style: AppTypography.bodyMedium(
-                        context,
-                        AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              ],
             ),
-          ],
+          ),
+          IconButton(
+            onPressed: () =>
+                Navigator.pushNamed(context, AppRoutes.remindersList),
+            icon: Icon(
+              Icons.notifications_paused,
+              size: 20,
+              color: AppColors.textPrimary(context),
+            ),
+            padding: const EdgeInsets.all(8),
+            constraints: const BoxConstraints(),
+          ),
         ],
       ),
     );
   }
 
-  /// Calculate notes progress based on note count
-  double _calculateNotesProgress(NoteState state) {
-    if (state is NotesLoaded) {
-      final todayNotes = state.notes
-          .where(
-            (note) =>
-                note.createdAt.day == DateTime.now().day &&
-                (note.todos?.isEmpty ?? true),
-          )
-          .length;
-      return todayNotes > 0 ? (todayNotes / 5).clamp(0.0, 1.0) : 0.0;
-    }
-    return 0.0;
-  }
-
-  /// Calculate todos progress based on completed todos
-  double _calculateTodosProgress(NoteState state) {
-    if (state is NotesLoaded) {
-      int totalTodos = 0;
-      int completedTodos = 0;
-      for (var note in state.notes) {
-        if (note.todos != null && note.createdAt.day == DateTime.now().day) {
-          totalTodos += note.todos!.length;
-          completedTodos += note.todos!.where((t) => t.isCompleted).length;
-        }
-      }
-      return totalTodos == 0
-          ? 0.0
-          : (completedTodos / totalTodos).clamp(0.0, 1.0);
-    }
-    return 0.0;
-  }
-
-  /// Calculate reflections progress based on reflection completions
-  double _calculateReflectionsProgress(BuildContext context) {
-    final reflectionBloc = context.read<ReflectionBloc>();
-    final state = reflectionBloc.state;
-
-    // Check for AllAnswersLoaded or AnswersLoaded states
-    if (state is AllAnswersLoaded) {
-      final todayReflections = state.answers
-          .where((r) => r.createdAt.day == DateTime.now().day)
-          .length;
-      return (todayReflections / 3).clamp(0.0, 1.0);
-    } else if (state is AnswersLoaded) {
-      final todayReflections = state.answers
-          .where((r) => r.createdAt.day == DateTime.now().day)
-          .length;
-      return (todayReflections / 3).clamp(0.0, 1.0);
-    }
-    return 0.0;
-  }
-
-  /// Get reflection streak days
-  int _getReflectionStreak(ReflectionState state) {
-    List<ReflectionAnswer> answers = <ReflectionAnswer>[];
-
-    if (state is AllAnswersLoaded) {
-      answers = state.answers;
-    } else if (state is AnswersLoaded) {
-      answers = state.answers;
-    }
-
-    if (answers.isEmpty) return 0;
-
-    int streak = 0;
+  String _formatDateTime(DateTime dateTime) {
     final now = DateTime.now();
-    for (int i = 0; i < 365; i++) {
-      final date = now.subtract(Duration(days: i));
-      final hasReflection = answers.any(
-        (r) =>
-            r.createdAt.year == date.year &&
-            r.createdAt.month == date.month &&
-            r.createdAt.day == date.day,
-      );
-      if (hasReflection) {
-        streak++;
-      } else {
-        break;
-      }
+    final today = DateTime(now.year, now.month, now.day);
+    final alarmDate = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    if (alarmDate == today) {
+      return 'Today at ${DateFormat.jm().format(dateTime)}';
     }
-    return streak;
-    return 0;
+    return DateFormat('MMM d, h:mm a').format(dateTime);
   }
 }
 
-// Intent for keyboard shortcut
 class _ShowCommandPaletteIntent extends Intent {
   const _ShowCommandPaletteIntent();
+}
+
+extension on Widget {
+  Widget get paddingAll =>
+      Padding(padding: const EdgeInsets.all(4), child: this);
 }

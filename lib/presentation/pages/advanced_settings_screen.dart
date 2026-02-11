@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/domain/entities/note.dart';
+import 'package:mynotes/injection_container.dart';
 import '../design_system/design_system.dart';
 import '../bloc/theme_bloc.dart';
 import '../bloc/theme_event.dart';
@@ -17,7 +18,7 @@ import 'fixed_universal_quick_add_screen.dart';
 // ==================== Notes Screens ====================
 import 'enhanced_notes_list_screen.dart';
 import 'enhanced_note_editor_screen.dart';
-import 'advanced_note_editor.dart';
+// import 'advanced_note_editor.dart';
 
 // ==================== Todos Screens ====================
 import 'todos_list_screen.dart';
@@ -291,7 +292,9 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
               Switch(
                 value: state.isDarkMode,
                 onChanged: (value) {
-                  context.read<ThemeBloc>().add(ToggleThemeEvent());
+                  context.read<ThemeBloc>().add(
+                    UpdateThemeEvent.toggleDarkMode(state.params),
+                  );
                   HapticFeedback.lightImpact();
                 },
                 activeColor: AppColors.primary,
@@ -536,11 +539,11 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
             'Advanced editor',
             () => _navigateToScreen(const EnhancedNoteEditorScreen()),
           ),
-          _buildDevTile(
-            'Advanced Note Editor',
-            'Professional editor with Quill',
-            () => _navigateToScreen(const AdvancedNoteEditor()),
-          ),
+          // _buildDevTile(
+          //   'Advanced Note Editor',
+          //   'Professional editor with Quill',
+          //   () => _navigateToScreen(const AdvancedNoteEditor()),
+          // ),
           _buildDevTile(
             'Empty Notes Help',
             'Help for empty state',
@@ -815,9 +818,6 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
   }
 
   void _showSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: AppColors.primary),
-    );
+    getIt<GlobalUiService>().showSuccess(message);
   }
 }
-

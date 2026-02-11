@@ -16,10 +16,31 @@ class LoadAllMediaEvent extends MediaGalleryEvent {
 }
 
 class FilterMediaEvent extends MediaGalleryEvent {
-  final String filterType; // 'all', 'image', 'video', 'audio'
-  const FilterMediaEvent({required this.filterType});
+  final String? filterType;
+  final DateTime? fromDate;
+  final DateTime? toDate;
+  final int? minSizeBytes;
+  final int? maxSizeBytes;
+  final List<String>? tags;
+
+  const FilterMediaEvent({
+    this.filterType,
+    this.fromDate,
+    this.toDate,
+    this.minSizeBytes,
+    this.maxSizeBytes,
+    this.tags,
+  });
+
   @override
-  List<Object?> get props => [filterType];
+  List<Object?> get props => [
+    filterType,
+    fromDate,
+    toDate,
+    minSizeBytes,
+    maxSizeBytes,
+    tags,
+  ];
 }
 
 class SearchMediaEvent extends MediaGalleryEvent {
@@ -199,7 +220,7 @@ class MediaGalleryBloc extends Bloc<MediaGalleryEvent, MediaGalleryState> {
             .toList();
       } else {
         final mediaItems = await mediaRepository.filterMediaByType(
-          event.filterType,
+          event.filterType ?? "",
         );
         filtered = mediaItems
             .map(
@@ -229,7 +250,7 @@ class MediaGalleryBloc extends Bloc<MediaGalleryEvent, MediaGalleryState> {
       emit(
         MediaGalleryLoaded(
           mediaItems: filtered,
-          filterType: event.filterType,
+          filterType: event.filterType ?? '',
           totalCount: allMedia.length,
           imageCount: imageCount,
           videoCount: videoCount,

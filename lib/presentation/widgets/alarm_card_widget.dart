@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/alarm.dart';
-import '../../core/services/alarm_service.dart';
 
 class AlarmCardWidget extends StatelessWidget {
   final Alarm alarm;

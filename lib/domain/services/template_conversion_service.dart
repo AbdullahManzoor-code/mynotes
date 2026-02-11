@@ -118,9 +118,11 @@ class TemplateConversionService {
       return {
         'id': _generateTemplateId(),
         'name': templateName,
-        'description': templateDescription ?? 'Template created from reminder',
+        'description':
+            templateDescription ??
+            reminder['description'] ??
+            'No description provided',
         'title': reminder['title'],
-        'description': reminder['description'],
         'priority': reminder['priority'] ?? 'normal',
         'category': reminder['category'],
         'tags': reminder['tags'] ?? [],

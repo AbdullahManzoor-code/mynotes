@@ -1,10 +1,15 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/injection_container.dart';
+import 'dart:convert';
 import '../../domain/repositories/note_repository.dart';
 import '../../domain/entities/note.dart';
 import '../../core/pdf/pdf_export_service.dart';
 import '../../core/notifications/alarm_service.dart';
+import '../../core/services/link_parser_service.dart';
+import '../../domain/repositories/alarm_repository.dart';
 import 'note_event.dart';
 import 'note_state.dart';
+import '../../domain/services/advanced_search_ranking_service.dart';
 
 /// Notes BLoC
 /// Manages all note-related operations and state
@@ -18,12 +23,20 @@ import 'note_state.dart';
 class NotesBloc extends Bloc<NoteEvent, NoteState> {
   final NoteRepository _noteRepository;
   final AlarmService _alarmService;
+  final AlarmRepository _alarmRepository;
+  final LinkParserService _linkParserService;
+  final AdvancedSearchRankingService _rankingService =
+      AdvancedSearchRankingService();
 
   NotesBloc({
     required NoteRepository noteRepository,
     AlarmService? alarmService,
+    AlarmRepository? alarmRepository,
+    LinkParserService? linkParserService,
   }) : _noteRepository = noteRepository,
        _alarmService = alarmService ?? AlarmService(),
+       _alarmRepository = alarmRepository ?? getIt<AlarmRepository>(),
+       _linkParserService = linkParserService ?? LinkParserService(),
        super(const NoteInitial()) {
     // Register event handlers
     on<LoadNotesEvent>(_onLoadNotes);
@@ -50,9 +63,9 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     on<SortNotesEvent>(_onSortNotes);
     on<ClipboardTextDetectedEvent>(_onClipboardTextDetected);
     on<SaveClipboardAsNoteEvent>(_onSaveClipboardAsNote);
+    on<UpdateNoteViewConfigEvent>(_onUpdateNoteViewConfig);
   }
 
-  /// Load all notes
   Future<void> _onLoadNotes(
     LoadNotesEvent event,
     Emitter<NoteState> emit,
@@ -64,7 +77,30 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       if (notes.isEmpty) {
         emit(const NoteEmpty());
       } else {
-        emit(NotesLoaded(notes, totalCount: notes.length));
+        // If we are already in a NotesLoaded state, preserve configuration
+        if (state is NotesLoaded) {
+          final current = state as NotesLoaded;
+          final displayed = _filterAndSortNotes(
+            notes: notes,
+            query: current.searchQuery,
+            tags: current.selectedTags,
+            colors: current.selectedColors,
+            sortOption: current.sortBy,
+            descending: current.sortDescending,
+            filterPinned: current.filterPinned,
+            filterMedia: current.filterWithMedia,
+            filterReminders: current.filterWithReminders,
+          );
+          emit(
+            current.copyWith(
+              allNotes: notes,
+              displayedNotes: displayed,
+              totalCount: notes.length,
+            ),
+          );
+        } else {
+          emit(NotesLoaded.simple(notes));
+        }
       }
     } catch (e) {
       emit(
@@ -109,19 +145,29 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     try {
       emit(const NoteLoading());
 
-      final newNote = Note(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        title: event.title,
-        content: event.content,
-        color: event.color,
-        tags: event.tags ?? [],
-        isPinned: event.isPinned,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      // Convert params to Note entity
+      final newNote = event.params
+          .copyWith(
+            noteId: DateTime.now().millisecondsSinceEpoch.toString(),
+            createdAt: DateTime.now(),
+            updatedAt: DateTime.now(),
+          )
+          .toNote();
 
       await _noteRepository.createNote(newNote);
+
+      // Sync links
+      if (newNote.content.isNotEmpty) {
+        final titles = _linkParserService.extractLinks(newNote.content);
+        if (titles.isNotEmpty) {
+          await _noteRepository.resolveAndSyncLinks(newNote.id, titles);
+        }
+      }
+
       emit(NoteCreated(newNote));
+
+      // Refresh notes list with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
@@ -141,10 +187,23 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     try {
       emit(const NoteLoading());
 
-      final updatedNote = event.note.copyWith(updatedAt: DateTime.now());
+      // Convert params to Note entity with updated timestamp
+      final updatedNote = event.params
+          .copyWith(updatedAt: DateTime.now())
+          .toNote();
 
       await _noteRepository.updateNote(updatedNote);
+
+      // Sync links
+      if (updatedNote.content.isNotEmpty) {
+        final titles = _linkParserService.extractLinks(updatedNote.content);
+        await _noteRepository.resolveAndSyncLinks(updatedNote.id, titles);
+      }
+
       emit(NoteUpdated(updatedNote));
+
+      // Refresh notes list with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
@@ -164,6 +223,9 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     try {
       await _noteRepository.deleteNote(event.noteId);
       emit(NoteDeleted(event.noteId));
+
+      // Refresh notes list with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
@@ -187,6 +249,9 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
         deletedCount++;
       }
       emit(NotesDeleted(event.noteIds, deletedCount));
+
+      // Refresh notes list with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
@@ -198,18 +263,22 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     }
   }
 
-  /// Toggle pin status
+  /// Toggle pin status using Complete Param pattern
   Future<void> _onTogglePinNote(
     TogglePinNoteEvent event,
     Emitter<NoteState> emit,
   ) async {
     try {
-      final note = await _noteRepository.getNoteById(event.noteId);
-      if (note != null) {
-        final updatedNote = note.togglePin();
-        await _noteRepository.updateNote(updatedNote);
-        emit(NotePinToggled(updatedNote, updatedNote.isPinned));
-      }
+      // Convert params to Note entity with updated timestamp
+      final updatedNote = event.params
+          .copyWith(updatedAt: DateTime.now())
+          .toNote();
+
+      await _noteRepository.updateNote(updatedNote);
+      emit(NotePinToggled(updatedNote, updatedNote.isPinned));
+
+      // Refresh notes list with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
       emit(
         NoteError(
@@ -220,18 +289,26 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     }
   }
 
-  /// Toggle archive status
+  /// Toggle archive status using Complete Param pattern
   Future<void> _onToggleArchiveNote(
     ToggleArchiveNoteEvent event,
     Emitter<NoteState> emit,
   ) async {
     try {
-      final note = await _noteRepository.getNoteById(event.noteId);
-      if (note != null) {
-        final updatedNote = note.toggleArchive();
-        await _noteRepository.updateNote(updatedNote);
-        emit(NoteArchiveToggled(updatedNote, updatedNote.isArchived));
-      }
+      // Convert params to Note entity with updated timestamp
+      final updatedNote = event.params
+          .copyWith(updatedAt: DateTime.now())
+          .toNote();
+
+      await _noteRepository.updateNote(updatedNote);
+      emit(NoteArchiveToggled(updatedNote, updatedNote.isArchived));
+
+      // Refresh notes list with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
+
+      // Also refresh archived list for observers
+      final allNotes = await _noteRepository.getAllNotes();
+      emit(ArchivedNotesLoaded(allNotes.where((n) => n.isArchived).toList()));
     } catch (e) {
       emit(
         NoteError(
@@ -242,15 +319,21 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     }
   }
 
-  /// Add tag to note
+  /// Add tag to note using Complete Param pattern
   Future<void> _onAddTag(AddTagEvent event, Emitter<NoteState> emit) async {
     try {
-      final note = await _noteRepository.getNoteById(event.noteId);
-      if (note != null) {
-        final updatedNote = note.addTag(event.tag);
-        await _noteRepository.updateNote(updatedNote);
-        emit(TagAdded(updatedNote, event.tag));
-      }
+      // Convert params to Note entity with updated timestamp
+      final updatedNote = event.params
+          .copyWith(updatedAt: DateTime.now())
+          .toNote();
+
+      await _noteRepository.updateNote(updatedNote);
+      // Extract tag from params (last added tag)
+      final tag = event.params.tags.isNotEmpty ? event.params.tags.last : '';
+      emit(TagAdded(updatedNote, tag));
+
+      // Refresh notes list with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
       emit(
         NoteError(
@@ -261,18 +344,26 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     }
   }
 
-  /// Remove tag from note
+  /// Remove tag from note using Complete Param pattern
   Future<void> _onRemoveTag(
     RemoveTagEvent event,
     Emitter<NoteState> emit,
   ) async {
     try {
-      final note = await _noteRepository.getNoteById(event.noteId);
-      if (note != null) {
-        final updatedNote = note.removeTag(event.tag);
-        await _noteRepository.updateNote(updatedNote);
-        emit(TagRemoved(updatedNote, event.tag));
-      }
+      // Convert params to Note entity with updated timestamp
+      final updatedNote = event.params
+          .copyWith(updatedAt: DateTime.now())
+          .toNote();
+
+      await _noteRepository.updateNote(updatedNote);
+      // Extract removed tag from params comparison
+      final removedTag = event.params.tags.isNotEmpty
+          ? event.params.tags.first
+          : '';
+      emit(TagRemoved(updatedNote, removedTag));
+
+      // Refresh notes list with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
       emit(
         NoteError(
@@ -295,13 +386,26 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       }
 
       final notes = await _noteRepository.getNotes();
-      final results = notes
-          .where(
-            (note) =>
-                note.title.toLowerCase().contains(event.query.toLowerCase()) ||
-                note.content.toLowerCase().contains(event.query.toLowerCase()),
-          )
-          .toList();
+
+      // Use AdvancedSearchRankingService for better results
+      final rankedResults = await _rankingService.advancedSearch(
+        items: notes,
+        query: event.query,
+      );
+
+      final results = rankedResults.map((r) {
+        final note = r.item as Note;
+        return {
+          'note': note,
+          'id': note.id,
+          'title': note.title,
+          'preview': note.content,
+          'date': note.updatedAt,
+          'relevance': r.score.clamp(0, 100).toInt(),
+          'type': 'note',
+          'tags': note.tags,
+        };
+      }).toList();
 
       emit(
         SearchResultsLoaded(results, event.query, resultCount: results.length),
@@ -341,7 +445,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
   ) async {
     try {
       emit(const NoteLoading());
-      final notes = await _noteRepository.getNotes();
+      final notes = await _noteRepository.getAllNotes();
       final archivedNotes = notes.where((note) => note.isArchived).toList();
 
       emit(ArchivedNotesLoaded(archivedNotes));
@@ -441,14 +545,25 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     try {
       final note = await _noteRepository.getNoteById(event.noteId);
       if (note != null) {
-        final updatedNote = note.addAlarm(event.alarm);
+        // Update alarm with linked note ID
+        final alarm = event.alarm.copyWith(linkedNoteId: note.id);
+
+        // Add to global reminders list (Persistence)
+        await _alarmRepository.createAlarm(alarm);
+
+        final updatedNote = note.addAlarm(alarm);
         await _noteRepository.updateNote(updatedNote);
 
         // Schedule the actual alarm notification
         await _alarmService.scheduleAlarm(
-          dateTime: event.alarm.dateTime,
-          id: event.alarm.id,
+          dateTime: alarm.scheduledTime,
+          id: alarm.id,
           title: 'Reminder: ${note.title}',
+          payload: jsonEncode({
+            'type': 'note',
+            'id': alarm.id,
+            'linkedNoteId': note.id,
+          }),
         );
 
         emit(AlarmAdded(updatedNote));
@@ -473,6 +588,9 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       if (note != null) {
         // Cancel the alarm notification
         await _alarmService.cancelAlarm(event.alarmId);
+
+        // Remove from global reminders list (Persistence)
+        await _alarmRepository.deleteAlarm(event.alarmId);
 
         final updatedNote = note.removeAlarm(event.alarmId);
         await _noteRepository.updateNote(updatedNote);
@@ -551,9 +669,8 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
         final updatedNote = note.copyWith(color: event.color);
         await _noteRepository.updateNote(updatedNote);
       }
-      // Reload all notes to reflect changes
-      final updatedNotes = await _noteRepository.getNotes();
-      emit(NotesLoaded(updatedNotes, totalCount: updatedNotes.length));
+      // Reload all notes to reflect changes with current configuration
+      await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
       emit(
         NoteError(
@@ -599,7 +716,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
           break;
       }
 
-      emit(NotesLoaded(notes, totalCount: notes.length));
+      emit(NotesLoaded.simple(notes));
     } catch (e) {
       emit(
         NoteError(
@@ -648,9 +765,6 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       // Save to database
       await _noteRepository.createNote(note);
 
-      // Emit success state
-      emit(ClipboardNoteSaved(note));
-
       // Reload notes
       await _onLoadNotes(const LoadNotesEvent(), emit);
     } catch (e) {
@@ -661,5 +775,128 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
         ),
       );
     }
+  }
+
+  /// Handle view configuration changes
+  void _onUpdateNoteViewConfig(
+    UpdateNoteViewConfigEvent event,
+    Emitter<NoteState> emit,
+  ) {
+    if (state is NotesLoaded) {
+      final current = state as NotesLoaded;
+
+      final newQuery = event.searchQuery ?? current.searchQuery;
+      final newTags = event.selectedTags ?? current.selectedTags;
+      final newColors = event.selectedColors ?? current.selectedColors;
+      final newSort = event.sortBy ?? current.sortBy;
+      final newDesc = event.sortDescending ?? current.sortDescending;
+      final newPinned = event.filterPinned ?? current.filterPinned;
+      final newMedia = event.filterWithMedia ?? current.filterWithMedia;
+      final newReminders =
+          event.filterWithReminders ?? current.filterWithReminders;
+      final newViewMode = event.viewMode ?? current.viewMode;
+
+      final displayed = _filterAndSortNotes(
+        notes: current.allNotes,
+        query: newQuery,
+        tags: newTags,
+        colors: newColors,
+        sortOption: newSort,
+        descending: newDesc,
+        filterPinned: newPinned,
+        filterMedia: newMedia,
+        filterReminders: newReminders,
+      );
+
+      emit(
+        current.copyWith(
+          searchQuery: newQuery,
+          selectedTags: newTags,
+          selectedColors: newColors,
+          sortBy: newSort,
+          sortDescending: newDesc,
+          filterPinned: newPinned,
+          filterWithMedia: newMedia,
+          filterWithReminders: newReminders,
+          viewMode: newViewMode,
+          displayedNotes: displayed,
+        ),
+      );
+    }
+  }
+
+  /// Helper to filter and sort notes
+  List<Note> _filterAndSortNotes({
+    required List<Note> notes,
+    required String query,
+    required List<String> tags,
+    required List<NoteColor> colors,
+    required NoteSortOption sortOption,
+    required bool descending,
+    required bool filterPinned,
+    required bool filterMedia,
+    required bool filterReminders,
+  }) {
+    List<Note> filtered = List.from(notes);
+
+    // Apply search
+    if (query.isNotEmpty) {
+      final q = query.toLowerCase();
+      filtered = filtered
+          .where(
+            (n) =>
+                n.title.toLowerCase().contains(q) ||
+                n.content.toLowerCase().contains(q) ||
+                n.tags.any((t) => t.toLowerCase().contains(q)),
+          )
+          .toList();
+    }
+
+    // Apply tags
+    if (tags.isNotEmpty) {
+      filtered = filtered
+          .where((n) => tags.any((t) => n.tags.contains(t)))
+          .toList();
+    }
+
+    // Apply colors
+    if (colors.isNotEmpty) {
+      filtered = filtered.where((n) => colors.contains(n.color)).toList();
+    }
+
+    // Apply special filters
+    if (filterPinned) {
+      filtered = filtered.where((n) => n.isPinned).toList();
+    }
+    if (filterMedia) {
+      filtered = filtered.where((n) => n.media.isNotEmpty).toList();
+    }
+    if (filterReminders) {
+      filtered = filtered
+          .where((n) => n.alarms != null && n.alarms!.isNotEmpty)
+          .toList();
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) {
+      int cmp;
+      switch (sortOption) {
+        case NoteSortOption.dateCreated:
+          cmp = a.createdAt.compareTo(b.createdAt);
+          break;
+        case NoteSortOption.dateModified:
+          cmp = a.updatedAt.compareTo(b.updatedAt);
+          break;
+        case NoteSortOption.titleAZ:
+          cmp = a.title.compareTo(b.title);
+          break;
+        case NoteSortOption.color:
+          cmp = a.color.index.compareTo(b.color.index);
+          break;
+      }
+      return descending ? -cmp : cmp;
+    });
+
+    return filtered;
   }
 }

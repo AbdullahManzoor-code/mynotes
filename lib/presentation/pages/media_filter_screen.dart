@@ -1,212 +1,280 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/presentation/bloc/media_gallery_bloc.dart';
-import 'package:mynotes/domain/services/media_filtering_service.dart';
+import 'package:mynotes/presentation/bloc/media_filter_bloc.dart';
+import 'package:mynotes/presentation/bloc/params/media_filter_params.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/core/services/global_ui_service.dart';
 
 /// Advanced Media Filter Screen - Batch 4, Screen 1
-class AdvancedMediaFilterScreen extends StatefulWidget {
-  const AdvancedMediaFilterScreen({Key? key}) : super(key: key);
-
-  @override
-  State<AdvancedMediaFilterScreen> createState() =>
-      _AdvancedMediaFilterScreenState();
-}
-
-class _AdvancedMediaFilterScreenState extends State<AdvancedMediaFilterScreen> {
-  final _filtering = MediaFilteringService();
-  
-  String? _selectedType;
-  DateTime? _fromDate;
-  DateTime? _toDate;
-  int? _minSize;
-  int? _maxSize;
-  List<String> _selectedTags = [];
-  
-  bool _excludeArchived = true;
+/// Refactored to BLoC and Design System - ORG-004
+class AdvancedMediaFilterScreen extends StatelessWidget {
+  const AdvancedMediaFilterScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => MediaFilterBloc(),
+      child: const _AdvancedMediaFilterContent(),
+    );
+  }
+}
+
+class _AdvancedMediaFilterContent extends StatelessWidget {
+  const _AdvancedMediaFilterContent();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
       appBar: AppBar(
-        title: const Text('Advanced Media Filter'),
+        title: Text(
+          'Advanced Media Filter',
+          style: AppTypography.heading2(context),
+        ),
         centerTitle: true,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: isDark ? AppColors.lightText : AppColors.darkText,
+            size: 20.sp,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: BlocListener<MediaGalleryBloc, MediaGalleryState>(
         listener: (context, state) {
           if (state is MediaGalleryError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: ${state.message}')),
-            );
+            getIt<GlobalUiService>().showError(state.message);
           }
         },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Media Type Filter
-              _buildSectionTitle('Media Type'),
-              _buildMediaTypeSelector(),
-              const SizedBox(height: 24),
+        child: BlocBuilder<MediaFilterBloc, MediaFilterState>(
+          builder: (context, filterState) {
+            final params = filterState.params;
 
-              // Date Range Filter
-              _buildSectionTitle('Date Range'),
-              _buildDateRangeSelector(),
-              const SizedBox(height: 24),
+            return SingleChildScrollView(
+              padding: EdgeInsets.all(AppSpacing.md),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Media Type Filter
+                  _buildSectionTitle(context, 'Media Type'),
+                  _buildMediaTypeSelector(context, params),
+                  SizedBox(height: AppSpacing.lg),
 
-              // File Size Filter
-              _buildSectionTitle('File Size'),
-              _buildSizeRangeSelector(),
-              const SizedBox(height: 24),
+                  // Date Range Filter
+                  _buildSectionTitle(context, 'Date Range'),
+                  _buildDateRangeSelector(context, params),
+                  SizedBox(height: AppSpacing.lg),
 
-              // Tags Filter
-              _buildSectionTitle('Tags'),
-              _buildTagsInput(),
-              const SizedBox(height: 24),
+                  // File Size Filter
+                  _buildSectionTitle(context, 'File Size'),
+                  _buildSizeRangeSelector(context, params),
+                  SizedBox(height: AppSpacing.lg),
 
-              // Options
-              _buildSectionTitle('Options'),
-              _buildOptionsCheckbox(),
-              const SizedBox(height: 24),
+                  // Tags Filter
+                  _buildSectionTitle(context, 'Tags'),
+                  _buildTagsInput(context, params),
+                  SizedBox(height: AppSpacing.lg),
 
-              // Action Buttons
-              _buildActionButtons(context),
-            ],
-          ),
+                  // Options
+                  _buildSectionTitle(context, 'Options'),
+                  _buildOptionsCheckbox(context, params),
+                  SizedBox(height: AppSpacing.xl),
+
+                  // Action Buttons
+                  _buildActionButtons(context, params),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-          ),
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppSpacing.sm),
+      child: Text(
+        title,
+        style: AppTypography.titleMedium(
+          context,
+        ).copyWith(fontWeight: FontWeight.bold),
+      ),
     );
   }
 
-  Widget _buildMediaTypeSelector() {
+  Widget _buildMediaTypeSelector(
+    BuildContext context,
+    MediaFilterParams params,
+  ) {
     final types = ['image', 'video', 'audio', 'document'];
-    
+
     return Wrap(
-      spacing: 8,
+      spacing: AppSpacing.xs,
       children: types.map((type) {
+        final isSelected = params.selectedType == type;
         return ChoiceChip(
           label: Text(type.toUpperCase()),
-          selected: _selectedType == type,
+          selected: isSelected,
+          selectedColor: AppColors.primaryColor.withOpacity(0.2),
+          labelStyle: TextStyle(
+            color: isSelected
+                ? AppColors.primaryColor
+                : AppColors.secondaryText,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
           onSelected: (selected) {
-            setState(() {
-              _selectedType = selected ? type : null;
-            });
+            context.read<MediaFilterBloc>().add(
+              UpdateMediaTypeEvent(selected ? type : null),
+            );
           },
         );
       }).toList(),
     );
   }
 
-  Widget _buildDateRangeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ListTile(
-          title: Text('From: ${_fromDate?.toString().split(' ')[0] ?? 'Not set'}'),
-          trailing: Icon(Icons.calendar_today),
-          onTap: () => _selectDate(true),
-        ),
-        ListTile(
-          title: Text('To: ${_toDate?.toString().split(' ')[0] ?? 'Not set'}'),
-          trailing: Icon(Icons.calendar_today),
-          onTap: () => _selectDate(false),
-        ),
-        if (_fromDate != null || _toDate != null)
-          TextButton(
-            onPressed: () {
-              setState(() {
-                _fromDate = null;
-                _toDate = null;
-              });
-            },
-            child: const Text('Clear'),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildSizeRangeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          decoration: InputDecoration(
-            labelText: 'Min Size (MB)',
-            prefixIcon: Icon(Icons.storage),
-          ),
-          keyboardType: TextInputType.number,
-          onChanged: (value) {
-            setState(() {
-              _minSize = int.tryParse(value) != null
-                  ? int.parse(value) * 1024 * 1024
-                  : null;
-            });
-          },
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          decoration: InputDecoration(
-            labelText: 'Max Size (MB)',
-            prefixIcon: Icon(Icons.storage),
-          ),
-          keyboardType: TextInputType.number,
-          onChanged: (value) {
-            setState(() {
-              _maxSize = int.tryParse(value) != null
-                  ? int.parse(value) * 1024 * 1024
-                  : null;
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTagsInput() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          decoration: InputDecoration(
-            labelText: 'Enter tags (comma-separated)',
-            hintText: 'e.g., vacation, important, work',
-            prefixIcon: Icon(Icons.label),
-            suffixIcon: IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                // Show tag suggestions in dialog
-                _showTagSuggestions();
-              },
+  Widget _buildDateRangeSelector(
+    BuildContext context,
+    MediaFilterParams params,
+  ) {
+    return Card(
+      elevation: 0,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? AppColors.darkSurface
+          : AppColors.lightSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            title: Text(
+              'From: ${params.fromDate?.toString().split(' ')[0] ?? 'Not set'}',
+              style: AppTypography.bodyMedium(context),
             ),
+            trailing: Icon(
+              Icons.calendar_today,
+              size: 18.sp,
+              color: AppColors.primaryColor,
+            ),
+            onTap: () => _selectDate(context, true),
           ),
+          Divider(
+            height: 1,
+            indent: 16,
+            endIndent: 16,
+            color: Theme.of(context).dividerColor,
+          ),
+          ListTile(
+            title: Text(
+              'To: ${params.toDate?.toString().split(' ')[0] ?? 'Not set'}',
+              style: AppTypography.bodyMedium(context),
+            ),
+            trailing: Icon(
+              Icons.calendar_today,
+              size: 18.sp,
+              color: AppColors.primaryColor,
+            ),
+            onTap: () => _selectDate(context, false),
+          ),
+          if (params.fromDate != null || params.toDate != null)
+            TextButton(
+              onPressed: () {
+                context.read<MediaFilterBloc>().add(
+                  const UpdateDateRangeEvent(fromDate: null, toDate: null),
+                );
+              },
+              child: Text(
+                'Clear Dates',
+                style: TextStyle(color: AppColors.errorColor),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSizeRangeSelector(
+    BuildContext context,
+    MediaFilterParams params,
+  ) {
+    return Column(
+      children: [
+        AppTextField(
+          labelText: 'Min Size (MB)',
+          prefixIcon: Icons.storage,
+          keyboardType: TextInputType.number,
+          hintText: 'Minimum size in MB',
+          onChanged: (value) {
+            final bytes = int.tryParse(value) != null
+                ? int.parse(value) * 1024 * 1024
+                : null;
+            context.read<MediaFilterBloc>().add(
+              UpdateSizeRangeEvent(
+                minSize: bytes,
+                maxSize: params.maxSizeBytes,
+              ),
+            );
+          },
+        ),
+        SizedBox(height: AppSpacing.sm),
+        AppTextField(
+          labelText: 'Max Size (MB)',
+          prefixIcon: Icons.storage,
+          keyboardType: TextInputType.number,
+          hintText: 'Maximum size in MB',
+          onChanged: (value) {
+            final bytes = int.tryParse(value) != null
+                ? int.parse(value) * 1024 * 1024
+                : null;
+            context.read<MediaFilterBloc>().add(
+              UpdateSizeRangeEvent(
+                minSize: params.minSizeBytes,
+                maxSize: bytes,
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTagsInput(BuildContext context, MediaFilterParams params) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AppTextField(
+          labelText: 'Enter tags',
+          hintText: 'e.g., vacation, important',
+          prefixIcon: Icons.label,
+          suffixIcon: Icons.add,
+          onSuffixIconTap: () => _showTagSuggestions(context),
           onSubmitted: (value) {
             if (value.isNotEmpty) {
-              setState(() {
-                _selectedTags = value.split(',').map((t) => t.trim()).toList();
-              });
+              context.read<MediaFilterBloc>().add(AddTagEvent(value.trim()));
             }
           },
         ),
-        if (_selectedTags.isNotEmpty) ...[
-          const SizedBox(height: 12),
+        if (params.selectedTags.isNotEmpty) ...[
+          SizedBox(height: AppSpacing.sm),
           Wrap(
-            spacing: 8,
-            children: _selectedTags.map((tag) {
+            spacing: AppSpacing.xs,
+            children: params.selectedTags.map((tag) {
               return Chip(
                 label: Text(tag),
+                backgroundColor: AppColors.primaryColor.withOpacity(0.1),
+                deleteIcon: Icon(Icons.close, size: 14.sp),
                 onDeleted: () {
-                  setState(() {
-                    _selectedTags.remove(tag);
-                  });
+                  context.read<MediaFilterBloc>().add(RemoveTagEvent(tag));
                 },
               );
             }).toList(),
@@ -216,145 +284,154 @@ class _AdvancedMediaFilterScreenState extends State<AdvancedMediaFilterScreen> {
     );
   }
 
-  Widget _buildOptionsCheckbox() {
-    return CheckboxListTile(
-      title: const Text('Exclude Archived Items'),
-      value: _excludeArchived,
-      onChanged: (value) {
-        setState(() {
-          _excludeArchived = value ?? true;
-        });
-      },
+  Widget _buildOptionsCheckbox(BuildContext context, MediaFilterParams params) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.darkSurface
+            : AppColors.lightSurface,
+        borderRadius: BorderRadius.circular(AppSpacing.radiusSmall),
+      ),
+      child: CheckboxListTile(
+        title: Text(
+          'Exclude Archived Items',
+          style: AppTypography.bodyMedium(context),
+        ),
+        value: params.excludeArchived,
+        activeColor: AppColors.primaryColor,
+        onChanged: (value) {
+          context.read<MediaFilterBloc>().add(
+            ToggleExcludeArchivedEvent(value ?? true),
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context, MediaFilterParams params) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        ElevatedButton.icon(
-          icon: Icon(Icons.clear),
-          label: Text('Reset'),
-          onPressed: _resetFilters,
+        Expanded(
+          child: OutlinedButton.icon(
+            icon: const Icon(Icons.refresh),
+            label: const Text('Reset'),
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              side: BorderSide(color: AppColors.secondaryText),
+            ),
+            onPressed: () => context.read<MediaFilterBloc>().add(
+              const ClearAllFiltersEvent(),
+            ),
+          ),
         ),
-        BlocBuilder<MediaGalleryBloc, MediaGalleryState>(
-          builder: (context, state) {
-            return ElevatedButton.icon(
-              icon: state is MediaGalleryLoading
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Icon(Icons.search),
-              label: Text('Apply Filter'),
-              onPressed: state is MediaGalleryLoading
-                  ? null
-                  : () => _applyFilter(context),
-            );
-          },
+        SizedBox(width: AppSpacing.md),
+        Expanded(
+          child: BlocBuilder<MediaGalleryBloc, MediaGalleryState>(
+            builder: (context, state) {
+              final isLoading = state is MediaGalleryLoading;
+              return ElevatedButton.icon(
+                icon: isLoading
+                    ? SizedBox(
+                        width: 16.sp,
+                        height: 16.sp,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.search),
+                label: const Text('Apply Filter'),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
+                onPressed: isLoading
+                    ? null
+                    : () => _applyFilter(context, params),
+              );
+            },
+          ),
         ),
       ],
     );
   }
 
-  void _selectDate(bool isFromDate) async {
+  Future<void> _selectDate(BuildContext context, bool isFromDate) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: AppColors.primaryColor,
+              primary: AppColors.primaryColor,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
-      setState(() {
-        if (isFromDate) {
-          _fromDate = picked;
-        } else {
-          _toDate = picked;
-        }
-      });
+      final currentParams = context.read<MediaFilterBloc>().state.params;
+      context.read<MediaFilterBloc>().add(
+        UpdateDateRangeEvent(
+          fromDate: isFromDate ? picked : currentParams.fromDate,
+          toDate: isFromDate ? currentParams.toDate : picked,
+        ),
+      );
     }
   }
 
-  void _showTagSuggestions() {
+  void _showTagSuggestions(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Popular Tags'),
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          'Popular Tags',
+          style: AppTypography.heading3(dialogContext),
+        ),
         content: Wrap(
-          spacing: 8,
+          spacing: AppSpacing.xs,
           children: ['vacation', 'work', 'important', 'family', 'project']
-              .map((tag) => ActionChip(
-                    label: Text(tag),
-                    onPressed: () {
-                      setState(() {
-                        if (!_selectedTags.contains(tag)) {
-                          _selectedTags.add(tag);
-                        }
-                      });
-                      Navigator.pop(context);
-                    },
-                  ))
+              .map(
+                (tag) => ActionChip(
+                  label: Text(tag),
+                  onPressed: () {
+                    context.read<MediaFilterBloc>().add(AddTagEvent(tag));
+                    Navigator.pop(dialogContext);
+                  },
+                ),
+              )
               .toList(),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Close'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
           ),
         ],
       ),
     );
   }
 
-  void _resetFilters() {
-    setState(() {
-      _selectedType = null;
-      _fromDate = null;
-      _toDate = null;
-      _minSize = null;
-      _maxSize = null;
-      _selectedTags = [];
-      _excludeArchived = true;
-    });
-  }
-
-  void _applyFilter(BuildContext context) {
-    // Create filter event for BLoC
+  void _applyFilter(BuildContext context, MediaFilterParams params) {
     context.read<MediaGalleryBloc>().add(
-          FilterMediaEvent(
-            typeFilter: _selectedType,
-            fromDate: _fromDate,
-            toDate: _toDate,
-            minSizeBytes: _minSize,
-            maxSizeBytes: _maxSize,
-            tags: _selectedTags.isNotEmpty ? _selectedTags : null,
-          ),
-        );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Filter applied!')),
+      FilterMediaEvent(
+        filterType: params.selectedType,
+        fromDate: params.fromDate,
+        toDate: params.toDate,
+        minSizeBytes: params.minSizeBytes,
+        maxSizeBytes: params.maxSizeBytes,
+        tags: params.selectedTags.isNotEmpty ? params.selectedTags : null,
+      ),
     );
+
+    getIt<GlobalUiService>().showSuccess('Narrowed down your media search');
+    Navigator.pop(context);
   }
 }
-
-/// Filter event to add to MediaGalleryBloc
-class FilterMediaEvent extends MediaGalleryEvent {
-  final String? typeFilter;
-  final DateTime? fromDate;
-  final DateTime? toDate;
-  final int? minSizeBytes;
-  final int? maxSizeBytes;
-  final List<String>? tags;
-
-  FilterMediaEvent({
-    this.typeFilter,
-    this.fromDate,
-    this.toDate,
-    this.minSizeBytes,
-    this.maxSizeBytes,
-    this.tags,
-  });
-}
-

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../core/constants/app_colors.dart';
+import '../design_system/design_system.dart';
 import '../../core/constants/app_constants.dart';
 
 /// Empty State Widget
@@ -29,21 +29,26 @@ class EmptyStateWidget extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 64.sp, color: AppColors.grey400),
+            Icon(
+              icon,
+              size: 64.sp,
+              color: AppColors.textSecondary(context).withOpacity(0.5),
+            ),
             SizedBox(height: 16.h),
             Text(
               title,
-              style: Theme.of(
+              style: AppTypography.heading3(
                 context,
-              ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              ).copyWith(fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             SizedBox(height: 8.h),
             Text(
               subtitle,
-              style: Theme.of(
+              style: AppTypography.bodyMedium(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: AppColors.grey600),
+                AppColors.textSecondary(context),
+              ),
               textAlign: TextAlign.center,
             ),
             if (onAction != null) ...[
@@ -52,6 +57,10 @@ class EmptyStateWidget extends StatelessWidget {
                 onPressed: onAction,
                 icon: const Icon(Icons.add),
                 label: Text(actionLabel ?? 'Create Note'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: Colors.white,
+                ),
               ),
             ],
           ],

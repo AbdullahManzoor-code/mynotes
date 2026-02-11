@@ -621,6 +621,8 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
                 'is:pinned - Filter by status',
                 '"text" - Exact phrase match',
                 '-tag:x - Exclude term',
+                'term1 term2 - Explicit AND',
+                'term1 | term2 - Explicit OR',
               ].map(
                 (e) => Padding(
                   padding: EdgeInsets.only(bottom: 8.h),

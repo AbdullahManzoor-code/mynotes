@@ -1,5 +1,7 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/analytics_bloc.dart';
 import 'edit_daily_highlight_screen_new.dart';
 import '../design_system/design_system.dart';
 
@@ -10,49 +12,65 @@ class DailyHighlightSummaryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppScaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF1a162e), Color(0xFF2d1b4d), Color(0xFF141121)],
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            children: [
-              // Top App Bar
-              _buildTopAppBar(context),
+    return BlocBuilder<AnalyticsBloc, AnalyticsState>(
+      builder: (context, state) {
+        final List<String> highlights = state is AnalyticsLoaded
+            ? state.dailyHighlights
+            : [
+                'Finalized the Project X product strategy proposal',
+                'Took a mindful 20-minute walk during lunch',
+                'Organized workspace and set priorities for tomorrow',
+              ];
 
-              // Main Content
-              Expanded(
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  child: Container(
-                    width: double.infinity,
-                    constraints: BoxConstraints(maxWidth: 480.w),
-                    padding: EdgeInsets.symmetric(horizontal: 24.w),
-                    child: Column(
-                      children: [
-                        SizedBox(height: 24.h),
-                        _buildHeader(),
-                        SizedBox(height: 24.h),
-                        _buildDecorativeImage(),
-                        SizedBox(height: 24.h),
-                        _buildWinsSummaryCard(),
-                        SizedBox(height: 24.h),
-                        _buildActionButtons(context),
-                        SizedBox(height: 32.h),
-                      ],
+        return AppScaffold(
+          body: Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xFF1a162e),
+                  Color(0xFF2d1b4d),
+                  Color(0xFF141121),
+                ],
+              ),
+            ),
+            child: SafeArea(
+              child: Column(
+                children: [
+                  // Top App Bar
+                  _buildTopAppBar(context),
+
+                  // Main Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Container(
+                        width: double.infinity,
+                        constraints: BoxConstraints(maxWidth: 480.w),
+                        padding: EdgeInsets.symmetric(horizontal: 24.w),
+                        child: Column(
+                          children: [
+                            SizedBox(height: 24.h),
+                            _buildHeader(),
+                            SizedBox(height: 24.h),
+                            _buildDecorativeImage(),
+                            SizedBox(height: 24.h),
+                            _buildWinsSummaryCard(highlights),
+                            SizedBox(height: 24.h),
+                            _buildActionButtons(context),
+                            SizedBox(height: 32.h),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -173,13 +191,7 @@ class DailyHighlightSummaryScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildWinsSummaryCard() {
-    final defaultWins = [
-      'Finalized the Project X product strategy proposal',
-      'Took a mindful 20-minute walk during lunch',
-      'Organized workspace and set priorities for tomorrow',
-    ];
-
+  Widget _buildWinsSummaryCard(List<String> highlights) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -224,7 +236,7 @@ class DailyHighlightSummaryScreen extends StatelessWidget {
               SizedBox(height: 16.h),
 
               // Wins List
-              ...defaultWins.map((win) => _buildWinItem(win)),
+              ...highlights.map((win) => _buildWinItem(win)),
             ],
           ),
         ),
@@ -395,4 +407,3 @@ class DailyHighlightSummaryScreen extends StatelessWidget {
     );
   }
 }
-

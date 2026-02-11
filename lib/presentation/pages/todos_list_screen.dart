@@ -2,13 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
 import 'dart:ui';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
+
 import '../../core/services/speech_service.dart';
 import '../../domain/entities/note.dart';
+import '../../domain/entities/todo_item.dart';
+import '../../domain/entities/alarm.dart';
 import '../bloc/note_bloc.dart';
 import '../bloc/note_state.dart';
 import '../bloc/note_event.dart';
+import '../bloc/params/note_params.dart';
 import '../design_system/design_system.dart';
 import '../widgets/empty_state_todos.dart' as widgets;
+// import '../widgets/glass_container.dart';
 import 'advanced_todo_screen.dart';
 import 'recurring_todo_schedule_screen.dart';
 import 'empty_state_todos_help_screen.dart';
@@ -16,7 +23,7 @@ import 'settings_screen.dart';
 import 'enhanced_note_editor_screen.dart';
 
 /// Todos List Screen - Display all notes tagged as todos
-/// Features: Quick voice entry, checkbox completion, filtering
+/// Features: Quick voice entry, checkbox completion, filtering, sections (Algo 5)
 class TodosListScreen extends StatefulWidget {
   const TodosListScreen({super.key});
 
@@ -29,7 +36,10 @@ class _TodosListScreenState extends State<TodosListScreen>
   late TextEditingController _todoController;
   final SpeechService _speechService = SpeechService();
   bool _isListening = false;
-  String _filterBy = 'all'; // all, active, completed
+  String _selectedCategory = 'All'; // All, Personal, Work, etc.
+
+  // Flattened list for rendering
+  List<TodoListItem> _flattenedList = [];
 
   @override
   bool get wantKeepAlive => true;
@@ -95,14 +105,19 @@ class _TodosListScreenState extends State<TodosListScreen>
   void _addQuickTodo() {
     if (_todoController.text.trim().isEmpty) return;
 
-    // Create a new todo note with proper tags
-    context.read<NotesBloc>().add(
-      CreateNoteEvent(
-        title: _todoController.text.trim(),
-        content: '',
-        tags: ['todo'], // Properly tag as todo
-      ),
+    // Create NoteParams with todo tag and potentially category tag
+    List<String> tags = ['todo'];
+    if (_selectedCategory != 'All' && _selectedCategory != 'Important') {
+      tags.add(_selectedCategory.toLowerCase());
+    }
+
+    final todoParams = NoteParams(
+      title: _todoController.text.trim(),
+      content: '',
+      tags: tags,
     );
+
+    context.read<NotesBloc>().add(CreateNoteEvent(params: todoParams));
 
     _todoController.clear();
 
@@ -122,42 +137,149 @@ class _TodosListScreenState extends State<TodosListScreen>
     );
   }
 
+  void _processTodos(List<Note> allNotes) {
+    // 1. Filter by 'todo' tag
+    var todos = allNotes.where((n) => n.tags.contains('todo')).toList();
+
+    // 2. Filter by Category
+    if (_selectedCategory != 'All') {
+      if (_selectedCategory == 'Important') {
+        // Assuming pinned means important for now, or a specific tag
+        todos = todos.where((n) => n.isPinned).toList();
+      } else {
+        todos = todos
+            .where((n) => n.tags.contains(_selectedCategory.toLowerCase()))
+            .toList();
+      }
+    }
+
+    // 3. Group by Section
+    final overdue = <Note>[];
+    final today = <Note>[];
+    final upcoming = <Note>[];
+    final noDate = <Note>[];
+    final completed = <Note>[];
+
+    final now = DateTime.now();
+    final todayStart = DateTime(now.year, now.month, now.day);
+    final tomorrowStart = todayStart.add(const Duration(days: 1));
+
+    for (final note in todos) {
+      if (note.tags.contains('completed')) {
+        completed.add(note);
+        continue;
+      }
+
+      // Check alarms for due date
+      final activeAlarms = note.alarms?.where((a) => a.isActive).toList() ?? [];
+      activeAlarms.sort((a, b) => a.scheduledTime.compareTo(b.scheduledTime));
+
+      if (activeAlarms.isNotEmpty) {
+        final dueDate = activeAlarms.first.scheduledTime;
+        if (dueDate.isBefore(todayStart)) {
+          overdue.add(note);
+        } else if (dueDate.isBefore(tomorrowStart)) {
+          today.add(note);
+        } else {
+          upcoming.add(note);
+        }
+      } else {
+        noDate.add(note);
+      }
+    }
+
+    // 4. Flatten List
+    _flattenedList = [];
+
+    if (overdue.isNotEmpty) {
+      _flattenedList.add(
+        HeaderItem('Overdue', AppColors.error, overdue.length),
+      );
+      _flattenedList.addAll(overdue.map((n) => TaskItem(n)));
+    }
+
+    if (today.isNotEmpty) {
+      _flattenedList.add(HeaderItem('Today', AppColors.primary, today.length));
+      _flattenedList.addAll(today.map((n) => TaskItem(n)));
+    }
+
+    if (upcoming.isNotEmpty) {
+      _flattenedList.add(
+        HeaderItem('Upcoming', AppColors.accentBlue, upcoming.length),
+      );
+      _flattenedList.addAll(upcoming.map((n) => TaskItem(n)));
+    }
+
+    if (noDate.isNotEmpty) {
+      _flattenedList.add(
+        HeaderItem('No Date', AppColors.textSecondary(context), noDate.length),
+      );
+      _flattenedList.addAll(noDate.map((n) => TaskItem(n)));
+    }
+
+    if (completed.isNotEmpty) {
+      _flattenedList.add(
+        HeaderItem('Completed', AppColors.successColor, completed.length),
+      );
+      _flattenedList.addAll(completed.map((n) => TaskItem(n)));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     super.build(context);
 
-    return BlocListener<NotesBloc, NoteState>(
-      listener: (context, state) {
-        if (state is NoteCreated ||
-            state is NoteUpdated ||
-            state is NoteDeleted) {
-          _loadTodos();
-        }
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.background(context),
-        body: Stack(
-          children: [
-            // Main content
-            CustomScrollView(
-              slivers: [
-                _buildSliverAppBar(),
-                _buildFilterSection(),
-                _buildTodoListSection(),
-                SliverToBoxAdapter(child: SizedBox(height: 200.h)),
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        return BlocListener<NotesBloc, NoteState>(
+          listener: (context, state) {
+            if (state is NoteCreated ||
+                state is NoteUpdated ||
+                state is NoteDeleted) {
+              _loadTodos();
+            }
+          },
+          child: Scaffold(
+            backgroundColor: AppColors.getBackgroundColor(
+              Theme.of(context).brightness,
+            ),
+            body: Stack(
+              children: [
+                // Main content
+                CustomScrollView(
+                  slivers: [
+                    _buildSliverAppBar(),
+
+                    if (state is NotesLoaded) ...[
+                      SliverToBoxAdapter(
+                        child: _buildProgressCard(state.notes),
+                      ),
+                      _buildFilterSection(),
+                      _buildTodoListSection(state.notes),
+                    ] else if (state is NoteLoading) ...[
+                      const SliverFillRemaining(
+                        child: Center(child: AppLoadingIndicator()),
+                      ),
+                    ] else ...[
+                      SliverFillRemaining(child: _buildErrorState(state)),
+                    ],
+
+                    SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+                  ],
+                ),
+
+                // Floating quick add at bottom
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: _buildQuickAddSection(),
+                ),
               ],
             ),
-
-            // Floating quick add at bottom
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _buildQuickAddSection(),
-            ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -165,7 +287,9 @@ class _TodosListScreenState extends State<TodosListScreen>
     return SliverAppBar(
       floating: true,
       snap: true,
-      backgroundColor: AppColors.background(context).withOpacity(0.8),
+      backgroundColor: AppColors.getBackgroundColor(
+        Theme.of(context).brightness,
+      ).withOpacity(0.8),
       flexibleSpace: ClipRRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -215,16 +339,6 @@ class _TodosListScreenState extends State<TodosListScreen>
                 ],
               ),
             ),
-            const PopupMenuItem(
-              value: 'help',
-              child: Row(
-                children: [
-                  Icon(Icons.help, size: 20),
-                  SizedBox(width: 12),
-                  Text('Getting Started'),
-                ],
-              ),
-            ),
             const PopupMenuDivider(),
             const PopupMenuItem(
               value: 'settings',
@@ -243,6 +357,77 @@ class _TodosListScreenState extends State<TodosListScreen>
     );
   }
 
+  Widget _buildProgressCard(List<Note> allNotes) {
+    final todos = allNotes.where((n) => n.tags.contains('todo')).toList();
+    if (todos.isEmpty) return const SizedBox.shrink();
+
+    final completed = todos.where((n) => n.tags.contains('completed')).length;
+    final total = todos.length;
+    final progress = total > 0 ? completed / total : 0.0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 8.h),
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16.r),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Progress Overview',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).toInt()}%',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 12.h),
+            LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white.withOpacity(0.3),
+              valueColor: const AlwaysStoppedAnimation(Colors.white),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              '$completed of $total tasks completed',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.9),
+                fontSize: 12.sp,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildQuickAddSection() {
     return Container(
       decoration: BoxDecoration(
@@ -250,8 +435,10 @@ class _TodosListScreenState extends State<TodosListScreen>
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppColors.background(context).withOpacity(0),
-            AppColors.background(context),
+            AppColors.getBackgroundColor(
+              Theme.of(context).brightness,
+            ).withOpacity(0),
+            AppColors.getBackgroundColor(Theme.of(context).brightness),
           ],
         ),
       ),
@@ -266,7 +453,7 @@ class _TodosListScreenState extends State<TodosListScreen>
                 style: AppTypography.bodyLarge(null, null, FontWeight.w500),
                 maxLines: null,
                 decoration: InputDecoration(
-                  hintText: "What's on your mind?",
+                  hintText: "Add a task...",
                   hintStyle: AppTypography.bodyLarge(
                     null,
                     AppColors.textMuted.withOpacity(0.5),
@@ -297,7 +484,9 @@ class _TodosListScreenState extends State<TodosListScreen>
                 child: Icon(
                   _isListening ? Icons.mic : Icons.mic_none,
                   size: 24.sp,
-                  color: _isListening ? AppColors.primary : Colors.white,
+                  color: _isListening
+                      ? AppColors.primary
+                      : AppColors.getTextColor(Theme.of(context).brightness),
                 ),
               ),
             ),
@@ -329,11 +518,7 @@ class _TodosListScreenState extends State<TodosListScreen>
   }
 
   Widget _buildFilterSection() {
-    final filters = [
-      {'id': 'all', 'label': 'All'},
-      {'id': 'active', 'label': 'Active'},
-      {'id': 'completed', 'label': 'Done'},
-    ];
+    final categories = ['All', 'Personal', 'Work', 'Important'];
 
     return SliverPadding(
       padding: EdgeInsets.symmetric(
@@ -341,152 +526,170 @@ class _TodosListScreenState extends State<TodosListScreen>
         vertical: 12.h,
       ),
       sliver: SliverToBoxAdapter(
-        child: Container(
-          height: 44.h,
-          decoration: BoxDecoration(
-            color: AppColors.surface(context).withOpacity(0.5),
-            borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
-          ),
-          padding: EdgeInsets.all(4.w),
-          child: Row(
-            children: filters.map((f) {
-              final isSelected = _filterBy == f['id'];
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _filterBy = f['id']!),
-                  child: Container(
-                    decoration: BoxDecoration(
+        child: SizedBox(
+          height: 36.h,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: categories.length,
+            separatorBuilder: (context, index) => SizedBox(width: 8.w),
+            itemBuilder: (context, index) {
+              final category = categories[index];
+              final isSelected = _selectedCategory == category;
+              return GestureDetector(
+                onTap: () => setState(() => _selectedCategory = category),
+                child: Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 16.w,
+                    vertical: 8.h,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppColors.primary
+                        : AppColors.surface(context),
+                    borderRadius: BorderRadius.circular(20.r),
+                    border: Border.all(
                       color: isSelected
-                          ? AppColors.surface(context)
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
-                      boxShadow: isSelected
-                          ? [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
+                          ? AppColors.primary
+                          : AppColors.divider(context),
                     ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      f['label']!,
-                      style: AppTypography.bodySmall(
-                        null,
-                        isSelected ? AppColors.primary : AppColors.textMuted,
-                        FontWeight.w600,
-                      ),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    category,
+                    style: TextStyle(
+                      color: isSelected
+                          ? Colors.white
+                          : AppColors.textSecondary(context),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12.sp,
                     ),
                   ),
                 ),
               );
-            }).toList(),
+            },
           ),
         ),
       ),
     );
   }
 
-  Widget _buildTodoListSection() {
-    return BlocBuilder<NotesBloc, NoteState>(
-      builder: (context, state) {
-        if (state is NoteLoading) {
-          return const SliverFillRemaining(
-            child: Center(child: AppLoadingIndicator()),
-          );
-        }
-        if (state is NotesLoaded) {
-          final todos = state.notes
-              .where((n) => n.tags.contains('todo'))
-              .toList();
+  Widget _buildTodoListSection(List<Note> allNotes) {
+    _processTodos(allNotes);
 
-          // Show empty state if no todos at all
-          if (todos.isEmpty && _filterBy == 'all') {
-            return SliverFillRemaining(child: widgets.EmptyStateTodos());
-          }
+    if (_flattenedList.isEmpty) {
+      return SliverFillRemaining(
+        child: Padding(
+          padding: EdgeInsets.only(bottom: 100.h),
+          child: widgets.EmptyStateTodos(),
+        ),
+      );
+    }
 
-          final filtered = _filterTodos(todos);
-
-          if (filtered.isEmpty) {
-            return SliverFillRemaining(
-              child: Padding(
-                padding: EdgeInsets.only(bottom: 100.h),
-                child: EmptyStateWidget(
-                  icon: Icons.check_circle_outline,
-                  title: 'All caught up!',
-                  description: 'No tasks to show for this filter.',
-                ),
-              ),
-            );
-          }
-
-          return SliverPadding(
-            padding: EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) => _buildTodoItem(filtered[index]),
-                childCount: filtered.length,
-              ),
-            ),
-          );
-        }
-
-        if (state is NoteError) {
-          return SliverFillRemaining(
-            child: Padding(
-              padding: const EdgeInsets.all(32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+    return SliverPadding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
+      sliver: SliverList(
+        delegate: SliverChildBuilderDelegate((context, index) {
+          final item = _flattenedList[index];
+          if (item is HeaderItem) {
+            return Padding(
+              padding: EdgeInsets.only(top: 24.h, bottom: 12.h),
+              child: Row(
                 children: [
-                  Icon(
-                    Icons.error_outline,
-                    size: 64,
-                    color: AppColors.errorColor,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Error loading tasks',
-                    style: AppTypography.heading3(
-                      context,
-                      AppColors.textPrimary(context),
+                  Container(
+                    width: 4.w,
+                    height: 16.h,
+                    decoration: BoxDecoration(
+                      color: item.color,
+                      borderRadius: BorderRadius.circular(2.r),
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 8),
+                  SizedBox(width: 8.w),
                   Text(
-                    state.message,
-                    style: AppTypography.bodyMedium(
-                      context,
-                      AppColors.textSecondary(context),
+                    item.title.toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.0,
+                      color: AppColors.getSecondaryTextColor(
+                        Theme.of(context).brightness,
+                      ),
                     ),
-                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () {
-                      context.read<NotesBloc>().add(const LoadNotesEvent());
-                    },
-                    child: Text('Retry'),
+                  SizedBox(width: 8.w),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 6.w,
+                      vertical: 2.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: item.color.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.r),
+                    ),
+                    child: Text(
+                      '${item.count}',
+                      style: TextStyle(
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w600,
+                        color: item.color,
+                      ),
+                    ),
                   ),
                 ],
               ),
-            ),
-          );
-        }
+            );
+          } else if (item is TaskItem) {
+            return _buildTodoItem(item.note);
+          }
+          return const SizedBox.shrink();
+        }, childCount: _flattenedList.length),
+      ),
+    );
+  }
 
-        return const SliverFillRemaining(
-          child: Center(child: Text('Error loading tasks')),
-        );
-      },
+  Widget _buildErrorState(NoteState state) {
+    String message = 'Error loading tasks';
+    if (state is NoteError) message = state.message;
+
+    return Padding(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: AppColors.errorColor),
+          const SizedBox(height: 16),
+          Text(
+            message,
+            style: AppTypography.heading3(
+              context,
+              AppColors.textPrimary(context),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () {
+              context.read<NotesBloc>().add(const LoadNotesEvent());
+            },
+            child: Text('Retry'),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildTodoItem(Note todo) {
     final isCompleted = todo.tags.contains('completed');
+
+    // Check for alarm Info
+    String? alarmText;
+    final activeAlarm = todo.alarms?.where((a) => a.isActive).firstOrNull;
+    if (activeAlarm != null && !isCompleted) {
+      alarmText = DateFormat('MMM d, h:mm a').format(activeAlarm.scheduledTime);
+    }
+
     return CardContainer(
-      margin: EdgeInsets.only(bottom: AppSpacing.md),
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: EdgeInsets.all(12.w),
       onTap: () => _openFocusMode(todo),
       child: Row(
         children: [
@@ -512,19 +715,50 @@ class _TodosListScreenState extends State<TodosListScreen>
                   : null,
             ),
           ),
-          SizedBox(width: AppSpacing.md),
+          SizedBox(width: 12.w),
           Expanded(
-            child: Text(
-              todo.title,
-              style:
-                  AppTypography.bodyMedium(
-                    context,
-                    isCompleted
-                        ? AppColors.textSecondary(context)
-                        : AppColors.textPrimary(context),
-                  ).copyWith(
-                    decoration: isCompleted ? TextDecoration.lineThrough : null,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  todo.title,
+                  style:
+                      AppTypography.bodyMedium(
+                        context,
+                        isCompleted
+                            ? AppColors.textSecondary(context)
+                            : AppColors.textPrimary(context),
+                      ).copyWith(
+                        decoration: isCompleted
+                            ? TextDecoration.lineThrough
+                            : null,
+                      ),
+                ),
+                if (alarmText != null) ...[
+                  SizedBox(height: 4.h),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.alarm,
+                        size: 12.sp,
+                        color: activeAlarm!.isOverdue
+                            ? AppColors.error
+                            : AppColors.textSecondary(context),
+                      ),
+                      SizedBox(width: 4.w),
+                      Text(
+                        alarmText,
+                        style: TextStyle(
+                          fontSize: 10.sp,
+                          color: activeAlarm.isOverdue
+                              ? AppColors.error
+                              : AppColors.textSecondary(context),
+                        ),
+                      ),
+                    ],
                   ),
+                ],
+              ],
             ),
           ),
           AppIconButton(icon: Icons.more_vert, onPressed: () {}, size: 20),
@@ -540,16 +774,8 @@ class _TodosListScreenState extends State<TodosListScreen>
     } else {
       tags.add('completed');
     }
-    context.read<NotesBloc>().add(UpdateNoteEvent(todo.copyWith(tags: tags)));
-  }
-
-  List<Note> _filterTodos(List<Note> notes) {
-    if (_filterBy == 'all') return notes;
-    if (_filterBy == 'completed') {
-      return notes.where((n) => n.tags.contains('completed')).toList();
-    }
-    // active (not completed)
-    return notes.where((n) => !n.tags.contains('completed')).toList();
+    final params = NoteParams.fromNote(todo.copyWith(tags: tags));
+    context.read<NotesBloc>().add(UpdateNoteEvent(params));
   }
 
   void _handleTodosMenu(String value) {
@@ -563,26 +789,18 @@ class _TodosListScreenState extends State<TodosListScreen>
         );
         break;
       case 'advanced':
-        // Create a blank note for advanced todo view
-        final blankNote = Note(
-          id: DateTime.now().toString(),
-          title: '',
-          content: '',
+        // Create a blank todo for advanced todo view
+        final dummyTodo = TodoItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          text: '',
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
-          tags: ['todo'],
         );
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => AdvancedTodoScreen(note: blankNote),
+            builder: (_) => AdvancedTodoScreen(todo: dummyTodo),
           ),
-        );
-        break;
-      case 'help':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const EmptyStateTodosHelpScreen()),
         );
         break;
       case 'settings':
@@ -593,4 +811,21 @@ class _TodosListScreenState extends State<TodosListScreen>
         break;
     }
   }
+}
+
+// Helper classes for flattened list
+abstract class TodoListItem {}
+
+class HeaderItem extends TodoListItem {
+  final String title;
+  final Color color;
+  final int count;
+
+  HeaderItem(this.title, this.color, this.count);
+}
+
+class TaskItem extends TodoListItem {
+  final Note note;
+
+  TaskItem(this.note);
 }

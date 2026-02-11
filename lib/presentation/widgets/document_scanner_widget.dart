@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:io';
+import 'package:mynotes/injection_container.dart';
+import '../../core/services/global_ui_service.dart';
 
 /// Document scan metadata
 class ScannedDocument {
@@ -65,9 +66,7 @@ class _DocumentScannerWidgetState extends State<DocumentScannerWidget> {
 
   void _completeScan() {
     if (_scannedPages.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please scan at least one page')));
+      getIt<GlobalUiService>().showWarning('Please scan at least one page');
       return;
     }
 

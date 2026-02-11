@@ -1,13 +1,20 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:intl/intl.dart';
+import '../../domain/entities/reflection_answer.dart';
 import '../bloc/reflection_bloc.dart';
 import '../bloc/reflection_event.dart';
 import '../bloc/reflection_state.dart';
 import '../design_system/design_system.dart';
 import '../pages/settings_screen.dart';
+import 'package:local_auth/local_auth.dart';
+import '../../injection_container.dart' show getIt;
 import 'question_list_screen.dart';
+import 'answer_screen.dart';
 import 'reflection_history_screen.dart';
+import '../../core/design_system/app_typography.dart'; // Ensure correct import
 
 class ReflectionHomeScreen extends StatefulWidget {
   const ReflectionHomeScreen({super.key});
@@ -19,52 +26,143 @@ class ReflectionHomeScreen extends StatefulWidget {
 class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
   final bool _isPrivacyMode = true;
   bool _isUnlocked = false;
+  final LocalAuthentication _auth = LocalAuthentication();
 
   @override
   void initState() {
     super.initState();
     context.read<ReflectionBloc>().add(const InitializeReflectionEvent());
+    context.read<ReflectionBloc>().add(const LoadAllAnswersEvent());
   }
 
   Future<void> _unlockReflections() async {
-    // In a real app, this would use biometric authentication
-    // For now, just toggle the unlock state
-    setState(() {
-      _isUnlocked = true;
-    });
+    try {
+      final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;
+      final bool canAuthenticate =
+          canAuthenticateWithBiometrics || await _auth.isDeviceSupported();
 
-    // Auto-lock after 30 seconds
-    Future.delayed(const Duration(seconds: 30), () {
-      if (mounted) {
+      if (!canAuthenticate) {
+        // Fallback or show error
         setState(() {
-          _isUnlocked = false;
+          _isUnlocked = true;
+        });
+        return;
+      }
+
+      final bool didAuthenticate = await _auth.authenticate(
+        localizedReason: 'Authenticate to view your private reflections',
+        options: const AuthenticationOptions(
+          stickyAuth: true,
+          biometricOnly: false,
+        ),
+      );
+
+      if (didAuthenticate) {
+        setState(() {
+          _isUnlocked = true;
+        });
+
+        // Auto-lock after 30 seconds
+        Future.delayed(const Duration(seconds: 30), () {
+          if (mounted) {
+            setState(() {
+              _isUnlocked = false;
+            });
+          }
         });
       }
-    });
+    } catch (e) {
+      AppLogger.e('Authentication error: $e');
+      // On error, we might want to allow access if it's a dev environment or show an error
+      getIt<GlobalUiService>().showError(
+        'Authentication failed: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<void> _showNotificationPicker(
+    BuildContext context,
+    bool isDark,
+  ) async {
+    final TimeOfDay? picked = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 20, minute: 0),
+      builder: (context, child) {
+        return Theme(
+          data: isDark
+              ? ThemeData.dark().copyWith(
+                  primaryColor: AppColors.primaryColor,
+                  colorScheme: ColorScheme.dark(
+                    primary: AppColors.primaryColor,
+                  ),
+                )
+              : ThemeData.light().copyWith(
+                  primaryColor: AppColors.primaryColor,
+                  colorScheme: ColorScheme.light(
+                    primary: AppColors.primaryColor,
+                  ),
+                ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      final now = DateTime.now();
+      DateTime scheduledDate = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        picked.hour,
+        picked.minute,
+      );
+
+      if (scheduledDate.isBefore(now)) {
+        scheduledDate = scheduledDate.add(const Duration(days: 1));
+      }
+
+      if (!mounted) return;
+      context.read<ReflectionBloc>().add(
+        ScheduleReflectionNotificationEvent(scheduledDate),
+      );
+
+      getIt<GlobalUiService>().showSuccess(
+        'Daily reminder set for ${picked.format(context)}',
+        actionLabel: 'CANCEL',
+        onActionPressed: () {
+          context.read<ReflectionBloc>().add(
+            const CancelReflectionNotificationEvent(),
+          );
+        },
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background(context),
+      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
       appBar: PreferredSize(
         preferredSize: Size.fromHeight(70.h),
         child: ClipRRect(
           child: BackdropFilter(
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
-              backgroundColor: AppColors.background(context).withOpacity(0.8),
+              backgroundColor: (isDark ? AppColors.darkBg : AppColors.lightBg)
+                  .withOpacity(0.8),
               elevation: 0,
               centerTitle: true,
               leading: Container(
                 margin: EdgeInsets.all(8.w),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
+                  color: AppColors.primaryColor.withOpacity(0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   Icons.shield_outlined,
-                  color: AppColors.primary,
+                  color: AppColors.primaryColor,
                   size: 24.sp,
                 ),
               ),
@@ -73,13 +171,16 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                 children: [
                   Text(
                     'Reflection',
-                    style: AppTypography.bodyLarge(null, null, FontWeight.bold),
+                    style: AppTypography.heading3().copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? AppColors.lightText : AppColors.darkText,
+                    ),
                   ),
                   if (_isPrivacyMode)
                     Text(
                       'PRIVACY MODE ACTIVE',
-                      style: AppTypography.captionSmall(null).copyWith(
-                        color: AppColors.primary,
+                      style: AppTypography.caption().copyWith(
+                        color: AppColors.primaryColor,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,
                       ),
@@ -88,7 +189,19 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
               ),
               actions: [
                 IconButton(
-                  icon: Icon(Icons.settings_outlined, size: 22.sp),
+                  icon: Icon(
+                    Icons.notifications_active_outlined,
+                    size: 22.sp,
+                    color: isDark ? AppColors.lightText : AppColors.darkText,
+                  ),
+                  onPressed: () => _showNotificationPicker(context, isDark),
+                ),
+                IconButton(
+                  icon: Icon(
+                    Icons.settings_outlined,
+                    size: 22.sp,
+                    color: isDark ? AppColors.lightText : AppColors.darkText,
+                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -104,310 +217,262 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
           ),
         ),
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Insights Card
-            _buildInsightsCard(),
+      body: BlocBuilder<ReflectionBloc, ReflectionState>(
+        builder: (context, state) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          final reflections = state.allAnswers.take(3).toList();
 
-            SizedBox(height: 8.h),
-
-            // Past Reflections Header
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return RefreshIndicator(
+            onRefresh: () async {
+              context.read<ReflectionBloc>().add(
+                const InitializeReflectionEvent(),
+              );
+              // Small delay to show indicator
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+            color: AppColors.primaryColor,
+            backgroundColor: isDark
+                ? AppColors.darkCardBackground
+                : Colors.white,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Past Reflections',
-                    style: AppTypography.bodyLarge(null, null, FontWeight.bold),
+                  // Streak & Progress Row
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.w),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: _buildStreakCard(isDark, state.streakCount),
+                        ),
+                        SizedBox(width: 12.w),
+                        Expanded(
+                          child: _buildHeatmapLite(isDark, state.allAnswers),
+                        ),
+                      ],
+                    ),
                   ),
-                  Icon(
-                    Icons.visibility_off_outlined,
-                    size: 18.sp,
-                    color: AppColors.textMuted,
+
+                  // Today's Prompt Section
+                  _buildTodayPrompt(context, state, isDark),
+
+                  // Category Selection
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 8.h,
+                    ),
+                    child: Text(
+                      'CATEGORIES',
+                      style: AppTypography.label().copyWith(
+                        color: isDark
+                            ? AppColors.lightTextSecondary
+                            : AppColors.darkTextSecondary,
+                      ),
+                    ),
                   ),
+                  _buildCategoriesList(context, isDark),
+
+                  SizedBox(height: 16.h),
+
+                  // Insights Card
+                  _buildInsightsCard(),
+
+                  SizedBox(height: 8.h),
+
+                  // Past Reflections Header
+                  Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 12.h,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Past Reflections',
+                          style: AppTypography.heading4().copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: isDark
+                                ? AppColors.lightText
+                                : AppColors.darkText,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    const ReflectionHistoryScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'View All',
+                            style: AppTypography.body2().copyWith(
+                              color: AppColors.primaryColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Blurred Reflections List with Unlock Button
+                  _buildPrivateReflectionsList(reflections),
+
+                  SizedBox(height: 100.h),
                 ],
               ),
             ),
-
-            // Blurred Reflections List with Unlock Button
-            _buildPrivateReflectionsList(),
-
-            SizedBox(height: 100.h),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildProgressCard(
-    bool isDark,
-    int answeredToday,
-    int totalQuestions,
-  ) {
-    final progress = totalQuestions > 0 ? answeredToday / totalQuestions : 0.0;
-
+  Widget _buildStreakCard(bool isDark, int streakCount) {
     return Container(
-      padding: EdgeInsets.all(20.w),
+      padding: EdgeInsets.all(16.w),
+      margin: EdgeInsets.symmetric(vertical: 8.h),
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.darkCardBackground
             : AppColors.lightCardBackground,
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.borderLight, width: 1),
+        border: Border.all(
+          color: streakCount > 0
+              ? AppColors.primaryColor.withOpacity(0.5)
+              : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "Today's Progress",
-            style: TextStyle(
-              fontSize: 14.sp,
-              fontWeight: FontWeight.w500,
-              color: isDark ? Colors.grey[400] : Colors.grey[600],
-            ),
-          ),
-          SizedBox(height: 12.h),
           Row(
             children: [
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(4.r),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 8.h,
-                    backgroundColor: isDark
-                        ? Colors.grey[800]
-                        : Colors.grey[200],
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      AppColors.primaryColor,
-                    ),
-                  ),
-                ),
+              Icon(
+                Icons.local_fire_department,
+                color: streakCount > 0 ? Colors.orange : Colors.grey,
+                size: 20.sp,
               ),
-              SizedBox(width: 16.w),
+              SizedBox(width: 8.w),
               Text(
-                '$answeredToday/$totalQuestions',
-                style: TextStyle(
-                  fontSize: 18.sp,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryColor,
+                "Streak",
+                style: AppTypography.body1().copyWith(
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
                 ),
               ),
             ],
+          ),
+          SizedBox(height: 8.h),
+          Text(
+            "$streakCount days",
+            style: AppTypography.heading3().copyWith(
+              fontWeight: FontWeight.w700,
+              color: streakCount > 0
+                  ? Colors.orange
+                  : (isDark ? AppColors.lightText : AppColors.darkText),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildCategoryCard(
+  Widget _buildTodayPrompt(
+    BuildContext context,
+    ReflectionState state,
     bool isDark,
-    String title,
-    IconData icon,
-    int questionCount,
-    VoidCallback onTap,
   ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.darkCardBackground
-              : AppColors.lightCardBackground,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: AppColors.borderLight, width: 1),
+    // Pick first question as today's prompt or show loading
+    final question = state.questions.isNotEmpty ? state.questions.first : null;
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.all(20.w),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark
+              ? [
+                  AppColors.primaryColor.withOpacity(0.1),
+                  AppColors.darkCardBackground,
+                ]
+              : [AppColors.primaryColor.withOpacity(0.05), Colors.white],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 48.w,
-              height: 48.w,
-              decoration: BoxDecoration(
-                color: AppColors.primaryColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Icon(icon, color: AppColors.primaryColor, size: 24.sp),
-            ),
-            SizedBox(width: 16.w),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(height: 4.h),
-                  Text(
-                    '$questionCount question${questionCount != 1 ? 's' : ''}',
-                    style: TextStyle(
-                      fontSize: 12.sp,
-                      color: isDark ? Colors.grey[400] : Colors.grey[600],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.arrow_forward_ios,
-              size: 16.sp,
-              color: isDark ? Colors.grey[600] : Colors.grey[400],
-            ),
-          ],
-        ),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.primaryColor.withOpacity(0.2)),
       ),
-    );
-  }
-
-  Widget _buildActionButton(
-    bool isDark,
-    String label,
-    IconData icon,
-    VoidCallback onTap,
-  ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-        decoration: BoxDecoration(
-          color: AppColors.primaryColor,
-          borderRadius: BorderRadius.circular(8.r),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 18.sp, color: Colors.white),
-            SizedBox(width: 8.w),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showAddQuestionDialog(BuildContext context, bool isDark) {
-    final textController = TextEditingController();
-    String selectedCategory = 'life';
-    String selectedFrequency = 'daily';
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        backgroundColor: isDark
-            ? AppColors.darkCardBackground
-            : AppColors.lightCardBackground,
-        title: Text(
-          'Add New Question',
-          style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextField(
-                controller: textController,
-                maxLines: 3,
-                style: TextStyle(fontSize: 14.sp),
-                decoration: InputDecoration(
-                  hintText: 'Enter your reflection question...',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(8.r),
-                    borderSide: BorderSide(color: AppColors.borderLight),
-                  ),
-                ),
-              ),
-              SizedBox(height: 16.h),
               Text(
-                'Category',
-                style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 8.h),
-              StatefulBuilder(
-                builder: (context, setState) => DropdownButton<String>(
-                  value: selectedCategory,
-                  isExpanded: true,
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'life',
-                      child: Text('Life & Purpose'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'daily',
-                      child: Text('Daily Reflection'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'career',
-                      child: Text('Career & Study'),
-                    ),
-                    DropdownMenuItem(
-                      value: 'mental_health',
-                      child: Text('Mental Health'),
-                    ),
-                  ],
-                  onChanged: (value) {
-                    setState(() => selectedCategory = value ?? 'life');
-                  },
+                "TODAY'S PROMPT",
+                style: AppTypography.label().copyWith(
+                  color: AppColors.primaryColor,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
                 ),
               ),
-              SizedBox(height: 16.h),
-              Text(
-                'Frequency',
-                style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w600),
-              ),
-              SizedBox(height: 8.h),
-              StatefulBuilder(
-                builder: (context, setState) => DropdownButton<String>(
-                  value: selectedFrequency,
-                  isExpanded: true,
-                  items: const [
-                    DropdownMenuItem(value: 'daily', child: Text('Daily')),
-                    DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
-                    DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
-                  ],
-                  onChanged: (value) {
-                    setState(() => selectedFrequency = value ?? 'daily');
-                  },
+              IconButton(
+                icon: Icon(
+                  Icons.refresh,
+                  color: AppColors.primaryColor,
+                  size: 20.sp,
                 ),
+                onPressed: () {
+                  context.read<ReflectionBloc>().add(
+                    const LoadRandomQuestionEvent(),
+                  );
+                },
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (textController.text.isNotEmpty) {
-                context.read<ReflectionBloc>().add(
-                  AddQuestionEvent(
-                    questionText: textController.text,
-                    category: selectedCategory,
-                    frequency: selectedFrequency,
+          SizedBox(height: 12.h),
+          if (question != null) ...[
+            Text(
+              question.questionText,
+              style: AppTypography.heading4().copyWith(
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppColors.lightText : AppColors.darkText,
+              ),
+            ),
+            SizedBox(height: 16.h),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => AnswerScreen(question: question),
                   ),
                 );
-                Navigator.pop(dialogContext);
-              }
-            },
-            child: const Text('Add'),
-          ),
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12.r),
+                ),
+                padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+                elevation: 0,
+              ),
+              child: const Text("Write Reflection"),
+            ),
+          ] else
+            const Center(child: CircularProgressIndicator()),
         ],
       ),
     );
@@ -454,7 +519,7 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
               child: Icon(
                 Icons.insights,
                 size: 64.sp,
-                color: AppColors.primary.withOpacity(0.4),
+                color: AppColors.primaryColor.withOpacity(0.4),
               ),
             ),
           ),
@@ -468,13 +533,16 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                 // Computed Locally Badge
                 Row(
                   children: [
-                    Icon(Icons.memory, color: AppColors.primary, size: 14.sp),
+                    Icon(
+                      Icons.memory,
+                      color: AppColors.primaryColor,
+                      size: 14.sp,
+                    ),
                     SizedBox(width: 8.w),
                     Text(
                       'COMPUTED LOCALLY',
-                      style: TextStyle(
+                      style: AppTypography.caption().copyWith(
                         color: const Color(0xFF9eb1b7),
-                        fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.2,
                       ),
@@ -486,10 +554,8 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                 // Insight Text
                 RichText(
                   text: TextSpan(
-                    style: TextStyle(
-                      color: AppColors.textPrimary(context),
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
+                    style: AppTypography.heading3().copyWith(
+                      color: isDark ? AppColors.lightText : AppColors.darkText,
                       letterSpacing: -0.5,
                       height: 1.3,
                     ),
@@ -497,7 +563,7 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                       const TextSpan(text: 'On days you feel '),
                       TextSpan(
                         text: 'Calm',
-                        style: TextStyle(color: AppColors.primary),
+                        style: TextStyle(color: AppColors.primaryColor),
                       ),
                       const TextSpan(
                         text: ', your productivity increases by 20%',
@@ -514,10 +580,8 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                   children: [
                     Text(
                       'Encrypted & Private',
-                      style: TextStyle(
+                      style: AppTypography.caption().copyWith(
                         color: const Color(0xFF9eb1b7),
-                        fontSize: 12.sp,
-                        fontWeight: FontWeight.normal,
                       ),
                     ),
                     Container(
@@ -526,14 +590,13 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                         vertical: 8.h,
                       ),
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color: AppColors.primaryColor,
                         borderRadius: BorderRadius.circular(20.r),
                       ),
                       child: Text(
                         'Learn more',
-                        style: TextStyle(
+                        style: AppTypography.body2().copyWith(
                           color: const Color(0xFF111d21),
-                          fontSize: 14.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -548,24 +611,126 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
     );
   }
 
-  Widget _buildPrivateReflectionsList() {
-    final sampleReflections = [
-      {
-        'date': 'Oct 24 • 🌿',
-        'icon': Icons.eco_outlined,
-        'text': 'Today I felt extremely grounded while working in the garden',
+  Widget _buildCategoriesList(BuildContext context, bool isDark) {
+    return Container(
+      height: 120.h,
+      padding: EdgeInsets.only(left: 16.w),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: [
+          _buildCategoryItem(
+            context,
+            isDark,
+            'Daily',
+            Icons.wb_sunny_outlined,
+            'daily',
+            'Daily Check-in',
+          ),
+          _buildCategoryItem(
+            context,
+            isDark,
+            'Purpose',
+            Icons.eco_outlined,
+            'life',
+            'Life & Purpose',
+          ),
+          _buildCategoryItem(
+            context,
+            isDark,
+            'Career',
+            Icons.work_outline,
+            'career',
+            'Career & Study',
+          ),
+          _buildCategoryItem(
+            context,
+            isDark,
+            'Mental',
+            Icons.psychology_outlined,
+            'mental_health',
+            'Mental Health',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryItem(
+    BuildContext context,
+    bool isDark,
+    String label,
+    IconData icon,
+    String category,
+    String categoryLabel,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => QuestionListScreen(
+              category: category,
+              categoryLabel: categoryLabel,
+            ),
+          ),
+        );
       },
-      {
-        'date': 'Oct 23 • 🌊',
-        'icon': Icons.water_drop_outlined,
-        'text': 'The sound of the ocean during my morning walk helped me focus',
-      },
-      {
-        'date': 'Oct 22 • ✨',
-        'icon': Icons.wb_sunny_outlined,
-        'text': 'A productive day with clear skies and even clearer mind',
-      },
-    ];
+      child: Container(
+        width: 100.w,
+        margin: EdgeInsets.only(right: 12.w),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCardBackground : Colors.white,
+          borderRadius: BorderRadius.circular(16.r),
+          border: Border.all(color: AppColors.borderLight.withOpacity(0.5)),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(12.w),
+              decoration: BoxDecoration(
+                color: AppColors.primaryColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppColors.primaryColor, size: 28.sp),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              label,
+              style: AppTypography.label().copyWith(
+                color: isDark ? AppColors.lightText : AppColors.darkText,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPrivateReflectionsList(List<ReflectionAnswer> reflections) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final moodIcons = {
+      'great': Icons.sentiment_very_satisfied,
+      'happy': Icons.sentiment_satisfied_alt,
+      'good': Icons.sentiment_satisfied,
+      'neutral': Icons.sentiment_neutral,
+      'sad': Icons.sentiment_very_dissatisfied,
+    };
+
+    if (reflections.isEmpty) {
+      return Container(
+        padding: EdgeInsets.all(32.w),
+        alignment: Alignment.center,
+        child: Text(
+          'No reflections yet',
+          style: AppTypography.body2().copyWith(
+            color: isDark
+                ? AppColors.lightTextSecondary
+                : AppColors.darkTextSecondary,
+          ),
+        ),
+      );
+    }
 
     return Stack(
       children: [
@@ -574,19 +739,24 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
           decoration: BoxDecoration(
             border: Border(
               top: BorderSide(
-                color: AppColors.borderLight.withOpacity(0.2),
+                color: (isDark ? AppColors.darkBorder : AppColors.lightBorder)
+                    .withOpacity(0.2),
                 width: 1,
               ),
             ),
           ),
           child: Column(
-            children: sampleReflections.map((reflection) {
+            children: reflections.map((reflection) {
               return Container(
                 padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: AppColors.borderLight.withOpacity(0.2),
+                      color:
+                          (isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.lightBorder)
+                              .withOpacity(0.2),
                       width: 1,
                     ),
                   ),
@@ -597,14 +767,14 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                       width: 48.w,
                       height: 48.w,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: AppColors.primaryColor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(
                           AppSpacing.radiusLG,
                         ),
                       ),
                       child: Icon(
-                        reflection['icon'] as IconData,
-                        color: AppColors.primary,
+                        moodIcons[reflection.mood] ?? Icons.notes,
+                        color: AppColors.primaryColor,
                         size: 24.sp,
                       ),
                     ),
@@ -614,19 +784,24 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            reflection['date'] as String,
-                            style: AppTypography.bodyMedium(
-                              null,
-                              null,
-                              FontWeight.bold,
+                            DateFormat(
+                              'MMM d • EEE',
+                            ).format(reflection.createdAt),
+                            style: AppTypography.body2().copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: isDark
+                                  ? AppColors.lightText
+                                  : AppColors.darkText,
                             ),
                           ),
                           SizedBox(height: 2.h),
                           Text(
-                            reflection['text'] as String,
-                            style: AppTypography.captionSmall(
-                              null,
-                            ).copyWith(color: AppColors.textMuted),
+                            reflection.answerText,
+                            style: AppTypography.caption().copyWith(
+                              color: isDark
+                                  ? AppColors.lightTextSecondary
+                                  : AppColors.darkTextSecondary,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -652,7 +827,8 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Container(
-                  color: AppColors.background(context).withOpacity(0.3),
+                  color: (isDark ? AppColors.darkBg : AppColors.lightBg)
+                      .withOpacity(0.3),
                   child: Center(
                     child: GestureDetector(
                       onTap: _unlockReflections,
@@ -662,13 +838,13 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                           vertical: 16.h,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.9),
+                          color: AppColors.primaryColor.withOpacity(0.9),
                           borderRadius: BorderRadius.circular(
                             AppSpacing.radiusFull,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withOpacity(0.3),
+                              color: AppColors.primaryColor.withOpacity(0.3),
                               blurRadius: 20,
                               spreadRadius: 2,
                             ),
@@ -685,10 +861,9 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                             SizedBox(width: 12.w),
                             Text(
                               'Tap to Unlock',
-                              style: AppTypography.bodyMedium(
-                                null,
-                                Colors.white,
-                                FontWeight.bold,
+                              style: AppTypography.body1().copyWith(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
@@ -701,6 +876,60 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildHeatmapLite(bool isDark, List<ReflectionAnswer> allAnswers) {
+    final now = DateTime.now();
+    final last7Days = List.generate(
+      7,
+      (i) => now.subtract(Duration(days: 6 - i)),
+    );
+
+    return Container(
+      padding: EdgeInsets.all(16.w),
+      margin: EdgeInsets.symmetric(vertical: 8.h),
+      decoration: BoxDecoration(
+        color: isDark
+            ? AppColors.darkCardBackground
+            : AppColors.lightCardBackground,
+        borderRadius: BorderRadius.circular(12.r),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            "Weekly Activity",
+            style: AppTypography.caption().copyWith(
+              color: Colors.grey,
+              fontSize: 10.sp,
+            ),
+          ),
+          SizedBox(height: 8.h),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: last7Days.map((date) {
+              final dateStr = DateFormat('yyyy-MM-dd').format(date);
+              final hasReflection = allAnswers.any(
+                (a) => DateFormat('yyyy-MM-dd').format(a.createdAt) == dateStr,
+              );
+              return Container(
+                width: 12.w,
+                height: 12.w,
+                decoration: BoxDecoration(
+                  color: hasReflection
+                      ? AppColors.primaryColor
+                      : Colors.grey.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
+import '../../core/services/app_logger.dart';
 
 /// Database helper for SQLite initialization and schema management
 class DatabaseHelper {
@@ -188,7 +189,7 @@ class DatabaseHelper {
     try {
       await deleteDatabase();
     } catch (e) {
-      print('Error deleting database: $e');
+      AppLogger.e('Error deleting database: $e');
     }
   }
 
@@ -205,13 +206,13 @@ class DatabaseHelper {
   /// Import database
   Future<bool> importDatabase(String sourcePath) async {
     try {
-      final databasesPath = await getDatabasesPath();
-      final destinationPath = join(databasesPath, 'mynotes.db');
+      // final databasesPath = await getDatabasesPath();
+      // final destinationPath = join(databasesPath, 'mynotes.db');
 
       // Copy source to destination
       return true;
     } catch (e) {
-      print('Error importing database: $e');
+      // debugPrint('Error importing database: $e');
       return false;
     }
   }

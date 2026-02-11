@@ -1,31 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/presentation/bloc/rule_builder_bloc.dart';
 import 'package:mynotes/domain/services/rule_evaluation_engine.dart';
+import 'package:mynotes/presentation/design_system/app_colors.dart';
+import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/design_system/app_spacing.dart';
+import 'package:mynotes/injection_container.dart';
+import 'package:mynotes/core/services/global_ui_service.dart';
 
 /// Rule Builder Screen - Batch 5, Screen 2
+/// Refactored to use Design System, Global UI Services, and BLoC
 class RuleBuilderScreen extends StatefulWidget {
-  final Map<String, dynamic>? existingRule;
+  final List<Map<String, dynamic>>? initialRules;
 
-  const RuleBuilderScreen({Key? key, this.existingRule}) : super(key: key);
+  const RuleBuilderScreen({Key? key, this.initialRules}) : super(key: key);
 
   @override
   State<RuleBuilderScreen> createState() => _RuleBuilderScreenState();
 }
 
 class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
-  final _ruleEngine = RuleEvaluationEngine();
   final _fieldController = TextEditingController();
   final _valueController = TextEditingController();
-  String _selectedOperator = '=';
-  List<Map<String, dynamic>> _builtRules = [];
 
   @override
   void initState() {
     super.initState();
-    if (widget.existingRule != null) {
-      _fieldController.text = widget.existingRule!['field'] ?? '';
-      _selectedOperator = widget.existingRule!['operator'] ?? '=';
-      _valueController.text = widget.existingRule!['value']?.toString() ?? '';
-    }
+    _fieldController.addListener(_onFieldChanged);
+    _valueController.addListener(_onValueChanged);
   }
 
   @override
@@ -35,191 +38,282 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
     super.dispose();
   }
 
+  void _onFieldChanged() {
+    context.read<RuleBuilderBloc>().add(
+      UpdateRuleFieldEvent(field: _fieldController.text),
+    );
+  }
+
+  void _onValueChanged() {
+    context.read<RuleBuilderBloc>().add(
+      UpdateRuleValueEvent(value: _valueController.text),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Rule Builder'), centerTitle: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Rules Guide
-            _buildRulesGuide(),
-            const SizedBox(height: 24),
+    return BlocProvider<RuleBuilderBloc>(
+      create: (context) {
+        final bloc = getIt<RuleBuilderBloc>();
+        if (widget.initialRules != null) {
+          bloc.add(
+            InitializeRuleBuilderEvent(initialRules: widget.initialRules!),
+          );
+        }
+        return bloc;
+      },
+      child: BlocBuilder<RuleBuilderBloc, RuleBuilderState>(
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: AppColors.lightBackground,
+            appBar: AppBar(
+              title: Text(
+                'Rule Builder',
+                style: AppTypography.displayMedium(context, AppColors.darkText),
+              ),
+              centerTitle: true,
+              backgroundColor: AppColors.lightSurface,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: AppColors.darkText),
+            ),
+            body: SingleChildScrollView(
+              padding: AppSpacing.paddingAllL,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Rules Guide
+                  _buildRulesGuide(context),
+                  AppSpacing.gapL,
 
-            // Rule Input
-            _buildRuleInput(),
-            const SizedBox(height: 24),
+                  // Rule Input
+                  _buildRuleInput(context, state),
+                  AppSpacing.gapL,
 
-            // Built Rules Preview
-            _buildRulesPreview(),
-            const SizedBox(height: 24),
+                  // Built Rules Preview
+                  _buildRulesPreview(context, state),
+                  AppSpacing.gapL,
 
-            // Action Buttons
-            _buildActionButtons(),
-          ],
-        ),
+                  // Action Buttons
+                  _buildActionButtons(context, state),
+                ],
+              ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildRulesGuide() {
+  Widget _buildRulesGuide(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Rule Components',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildGuideItem(
-                  'Field',
-                  'The property to check (e.g., type, size)',
-                ),
-                _buildGuideItem(
-                  'Operator',
-                  'How to compare (=, >, <, ~, ^, \$, ∈)',
-                ),
-                _buildGuideItem('Value', 'The value to compare against'),
-              ],
-            ),
+        Text('Rule Components', style: AppTypography.heading2(context)),
+        AppSpacing.gapS,
+        Container(
+          padding: AppSpacing.paddingAllM,
+          decoration: BoxDecoration(
+            color: AppColors.lightSurface,
+            borderRadius: BorderRadius.circular(16.r),
+            border: Border.all(color: AppColors.borderLight),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildGuideItem(
+                context,
+                'Field',
+                'The property to check (e.g., type, size, content)',
+              ),
+              _buildGuideItem(
+                context,
+                'Operator',
+                'How to compare (=, >, <, contains, starts with)',
+              ),
+              _buildGuideItem(
+                context,
+                'Value',
+                'The target value to match against',
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildGuideItem(String label, String description) {
+  Widget _buildGuideItem(
+    BuildContext context,
+    String label,
+    String description,
+  ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: 8.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
-          Text(description, style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            label,
+            style: AppTypography.bodySmall(
+              context,
+              AppColors.primaryColor,
+              FontWeight.bold,
+            ),
+          ),
+          SizedBox(height: 2.h),
+          Text(
+            description,
+            style: AppTypography.bodySmall(context, AppColors.secondaryText),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildRuleInput() {
+  Widget _buildRuleInput(BuildContext context, RuleBuilderState state) {
+    final bloc = context.read<RuleBuilderBloc>();
+    final ruleEngine = bloc.ruleEngine;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Build Your Rule',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 12),
+        Text('Define Criteria', style: AppTypography.heading2(context)),
+        AppSpacing.gapM,
 
         // Field Input
         TextField(
           controller: _fieldController,
+          style: AppTypography.bodyMedium(context, AppColors.darkText),
           decoration: InputDecoration(
             labelText: 'Field Name',
             hintText: 'e.g., type, size, name',
-            prefixIcon: Icon(Icons.category),
-            border: OutlineInputBorder(),
-            suffixIcon: PopupMenuButton(
+            prefixIcon: const Icon(
+              Icons.category_rounded,
+              color: AppColors.primaryColor,
+            ),
+            filled: true,
+            fillColor: AppColors.lightSurface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
+            suffixIcon: PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.arrow_drop_down_circle_outlined,
+                color: AppColors.primaryColor,
+              ),
+              onSelected: (val) {
+                _fieldController.text = val;
+                bloc.add(UpdateRuleFieldEvent(field: val));
+              },
               itemBuilder: (context) => [
-                PopupMenuItem(
-                  child: Text('type'),
-                  onTap: () => _fieldController.text = 'type',
-                ),
-                PopupMenuItem(
-                  child: Text('size'),
-                  onTap: () => _fieldController.text = 'size',
-                ),
-                PopupMenuItem(
-                  child: Text('name'),
-                  onTap: () => _fieldController.text = 'name',
-                ),
-                PopupMenuItem(
-                  child: Text('createdAt'),
-                  onTap: () => _fieldController.text = 'createdAt',
-                ),
-                PopupMenuItem(
-                  child: Text('tags'),
-                  onTap: () => _fieldController.text = 'tags',
-                ),
+                _buildPopupItem('type'),
+                _buildPopupItem('size'),
+                _buildPopupItem('name'),
+                _buildPopupItem('createdAt'),
+                _buildPopupItem('tags'),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        AppSpacing.gapM,
 
         // Operator Selection
         DropdownButtonFormField<String>(
-          value: _selectedOperator,
-          items: _ruleEngine.getSupportedOperators().map((op) {
+          value: state.operator,
+          items: ruleEngine.getSupportedOperators().map((op) {
             return DropdownMenuItem(
               value: op,
               child: Text(_getOperatorLabel(op)),
             );
           }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedOperator = value ?? '=';
-            });
-          },
+          onChanged: (value) =>
+              bloc.add(UpdateRuleOperatorEvent(operator: value ?? '=')),
           decoration: InputDecoration(
             labelText: 'Operator',
-            prefixIcon: Icon(Icons.compare),
-            border: OutlineInputBorder(),
+            prefixIcon: const Icon(
+              Icons.compare_arrows_rounded,
+              color: AppColors.primaryColor,
+            ),
+            filled: true,
+            fillColor: AppColors.lightSurface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 8.h),
         Text(
-          _getOperatorDescription(_selectedOperator),
-          style: Theme.of(context).textTheme.labelSmall,
+          _getOperatorDescription(state.operator),
+          style: AppTypography.labelSmall(
+            context,
+            AppColors.secondaryText,
+          ).copyWith(fontStyle: FontStyle.italic),
         ),
-        const SizedBox(height: 16),
+        AppSpacing.gapM,
 
         // Value Input
         TextField(
           controller: _valueController,
+          style: AppTypography.bodyMedium(context, AppColors.darkText),
           decoration: InputDecoration(
             labelText: 'Value',
-            hintText: 'The value to compare',
-            prefixIcon: Icon(Icons.edit),
-            border: OutlineInputBorder(),
+            hintText: 'Target for comparison',
+            prefixIcon: const Icon(
+              Icons.edit_note_rounded,
+              color: AppColors.primaryColor,
+            ),
+            filled: true,
+            fillColor: AppColors.lightSurface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
           ),
         ),
-        const SizedBox(height: 16),
+        AppSpacing.gapL,
 
-        // Add Rule Button
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            icon: Icon(Icons.add),
-            label: Text('Add This Rule'),
-            onPressed: _addRule,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('Add This Rule'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryColor,
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              elevation: 0,
+            ),
+            onPressed: () => _addRule(context, state),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildRulesPreview() {
-    if (_builtRules.isEmpty) {
+  PopupMenuItem<String> _buildPopupItem(String value) {
+    return PopupMenuItem(value: value, child: Text(value));
+  }
+
+  Widget _buildRulesPreview(BuildContext context, RuleBuilderState state) {
+    if (state.builtRules.isEmpty) {
       return Center(
-        child: Column(
-          children: [
-            Icon(Icons.rule, size: 48, color: Colors.grey),
-            const SizedBox(height: 12),
-            Text('No rules added yet'),
-          ],
+        child: Padding(
+          padding: AppSpacing.paddingAllM,
+          child: Column(
+            children: [
+              Icon(
+                Icons.format_list_bulleted_rounded,
+                size: 48.sp,
+                color: AppColors.borderLight,
+              ),
+              AppSpacing.gapS,
+              Text(
+                'No rules defined yet',
+                style: AppTypography.bodySmall(context, AppColors.tertiaryText),
+              ),
+            ],
+          ),
         ),
       );
     }
@@ -228,30 +322,50 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Rules (${_builtRules.length})',
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+          'Active Rules (${state.builtRules.length})',
+          style: AppTypography.heading2(context),
         ),
-        const SizedBox(height: 12),
-        ListView.builder(
+        AppSpacing.gapM,
+        ListView.separated(
           shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: _builtRules.length,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: state.builtRules.length,
+          separatorBuilder: (context, index) => AppSpacing.gapS,
           itemBuilder: (context, index) {
-            final rule = _builtRules[index];
-            return Card(
+            final rule = state.builtRules[index];
+            return Container(
+              decoration: BoxDecoration(
+                color: AppColors.lightSurface,
+                borderRadius: BorderRadius.circular(12.r),
+                border: Border.all(color: AppColors.borderLight),
+              ),
               child: ListTile(
-                leading: CircleAvatar(child: Text('${index + 1}')),
+                leading: CircleAvatar(
+                  backgroundColor: AppColors.primary10,
+                  radius: 14.r,
+                  child: Text(
+                    '${index + 1}',
+                    style: AppTypography.labelSmall(
+                      context,
+                      AppColors.primaryColor,
+                      FontWeight.bold,
+                    ),
+                  ),
+                ),
                 title: Text(
                   '${rule['field']} ${_getOperatorLabel(rule['operator'])} ${rule['value']}',
+                  style: AppTypography.bodyMedium(context, AppColors.darkText),
                 ),
                 trailing: IconButton(
-                  icon: Icon(Icons.delete, color: Colors.red),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppColors.error,
+                  ),
                   onPressed: () {
-                    setState(() {
-                      _builtRules.removeAt(index);
-                    });
+                    context.read<RuleBuilderBloc>().add(
+                      RemoveRuleIndexEvent(index: index),
+                    );
+                    getIt<GlobalUiService>().hapticFeedback();
                   },
                 ),
               ),
@@ -262,65 +376,74 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context, RuleBuilderState state) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        ElevatedButton.icon(
-          icon: Icon(Icons.clear),
-          label: Text('Clear All'),
-          onPressed: () {
-            setState(() {
-              _builtRules.clear();
-            });
-          },
+        Expanded(
+          child: OutlinedButton(
+            onPressed: () {
+              context.read<RuleBuilderBloc>().add(const ClearAllRulesEvent());
+              getIt<GlobalUiService>().hapticFeedback();
+            },
+            style: OutlinedButton.styleFrom(
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              foregroundColor: AppColors.error,
+              side: const BorderSide(color: AppColors.error),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+            ),
+            child: const Text('Clear All'),
+          ),
         ),
-        ElevatedButton.icon(
-          icon: Icon(Icons.check),
-          label: Text('Save Rules'),
-          onPressed: () {
-            Navigator.pop(context, _builtRules);
-          },
+        AppSpacing.gapM,
+        Expanded(
+          flex: 2,
+          child: ElevatedButton(
+            onPressed: () {
+              getIt<GlobalUiService>().hapticFeedback();
+              Navigator.pop(context, state.builtRules);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.successGreen,
+              padding: EdgeInsets.symmetric(vertical: 16.h),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.r),
+              ),
+              elevation: 0,
+            ),
+            child: Text(
+              'Save Rules',
+              style: AppTypography.button(context, AppColors.lightSurface),
+            ),
+          ),
         ),
       ],
     );
   }
 
-  void _addRule() async {
-    final field = _fieldController.text.trim();
-    final value = _valueController.text.trim();
+  void _addRule(BuildContext context, RuleBuilderState state) async {
+    final bloc = context.read<RuleBuilderBloc>();
+    final field = state.field.trim();
+    final value = state.value.trim();
 
     if (field.isEmpty || value.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Please fill in all fields')));
+      getIt<GlobalUiService>().showWarning('Please fill in all rule fields');
       return;
     }
 
-    final rule = {
-      'field': field,
-      'operator': _selectedOperator,
-      'value': value,
-    };
+    final rule = {'field': field, 'operator': state.operator, 'value': value};
 
-    // Validate rule
-    final isValid = await _ruleEngine.validateRule(rule);
+    final isValid = await bloc.ruleEngine.validateRule(rule);
 
     if (isValid) {
-      setState(() {
-        _builtRules.add(rule);
-        _fieldController.clear();
-        _valueController.clear();
-        _selectedOperator = '=';
-      });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Rule added successfully!')));
+      bloc.add(AddRuleEvent(rule: rule));
+      _fieldController.clear();
+      _valueController.clear();
+      getIt<GlobalUiService>().showSuccess('Rule expression added');
+      getIt<GlobalUiService>().hapticFeedback();
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Invalid rule. Please check your input.')),
-      );
+      getIt<GlobalUiService>().showError('Invalid rule syntax');
     }
   }
 
@@ -348,22 +471,21 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
   String _getOperatorDescription(String operator) {
     switch (operator) {
       case 'equals':
-        return 'The field must equal the value exactly';
+        return 'Exact match required';
       case 'contains':
-        return 'The field must contain the value';
+        return 'Value must appear anywhere';
       case 'greaterThan':
-        return 'The field must be greater than the value';
+        return 'Field must be numerically greater';
       case 'lessThan':
-        return 'The field must be less than the value';
+        return 'Field must be numerically less';
       case 'startsWith':
-        return 'The field must start with the value';
+        return 'Field begins with value';
       case 'endsWith':
-        return 'The field must end with the value';
+        return 'Field concludes with value';
       case 'inList':
-        return 'The field must be in the list (comma-separated)';
+        return 'Field matches any comma-separated value';
       default:
         return '';
     }
   }
 }
-

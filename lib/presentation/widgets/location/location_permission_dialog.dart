@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/core/services/location_permission_manager.dart';
+import 'package:mynotes/injection_container.dart' show getIt;
+import 'package:mynotes/core/services/global_ui_service.dart';
 
 /// Permission Request Dialog
 /// Shows a dialog requesting various permissions for location reminders
@@ -128,23 +130,15 @@ class _LocationPermissionDialogState extends State<LocationPermissionDialog> {
   }
 
   void _showPermissionDeniedSnackbar() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${_permissionSteps[_currentStep].title} permission is required for this feature.',
-        ),
-        action: SnackBarAction(
-          label: 'Settings',
-          onPressed: () => _permissionManager.openAppSettings(),
-        ),
-      ),
+    getIt<GlobalUiService>().showWarning(
+      '${_permissionSteps[_currentStep].title} permission is required for this feature.',
+      actionLabel: 'Settings',
+      onActionPressed: () => _permissionManager.openAppSettings(),
     );
   }
 
   void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    getIt<GlobalUiService>().showError(message);
   }
 
   void _skipPermission() {

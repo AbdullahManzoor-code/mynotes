@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-enum MediaType { image, audio, video }
+enum MediaType { image, audio, video, document }
 
 class MediaItem extends Equatable {
   final String id;
@@ -10,6 +10,7 @@ class MediaItem extends Equatable {
   final int size; // Added
   final int durationMs; // 0 for images; else duration in ms
   final String thumbnailPath;
+  final Map<String, dynamic> metadata; // New: for annotations, trim info, etc.
   final DateTime createdAt;
 
   MediaItem({
@@ -20,6 +21,7 @@ class MediaItem extends Equatable {
     this.size = 0,
     this.durationMs = 0,
     this.thumbnailPath = '',
+    this.metadata = const {},
     DateTime? createdAt,
   }) : createdAt = createdAt ?? DateTime.now();
 
@@ -32,6 +34,7 @@ class MediaItem extends Equatable {
     size,
     durationMs,
     thumbnailPath,
+    metadata,
     createdAt,
   ];
 
@@ -43,6 +46,7 @@ class MediaItem extends Equatable {
     'size': size,
     'durationMs': durationMs,
     'thumbnailPath': thumbnailPath,
+    'metadata': metadata,
     'createdAt': createdAt.toIso8601String(),
   };
 
@@ -54,6 +58,8 @@ class MediaItem extends Equatable {
         return 'audio';
       case MediaType.video:
         return 'video';
+      case MediaType.document:
+        return 'document';
     }
   }
 
@@ -65,6 +71,8 @@ class MediaItem extends Equatable {
         return MediaType.audio;
       case 'video':
         return MediaType.video;
+      case 'document':
+        return MediaType.document;
       default:
         return MediaType.image;
     }
@@ -79,6 +87,7 @@ class MediaItem extends Equatable {
       size: (json['size'] as int?) ?? 0,
       durationMs: (json['durationMs'] as int?) ?? 0,
       thumbnailPath: (json['thumbnailPath'] as String?) ?? '',
+      metadata: (json['metadata'] as Map<String, dynamic>?) ?? const {},
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'] as String)
           : DateTime.now(),
@@ -94,6 +103,7 @@ class MediaItem extends Equatable {
     int? size,
     int? durationMs,
     String? thumbnailPath,
+    Map<String, dynamic>? metadata,
     DateTime? createdAt,
   }) {
     return MediaItem(
@@ -104,6 +114,7 @@ class MediaItem extends Equatable {
       size: size ?? this.size,
       durationMs: durationMs ?? this.durationMs,
       thumbnailPath: thumbnailPath ?? this.thumbnailPath,
+      metadata: metadata ?? this.metadata,
       createdAt: createdAt ?? this.createdAt,
     );
   }

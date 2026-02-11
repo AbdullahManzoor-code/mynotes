@@ -6,6 +6,7 @@ import '../design_system/design_system.dart';
 import '../widgets/universal_item_card.dart';
 import '../../core/utils/smart_voice_parser.dart';
 import '../../data/repositories/unified_repository.dart';
+import '../../injection_container.dart' show getIt;
 
 /// Fixed Universal Quick Add Screen
 /// Fully working manual and voice input with proper UI
@@ -66,7 +67,7 @@ class _FixedUniversalQuickAddScreenState
     try {
       await _repository.initialize();
     } catch (e) {
-      debugPrint('Repository init error: $e');
+      AppLogger.e('Repository init error: $e');
     }
   }
 
@@ -75,7 +76,7 @@ class _FixedUniversalQuickAddScreenState
       _speechToText = stt.SpeechToText();
       _isVoiceAvailable = await _speechToText.initialize(
         onStatus: (status) {
-          debugPrint('Voice status: $status');
+          AppLogger.i('Voice status: $status');
           if (status == 'notListening' && _isListening) {
             setState(() {
               _isListening = false;
@@ -83,13 +84,13 @@ class _FixedUniversalQuickAddScreenState
           }
         },
         onError: (error) {
-          debugPrint('Voice error: $error');
+          AppLogger.e('Voice error: $error');
           _handleVoiceError(error);
         },
       );
       setState(() {});
     } catch (e) {
-      debugPrint('Voice init error: $e');
+      AppLogger.e('Voice init error: $e');
     }
   }
 
@@ -124,7 +125,7 @@ class _FixedUniversalQuickAddScreenState
         _showPreview = true;
       });
     } catch (e) {
-      debugPrint('Parse error: $e');
+      AppLogger.e('Parse error: $e');
     }
   }
 
@@ -157,7 +158,7 @@ class _FixedUniversalQuickAddScreenState
         pauseFor: const Duration(seconds: 3),
       );
     } catch (e) {
-      debugPrint('Listen error: $e');
+      AppLogger.e('Listen error: $e');
       _handleVoiceError(e);
     }
   }
@@ -170,7 +171,7 @@ class _FixedUniversalQuickAddScreenState
       });
       _voiceController.reverse();
     } catch (e) {
-      debugPrint('Stop listening error: $e');
+      AppLogger.e('Stop listening error: $e');
     }
   }
 
@@ -195,35 +196,12 @@ class _FixedUniversalQuickAddScreenState
     try {
       await _repository.createItem(_previewItem!);
 
-      HapticFeedback.mediumImpact();
-
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 12.w),
-                Text(
-                  _getSuccessMessage(),
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.primary,
-            duration: const Duration(seconds: 2),
-            margin: EdgeInsets.all(16.w),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-
+        getIt<GlobalUiService>().showSuccess(_getSuccessMessage());
         Navigator.pop(context, true);
       }
     } catch (error) {
-      debugPrint('Save error: $error');
+      AppLogger.e('Save error: $error');
       _showErrorSnackbar('Failed to save: $error');
     } finally {
       if (mounted) {
@@ -247,20 +225,7 @@ class _FixedUniversalQuickAddScreenState
   }
 
   void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white),
-            SizedBox(width: 12.w),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red.shade600,
-        margin: EdgeInsets.all(16.w),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    getIt<GlobalUiService>().showError(message);
   }
 
   @override
@@ -642,4 +607,3 @@ class _FixedUniversalQuickAddScreenState
     return Colors.red;
   }
 }
-

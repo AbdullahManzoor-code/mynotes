@@ -1,44 +1,15 @@
 import 'package:equatable/equatable.dart';
-import 'package:flutter/material.dart';
-import '../../core/themes/theme.dart';
+import 'params/theme_params.dart';
 
 class ThemeState extends Equatable {
-  final ThemeMode themeMode;
-  final bool isDarkMode;
-  final AppThemeType currentTheme;
-  final ThemeData themeData;
-  final double fontSize;
+  final ThemeParams params;
 
-  const ThemeState({
-    this.themeMode = ThemeMode.light,
-    this.isDarkMode = false,
-    this.currentTheme = AppThemeType.system,
-    required this.themeData,
-    this.fontSize = 1.0,
-  });
+  const ThemeState({required this.params});
 
-  ThemeState copyWith({
-    ThemeMode? themeMode,
-    bool? isDarkMode,
-    AppThemeType? currentTheme,
-    ThemeData? themeData,
-    double? fontSize,
-  }) {
-    return ThemeState(
-      themeMode: themeMode ?? this.themeMode,
-      isDarkMode: isDarkMode ?? this.isDarkMode,
-      currentTheme: currentTheme ?? this.currentTheme,
-      themeData: themeData ?? this.themeData,
-      fontSize: fontSize ?? this.fontSize,
-    );
-  }
+  bool get isDarkMode => params.isDarkMode;
+  String get themeMode => params.isDarkMode ? 'dark' : 'light';
+  double get fontSize => params.fontSize;
 
   @override
-  List<Object?> get props => [
-    themeMode,
-    isDarkMode,
-    currentTheme,
-    themeData,
-    fontSize,
-  ];
+  List<Object?> get props => [params];
 }

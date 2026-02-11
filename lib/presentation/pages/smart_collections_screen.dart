@@ -1,60 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:mynotes/core/design_system/app_colors.dart';
-import 'package:mynotes/core/design_system/app_typography.dart';
+import 'package:mynotes/presentation/bloc/smart_collections_bloc.dart';
+import 'package:mynotes/presentation/bloc/params/smart_collections_params.dart';
+import 'package:mynotes/domain/entities/smart_collection.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
+import '../../domain/repositories/smart_collection_repository.dart';
+import '../../injection_container.dart';
 
 /// Smart Collections Screen (ORG-003)
 /// AI-powered, rule-based collections that auto-organize notes
-class SmartCollectionsScreen extends StatefulWidget {
-  const SmartCollectionsScreen({Key? key}) : super(key: key);
-
-  @override
-  State<SmartCollectionsScreen> createState() => _SmartCollectionsScreenState();
-}
-
-class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
-  // Sample smart collections data
-  final List<Map<String, dynamic>> smartCollections = [
-    {
-      'id': '1',
-      'name': 'Work Projects',
-      'description': 'Notes tagged with "work"',
-      'itemCount': 24,
-      'icon': Icons.work,
-      'color': Colors.blue,
-      'ruleCount': 3,
-      'lastUpdated': 'Today',
-    },
-    {
-      'id': '2',
-      'name': 'Personal Goals',
-      'description': 'High-priority personal items',
-      'itemCount': 18,
-      'icon': Icons.track_changes,
-      'color': Colors.orange,
-      'ruleCount': 2,
-      'lastUpdated': 'Yesterday',
-    },
-    {
-      'id': '3',
-      'name': 'Urgent Tasks',
-      'description': 'Red-colored notes from past week',
-      'itemCount': 7,
-      'icon': Icons.priority_high,
-      'color': Colors.red,
-      'ruleCount': 2,
-      'lastUpdated': '2 days ago',
-    },
-  ];
-
-  String selectedFilter = 'all'; // all, active, archived
+class SmartCollectionsScreen extends StatelessWidget {
+  const SmartCollectionsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BlocProvider(
+      create: (context) => SmartCollectionsBloc(
+        smartCollectionRepository: getIt<SmartCollectionRepository>(),
+      )..add(const LoadSmartCollectionsEvent()),
+      child: const _SmartCollectionsView(),
+    );
+  }
+}
 
+class _SmartCollectionsView extends StatelessWidget {
+  const _SmartCollectionsView();
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      backgroundColor: AppColors.background(context),
       appBar: _buildAppBar(context),
       body: Column(
         children: [
@@ -67,30 +43,17 @@ class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
   }
 
   PreferredSizeWidget _buildAppBar(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return AppBar(
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+      backgroundColor: AppColors.surface(context),
       elevation: 0,
       leading: IconButton(
-        icon: Icon(
-          Icons.arrow_back,
-          color: isDark ? AppColors.lightText : AppColors.darkText,
-        ),
+        icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
         onPressed: () => Navigator.pop(context),
       ),
-      title: Text(
-        'Smart Collections',
-        style: AppTypography.heading2().copyWith(
-          color: isDark ? AppColors.lightText : AppColors.darkText,
-        ),
-      ),
+      title: Text('Smart Collections', style: AppTypography.heading2(context)),
       actions: [
         IconButton(
-          icon: Icon(
-            Icons.info_outline,
-            color: isDark ? AppColors.lightText : AppColors.darkText,
-          ),
+          icon: Icon(Icons.info_outline, color: AppColors.textPrimary(context)),
           onPressed: () => _showInfoDialog(context),
         ),
         SizedBox(width: 8.w),
@@ -99,54 +62,70 @@ class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
   }
 
   Widget _buildFilterChips(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.divider(context), width: 0.5),
-        ),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildFilterChip('All Collections', 'all', Icons.apps, context),
-            SizedBox(width: 8.w),
-            _buildFilterChip('Active', 'active', Icons.check_circle, context),
-            SizedBox(width: 8.w),
-            _buildFilterChip('Archived', 'archived', Icons.archive, context),
-          ],
-        ),
-      ),
+    return BlocBuilder<SmartCollectionsBloc, SmartCollectionsState>(
+      buildWhen: (p, c) => p.params.selectedFilter != c.params.selectedFilter,
+      builder: (context, state) {
+        return Container(
+          padding: AppSpacing.paddingAllS,
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(color: AppColors.borderLight, width: 0.5),
+            ),
+          ),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip(
+                  context,
+                  'All',
+                  'all',
+                  Icons.apps,
+                  state.params.selectedFilter,
+                ),
+                AppSpacing.gapS,
+                _buildFilterChip(
+                  context,
+                  'Active',
+                  'active',
+                  Icons.check_circle,
+                  state.params.selectedFilter,
+                ),
+                AppSpacing.gapS,
+                _buildFilterChip(
+                  context,
+                  'Archived',
+                  'archived',
+                  Icons.archive,
+                  state.params.selectedFilter,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildFilterChip(
+    BuildContext context,
     String label,
     String value,
     IconData icon,
-    BuildContext context,
+    String selectedValue,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isSelected = selectedFilter == value;
+    final isSelected = selectedValue == value;
 
     return GestureDetector(
-      onTap: () => setState(() => selectedFilter = value),
+      onTap: () =>
+          context.read<SmartCollectionsBloc>().add(FilterChangedEvent(value)),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
         decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primaryColor.withOpacity(0.2)
-              : isDark
-              ? AppColors.darkSurface
-              : AppColors.lightSurface,
+          color: isSelected ? AppColors.primary10 : AppColors.surface(context),
           borderRadius: BorderRadius.circular(20.r),
           border: Border.all(
-            color: isSelected
-                ? AppColors.primaryColor
-                : AppColors.divider(context),
+            color: isSelected ? AppColors.primaryColor : AppColors.borderLight,
             width: 1,
           ),
         ),
@@ -157,20 +136,17 @@ class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
               size: 16.sp,
               color: isSelected
                   ? AppColors.primaryColor
-                  : isDark
-                  ? AppColors.lightText
-                  : AppColors.darkText,
+                  : AppColors.textPrimary(context),
             ),
             SizedBox(width: 6.w),
             Text(
               label,
-              style: AppTypography.body2().copyWith(
-                color: isSelected
+              style: AppTypography.bodySmall(
+                context,
+                isSelected
                     ? AppColors.primaryColor
-                    : isDark
-                    ? AppColors.lightText
-                    : AppColors.darkText,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    : AppColors.textPrimary(context),
+                isSelected ? FontWeight.w600 : FontWeight.w500,
               ),
             ),
           ],
@@ -180,30 +156,56 @@ class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
   }
 
   Widget _buildCollectionsList(BuildContext context) {
-    return ListView.builder(
-      padding: EdgeInsets.all(16.w),
-      itemCount: smartCollections.length,
-      itemBuilder: (context, index) {
-        return _buildCollectionCard(smartCollections[index], context);
+    return BlocBuilder<SmartCollectionsBloc, SmartCollectionsState>(
+      builder: (context, state) {
+        if (state is SmartCollectionsLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final collections = state.params.filteredCollections;
+
+        if (collections.isEmpty) {
+          return Center(
+            child: Text(
+              'No collections found',
+              style: AppTypography.bodyMedium(context, AppColors.secondaryText),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: AppSpacing.paddingAllM,
+          itemCount: collections.length,
+          itemBuilder: (context, index) {
+            return _buildCollectionCard(context, collections[index]);
+          },
+        );
       },
     );
   }
 
   Widget _buildCollectionCard(
-    Map<String, dynamic> collection,
     BuildContext context,
+    SmartCollection collection,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final Color itemColor = _getCollectionColor(collection.id);
+    final IconData itemIcon = _getCollectionIcon(collection.id);
 
     return GestureDetector(
-      onTap: () => _showCollectionDetails(collection, context),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              _CollectionDetailsScreen(collection: collection),
+        ),
+      ),
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
-        padding: EdgeInsets.all(16.w),
+        padding: AppSpacing.paddingAllM,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+          color: AppColors.surface(context),
           borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: AppColors.divider(context), width: 0.5),
+          border: Border.all(color: AppColors.borderLight, width: 0.5),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -214,35 +216,30 @@ class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
                   width: 48.w,
                   height: 48.w,
                   decoration: BoxDecoration(
-                    color: (collection['color'] as Color).withOpacity(0.2),
+                    color: itemColor.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12.r),
                   ),
-                  child: Icon(
-                    collection['icon'] as IconData,
-                    color: collection['color'] as Color,
-                    size: 24.sp,
-                  ),
+                  child: Icon(itemIcon, color: itemColor, size: 24.sp),
                 ),
-                SizedBox(width: 12.w),
+                AppSpacing.gapM,
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        collection['name'] as String,
-                        style: AppTypography.heading3().copyWith(
-                          color: isDark
-                              ? AppColors.lightText
-                              : AppColors.darkText,
+                        collection.name,
+                        style: AppTypography.bodyLarge(
+                          context,
+                          null,
+                          FontWeight.bold,
                         ),
                       ),
                       SizedBox(height: 4.h),
                       Text(
-                        collection['description'] as String,
-                        style: AppTypography.body3().copyWith(
-                          color: isDark
-                              ? AppColors.lightTextSecondary
-                              : AppColors.darkTextSecondary,
+                        collection.description,
+                        style: AppTypography.bodySmall(
+                          context,
+                          AppColors.secondaryText,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -250,47 +247,10 @@ class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
                     ],
                   ),
                 ),
-                PopupMenuButton(
-                  icon: Icon(
-                    Icons.more_vert,
-                    color: isDark ? AppColors.lightText : AppColors.darkText,
-                  ),
-                  itemBuilder: (context) => [
-                    PopupMenuItem(
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit, size: 18.sp),
-                          SizedBox(width: 8.w),
-                          Text('Edit Rules'),
-                        ],
-                      ),
-                      onTap: () => _showRuleBuilder(collection, context),
-                    ),
-                    PopupMenuItem(
-                      child: Row(
-                        children: [
-                          Icon(Icons.archive, size: 18.sp),
-                          SizedBox(width: 8.w),
-                          Text('Archive'),
-                        ],
-                      ),
-                      onTap: () {},
-                    ),
-                    PopupMenuItem(
-                      child: Row(
-                        children: [
-                          Icon(Icons.delete, size: 18.sp, color: Colors.red),
-                          SizedBox(width: 8.w),
-                          Text('Delete', style: TextStyle(color: Colors.red)),
-                        ],
-                      ),
-                      onTap: () {},
-                    ),
-                  ],
-                ),
+                _buildCollectionsMenu(context, collection),
               ],
             ),
-            SizedBox(height: 12.h),
+            AppSpacing.gapM,
             Row(
               children: [
                 Expanded(
@@ -299,17 +259,14 @@ class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
                       Icon(
                         Icons.insert_drive_file,
                         size: 16.sp,
-                        color: isDark
-                            ? AppColors.lightTextSecondary
-                            : AppColors.darkTextSecondary,
+                        color: AppColors.secondaryText,
                       ),
                       SizedBox(width: 6.w),
                       Text(
-                        '${collection['itemCount']} items',
-                        style: AppTypography.body3().copyWith(
-                          color: isDark
-                              ? AppColors.lightTextSecondary
-                              : AppColors.darkTextSecondary,
+                        '${collection.itemCount} items',
+                        style: AppTypography.bodySmall(
+                          context,
+                          AppColors.secondaryText,
                         ),
                       ),
                     ],
@@ -318,206 +275,237 @@ class _SmartCollectionsScreenState extends State<SmartCollectionsScreen> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkSurface
-                        : AppColors.lightSurface,
+                    color: AppColors.background(context),
                     borderRadius: BorderRadius.circular(6.r),
                     border: Border.all(
-                      color: AppColors.divider(context),
+                      color: AppColors.borderLight,
                       width: 0.5,
                     ),
                   ),
                   child: Text(
-                    '${collection['ruleCount']} rules',
-                    style: AppTypography.caption().copyWith(
-                      color: isDark
-                          ? AppColors.lightTextSecondary
-                          : AppColors.darkTextSecondary,
+                    '${collection.rules.length} rules',
+                    style: AppTypography.labelSmall(
+                      context,
+                      AppColors.secondaryText,
                     ),
                   ),
                 ),
               ],
             ),
-            SizedBox(height: 8.h),
-            Text(
-              'Updated ${collection['lastUpdated']}',
-              style: AppTypography.caption().copyWith(
-                color: isDark
-                    ? AppColors.lightTextSecondary
-                    : AppColors.darkTextSecondary,
-              ),
-            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCollectionsMenu(
+    BuildContext context,
+    SmartCollection collection,
+  ) {
+    return PopupMenuButton(
+      icon: Icon(Icons.more_vert, color: AppColors.textPrimary(context)),
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(Icons.edit, size: 18.sp),
+              AppSpacing.gapS,
+              const Text('Edit Rules'),
+            ],
+          ),
+          onTap: () => _showRuleBuilder(context, collection),
+        ),
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(
+                collection.isActive ? Icons.archive : Icons.unarchive,
+                size: 18.sp,
+              ),
+              AppSpacing.gapS,
+              Text(collection.isActive ? 'Archive' : 'Activate'),
+            ],
+          ),
+          onTap: () => context.read<SmartCollectionsBloc>().add(
+            ArchiveSmartCollectionEvent(collectionId: collection.id),
+          ),
+        ),
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(Icons.delete, size: 18.sp, color: Colors.red),
+              AppSpacing.gapS,
+              const Text('Delete', style: TextStyle(color: Colors.red)),
+            ],
+          ),
+          onTap: () => context.read<SmartCollectionsBloc>().add(
+            DeleteSmartCollectionEvent(collectionId: collection.id),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildCreateButton(BuildContext context) {
     return FloatingActionButton.extended(
       onPressed: () => _showCreateDialog(context),
-      label: Text('New Collection'),
-      icon: Icon(Icons.add),
+      label: const Text('New Collection'),
+      icon: const Icon(Icons.add),
       backgroundColor: AppColors.primaryColor,
     );
   }
 
   void _showCreateDialog(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final TextEditingController nameController = TextEditingController();
+    final TextEditingController descController = TextEditingController();
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark
-            ? AppColors.darkSurface
-            : AppColors.lightSurface,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.surface(context),
         title: Text(
           'Create Smart Collection',
-          style: AppTypography.heading3().copyWith(
-            color: isDark ? AppColors.lightText : AppColors.darkText,
-          ),
+          style: AppTypography.heading3(context),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextField(
-              decoration: InputDecoration(
-                hintText: 'Collection name',
-                hintStyle: AppTypography.body2().copyWith(
-                  color: isDark
-                      ? AppColors.lightTextSecondary
-                      : AppColors.darkTextSecondary,
-                ),
-              ),
+              controller: nameController,
+              decoration: const InputDecoration(hintText: 'Collection name'),
             ),
-            SizedBox(height: 16.h),
+            AppSpacing.gapM,
             TextField(
-              decoration: InputDecoration(
+              controller: descController,
+              decoration: const InputDecoration(
                 hintText: 'Description (optional)',
-                hintStyle: AppTypography.body2().copyWith(
-                  color: isDark
-                      ? AppColors.lightTextSecondary
-                      : AppColors.darkTextSecondary,
-                ),
               ),
             ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Cancel'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Create'),
+            onPressed: () {
+              if (nameController.text.isNotEmpty) {
+                context.read<SmartCollectionsBloc>().add(
+                  CreateSmartCollectionEvent(
+                    name: nameController.text,
+                    description: descController.text,
+                    rules: const [],
+                  ),
+                );
+                Navigator.pop(dialogContext);
+              }
+            },
+            child: const Text('Create'),
           ),
         ],
       ),
     );
   }
 
-  void _showCollectionDetails(
-    Map<String, dynamic> collection,
-    BuildContext context,
-  ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _CollectionDetailsScreen(collection: collection),
-      ),
-    );
-  }
-
-  void _showRuleBuilder(Map<String, dynamic> collection, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+  void _showRuleBuilder(BuildContext context, SmartCollection collection) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-      builder: (context) => _RuleBuilderSheet(collection: collection),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => BlocProvider.value(
+        value: context.read<SmartCollectionsBloc>(),
+        child: _RuleBuilderSheet(collection: collection),
+      ),
     );
   }
 
   void _showInfoDialog(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: isDark
-            ? AppColors.darkSurface
-            : AppColors.lightSurface,
+        backgroundColor: AppColors.surface(context),
         title: Text(
           'About Smart Collections',
-          style: AppTypography.heading3().copyWith(
-            color: isDark ? AppColors.lightText : AppColors.darkText,
-          ),
+          style: AppTypography.heading3(context),
         ),
         content: Text(
           'Smart Collections use rules to automatically organize your notes. Set conditions like tags, colors, and dates, and notes matching all rules are automatically grouped.',
-          style: AppTypography.body2().copyWith(
-            color: isDark ? AppColors.lightText : AppColors.darkText,
-          ),
+          style: AppTypography.bodyMedium(context),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Got it'),
+            child: const Text('Got it'),
           ),
         ],
       ),
     );
   }
+
+  Color _getCollectionColor(String id) {
+    switch (id) {
+      case '1':
+        return Colors.blue;
+      case '2':
+        return Colors.orange;
+      case '3':
+        return Colors.red;
+      case 'sys_1':
+        return Colors.teal;
+      case 'sys_2':
+        return Colors.purple;
+      default:
+        return Colors.blueGrey;
+    }
+  }
+
+  IconData _getCollectionIcon(String id) {
+    switch (id) {
+      case '1':
+        return Icons.work;
+      case '2':
+        return Icons.track_changes;
+      case '3':
+        return Icons.priority_high;
+      case 'sys_1':
+        return Icons.history;
+      case 'sys_2':
+        return Icons.notifications_active;
+      default:
+        return Icons.folder;
+    }
+  }
 }
 
-class _CollectionDetailsScreen extends StatefulWidget {
-  final Map<String, dynamic> collection;
+class _CollectionDetailsScreen extends StatelessWidget {
+  final SmartCollection collection;
 
-  const _CollectionDetailsScreen({Key? key, required this.collection})
-    : super(key: key);
+  const _CollectionDetailsScreen({required this.collection});
 
-  @override
-  State<_CollectionDetailsScreen> createState() =>
-      _CollectionDetailsScreenState();
-}
-
-class _CollectionDetailsScreenState extends State<_CollectionDetailsScreen> {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+      backgroundColor: AppColors.background(context),
       appBar: AppBar(
-        backgroundColor: isDark
-            ? AppColors.darkSurface
-            : AppColors.lightSurface,
+        backgroundColor: AppColors.surface(context),
         elevation: 0,
         leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: isDark ? AppColors.lightText : AppColors.darkText,
-          ),
+          icon: Icon(Icons.arrow_back, color: AppColors.textPrimary(context)),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          widget.collection['name'] as String,
-          style: AppTypography.heading2().copyWith(
-            color: isDark ? AppColors.lightText : AppColors.darkText,
-          ),
-        ),
+        title: Text(collection.name, style: AppTypography.heading2(context)),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.w),
+        padding: AppSpacing.paddingAllM,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildInfoSection(context),
-            SizedBox(height: 24.h),
-            _buildRulesSection(context),
-            SizedBox(height: 24.h),
-            _buildItemsPreview(context),
+            AppSpacing.gapL,
+            _buildRulesSection(context, collection),
+            AppSpacing.gapL,
+            _buildItemsPreview(context, collection),
           ],
         ),
       ),
@@ -525,14 +513,12 @@ class _CollectionDetailsScreenState extends State<_CollectionDetailsScreen> {
   }
 
   Widget _buildInfoSection(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      padding: EdgeInsets.all(16.w),
+      padding: AppSpacing.paddingAllM,
       decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12.r),
-        border: Border.all(color: AppColors.divider(context), width: 0.5),
+        border: Border.all(color: AppColors.borderLight, width: 0.5),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -543,35 +529,30 @@ class _CollectionDetailsScreenState extends State<_CollectionDetailsScreen> {
                 width: 56.w,
                 height: 56.w,
                 decoration: BoxDecoration(
-                  color: (widget.collection['color'] as Color).withOpacity(0.2),
+                  color: AppColors.primary10,
                   borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Icon(
-                  widget.collection['icon'] as IconData,
-                  color: widget.collection['color'] as Color,
+                  Icons.folder,
+                  color: AppColors.primaryColor,
                   size: 28.sp,
                 ),
               ),
-              SizedBox(width: 16.w),
+              AppSpacing.gapM,
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      widget.collection['name'] as String,
-                      style: AppTypography.heading3().copyWith(
-                        color: isDark
-                            ? AppColors.lightText
-                            : AppColors.darkText,
-                      ),
+                      collection.name,
+                      style: AppTypography.heading3(context),
                     ),
                     SizedBox(height: 4.h),
                     Text(
-                      widget.collection['description'] as String,
-                      style: AppTypography.body3().copyWith(
-                        color: isDark
-                            ? AppColors.lightTextSecondary
-                            : AppColors.darkTextSecondary,
+                      collection.description,
+                      style: AppTypography.bodySmall(
+                        context,
+                        AppColors.secondaryText,
                       ),
                     ),
                   ],
@@ -579,27 +560,27 @@ class _CollectionDetailsScreenState extends State<_CollectionDetailsScreen> {
               ),
             ],
           ),
-          SizedBox(height: 16.h),
+          AppSpacing.gapM,
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildStatCard(
+                context,
                 'Items',
-                '${widget.collection['itemCount']}',
+                '${collection.itemCount}',
                 Icons.insert_drive_file,
-                context,
               ),
               _buildStatCard(
+                context,
                 'Rules',
-                '${widget.collection['ruleCount']}',
+                '${collection.rules.length}',
                 Icons.rule,
-                context,
               ),
               _buildStatCard(
-                'Updated',
-                widget.collection['lastUpdated'] as String,
-                Icons.access_time,
                 context,
+                'Active',
+                collection.isActive ? 'Yes' : 'No',
+                Icons.check_circle_outline,
               ),
             ],
           ),
@@ -609,45 +590,27 @@ class _CollectionDetailsScreenState extends State<_CollectionDetailsScreen> {
   }
 
   Widget _buildStatCard(
+    BuildContext context,
     String label,
     String value,
     IconData icon,
-    BuildContext context,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Expanded(
       child: Container(
         margin: EdgeInsets.symmetric(horizontal: 4.w),
-        padding: EdgeInsets.all(12.w),
+        padding: AppSpacing.paddingAllS,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkBg : AppColors.lightBg,
+          color: AppColors.background(context),
           borderRadius: BorderRadius.circular(8.r),
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              size: 20.sp,
-              color: isDark
-                  ? AppColors.lightTextSecondary
-                  : AppColors.darkTextSecondary,
-            ),
+            Icon(icon, size: 20.sp, color: AppColors.secondaryText),
             SizedBox(height: 4.h),
-            Text(
-              value,
-              style: AppTypography.heading4().copyWith(
-                color: isDark ? AppColors.lightText : AppColors.darkText,
-              ),
-            ),
-            SizedBox(height: 2.h),
+            Text(value, style: AppTypography.heading4(context)),
             Text(
               label,
-              style: AppTypography.caption().copyWith(
-                color: isDark
-                    ? AppColors.lightTextSecondary
-                    : AppColors.darkTextSecondary,
-              ),
+              style: AppTypography.labelSmall(context, AppColors.secondaryText),
             ),
           ],
         ),
@@ -655,126 +618,116 @@ class _CollectionDetailsScreenState extends State<_CollectionDetailsScreen> {
     );
   }
 
-  Widget _buildRulesSection(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Collection Rules',
-          style: AppTypography.heading4().copyWith(
-            color: isDark ? AppColors.lightText : AppColors.darkText,
-          ),
-        ),
-        SizedBox(height: 12.h),
-        Container(
-          padding: EdgeInsets.all(16.w),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-            borderRadius: BorderRadius.circular(12.r),
-            border: Border.all(color: AppColors.divider(context), width: 0.5),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildRuleItem('Tag', 'contains "work"', context),
-              SizedBox(height: 12.h),
-              _buildRuleItem('Date Range', 'Last 30 days', context),
-              SizedBox(height: 12.h),
-              _buildRuleItem('Priority', 'High or Medium', context),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRuleItem(String label, String value, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Row(
-      children: [
-        Icon(
-          Icons.rule,
-          size: 16.sp,
-          color: isDark
-              ? AppColors.lightTextSecondary
-              : AppColors.darkTextSecondary,
-        ),
-        SizedBox(width: 12.w),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: AppTypography.body3().copyWith(
-                  color: isDark
-                      ? AppColors.lightTextSecondary
-                      : AppColors.darkTextSecondary,
-                ),
-              ),
-              SizedBox(height: 2.h),
-              Text(
-                value,
-                style: AppTypography.body2().copyWith(
-                  color: isDark ? AppColors.lightText : AppColors.darkText,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildItemsPreview(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+  Widget _buildRulesSection(BuildContext context, SmartCollection collection) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Items in this Collection',
-              style: AppTypography.heading4().copyWith(
-                color: isDark ? AppColors.lightText : AppColors.darkText,
-              ),
-            ),
-            Text(
-              '${widget.collection['itemCount']}',
-              style: AppTypography.heading4().copyWith(
-                color: AppColors.primaryColor,
-              ),
+            Text('Rules', style: AppTypography.heading3(context)),
+            TextButton.icon(
+              onPressed: () {},
+              icon: Icon(Icons.add, size: 18.sp),
+              label: const Text('Add Rule'),
             ),
           ],
         ),
-        SizedBox(height: 12.h),
-        // Item preview list
+        AppSpacing.gapM,
+        if (collection.rules.isEmpty)
+          Center(
+            child: Text(
+              'No rules defined.',
+              style: AppTypography.bodySmall(context, AppColors.secondaryText),
+            ),
+          )
+        else
+          ...collection.rules.map((rule) => _buildRuleItem(context, rule)),
+      ],
+    );
+  }
+
+  Widget _buildRuleItem(BuildContext context, CollectionRule rule) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 8.h),
+      padding: AppSpacing.paddingAllS,
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.circular(8.r),
+        border: Border.all(color: AppColors.borderLight, width: 0.5),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.rule, size: 18.sp, color: AppColors.primaryColor),
+          AppSpacing.gapM,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${rule.type} ${rule.operator}',
+                  style: AppTypography.bodySmall(
+                    context,
+                    null,
+                    FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Value: ${rule.value}',
+                  style: AppTypography.labelSmall(
+                    context,
+                    AppColors.secondaryText,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildItemsPreview(BuildContext context, SmartCollection collection) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Items Preview', style: AppTypography.heading3(context)),
+            Text(
+              '${collection.itemCount} items',
+              style: AppTypography.heading4(context, AppColors.primaryColor),
+            ),
+          ],
+        ),
+        AppSpacing.gapM,
         ListView.builder(
           shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: 5,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: collection.itemCount > 5 ? 5 : collection.itemCount,
           itemBuilder: (context, index) {
             return Container(
               margin: EdgeInsets.only(bottom: 8.h),
-              padding: EdgeInsets.all(12.w),
+              padding: AppSpacing.paddingAllM,
               decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                color: AppColors.surface(context),
                 borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(
-                  color: AppColors.divider(context),
-                  width: 0.5,
-                ),
+                border: Border.all(color: AppColors.borderLight, width: 0.5),
               ),
-              child: Text(
-                'Item ${index + 1}',
-                style: AppTypography.body2().copyWith(
-                  color: isDark ? AppColors.lightText : AppColors.darkText,
-                ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.description,
+                    size: 20.sp,
+                    color: AppColors.secondaryText,
+                  ),
+                  AppSpacing.gapM,
+                  Text(
+                    'Note ${index + 1}',
+                    style: AppTypography.bodyMedium(context),
+                  ),
+                ],
               ),
             );
           },
@@ -784,81 +737,102 @@ class _CollectionDetailsScreenState extends State<_CollectionDetailsScreen> {
   }
 }
 
-class _RuleBuilderSheet extends StatefulWidget {
-  final Map<String, dynamic> collection;
+class _RuleBuilderSheet extends StatelessWidget {
+  final SmartCollection collection;
 
-  const _RuleBuilderSheet({Key? key, required this.collection})
-    : super(key: key);
+  const _RuleBuilderSheet({required this.collection});
 
-  @override
-  State<_RuleBuilderSheet> createState() => _RuleBuilderSheetState();
-}
-
-class _RuleBuilderSheetState extends State<_RuleBuilderSheet> {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Container(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      padding: AppSpacing.paddingAllM,
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(20.r),
+          topRight: Radius.circular(20.r),
+        ),
+      ),
+      child: BlocBuilder<SmartCollectionsBloc, SmartCollectionsState>(
+        builder: (context, state) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Edit Rules',
-                style: AppTypography.heading3().copyWith(
-                  color: isDark ? AppColors.lightText : AppColors.darkText,
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Edit Rules', style: AppTypography.heading3(context)),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
               ),
-              IconButton(
-                icon: Icon(Icons.close),
-                onPressed: () => Navigator.pop(context),
+              AppSpacing.gapL,
+              _buildRuleList(context),
+              AppSpacing.gapL,
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  AppSpacing.gapM,
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        // In a real app, we would gather rules from UI
+                        // For this refactor, we maintain existing ones
+                        context.read<SmartCollectionsBloc>().add(
+                          UpdateSmartCollectionEvent(
+                            collectionId: collection.id,
+                            name: collection.name,
+                            rules: collection.rules,
+                          ),
+                        );
+                        Navigator.pop(context);
+                      },
+                      child: const Text('Save Changes'),
+                    ),
+                  ),
+                ],
               ),
+              SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
             ],
-          ),
-          SizedBox(height: 16.h),
-          _buildRuleBuilder(context),
-          SizedBox(height: 16.h),
-          Row(
-            children: [
-              Expanded(
-                child: TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Cancel'),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text('Save Changes'),
-                ),
-              ),
-            ],
-          ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildRuleBuilder(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildRuleList(BuildContext context) {
+    if (collection.rules.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: AppSpacing.paddingAllL,
+          child: Text(
+            'No rules defined yet.',
+            style: AppTypography.bodyMedium(context, AppColors.secondaryText),
+          ),
+        ),
+      );
+    }
 
     return ListView.builder(
       shrinkWrap: true,
-      itemCount: 3,
+      itemCount: collection.rules.length,
       itemBuilder: (context, index) {
+        final rule = collection.rules[index];
         return Container(
           margin: EdgeInsets.only(bottom: 12.h),
-          padding: EdgeInsets.all(12.w),
+          padding: AppSpacing.paddingAllM,
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkBg : AppColors.lightBg,
-            borderRadius: BorderRadius.circular(8.r),
-            border: Border.all(color: AppColors.divider(context), width: 0.5),
+            color: AppColors.background(context),
+            borderRadius: BorderRadius.circular(12.r),
+            border: Border.all(color: AppColors.borderLight),
           ),
           child: Row(
             children: [
@@ -867,34 +841,28 @@ class _RuleBuilderSheetState extends State<_RuleBuilderSheet> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Rule ${index + 1}',
-                      style: AppTypography.body2().copyWith(
-                        color: isDark
-                            ? AppColors.lightText
-                            : AppColors.darkText,
+                      '${rule.type} ${rule.operator}',
+                      style: AppTypography.bodyMedium(
+                        context,
+                        null,
+                        FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 4.h),
                     Text(
-                      'Tag contains "example"',
-                      style: AppTypography.body3().copyWith(
-                        color: isDark
-                            ? AppColors.lightTextSecondary
-                            : AppColors.darkTextSecondary,
+                      'Value: ${rule.value}',
+                      style: AppTypography.bodySmall(
+                        context,
+                        AppColors.secondaryText,
                       ),
                     ),
                   ],
                 ),
               ),
               IconButton(
-                icon: Icon(
-                  Icons.edit,
-                  size: 18.sp,
-                  color: isDark
-                      ? AppColors.lightTextSecondary
-                      : AppColors.darkTextSecondary,
-                ),
-                onPressed: () {},
+                icon: Icon(Icons.delete, color: Colors.red, size: 20.sp),
+                onPressed: () {
+                  // TODO: Implement rule deletion logic
+                },
               ),
             ],
           ),

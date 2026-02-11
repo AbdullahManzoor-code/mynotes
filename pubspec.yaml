@@ -64,6 +64,11 @@ dependencies:
   
   # File Management
   share_plus: ^7.2.1
+  file_picker: ^8.1.7
+
+  # OCR & Text Extraction
+  google_mlkit_text_recognition: ^0.14.0
+  syncfusion_flutter_pdf: ^28.1.33
   
   # URL Launcher
   url_launcher: ^6.2.0
@@ -75,7 +80,7 @@ dependencies:
   flutter_screenutil: ^5.9.3
   
   # Date & Time
-  intl: ^0.20.2
+  intl: any
   
   # UUID Generation
   uuid: ^4.2.1
@@ -106,15 +111,27 @@ dependencies:
   fl_chart: ^0.66.0
   
   # Rich Text Editor
-  flutter_quill: ^9.0.0
+  flutter_quill: ^10.8.2
   speech_to_text: ^7.3.0
-  table_calendar: ^3.2.0
+  table_calendar: any
   photo_manager: ^3.8.3
   geolocator: ^14.0.2
   geocoding: ^4.0.0
   google_maps_flutter: ^2.5.0
   google_maps_flutter_platform_interface: ^2.6.0
   google_places_flutter: ^2.0.8
+  flutter_timezone: ^5.0.1
+  flutter_quill_extensions: ^10.4.0
+  pro_image_editor: ^11.18.4
+  video_editor: any
+  youtube_player_iframe: ^5.1.2
+  graphview: ^1.5.1
+  archive: ^3.6.1
+  connectivity_plus: ^7.0.0
+
+dependency_overrides:
+  flutter_inappwebview: ^6.1.5
+  intl: ^0.19.0
 
 dev_dependencies:
   flutter_test:
@@ -128,6 +145,8 @@ dev_dependencies:
   flutter_lints: ^5.0.0
   mockito: ^5.6.3
   bloc_test: ^10.0.0
+  build_runner: ^2.10.5
+  mocktail: ^1.0.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

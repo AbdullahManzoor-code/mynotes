@@ -1,129 +1,88 @@
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:bloc/bloc.dart';
+import 'package:equatable/equatable.dart';
+import '../../domain/repositories/stats_repository.dart';
+import '../../domain/entities/focus_session.dart';
+import '../widgets/universal_item_card.dart';
 
 part 'analytics_event.dart';
 part 'analytics_state.dart';
 
 class AnalyticsBloc extends Bloc<AnalyticsEvent, AnalyticsState> {
-  AnalyticsBloc() : super(AnalyticsInitial()) {
-    on<LoadMoodAnalyticsEvent>(_onLoadMoodAnalytics);
-    on<LoadNotesStatsEvent>(_onLoadNotesStats);
-    on<LoadProductivityStatsEvent>(_onLoadProductivityStats);
-    on<LoadReflectionStatsEvent>(_onLoadReflectionStats);
-    on<ExportJournalEvent>(_onExportJournal);
+  final StatsRepository repository;
+
+  AnalyticsBloc({required this.repository}) : super(const AnalyticsInitial()) {
+    on<LoadAnalyticsEvent>(_onLoadAnalytics);
+    on<RefreshAnalyticsEvent>(_onRefreshAnalytics);
+    on<RecordFocusSessionEvent>(_onRecordFocusSession);
+
+    // Legacy mapping
+    on<LoadMoodAnalyticsEvent>((event, emit) async {
+      emit(const MoodAnalyticsLoaded({'General': 1}));
+    });
   }
 
-  Future<void> _onLoadMoodAnalytics(
-    LoadMoodAnalyticsEvent event,
+  Future<void> _onLoadAnalytics(
+    LoadAnalyticsEvent event,
+    Emitter<AnalyticsState> emit,
+  ) async {
+    emit(const AnalyticsLoading());
+    await _fetchAndEmitStats(emit);
+  }
+
+  Future<void> _onRefreshAnalytics(
+    RefreshAnalyticsEvent event,
+    Emitter<AnalyticsState> emit,
+  ) async {
+    await _fetchAndEmitStats(emit);
+  }
+
+  Future<void> _onRecordFocusSession(
+    RecordFocusSessionEvent event,
     Emitter<AnalyticsState> emit,
   ) async {
     try {
-      emit(AnalyticsLoading());
-
-      // Simulate data loading
-      await Future.delayed(Duration(milliseconds: 500));
-
-      final analytics = MoodAnalytics(
-        moodCounts: {'Happy': 15, 'Sad': 3, 'Neutral': 10},
-        dailyMoods: {},
-        averageMood: 4.2,
-        mostFrequentMood: 'Happy',
-        totalEntries: 28,
-      );
-
-      emit(MoodAnalyticsLoaded(analytics));
+      await repository.saveFocusSession(event.session);
+      await _fetchAndEmitStats(emit);
     } catch (e) {
-      emit(AnalyticsError('Failed to load mood analytics: $e'));
+      emit(AnalyticsError(e.toString()));
     }
   }
 
-  Future<void> _onLoadNotesStats(
-    LoadNotesStatsEvent event,
-    Emitter<AnalyticsState> emit,
-  ) async {
+  Future<void> _fetchAndEmitStats(Emitter<AnalyticsState> emit) async {
     try {
-      emit(AnalyticsLoading());
+      final results = await Future.wait([
+        repository.getItemCounts(),
+        repository.getWeeklyActivity(),
+        repository.getCategoryBreakdown(),
+        repository.getProductivityInsights(),
+        repository.getCurrentStreak(),
+        repository.getRecentItems(),
+        repository.getOverdueReminders(),
+        repository.getDailyHighlights(),
+      ]);
 
-      await Future.delayed(Duration(milliseconds: 500));
-
-      final stats = NotesStatistics(
-        totalNotes: 42,
-        archivedNotes: 5,
-        notesWithAttachments: 12,
-        totalWords: 15420,
-        averageNoteLength: 367,
-        lastNoteDate: DateTime.now(),
-      );
-
-      emit(NotesStatsLoaded(stats));
-    } catch (e) {
-      emit(AnalyticsError('Failed to load notes stats: $e'));
-    }
-  }
-
-  Future<void> _onLoadProductivityStats(
-    LoadProductivityStatsEvent event,
-    Emitter<AnalyticsState> emit,
-  ) async {
-    try {
-      emit(AnalyticsLoading());
-
-      await Future.delayed(Duration(milliseconds: 500));
-
-      final stats = ProductivityStatistics(
-        totalTodosCompleted: 87,
-        totalTodosCreated: 110,
-        completionRate: 0.791,
-        consecutiveDaysActive: 15,
-        averageTaskDuration: Duration(minutes: 45),
-        tasksCompletedThisWeek: 12,
-      );
-
-      emit(ProductivityStatsLoaded(stats));
-    } catch (e) {
-      emit(AnalyticsError('Failed to load productivity stats: $e'));
-    }
-  }
-
-  Future<void> _onLoadReflectionStats(
-    LoadReflectionStatsEvent event,
-    Emitter<AnalyticsState> emit,
-  ) async {
-    try {
-      emit(AnalyticsLoading());
-
-      await Future.delayed(Duration(milliseconds: 500));
-
-      final stats = ReflectionStatistics(
-        totalAnswers: 45,
-        answersThisWeek: 8,
-        topCategories: ['Personal', 'Growth'],
-        consecutiveReflectionDays: 7,
-        answersPerCategory: {'Personal': 20, 'Growth': 15, 'Health': 10},
-      );
-
-      emit(ReflectionStatsLoaded(stats));
-    } catch (e) {
-      emit(AnalyticsError('Failed to load reflection stats: $e'));
-    }
-  }
-
-  Future<void> _onExportJournal(
-    ExportJournalEvent event,
-    Emitter<AnalyticsState> emit,
-  ) async {
-    try {
-      emit(ExportInProgress());
-
-      await Future.delayed(Duration(milliseconds: 1000));
+      final recentItemsRaw = results[5] as List<Map<String, dynamic>>;
+      final overdueItemsRaw = results[6] as List<Map<String, dynamic>>;
+      final highlights = results[7] as List<String>;
 
       emit(
-        ExportCompleted(
-          fileName: 'journal_export_${DateTime.now().millisecondsSinceEpoch}',
-          format: event.format,
+        AnalyticsLoaded(
+          itemCounts: results[0] as Map<String, int>,
+          weeklyActivity: results[1] as Map<String, double>,
+          categoryBreakdown: results[2] as List<Map<String, dynamic>>,
+          productivityInsights: results[3] as Map<String, dynamic>,
+          streak: results[4] as int,
+          recentItems: recentItemsRaw
+              .map((m) => UniversalItem.fromMap(m))
+              .toList(),
+          overdueItems: overdueItemsRaw
+              .map((m) => UniversalItem.fromMap(m))
+              .toList(),
+          dailyHighlights: highlights,
         ),
       );
     } catch (e) {
-      emit(AnalyticsError('Failed to export journal: $e'));
+      emit(AnalyticsError('Failed to load analytics: ${e.toString()}'));
     }
   }
 }
