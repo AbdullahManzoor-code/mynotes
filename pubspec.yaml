@@ -1,7 +1,8 @@
 name: mynotes
 description: "A new Flutter project."
+
 # The following line prevents the package from being accidentally published to
-# pub.dev using `flutter pub publish`. This is preferred for private packages.
+# pub.dev using flutter pub publish. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
@@ -17,117 +18,210 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
 version: 1.0.0+1
-  # sdk: ^3.10.7
 
+# sdk: ^3.10.7
 environment:
   sdk: ^3.8.1
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
-# consider running `flutter pub upgrade --major-versions`. Alternatively,
+# consider running flutter pub upgrade --major-versions. Alternatively,
 # dependencies can be manually updated by changing the version numbers below to
 # the latest version available on pub.dev. To see which dependencies have newer
-# versions available, run `flutter pub outdated`.
+# versions available, run flutter pub outdated.
 dependencies:
   flutter:
+    sdk: flutter
+  flutter_localizations:
     sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  
-  # State Management
+
+  # ══════════════════════════════════════
+  # 🧱 BLOC & STATE MANAGEMENT
+  # ══════════════════════════════════════
   equatable: ^2.0.8
   flutter_bloc: ^9.1.1
-  rxdart: ^0.27.7
-  get_it: ^8.0.3
-  
-  # Local Storage
+  rxdart: ^0.28.0
+  get_it: ^9.2.0
+  bloc: ^9.1.1
+  bloc_concurrency: ^0.3.0
+  hydrated_bloc: ^10.1.1
+
+  # ══════════════════════════════════════
+  # 🏗️ ARCHITECTURE & DI
+  # ══════════════════════════════════════
+  injectable: ^2.5.0
+  dartz: ^0.10.1
+  formz: ^0.8.0
+  # freezed_annotation: ^2.4.6
+  json_annotation: ^4.9.0
+
+  # ══════════════════════════════════════
+  # 🧭 NAVIGATION
+  # ══════════════════════════════════════
+  go_router: ^17.1.0
+
+  # ══════════════════════════════════════
+  # 🌐 NETWORKING
+  # ══════════════════════════════════════
+  dio: ^5.7.0
+  retrofit: ^4.4.1
+  pretty_dio_logger: ^1.4.0
+  connectivity_plus: ^7.0.0
+
+  # ══════════════════════════════════════
+  # 💾 DATABASE & STORAGE (Local Storage)
+  # ══════════════════════════════════════
   sqflite: ^2.3.0
   path_provider: ^2.1.1
   path: ^1.9.0
-  
-  # Media & Compression
+  shared_preferences: ^2.5.3
+  sqlite3_flutter_libs: ^0.5.20
+  sqflite_common_ffi: ^2.3.0+4
+  flutter_secure_storage: ^10.0.0
+
+  # ══════════════════════════════════════
+  # 📝 RICH TEXT EDITOR
+  # ══════════════════════════════════════
+  flutter_quill: ^11.5.0
+  flutter_quill_extensions: ^11.0.0
+
+  # ══════════════════════════════════════
+  # 📸 MEDIA & FILES
+  # ══════════════════════════════════════
   image_picker: ^1.0.4
+  image_cropper: ^11.0.0
   flutter_image_compress: ^2.1.0
+  video_compress: ^3.1.3
   video_player: ^2.8.1
+  chewie: ^1.8.5
+  video_thumbnail: ^0.5.3
   record: ^6.1.2
-  audioplayers: ^5.2.1
-  
-  # Notifications & Alarms - FIXED VERSION
-  flutter_local_notifications: ^17.2.3  # ✅ UPGRADED - fixes the bigLargeIcon bug
+  audioplayers: ^6.5.1
+  just_audio: ^0.10.5
+  audio_waveforms: ^2.0.2
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.1
+  photo_view: ^0.15.0
+  file_picker: ^10.3.10
+  archive: ^4.0.7
+  photo_manager: ^3.8.3
+  pro_image_editor: ^11.18.4
+  video_editor: any
+
+  # ══════════════════════════════════════
+  # 🎤 VOICE & STT
+  # ══════════════════════════════════════
+  speech_to_text: ^7.3.0
+  avatar_glow: ^3.0.1
+
+  # ══════════════════════════════════════
+  # 📷 DOCUMENT SCANNING & OCR
+  # ══════════════════════════════════════
+  cunning_document_scanner: ^1.3.0
+  google_mlkit_text_recognition: ^0.15.1
+  syncfusion_flutter_pdf: ^32.2.4
+  image: ^4.3.0
+
+  # ══════════════════════════════════════
+  # 🔔 NOTIFICATIONS
+  # ══════════════════════════════════════
+  flutter_local_notifications: ^18.0.1
+  awesome_notifications: ^0.10.1
+  android_alarm_manager_plus: ^5.0.0
   timezone: ^0.9.4
-  
-  # PDF Generation
+  flutter_timezone: ^5.0.1
+
+  # ══════════════════════════════════════
+  # 🔐 SECURITY
+  # ══════════════════════════════════════
+  local_auth: ^3.0.0
+  permission_handler: ^12.0.1
+  encrypt: ^5.0.3
+  crypto: ^3.0.3
+
+  # ══════════════════════════════════════
+  # 🎨 UI & THEMING
+  # ══════════════════════════════════════
+  flutter_screenutil: ^5.9.3
+  responsive_framework: ^1.5.1
+  flex_color_scheme: ^8.0.2
+  adaptive_theme: ^3.6.0
+  google_fonts: ^8.0.1
+  flutter_svg: ^2.0.16
+  lottie: ^3.0.0
+  shimmer: ^3.0.0
+
+  # ══════════════════════════════════════
+  # 🧩 UI WIDGETS
+  # ══════════════════════════════════════
+  flutter_staggered_grid_view: ^0.7.0
+  flutter_slidable: ^4.0.3
+  carousel_slider: ^5.0.0
+  smooth_page_indicator: ^2.0.1
+  percent_indicator: ^4.2.3
+  pin_code_fields: ^8.0.1
+  badges: ^3.1.2
+  fluttertoast: ^9.0.0
+  confetti: ^0.8.0
+  grouped_list: ^6.0.0
+  introduction_screen: ^4.0.0
+  table_calendar: any
+  fl_chart: ^1.1.1
+  flex_color_picker: ^3.6.0
+  textfield_tags: ^3.0.1
+  any_link_preview: ^3.0.2
+  circular_countdown_timer: ^0.2.3
+  flutter_staggered_animations: ^1.1.1
+  graphview: ^1.5.1
+
+  # ══════════════════════════════════════
+  # 📤 EXPORT & SHARE
+  # ══════════════════════════════════════
   pdf: ^3.10.7
   printing: ^5.11.1
-  
-  # File Management
-  share_plus: ^7.2.1
-  file_picker: ^8.1.7
-
-  # OCR & Text Extraction
-  google_mlkit_text_recognition: ^0.14.0
-  syncfusion_flutter_pdf: ^28.1.33
-  
-  # URL Launcher
+  markdown: ^7.2.2
+  share_plus: ^12.0.1
   url_launcher: ^6.2.0
-  
-  # Permissions
-  permission_handler: ^11.1.0
-  
-  # Responsive Design
-  flutter_screenutil: ^5.9.3
-  
-  # Date & Time
-  intl: any
-  
-  # UUID Generation
-  uuid: ^4.2.1
-  
-  # Security & Cryptography
-  crypto: ^3.0.3
-  
-  # Animations
-  shimmer: ^3.0.0
-  lottie: ^3.0.0
-  flutter_staggered_animations: ^1.1.1
-  shared_preferences: ^2.5.3
-  sqlite3_flutter_libs: ^0.5.20  # Add this - bundles SQLite with FTS5
-  sqflite_common_ffi: ^2.3.0+4
-  # Fonts
-  google_fonts: ^6.1.0
-  
-  # Biometric Authentication
-  local_auth: ^2.2.0
-  
-  # Voice Recognition - FIXED VERSION
-  # Advanced UI Components
-  flutter_staggered_grid_view: ^0.7.0
-  carousel_slider: ^5.0.0
-  flutter_slidable: ^3.0.1
-  
-  # Charts & Analytics
-  fl_chart: ^0.66.0
-  
-  # Rich Text Editor
-  flutter_quill: ^10.8.2
-  speech_to_text: ^7.3.0
-  table_calendar: any
-  photo_manager: ^3.8.3
+
+  # ══════════════════════════════════════
+  # 📅 INTEGRATIONS
+  # ══════════════════════════════════════
+  device_calendar: ^4.3.2
+  google_sign_in: ^7.2.0
+  home_widget: ^0.9.0
+  youtube_player_iframe: ^5.1.2
+
+  # ══════════════════════════════════════
+  # 📍 LOCATION & MAPS
+  # ══════════════════════════════════════
   geolocator: ^14.0.2
   geocoding: ^4.0.0
   google_maps_flutter: ^2.5.0
   google_maps_flutter_platform_interface: ^2.6.0
   google_places_flutter: ^2.0.8
-  flutter_timezone: ^5.0.1
-  flutter_quill_extensions: ^10.4.0
-  pro_image_editor: ^11.18.4
-  video_editor: any
-  youtube_player_iframe: ^5.1.2
-  graphview: ^1.5.1
-  archive: ^3.6.1
-  connectivity_plus: ^7.0.0
+
+  # ══════════════════════════════════════
+  # 📱 DEVICE & PLATFORM
+  # ══════════════════════════════════════
+  device_info_plus: ^12.3.0
+  package_info_plus: ^9.0.0
+  in_app_review: ^2.0.9
+  wakelock_plus: ^1.2.8
+  flutter_background_service: ^5.0.10
+
+  # ══════════════════════════════════════
+  # 🛠️ UTILITIES
+  # ══════════════════════════════════════
+  uuid: ^4.2.1
+  intl: any
+  logger: ^2.5.0
+  rrule: ^0.2.16
+  validators: ^3.0.0
+  gal: ^2.3.2
 
 dependency_overrides:
   flutter_inappwebview: ^6.1.5
@@ -136,17 +230,43 @@ dependency_overrides:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
 
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  # ══════════════════════════════════════
+  # Code Generation
+  # ══════════════════════════════════════
+  build_runner: ^2.10.5
+  freezed: ^3.2.3
+  json_serializable: ^6.8.0
+  injectable_generator: ^2.6.2
+  retrofit_generator: ^10.2.1
+  envied_generator: ^1.3.3
+
+  # ══════════════════════════════════════
+  # Testing
+  # ══════════════════════════════════════
+  flutter_lints: ^6.0.0
   mockito: ^5.6.3
   bloc_test: ^10.0.0
-  build_runner: ^2.10.5
   mocktail: ^1.0.4
+  fake_async: ^1.3.1
+  golden_toolkit: ^0.15.0
+  network_image_mock: ^2.1.1
+  patrol: ^4.1.1
+
+  # ══════════════════════════════════════
+  # Linting
+  # ══════════════════════════════════════
+  very_good_analysis: ^10.1.0
+
+  # ══════════════════════════════════════
+  # Build & Deploy
+  # ══════════════════════════════════════
+  flutter_launcher_icons: ^0.14.1
+  flutter_native_splash: ^2.4.2
+  flutter_flavorizr: ^2.2.3
+  envied: ^1.3.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -158,6 +278,19 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # assets:
+  #   - assets/images/
+  #   - assets/icons/
+  #   - assets/animations/
+  #   - assets/sounds/
+  #   - assets/translations/
+  #   - assets/templates/
+
+  # fonts:
+  #   - family: CustomIcons
+  #     fonts:
+  #       - asset: assets/fonts/custom_icons.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

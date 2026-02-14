@@ -21,8 +21,7 @@ class MoodAnalytics {
 class MoodAnalyticsWidget extends StatelessWidget {
   final MoodAnalytics analytics;
 
-  const MoodAnalyticsWidget({Key? key, required this.analytics})
-    : super(key: key);
+  const MoodAnalyticsWidget({super.key, required this.analytics});
 
   @override
   Widget build(BuildContext context) {
@@ -115,7 +114,10 @@ class MoodAnalyticsWidget extends StatelessWidget {
             Expanded(
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(4),
-                child: LinearProgressIndicator(value: percentage.toDouble(), minHeight: 6),
+                child: LinearProgressIndicator(
+                  value: percentage.toDouble(),
+                  minHeight: 6,
+                ),
               ),
             ),
             SizedBox(width: 8),
@@ -174,7 +176,7 @@ class NotesStatistics {
 class NotesStatsWidget extends StatelessWidget {
   final NotesStatistics stats;
 
-  const NotesStatsWidget({Key? key, required this.stats}) : super(key: key);
+  const NotesStatsWidget({super.key, required this.stats});
 
   @override
   Widget build(BuildContext context) {
@@ -291,8 +293,7 @@ class ProductivityStatistics {
 class ProductivityStatsWidget extends StatelessWidget {
   final ProductivityStatistics stats;
 
-  const ProductivityStatsWidget({Key? key, required this.stats})
-    : super(key: key);
+  const ProductivityStatsWidget({super.key, required this.stats});
 
   @override
   Widget build(BuildContext context) {
@@ -439,8 +440,7 @@ class ReflectionStatistics {
 class ReflectionStatsWidget extends StatelessWidget {
   final ReflectionStatistics stats;
 
-  const ReflectionStatsWidget({Key? key, required this.stats})
-    : super(key: key);
+  const ReflectionStatsWidget({super.key, required this.stats});
 
   @override
   Widget build(BuildContext context) {
@@ -550,7 +550,7 @@ class ReflectionStatsWidget extends StatelessWidget {
                   ],
                 ),
               );
-            }).toList(),
+            }),
           ],
         ),
       ),

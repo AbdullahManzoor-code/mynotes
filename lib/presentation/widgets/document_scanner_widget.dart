@@ -28,17 +28,17 @@ class DocumentScannerWidget extends StatefulWidget {
   final VoidCallback? onCancel;
 
   const DocumentScannerWidget({
-    Key? key,
+    super.key,
     required this.onScanComplete,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   State<DocumentScannerWidget> createState() => _DocumentScannerWidgetState();
 }
 
 class _DocumentScannerWidgetState extends State<DocumentScannerWidget> {
-  List<String> _scannedPages = [];
+  final List<String> _scannedPages = [];
   bool _isScanning = false;
 
   void _addPage() {
@@ -246,8 +246,11 @@ class DocumentViewerWidget extends StatefulWidget {
   final ScannedDocument document;
   final VoidCallback? onDelete;
 
-  const DocumentViewerWidget({Key? key, required this.document, this.onDelete})
-    : super(key: key);
+  const DocumentViewerWidget({
+    super.key,
+    required this.document,
+    this.onDelete,
+  });
 
   @override
   State<DocumentViewerWidget> createState() => _DocumentViewerWidgetState();
@@ -358,11 +361,11 @@ class DocumentAttachmentsList extends StatelessWidget {
   final Function(int)? onDocumentTap;
 
   const DocumentAttachmentsList({
-    Key? key,
+    super.key,
     required this.documents,
     required this.onDocumentDelete,
     this.onDocumentTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

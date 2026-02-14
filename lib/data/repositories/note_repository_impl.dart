@@ -236,4 +236,22 @@ class NoteRepositoryImpl implements NoteRepository {
       return [];
     }
   }
+
+  @override
+  Future<void> deleteAlarm(String alarmId) async {
+    try {
+      await _database.deleteAlarm(alarmId);
+    } catch (e) {
+      throw Exception('Failed to delete alarm: $e');
+    }
+  }
+
+  @override
+  Future<void> updateAlarm(dynamic alarm) async {
+    try {
+      await _database.updateAlarm(alarm);
+    } catch (e) {
+      throw Exception('Failed to update alarm: $e');
+    }
+  }
 }

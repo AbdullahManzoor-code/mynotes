@@ -4,7 +4,6 @@ import 'package:mynotes/injection_container.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/todo_item.dart';
 import '../../core/services/speech_service.dart';
-import '../../core/services/global_ui_service.dart';
 
 /// Create Todo Bottom Sheet (TD-001)
 /// Supports text input with voice, due date, priority, and category selection

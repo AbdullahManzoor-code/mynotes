@@ -91,7 +91,7 @@ class GlassAppBar extends StatelessWidget implements PreferredSizeWidget {
                       ],
                     ),
                   ),
-                  if (bottom != null) bottom!,
+                  ?bottom,
                 ],
               ),
             ),

@@ -1,7 +1,11 @@
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'alarm.g.dart';
 
 /// Enhanced Alarm/Reminder entity (ALM-001, ALM-002, ALM-003, ALM-004)
 /// Supports: Date/Time scheduling, recurring patterns, timezone awareness, note linking
+@JsonSerializable()
 class Alarm extends Equatable {
   final String id;
   final String message;
@@ -255,65 +259,9 @@ class Alarm extends Equatable {
     );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'message': message,
-      'scheduledTime': scheduledTime.toIso8601String(),
-      'isActive': isActive ? 1 : 0,
-      'recurrence': recurrence.index,
-      'status': status.index,
-      'linkedNoteId': linkedNoteId,
-      'linkedTodoId': linkedTodoId,
-      'soundPath': soundPath,
-      'vibrate': vibrate ? 1 : 0,
-      'isEnabled': isEnabled ? 1 : 0,
-      'snoozeCount': snoozeCount,
-      'completedAt': completedAt?.toIso8601String(),
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
-      'lastTriggered': lastTriggered?.toIso8601String(),
-      'snoozedUntil': snoozedUntil?.toIso8601String(),
-      'weekDays': weekDays?.join(','),
-    };
-  }
+  factory Alarm.fromJson(Map<String, dynamic> json) => _$AlarmFromJson(json);
 
-  factory Alarm.fromJson(Map<String, dynamic> json) {
-    return Alarm(
-      id: json['id'] as String,
-      message: json['message'] as String,
-      scheduledTime: DateTime.parse(json['scheduledTime'] as String),
-      isActive: (json['isActive'] as int) == 1,
-      recurrence: AlarmRecurrence.values[json['recurrence'] as int],
-      status: AlarmStatus.values[json['status'] as int],
-      linkedNoteId: json['linkedNoteId'] as String?,
-      linkedTodoId: json['linkedTodoId'] as String?,
-      soundPath: json['soundPath'] as String?,
-      vibrate: (json['vibrate'] as int) == 1,
-      isEnabled: json['isEnabled'] != null
-          ? (json['isEnabled'] as int) == 1
-          : true,
-      snoozeCount: json['snoozeCount'] as int? ?? 0,
-      completedAt: json['completedAt'] != null
-          ? DateTime.parse(json['completedAt'] as String)
-          : null,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-      lastTriggered: json['lastTriggered'] != null
-          ? DateTime.parse(json['lastTriggered'] as String)
-          : null,
-      snoozedUntil: json['snoozedUntil'] != null
-          ? DateTime.parse(json['snoozedUntil'] as String)
-          : null,
-      weekDays:
-          json['weekDays'] != null && (json['weekDays'] as String).isNotEmpty
-          ? (json['weekDays'] as String)
-                .split(',')
-                .map((e) => int.parse(e))
-                .toList()
-          : null,
-    );
-  }
+  Map<String, dynamic> toJson() => _$AlarmToJson(this);
 
   @override
   List<Object?> get props => [

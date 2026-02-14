@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/domain/entities/universal_item.dart';
 import '../design_system/design_system.dart';
 import '../widgets/universal_item_card.dart';
 import '../../core/utils/smart_voice_parser.dart';
+import '../bloc/cross_feature/cross_feature_bloc.dart';
 
 /// Cross-Feature Integration Demo
 /// Demonstrates the power of the unified Notes/Todos/Reminders system
@@ -19,58 +20,29 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
     with TickerProviderStateMixin {
   late AnimationController _transformController;
   late Animation<double> _transformAnimation;
+  late CrossFeatureBloc _bloc;
 
-  UniversalItem? _demoItem;
-  List<String> _transformationSteps = [];
-  int _currentStep = 0;
-  bool _isTransforming = false;
-
-  // Demo scenarios
+  // Demo scenarios (Keep for selector if needed, but Bloc has them too)
   final List<Map<String, dynamic>> _demoScenarios = [
     {
       'title': 'Meeting Note → Todo → Reminder',
       'description': 'Watch a meeting note become actionable',
-      'steps': [
-        'Create meeting note with agenda',
-        'Convert to todo: "Follow up with client"',
-        'Add reminder for tomorrow at 2 PM',
-        'See unified integration in action',
-      ],
-      'initialText':
-          'Team meeting notes:\n- Discussed Q1 targets\n- Client wants proposal by Friday\n- Need to schedule follow-up',
     },
     {
       'title': 'Voice → Smart Everything',
       'description': 'AI-powered voice creates integrated items',
-      'steps': [
-        'Voice: "Remind me to buy groceries tomorrow at 5 PM"',
-        'AI creates todo with reminder automatically',
-        'Shows in both Todos and Reminders views',
-        'Cross-feature integration complete',
-      ],
-      'initialText': 'Remind me to buy groceries tomorrow at 5 PM',
     },
     {
       'title': 'Shopping List Evolution',
       'description': 'Simple list becomes smart system',
-      'steps': [
-        'Start with basic shopping list note',
-        'Convert items to individual todos',
-        'Add location-based reminders',
-        'Track completion across categories',
-      ],
-      'initialText':
-          'Shopping list:\n- Milk and bread\n- Vegetables for dinner\n- Birthday gift for mom',
     },
   ];
-
-  int _selectedScenario = 0;
 
   @override
   void initState() {
     super.initState();
+    _bloc = CrossFeatureBloc()..add(const StartScenario(0));
     _initializeAnimation();
-    _startDemoScenario();
   }
 
   void _initializeAnimation() {
@@ -90,164 +62,23 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
   @override
   void dispose() {
     _transformController.dispose();
+    _bloc.close();
     super.dispose();
   }
 
-  void _startDemoScenario() {
-    final scenario = _demoScenarios[_selectedScenario];
-
-    setState(() {
-      _currentStep = 0;
-      _transformationSteps = List<String>.from(scenario['steps']);
-      _isTransforming = false;
-    });
-
-    // Create initial demo item
-    _createInitialItem(scenario['initialText']);
-  }
-
-  void _createInitialItem(String text) {
-    final parsed = SmartVoiceParser.parseVoiceInput(text);
-    setState(() {
-      _demoItem = parsed;
-    });
-  }
-
   Future<void> _nextStep() async {
-    if (_currentStep >= _transformationSteps.length - 1) {
-      _completeDemoScenario();
-      return;
-    }
-
-    setState(() {
-      _isTransforming = true;
-      _currentStep++;
-    });
+    _bloc.add(NextStep());
 
     _transformController.forward().then((_) {
-      _performTransformation();
+      _bloc.add(CompleteTransformation());
       _transformController.reverse();
     });
   }
 
-  void _performTransformation() {
-    if (_demoItem == null) return;
-
-    switch (_selectedScenario) {
-      case 0: // Meeting Note → Todo → Reminder
-        _transformMeetingNote();
-        break;
-      case 1: // Voice → Smart Everything
-        _transformVoiceInput();
-        break;
-      case 2: // Shopping List Evolution
-        _transformShoppingList();
-        break;
-    }
-  }
-
-  void _transformMeetingNote() {
-    switch (_currentStep) {
-      case 1: // Convert to todo
-        setState(() {
-          _demoItem = _demoItem!.copyWith(
-            title: 'Follow up with client',
-            isTodo: true,
-            category: 'Work',
-          );
-        });
-        break;
-      case 2: // Add reminder
-        final tomorrow = DateTime.now().add(const Duration(days: 1));
-        final reminderTime = DateTime(
-          tomorrow.year,
-          tomorrow.month,
-          tomorrow.day,
-          14,
-          0,
-        );
-        setState(() {
-          _demoItem = _demoItem!.copyWith(
-            reminderTime: reminderTime,
-            category: 'Work',
-          );
-        });
-        break;
-      case 3: // Show integration
-        break;
-    }
-  }
-
-  void _transformVoiceInput() {
-    switch (_currentStep) {
-      case 1: // AI parsing
-        final tomorrow = DateTime.now().add(const Duration(days: 1));
-        final reminderTime = DateTime(
-          tomorrow.year,
-          tomorrow.month,
-          tomorrow.day,
-          17,
-          0,
-        );
-        setState(() {
-          _demoItem = _demoItem!.copyWith(
-            title: 'Buy groceries',
-            isTodo: true,
-            reminderTime: reminderTime,
-            category: 'Shopping',
-            hasVoiceNote: true,
-          );
-        });
-        break;
-      case 2: // Show in both views
-      case 3: // Integration complete
-        break;
-    }
-  }
-
-  void _transformShoppingList() {
-    switch (_currentStep) {
-      case 1: // Convert to todos
-        setState(() {
-          _demoItem = _demoItem!.copyWith(
-            title: 'Milk and bread',
-            isTodo: true,
-            category: 'Shopping',
-          );
-        });
-        break;
-      case 2: // Add location reminder
-        final today = DateTime.now();
-        final reminderTime = DateTime(
-          today.year,
-          today.month,
-          today.day,
-          18,
-          0,
-        );
-        setState(() {
-          _demoItem = _demoItem!.copyWith(
-            reminderTime: reminderTime,
-            content: 'Pick up at grocery store on Main Street',
-          );
-        });
-        break;
-      case 3: // Track completion
-        setState(() {
-          _demoItem = _demoItem!.copyWith(isCompleted: true);
-        });
-        break;
-    }
-  }
-
   void _completeDemoScenario() {
-    setState(() {
-      _isTransforming = false;
-    });
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
+        content: const Text(
           'Demo complete! This is the power of unified integration.',
         ),
         backgroundColor: AppColors.primary,
@@ -258,44 +89,65 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      appBar: AppBar(
-        title: const Text('Cross-Feature Demo'),
-        backgroundColor: AppColors.darkBackground,
-        elevation: 0,
-        actions: [
-          IconButton(onPressed: _startDemoScenario, icon: Icon(Icons.refresh)),
-        ],
-      ),
-      body: Column(
-        children: [
-          _buildScenarioSelector(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: EdgeInsets.all(24.w),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildDemoDescription(),
-                  SizedBox(height: 24.h),
-                  _buildTransformationViewer(),
-                  SizedBox(height: 24.h),
-                  _buildStepsProgress(),
-                  SizedBox(height: 32.h),
-                  _buildActionButton(),
-                  SizedBox(height: 24.h),
-                  _buildIntegrationExplanation(),
+    return BlocProvider.value(
+      value: _bloc,
+      child: BlocListener<CrossFeatureBloc, CrossFeatureState>(
+        listener: (context, state) {
+          if (state.currentStep >= state.transformationSteps.length - 1 &&
+              !state.isTransforming &&
+              state.currentStep > 0) {
+            // Check if it's the very last step and transformation just finished
+            // This logic might need refinement to avoid showing snackbar on every rebuild
+          }
+        },
+        child: BlocBuilder<CrossFeatureBloc, CrossFeatureState>(
+          builder: (context, state) {
+            return Scaffold(
+              backgroundColor: AppColors.darkBackground,
+              appBar: AppBar(
+                title: const Text('Cross-Feature Demo'),
+                backgroundColor: AppColors.darkBackground,
+                elevation: 0,
+                actions: [
+                  IconButton(
+                    onPressed: () =>
+                        _bloc.add(StartScenario(state.selectedScenario)),
+                    icon: const Icon(Icons.refresh),
+                  ),
                 ],
               ),
-            ),
-          ),
-        ],
+              body: Column(
+                children: [
+                  _buildScenarioSelector(state),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.all(24.w),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildDemoDescription(state),
+                          SizedBox(height: 24.h),
+                          _buildTransformationViewer(state),
+                          SizedBox(height: 24.h),
+                          _buildStepsProgress(state),
+                          SizedBox(height: 32.h),
+                          _buildActionButton(state),
+                          SizedBox(height: 24.h),
+                          _buildIntegrationExplanation(),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildScenarioSelector() {
+  Widget _buildScenarioSelector(CrossFeatureState state) {
     return Container(
       height: 80.h,
       padding: EdgeInsets.symmetric(horizontal: 24.w),
@@ -303,13 +155,10 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
         scrollDirection: Axis.horizontal,
         itemCount: _demoScenarios.length,
         itemBuilder: (context, index) {
-          final isSelected = index == _selectedScenario;
+          final isSelected = index == state.selectedScenario;
           return GestureDetector(
             onTap: () {
-              setState(() {
-                _selectedScenario = index;
-              });
-              _startDemoScenario();
+              _bloc.add(StartScenario(index));
             },
             child: Container(
               margin: EdgeInsets.only(right: 16.w, top: 16.h, bottom: 16.h),
@@ -340,8 +189,8 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
     );
   }
 
-  Widget _buildDemoDescription() {
-    final scenario = _demoScenarios[_selectedScenario];
+  Widget _buildDemoDescription(CrossFeatureState state) {
+    final scenario = _demoScenarios[state.selectedScenario];
 
     return Container(
       padding: EdgeInsets.all(20.w),
@@ -377,7 +226,7 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
     );
   }
 
-  Widget _buildTransformationViewer() {
+  Widget _buildTransformationViewer(CrossFeatureState state) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -400,7 +249,7 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
                   color: Colors.white,
                 ),
               ),
-              if (_isTransforming) ...[
+              if (state.isTransforming) ...[
                 const Spacer(),
                 SizedBox(
                   width: 20.w,
@@ -415,7 +264,7 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
           ),
           SizedBox(height: 20.h),
 
-          if (_demoItem != null)
+          if (state.demoItem != null)
             AnimatedBuilder(
               animation: _transformAnimation,
               builder: (context, child) {
@@ -424,7 +273,7 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
                   child: Opacity(
                     opacity: 1.0 - (_transformAnimation.value * 0.3),
                     child: UniversalItemCard(
-                      item: _demoItem!,
+                      item: state.demoItem!,
                       showActions: false,
                     ),
                   ),
@@ -436,7 +285,7 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
     );
   }
 
-  Widget _buildStepsProgress() {
+  Widget _buildStepsProgress(CrossFeatureState state) {
     return Container(
       padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
@@ -457,9 +306,9 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
           ),
           SizedBox(height: 16.h),
 
-          ...List.generate(_transformationSteps.length, (index) {
-            final isCompleted = index < _currentStep;
-            final isCurrent = index == _currentStep;
+          ...List.generate(state.transformationSteps.length, (index) {
+            final isCompleted = index < state.currentStep;
+            final isCurrent = index == state.currentStep;
 
             return Container(
               margin: EdgeInsets.only(bottom: 12.h),
@@ -505,7 +354,7 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
                   SizedBox(width: 12.w),
                   Expanded(
                     child: Text(
-                      _transformationSteps[index],
+                      state.transformationSteps[index],
                       style: TextStyle(
                         fontSize: 14.sp,
                         color: isCompleted || isCurrent
@@ -526,13 +375,16 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
     );
   }
 
-  Widget _buildActionButton() {
-    final isComplete = _currentStep >= _transformationSteps.length - 1;
+  Widget _buildActionButton(CrossFeatureState state) {
+    final isComplete =
+        state.currentStep >= state.transformationSteps.length - 1;
 
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: isComplete ? _startDemoScenario : _nextStep,
+        onPressed: isComplete
+            ? () => _bloc.add(StartScenario(state.selectedScenario))
+            : _nextStep,
         style: ElevatedButton.styleFrom(
           backgroundColor: isComplete
               ? AppColors.accentGreen

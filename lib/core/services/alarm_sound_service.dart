@@ -64,10 +64,10 @@ class AlarmSoundSelector extends StatefulWidget {
   final Function(AlarmSound) onSoundSelected;
 
   const AlarmSoundSelector({
-    Key? key,
+    super.key,
     required this.selectedSound,
     required this.onSoundSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<AlarmSoundSelector> createState() => _AlarmSoundSelectorState();
@@ -139,10 +139,10 @@ class AlarmSoundSettingsPanel extends StatefulWidget {
   final Function(AlarmSound) onSoundChanged;
 
   const AlarmSoundSettingsPanel({
-    Key? key,
+    super.key,
     required this.currentSound,
     required this.onSoundChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<AlarmSoundSettingsPanel> createState() =>

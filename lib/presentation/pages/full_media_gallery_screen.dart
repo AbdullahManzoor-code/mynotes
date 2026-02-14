@@ -1,11 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:image_picker/image_picker.dart';
 
-import '../bloc/media_bloc.dart';
-import '../bloc/media_state.dart';
-import '../bloc/media_event.dart';
+import '../bloc/media/media_gallery/media_gallery_bloc.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/media_item.dart';
 
@@ -20,9 +16,6 @@ class FullMediaGalleryScreen extends StatefulWidget {
 
 class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
   final TextEditingController _searchController = TextEditingController();
-  MediaType? _selectedType;
-  final Set<String> _selectedMediaIds = {};
-  bool _isMultiSelectMode = false;
 
   @override
   void dispose() {
@@ -33,37 +26,24 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
   @override
   void initState() {
     super.initState();
-    context.read<MediaBloc>().add(const LoadAllMediaEvent());
+    context.read<MediaGalleryBloc>().add(const LoadAllMediaEvent());
   }
 
   void _toggleMultiSelect(String mediaId) {
-    setState(() {
-      if (_selectedMediaIds.contains(mediaId)) {
-        _selectedMediaIds.remove(mediaId);
-        if (_selectedMediaIds.isEmpty) {
-          _isMultiSelectMode = false;
-        }
-      } else {
-        _selectedMediaIds.add(mediaId);
-        _isMultiSelectMode = true;
-      }
-    });
+    context.read<MediaGalleryBloc>().add(SelectMediaEvent(mediaId: mediaId));
   }
 
   void _clearSelection() {
-    setState(() {
-      _selectedMediaIds.clear();
-      _isMultiSelectMode = false;
-    });
+    context.read<MediaGalleryBloc>().add(const ClearSelectionEvent());
   }
 
-  void _deleteSelectedMedia() {
+  void _deleteSelectedMedia(Set<String> selectedIds) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Media'),
         content: Text(
-          'Delete ${_selectedMediaIds.length} item(s)? This cannot be undone.',
+          'Delete ${selectedIds.length} item(s)? This cannot be undone.',
         ),
         actions: [
           TextButton(
@@ -72,16 +52,16 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
           ),
           TextButton(
             onPressed: () {
-              for (final mediaId in _selectedMediaIds) {
-                context.read<MediaBloc>().add(
-                  RemoveImageFromNoteEvent('', mediaId),
+              for (final mediaId in selectedIds) {
+                context.read<MediaGalleryBloc>().add(
+                  DeleteMediaEvent(mediaId: mediaId),
                 );
               }
               _clearSelection();
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('${_selectedMediaIds.length} item(s) deleted'),
+                  content: Text('${selectedIds.length} item(s) deleted'),
                 ),
               );
             },
@@ -94,37 +74,61 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BlocBuilder<MediaGalleryBloc, MediaGalleryState>(
+      builder: (context, state) {
+        final isMultiSelectMode =
+            state is MediaGalleryLoaded && state.selectedIds.isNotEmpty;
+        final selectedIds = state is MediaGalleryLoaded
+            ? state.selectedIds
+            : <String>{};
 
-    return Scaffold(
-      appBar: _buildAppBar(context),
-      body: BlocBuilder<MediaBloc, MediaState>(
-        builder: (context, state) {
-          if (state is MediaLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          // For now, return empty state (will be populated from BLoC)
-          return _buildMediaGrid([]);
-        },
-      ),
+        return Scaffold(
+          appBar: _buildAppBar(context, state, isMultiSelectMode, selectedIds),
+          body: _buildBody(state, isMultiSelectMode, selectedIds),
+        );
+      },
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  Widget _buildBody(
+    MediaGalleryState state,
+    bool isMultiSelectMode,
+    Set<String> selectedIds,
+  ) {
+    if (state is MediaGalleryLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state is MediaGalleryError) {
+      return Center(child: Text(state.message));
+    }
+
+    if (state is MediaGalleryLoaded) {
+      return _buildMediaGrid(state.mediaItems, isMultiSelectMode, selectedIds);
+    }
+
+    return const Center(child: Text('Initialize media...'));
+  }
+
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    MediaGalleryState state,
+    bool isMultiSelectMode,
+    Set<String> selectedIds,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AppBar(
       backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
       elevation: 0,
-      leading: _isMultiSelectMode
+      leading: isMultiSelectMode
           ? IconButton(
               icon: const Icon(Icons.close),
               onPressed: _clearSelection,
             )
           : null,
-      title: _isMultiSelectMode
+      title: isMultiSelectMode
           ? Text(
-              '${_selectedMediaIds.length} selected',
+              '${selectedIds.length} selected',
               style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
             )
           : Text(
@@ -132,7 +136,7 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
               style: TextStyle(fontSize: 18.sp, fontWeight: FontWeight.w700),
             ),
       actions: [
-        if (_isMultiSelectMode) ...[
+        if (isMultiSelectMode) ...[
           IconButton(
             icon: const Icon(Icons.share),
             onPressed: () {
@@ -143,7 +147,7 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.delete),
-            onPressed: _deleteSelectedMedia,
+            onPressed: () => _deleteSelectedMedia(selectedIds),
           ),
         ] else ...[
           IconButton(
@@ -156,7 +160,7 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
             itemBuilder: (context) => [
               PopupMenuItem(
                 child: const Text('Filter'),
-                onTap: () => showFilterBottomSheet(context),
+                onTap: () => showFilterBottomSheet(context, state),
               ),
               const PopupMenuItem(child: Text('Sort')),
             ],
@@ -166,7 +170,11 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
     );
   }
 
-  Widget _buildMediaGrid(List<MediaItem> items) {
+  Widget _buildMediaGrid(
+    List<Map<String, dynamic>> items,
+    bool isMultiSelectMode,
+    Set<String> selectedIds,
+  ) {
     if (items.isEmpty) {
       return Center(
         child: Column(
@@ -194,14 +202,16 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
       itemCount: items.length,
       itemBuilder: (context, index) {
         final media = items[index];
-        final isSelected = _selectedMediaIds.contains(media.id);
+        final id = media['id'] as String;
+        final type = media['type'] as MediaType;
+        final isSelected = selectedIds.contains(id);
 
         return GestureDetector(
           onLongPress: () {
-            _toggleMultiSelect(media.id);
+            _toggleMultiSelect(id);
           },
-          onTap: _isMultiSelectMode
-              ? () => _toggleMultiSelect(media.id)
+          onTap: isMultiSelectMode
+              ? () => _toggleMultiSelect(id)
               : () {
                   // View media details
                 },
@@ -214,10 +224,10 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
                   borderRadius: BorderRadius.circular(8.r),
                   color: Colors.grey[300],
                 ),
-                child: _buildMediaThumbnail(media),
+                child: _buildMediaThumbnail(type),
               ),
               // Selection overlay
-              if (_isMultiSelectMode)
+              if (isMultiSelectMode)
                 Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8.r),
@@ -227,7 +237,7 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
                   ),
                 ),
               // Selection checkmark
-              if (_isMultiSelectMode)
+              if (isMultiSelectMode)
                 Positioned(
                   top: 4.w,
                   right: 4.w,
@@ -248,7 +258,7 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
               Positioned(
                 bottom: 4.w,
                 left: 4.w,
-                child: _buildMediaTypeIcon(media.type),
+                child: _buildMediaTypeIcon(type),
               ),
             ],
           ),
@@ -257,8 +267,8 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
     );
   }
 
-  Widget _buildMediaThumbnail(MediaItem media) {
-    switch (media.type) {
+  Widget _buildMediaThumbnail(MediaType type) {
+    switch (type) {
       case MediaType.image:
         return Container(
           color: Colors.grey[300],
@@ -267,13 +277,7 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
       case MediaType.video:
         return Container(
           color: Colors.grey[400],
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(color: Colors.grey[400]),
-              const Icon(Icons.play_circle_outline, size: 32),
-            ],
-          ),
+          child: const Icon(Icons.play_circle_outline, size: 32),
         );
       case MediaType.audio:
         return Container(
@@ -306,7 +310,7 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
     return Container(
       decoration: BoxDecoration(shape: BoxShape.circle, color: colors[type]),
       padding: EdgeInsets.all(4.w),
-      child: Icon(icons[type], size: 12.sp, color: Colors.white),
+      child: Icon(icons[type]!, size: 12.sp, color: Colors.white),
     );
   }
 
@@ -330,7 +334,9 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
           TextButton(
             onPressed: () {
               if (_searchController.text.isNotEmpty) {
-                // Trigger search
+                context.read<MediaGalleryBloc>().add(
+                  SearchMediaEvent(query: _searchController.text),
+                );
               }
               Navigator.pop(context);
             },
@@ -341,7 +347,12 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
     );
   }
 
-  void showFilterBottomSheet(BuildContext context) {
+  void showFilterBottomSheet(BuildContext context, MediaGalleryState state) {
+    String? currentFilter;
+    if (state is MediaGalleryLoaded) {
+      currentFilter = state.filterType;
+    }
+
     showModalBottomSheet(
       context: context,
       builder: (context) => Container(
@@ -360,41 +371,41 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
               children: [
                 FilterChip(
                   label: const Text('All'),
-                  selected: _selectedType == null,
+                  selected: currentFilter == 'all',
                   onSelected: (selected) {
-                    setState(() => _selectedType = null);
+                    context.read<MediaGalleryBloc>().add(
+                      const FilterMediaEvent(filterType: 'all'),
+                    );
                     Navigator.pop(context);
                   },
                 ),
                 FilterChip(
                   label: const Text('Images'),
-                  selected: _selectedType == MediaType.image,
+                  selected: currentFilter == 'image',
                   onSelected: (selected) {
-                    setState(() => _selectedType = MediaType.image);
+                    context.read<MediaGalleryBloc>().add(
+                      const FilterMediaEvent(filterType: 'image'),
+                    );
                     Navigator.pop(context);
                   },
                 ),
                 FilterChip(
                   label: const Text('Videos'),
-                  selected: _selectedType == MediaType.video,
+                  selected: currentFilter == 'video',
                   onSelected: (selected) {
-                    setState(() => _selectedType = MediaType.video);
+                    context.read<MediaGalleryBloc>().add(
+                      const FilterMediaEvent(filterType: 'video'),
+                    );
                     Navigator.pop(context);
                   },
                 ),
                 FilterChip(
                   label: const Text('Audio'),
-                  selected: _selectedType == MediaType.audio,
+                  selected: currentFilter == 'audio',
                   onSelected: (selected) {
-                    setState(() => _selectedType = MediaType.audio);
-                    Navigator.pop(context);
-                  },
-                ),
-                FilterChip(
-                  label: const Text('Documents'),
-                  selected: _selectedType == MediaType.document,
-                  onSelected: (selected) {
-                    setState(() => _selectedType = MediaType.document);
+                    context.read<MediaGalleryBloc>().add(
+                      const FilterMediaEvent(filterType: 'audio'),
+                    );
                     Navigator.pop(context);
                   },
                 ),
@@ -405,25 +416,4 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
       ),
     );
   }
-}
-
-/// Placeholder events for full media gallery
-class LoadAllMediaEvent extends MediaEvent {
-  const LoadAllMediaEvent();
-  @override
-  List<Object?> get props => [];
-}
-
-class SearchMediaEvent extends MediaEvent {
-  final String query;
-  const SearchMediaEvent(this.query);
-  @override
-  List<Object?> get props => [query];
-}
-
-class FilterMediaByTypeEvent extends MediaEvent {
-  final MediaType type;
-  const FilterMediaByTypeEvent(this.type);
-  @override
-  List<Object?> get props => [type];
 }

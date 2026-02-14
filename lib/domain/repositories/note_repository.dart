@@ -13,6 +13,10 @@ abstract class NoteRepository {
   Future<void> cancelReminder(String noteId);
   Future<List<Note>> searchNotes(String query);
 
+  // Alarm operations
+  Future<void> deleteAlarm(String alarmId);
+  Future<void> updateAlarm(dynamic alarm);
+
   // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
   Future<void> updateNoteLinks(String sourceId, List<String> targetIds);
   Future<void> resolveAndSyncLinks(String sourceId, List<String> targetTitles);

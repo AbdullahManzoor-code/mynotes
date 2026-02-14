@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/widgets/command_palette_widget.dart';
 import 'package:mynotes/presentation/widgets/universal_item_card.dart';
-import '../bloc/command_palette_bloc.dart';
-import '../bloc/global_search_bloc.dart';
-import '../bloc/params/global_search_params.dart';
+import '../bloc/command_palette/command_palette_bloc.dart';
+import '../bloc/global_search/global_search_bloc.dart';
 import '../design_system/design_system.dart';
 import 'enhanced_note_editor_screen.dart';
 import '../../injection_container.dart' show getIt;
 import '../../domain/models/search_filters.dart';
-import '../../data/repositories/unified_repository.dart';
 import '../widgets/search_filter_modal.dart';
 
 /// Global Search & Command Palette Screen
@@ -332,3 +330,4 @@ class _GlobalSearchViewState extends State<_GlobalSearchView> {
     );
   }
 }
+

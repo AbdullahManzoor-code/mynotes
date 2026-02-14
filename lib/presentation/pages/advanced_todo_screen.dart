@@ -6,7 +6,7 @@ import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
 import '../design_system/app_spacing.dart';
 import '../../domain/entities/todo_item.dart';
-import '../bloc/todos_bloc.dart';
+import '../bloc/todos/todos_bloc.dart';
 
 /// Advanced Todo Detail Screen (View D1)
 /// Refactored to use Design System, BLoC, and Stateless architecture
@@ -420,3 +420,4 @@ class _BottomSubtaskInputState extends State<_BottomSubtaskInput> {
     );
   }
 }
+

@@ -1,19 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/presentation/widgets/notes_search_bar.dart'
+    show NotesSearchBar;
+import 'package:shimmer/shimmer.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:mynotes/domain/entities/note.dart';
 import 'dart:ui' as ui;
-import '../design_system/design_system.dart';
-import '../bloc/note_bloc.dart';
-import '../bloc/note_state.dart';
-import '../widgets/note_card_widget.dart';
-import '../widgets/notes_view_options_sheet.dart';
-import '../widgets/notes_search_bar.dart';
-import 'empty_state_notes_help_screen.dart';
-import '../../core/routes/app_routes.dart';
-import '../bloc/params/note_params.dart';
-import '../bloc/note_event.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_state.dart';
+import 'package:mynotes/presentation/widgets/note_card_widget.dart';
+import 'package:mynotes/presentation/widgets/notes_view_options_sheet.dart';
+// import 'package:mynotes/presentation/widgets/notes_search_bar.dart';
+import 'package:mynotes/presentation/pages/empty_state_notes_help_screen.dart';
+import 'package:mynotes/core/routes/app_routes.dart';
+import 'package:mynotes/presentation/bloc/params/note_params.dart';
+import '../bloc/note/note_event.dart';
 import '../widgets/quick_add_bottom_sheet.dart';
+
+/// Simple template data class for note templates
+class SimpleNoteTemplate {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final String description;
+
+  const SimpleNoteTemplate({
+    required this.title,
+    required this.icon,
+    required this.color,
+    required this.description,
+  });
+}
 
 /// Enhanced Notes List with Templates Screen
 /// Modern notes list interface with template picker
@@ -21,38 +39,38 @@ import '../widgets/quick_add_bottom_sheet.dart';
 class EnhancedNotesListScreen extends StatelessWidget {
   const EnhancedNotesListScreen({super.key});
 
-  static final List<NoteTemplate> _templates = [
-    NoteTemplate(
+  static final List<SimpleNoteTemplate> _templates = [
+    SimpleNoteTemplate(
       title: 'Meeting Notes',
       icon: Icons.groups,
       color: AppColors.primary,
       description: 'Capture meeting discussions and action items',
     ),
-    NoteTemplate(
+    SimpleNoteTemplate(
       title: 'Shopping List',
       icon: Icons.shopping_cart,
       color: AppColors.accentOrange,
       description: 'Create organized shopping lists',
     ),
-    NoteTemplate(
+    SimpleNoteTemplate(
       title: 'Daily Journal',
       icon: Icons.book,
       color: AppColors.accentPurple,
       description: 'Reflect on your day and thoughts',
     ),
-    NoteTemplate(
+    SimpleNoteTemplate(
       title: 'Project Plan',
       icon: Icons.business_center,
       color: AppColors.accentGreen,
       description: 'Plan and track project milestones',
     ),
-    NoteTemplate(
+    SimpleNoteTemplate(
       title: 'Travel Plan',
       icon: Icons.flight_takeoff,
       color: AppColors.accentBlue,
       description: 'Organize your travel itinerary',
     ),
-    NoteTemplate(
+    SimpleNoteTemplate(
       title: 'Recipe',
       icon: Icons.restaurant,
       color: AppColors.accentYellow,
@@ -60,7 +78,7 @@ class EnhancedNotesListScreen extends StatelessWidget {
     ),
   ];
 
-  void _createFromTemplate(BuildContext context, NoteTemplate template) {
+  void _createFromTemplate(BuildContext context, SimpleNoteTemplate template) {
     Navigator.pushNamed(
       context,
       '/notes/editor',
@@ -71,7 +89,7 @@ class EnhancedNotesListScreen extends StatelessWidget {
     );
   }
 
-  String _getTemplateContent(NoteTemplate template) {
+  String _getTemplateContent(SimpleNoteTemplate template) {
     switch (template.title) {
       case 'Meeting Notes':
         return '''# Meeting Notes
@@ -295,40 +313,7 @@ class EnhancedNotesListScreen extends StatelessWidget {
                     horizontal: 16.w,
                     vertical: 16.h,
                   ),
-                  child: NotesSearchBar(
-                    initialSearchQuery: isLoaded ? state.searchQuery : '',
-                    initialSelectedTags: isLoaded ? state.selectedTags : [],
-                    initialSelectedColors: isLoaded ? state.selectedColors : [],
-                    initialFilterPinned: isLoaded ? state.filterPinned : false,
-                    initialFilterWithMedia: isLoaded
-                        ? state.filterWithMedia
-                        : false,
-                    onSearchChanged: (query) {
-                      context.read<NotesBloc>().add(
-                        UpdateNoteViewConfigEvent(searchQuery: query),
-                      );
-                    },
-                    onTagsSelected: (tags) {
-                      context.read<NotesBloc>().add(
-                        UpdateNoteViewConfigEvent(selectedTags: tags),
-                      );
-                    },
-                    onColorsSelected: (colors) {
-                      context.read<NotesBloc>().add(
-                        UpdateNoteViewConfigEvent(selectedColors: colors),
-                      );
-                    },
-                    onPinnedFilterChanged: (pinned) {
-                      context.read<NotesBloc>().add(
-                        UpdateNoteViewConfigEvent(filterPinned: pinned),
-                      );
-                    },
-                    onMediaFilterChanged: (media) {
-                      context.read<NotesBloc>().add(
-                        UpdateNoteViewConfigEvent(filterWithMedia: media),
-                      );
-                    },
-                  ),
+                  child: const NotesSearchBar(),
                 ),
               ),
 
@@ -582,7 +567,7 @@ class EnhancedNotesListScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildTemplateCard(BuildContext context, NoteTemplate template) {
+  Widget _buildTemplateCard(BuildContext context, SimpleNoteTemplate template) {
     return GestureDetector(
       onTap: () => _createFromTemplate(context, template),
       child: AnimatedScale(
@@ -629,25 +614,27 @@ class EnhancedNotesListScreen extends StatelessWidget {
   }
 
   Widget _buildLoadingState(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.all(24.w),
+    return Shimmer.fromColors(
+      baseColor: AppColors.getSecondaryTextColor(
+        Theme.of(context).brightness,
+      ).withOpacity(0.1),
+      highlightColor: AppColors.getSecondaryTextColor(
+        Theme.of(context).brightness,
+      ).withOpacity(0.2),
       child: Column(
-        children: [
-          CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
-            strokeWidth: 2,
-          ),
-          SizedBox(height: 16.h),
-          Text(
-            'Loading your notes...',
-            style: TextStyle(
-              fontSize: 16.sp,
-              color: AppColors.getSecondaryTextColor(
-                Theme.of(context).brightness,
+        children: List.generate(
+          3,
+          (index) => Padding(
+            padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
+            child: Container(
+              height: 120.h,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16.r),
               ),
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -824,14 +811,11 @@ class EnhancedNotesListScreen extends StatelessWidget {
     if (viewMode == NoteViewMode.grid) {
       return SliverPadding(
         padding: EdgeInsets.symmetric(horizontal: 16.w),
-        sliver: SliverGrid(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: 0.75,
-            crossAxisSpacing: 12.w,
-            mainAxisSpacing: 12.h,
-          ),
-          delegate: SliverChildBuilderDelegate((context, index) {
+        sliver: SliverMasonryGrid.count(
+          crossAxisCount: 2,
+          mainAxisSpacing: 12.h,
+          crossAxisSpacing: 12.w,
+          itemBuilder: (context, index) {
             final note = notes[index];
             return NoteCardWidget(
               note: note,
@@ -843,7 +827,8 @@ class EnhancedNotesListScreen extends StatelessWidget {
               ),
               onLongPress: () => _showNoteContextMenu(context, note),
             );
-          }, childCount: notes.length),
+          },
+          childCount: notes.length,
         ),
       );
     }
@@ -1016,18 +1001,4 @@ class EnhancedNotesListScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class NoteTemplate {
-  final String title;
-  final IconData icon;
-  final Color color;
-  final String description;
-
-  NoteTemplate({
-    required this.title,
-    required this.icon,
-    required this.color,
-    required this.description,
-  });
 }

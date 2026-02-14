@@ -60,8 +60,8 @@ class MediaFilterParams extends Equatable {
       toDate: toDate ? null : this.toDate,
       minSizeBytes: minSizeBytes ? null : this.minSizeBytes,
       maxSizeBytes: maxSizeBytes ? null : this.maxSizeBytes,
-      selectedTags: this.selectedTags,
-      excludeArchived: this.excludeArchived,
+      selectedTags: selectedTags,
+      excludeArchived: excludeArchived,
     );
   }
 

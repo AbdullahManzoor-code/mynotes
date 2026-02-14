@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/core/error_handling/app_error_handler.dart';
 import 'package:mynotes/core/exceptions/app_exceptions.dart';
-import 'package:mynotes/core/exceptions/location_exceptions.dart'
-    hide DatabaseException;
 import 'package:mynotes/presentation/widgets/error_display_components.dart';
 
 /// Global Error Handler Listener
@@ -10,8 +8,7 @@ import 'package:mynotes/presentation/widgets/error_display_components.dart';
 class GlobalErrorHandlerListener extends StatefulWidget {
   final Widget child;
 
-  const GlobalErrorHandlerListener({Key? key, required this.child})
-    : super(key: key);
+  const GlobalErrorHandlerListener({super.key, required this.child});
 
   @override
   State<GlobalErrorHandlerListener> createState() =>
@@ -81,13 +78,13 @@ class ErrorStateWrapper extends StatelessWidget {
   final String errorTitle;
 
   const ErrorStateWrapper({
-    Key? key,
+    super.key,
     this.errorMessage,
     this.errorCode,
     this.onRetry,
     this.child,
     this.errorTitle = 'Operation Failed',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

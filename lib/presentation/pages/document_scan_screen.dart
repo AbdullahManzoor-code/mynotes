@@ -2,9 +2,11 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../presentation/design_system/app_colors.dart';
 import '../../presentation/design_system/app_typography.dart';
 import '../../presentation/design_system/app_spacing.dart';
+import '../bloc/document_scan/document_scan_bloc.dart';
 
 /// Document Scan and OCR Screen
 /// Capture documents and extract text using OCR
@@ -17,12 +19,7 @@ class DocumentScanScreen extends StatefulWidget {
 
 class _DocumentScanScreenState extends State<DocumentScanScreen>
     with TickerProviderStateMixin {
-  final ImagePicker _picker = ImagePicker();
-
-  File? _capturedImage;
-  String _extractedText = '';
-  bool _isProcessing = false;
-  final bool _showPreview = false;
+  late DocumentScanBloc _bloc;
 
   late AnimationController _scanAnimationController;
   late AnimationController _fadeAnimationController;
@@ -32,6 +29,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
   @override
   void initState() {
     super.initState();
+    _bloc = DocumentScanBloc();
 
     _scanAnimationController = AnimationController(
       duration: const Duration(seconds: 2),
@@ -59,6 +57,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
   void dispose() {
     _scanAnimationController.dispose();
     _fadeAnimationController.dispose();
+    _bloc.close();
     super.dispose();
   }
 
@@ -66,60 +65,85 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark
-          ? AppColors.darkBackground
-          : AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: isDark
-            ? AppColors.darkBackground
-            : AppColors.lightBackground,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios,
-            color: AppColors.textPrimary(context),
-          ),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-        title: Text(
-          'Document Scanner',
-          style: AppTypography.heading2(
-            context,
-            AppColors.textPrimary(context),
-          ),
-        ),
-        actions: [
-          if (_extractedText.isNotEmpty)
-            IconButton(
-              icon: Icon(Icons.save_outlined, color: AppColors.primaryColor),
-              onPressed: _saveAsNote,
-            ),
-        ],
-      ),
-      body: _buildBody(isDark),
-      floatingActionButton: _capturedImage == null
-          ? FloatingActionButton.extended(
-              onPressed: _showCaptureOptions,
-              backgroundColor: AppColors.primaryColor,
-              foregroundColor: Colors.white,
-              icon: const Icon(Icons.camera_alt),
-              label: Text(
-                'Scan Document',
-                style: AppTypography.button(context, Colors.white),
+    return BlocProvider.value(
+      value: _bloc,
+      child: BlocConsumer<DocumentScanBloc, DocumentScanState>(
+        listener: (context, state) {
+          if (state.status == DocumentScanStatus.processing) {
+            _scanAnimationController.repeat();
+          } else {
+            _scanAnimationController.stop();
+          }
+
+          if (state.status == DocumentScanStatus.success) {
+            _fadeAnimationController.forward();
+          }
+
+          if (state.status == DocumentScanStatus.failure) {
+            _showError(state.errorMessage);
+          }
+        },
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: isDark
+                ? AppColors.darkBackground
+                : AppColors.lightBackground,
+            appBar: AppBar(
+              backgroundColor: isDark
+                  ? AppColors.darkBackground
+                  : AppColors.lightBackground,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios,
+                  color: AppColors.textPrimary(context),
+                ),
+                onPressed: () => Navigator.of(context).pop(),
               ),
-            )
-          : null,
+              title: Text(
+                'Document Scanner',
+                style: AppTypography.heading2(
+                  context,
+                  AppColors.textPrimary(context),
+                ),
+              ),
+              actions: [
+                if (state.extractedText.isNotEmpty)
+                  IconButton(
+                    icon: Icon(
+                      Icons.save_outlined,
+                      color: AppColors.primaryColor,
+                    ),
+                    onPressed: () => _saveAsNote(state),
+                  ),
+              ],
+            ),
+            body: _buildBody(isDark, state),
+            floatingActionButton: state.capturedImage == null
+                ? FloatingActionButton.extended(
+                    onPressed: _showCaptureOptions,
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: Colors.white,
+                    icon: const Icon(Icons.camera_alt),
+                    label: Text(
+                      'Scan Document',
+                      style: AppTypography.button(context, Colors.white),
+                    ),
+                  )
+                : null,
+          );
+        },
+      ),
     );
   }
 
-  Widget _buildBody(bool isDark) {
-    if (_capturedImage == null) {
+  Widget _buildBody(bool isDark, DocumentScanState state) {
+    if (state.capturedImage == null) {
       return _buildWelcomeView(isDark);
-    } else if (_isProcessing) {
+    } else if (state.status == DocumentScanStatus.processing) {
       return _buildProcessingView(isDark);
     } else {
-      return _buildResultsView(isDark);
+      return _buildResultsView(isDark, state);
     }
   }
 
@@ -331,7 +355,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
     );
   }
 
-  Widget _buildResultsView(bool isDark) {
+  Widget _buildResultsView(bool isDark, DocumentScanState state) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(AppSpacing.lg),
       child: Column(
@@ -349,7 +373,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppSpacing.radiusLG),
-              child: Image.file(_capturedImage!, fit: BoxFit.cover),
+              child: Image.file(state.capturedImage!, fit: BoxFit.cover),
             ),
           ),
 
@@ -375,7 +399,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
               SizedBox(width: AppSpacing.lg),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _copyText,
+                  onPressed: () => _copyText(state.extractedText),
                   icon: const Icon(Icons.copy),
                   label: const Text('Copy Text'),
                   style: ElevatedButton.styleFrom(
@@ -413,7 +437,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
                 color: AppColors.textSecondary(context).withOpacity(0.2),
               ),
             ),
-            child: _extractedText.isEmpty
+            child: state.extractedText.isEmpty
                 ? Text(
                     'No text detected in the document. Try capturing again with better lighting.',
                     style: AppTypography.bodyMedium(
@@ -422,7 +446,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
                     ),
                   )
                 : SelectableText(
-                    _extractedText,
+                    state.extractedText,
                     style: AppTypography.bodyMedium(
                       context,
                       AppColors.textPrimary(context),
@@ -430,7 +454,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
                   ),
           ),
 
-          if (_extractedText.isNotEmpty) ...[
+          if (state.extractedText.isNotEmpty) ...[
             SizedBox(height: AppSpacing.xl),
 
             // Save Options
@@ -447,7 +471,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: _saveAsNote,
+                onPressed: () => _saveAsNote(state),
                 icon: const Icon(Icons.note_add),
                 label: const Text('Save as Note'),
                 style: ElevatedButton.styleFrom(
@@ -511,101 +535,25 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
       builder: (context) => _CaptureOptionsSheet(
         onCameraPressed: () {
           Navigator.pop(context);
-          _captureFromCamera();
+          _bloc.add(const CaptureImage(ImageSource.camera));
         },
         onGalleryPressed: () {
           Navigator.pop(context);
-          _captureFromGallery();
+          _bloc.add(const CaptureImage(ImageSource.gallery));
         },
       ),
     );
   }
 
-  Future<void> _captureFromCamera() async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.rear,
-      );
-
-      if (image != null) {
-        setState(() {
-          _capturedImage = File(image.path);
-          _isProcessing = true;
-        });
-
-        _scanAnimationController.repeat();
-        await _processImage();
-      }
-    } catch (e) {
-      _showError('Failed to capture image: $e');
-    }
-  }
-
-  Future<void> _captureFromGallery() async {
-    try {
-      final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-
-      if (image != null) {
-        setState(() {
-          _capturedImage = File(image.path);
-          _isProcessing = true;
-        });
-
-        _scanAnimationController.repeat();
-        await _processImage();
-      }
-    } catch (e) {
-      _showError('Failed to load image: $e');
-    }
-  }
-
-  Future<void> _processImage() async {
-    try {
-      // Simulate OCR processing
-      await Future.delayed(const Duration(seconds: 3));
-
-      // Mock extracted text - replace with actual OCR implementation
-      const mockText = '''Sample extracted text from the scanned document.
-
-This is where the OCR technology would extract the text content from the captured image. The text recognition would identify:
-
-• Headers and titles
-• Body paragraphs
-• Lists and bullet points
-• Tables and structured data
-
-The accuracy depends on image quality, lighting conditions, and font clarity.''';
-
-      setState(() {
-        _extractedText = mockText;
-        _isProcessing = false;
-      });
-
-      _scanAnimationController.stop();
-      _fadeAnimationController.forward();
-    } catch (e) {
-      setState(() {
-        _isProcessing = false;
-      });
-      _scanAnimationController.stop();
-      _showError('Failed to process image: $e');
-    }
-  }
-
   void _retakePhoto() {
-    setState(() {
-      _capturedImage = null;
-      _extractedText = '';
-      _isProcessing = false;
-    });
+    _bloc.add(const ResetScanner());
     _scanAnimationController.reset();
     _fadeAnimationController.reset();
   }
 
-  void _copyText() {
-    if (_extractedText.isNotEmpty) {
-      Clipboard.setData(ClipboardData(text: _extractedText));
+  void _copyText(String text) {
+    if (text.isNotEmpty) {
+      Clipboard.setData(ClipboardData(text: text));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Text copied to clipboard'),
@@ -615,15 +563,15 @@ The accuracy depends on image quality, lighting conditions, and font clarity.'''
     }
   }
 
-  void _saveAsNote() {
-    if (_extractedText.isNotEmpty) {
+  void _saveAsNote(DocumentScanState state) {
+    if (state.extractedText.isNotEmpty) {
       Navigator.pushNamed(
         context,
         '/note-editor',
         arguments: {
           'title': 'Scanned Document',
-          'content': _extractedText,
-          'image': _capturedImage?.path,
+          'content': state.extractedText,
+          'image': state.capturedImage?.path,
         },
       );
     }

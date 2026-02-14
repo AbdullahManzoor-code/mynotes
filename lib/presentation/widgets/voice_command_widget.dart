@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/voice_command_bloc.dart';
+import '../bloc/voice_command/voice_command_bloc.dart';
 
 /// Voice command types
 enum VoiceCommandType {
@@ -173,10 +173,10 @@ class VoiceCommandWidget extends StatefulWidget {
   final ValueChanged<String>? onContentExtracted;
 
   const VoiceCommandWidget({
-    Key? key,
+    super.key,
     required this.onCommandRecognized,
     this.onContentExtracted,
-  }) : super(key: key);
+  });
 
   @override
   State<VoiceCommandWidget> createState() => _VoiceCommandWidgetState();
@@ -293,26 +293,21 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                   ),
                   SizedBox(height: 8),
                   ...[
-                        'create note / new note',
-                        'create todo / add task',
-                        'start focus / pomodoro',
-                        'pause / stop',
-                        'reflect',
-                        'search',
-                      ]
-                      .map(
-                        (cmd) => Padding(
-                          padding: EdgeInsets.symmetric(vertical: 2),
-                          child: Text(
-                            '• $cmd',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.blue[700],
-                            ),
-                          ),
-                        ),
-                      )
-                      .toList(),
+                    'create note / new note',
+                    'create todo / add task',
+                    'start focus / pomodoro',
+                    'pause / stop',
+                    'reflect',
+                    'search',
+                  ].map(
+                    (cmd) => Padding(
+                      padding: EdgeInsets.symmetric(vertical: 2),
+                      child: Text(
+                        '• $cmd',
+                        style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -327,7 +322,7 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
 class VoiceSettingsPanel extends StatelessWidget {
   final VoidCallback? onClose;
 
-  const VoiceSettingsPanel({Key? key, this.onClose}) : super(key: key);
+  const VoiceSettingsPanel({super.key, this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -344,21 +339,21 @@ class VoiceSettingsPanel extends StatelessWidget {
             SwitchListTile(
               title: Text('Command Feedback Sound'),
               subtitle: Text('Play sound when command is recognized'),
-              value: (state as VoiceCommandFeedbackToggled).soundEnabled,
+              value: (state).soundEnabled,
               onChanged: (value) {
                 context.read<VoiceCommandBloc>().add(
-                      ToggleSoundFeedbackEvent(value),
-                    );
+                  ToggleSoundFeedbackEvent(value),
+                );
               },
             ),
             SwitchListTile(
               title: Text('Vibration Feedback'),
               subtitle: Text('Vibrate when command is recognized'),
-              value: (state as VoiceCommandFeedbackToggled).vibrationEnabled,
+              value: (state).vibrationEnabled,
               onChanged: (value) {
                 context.read<VoiceCommandBloc>().add(
-                      ToggleVibrationFeedbackEvent(value),
-                    );
+                  ToggleVibrationFeedbackEvent(value),
+                );
               },
             ),
           ] else ...[
@@ -368,8 +363,8 @@ class VoiceSettingsPanel extends StatelessWidget {
               value: true,
               onChanged: (value) {
                 context.read<VoiceCommandBloc>().add(
-                      ToggleSoundFeedbackEvent(value),
-                    );
+                  ToggleSoundFeedbackEvent(value),
+                );
               },
             ),
             SwitchListTile(
@@ -378,8 +373,8 @@ class VoiceSettingsPanel extends StatelessWidget {
               value: true,
               onChanged: (value) {
                 context.read<VoiceCommandBloc>().add(
-                      ToggleVibrationFeedbackEvent(value),
-                    );
+                  ToggleVibrationFeedbackEvent(value),
+                );
               },
             ),
           ],
@@ -394,9 +389,10 @@ class VoiceSettingsPanel extends StatelessWidget {
               title: Text(VoiceCommandParser.getCommandDescription(cmd)),
               dense: true,
             );
-          }).toList(),
+          }),
         ],
       ),
     );
   }
 }
+

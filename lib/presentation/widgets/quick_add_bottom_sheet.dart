@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/domain/entities/universal_item.dart';
 import '../design_system/design_system.dart';
-import '../bloc/alarms_bloc.dart';
-import '../bloc/note_bloc.dart';
-import '../bloc/note_event.dart';
+import '../bloc/alarm/alarms_bloc.dart';
+import '../bloc/note/note_bloc.dart';
+import '../bloc/note/note_event.dart';
 import '../bloc/params/note_params.dart';
 import '../bloc/params/todo_params.dart';
-import '../bloc/todos_bloc.dart';
-import 'universal_item_card.dart';
+import '../bloc/todos/todos_bloc.dart';
 import '../../injection_container.dart' show getIt;
 import '../../core/utils/smart_voice_parser.dart';
 import '../../domain/entities/alarm.dart';
@@ -16,18 +16,25 @@ enum QuickAddTab { note, todo, reminder }
 
 class QuickAddBottomSheet extends StatefulWidget {
   final QuickAddTab initialTab;
+  final String? initialText;
 
-  const QuickAddBottomSheet({super.key, this.initialTab = QuickAddTab.note});
+  const QuickAddBottomSheet({
+    super.key,
+    this.initialTab = QuickAddTab.note,
+    this.initialText,
+  });
 
   static Future<T?> show<T>(
     BuildContext context, {
     QuickAddTab initialTab = QuickAddTab.note,
+    String? initialText,
   }) {
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => QuickAddBottomSheet(initialTab: initialTab),
+      builder: (context) =>
+          QuickAddBottomSheet(initialTab: initialTab, initialText: initialText),
     );
   }
 
@@ -50,6 +57,9 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
       vsync: this,
       initialIndex: widget.initialTab.index,
     );
+    if (widget.initialText != null) {
+      _textController.text = widget.initialText!;
+    }
     _focusNode.requestFocus();
   }
 
@@ -245,3 +255,4 @@ class _QuickAddBottomSheetState extends State<QuickAddBottomSheet>
     );
   }
 }
+

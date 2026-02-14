@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
-import '../../domain/entities/note.dart';
+import '../../domain/entities/universal_item.dart';
 
 /// Universal Item Card
 /// Adaptive card that handles Notes, Todos, and Reminders in one unified widget
@@ -13,6 +12,8 @@ class UniversalItemCard extends StatefulWidget {
   final VoidCallback? onLongPress;
   final Function(bool)? onTodoToggle;
   final VoidCallback? onReminderTap;
+  final VoidCallback? onPromoteToTodo;
+  final Function(DateTime)? onPromoteToReminder;
   final bool showActions;
   final bool isSelected;
 
@@ -23,6 +24,8 @@ class UniversalItemCard extends StatefulWidget {
     this.onLongPress,
     this.onTodoToggle,
     this.onReminderTap,
+    this.onPromoteToTodo,
+    this.onPromoteToReminder,
     this.showActions = true,
     this.isSelected = false,
   });
@@ -487,175 +490,3 @@ class _UniversalItemCardState extends State<UniversalItemCard>
     }
   }
 }
-
-// Universal Item Model - Unified data model
-class UniversalItem {
-  final String id;
-  final String title;
-  final String content;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final bool isTodo;
-  final bool isCompleted;
-  final DateTime? reminderTime;
-  final ItemPriority? priority;
-  final String category;
-  final bool hasVoiceNote;
-  final bool hasImages;
-  final List<String>? tags;
-
-  UniversalItem({
-    required this.id,
-    required this.title,
-    this.content = '',
-    required this.createdAt,
-    required this.updatedAt,
-    this.isTodo = false,
-    this.isCompleted = false,
-    this.reminderTime,
-    this.priority,
-    this.category = '',
-    this.hasVoiceNote = false,
-    this.hasImages = false,
-    this.tags,
-  });
-
-  // Factory constructors for different types
-  factory UniversalItem.fromNote(Note note) {
-    return UniversalItem(
-      id: note.id,
-      title: note.title,
-      content: note.content,
-      createdAt: note.createdAt,
-      updatedAt: note.updatedAt,
-      category: 'Note',
-    );
-  }
-
-  factory UniversalItem.todo({
-    required String id,
-    required String title,
-    String content = '',
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    bool isCompleted = false,
-    DateTime? reminderTime,
-    ItemPriority? priority,
-    String category = 'Todo',
-    bool hasVoiceNote = false,
-  }) {
-    return UniversalItem(
-      id: id,
-      title: title,
-      content: content,
-      createdAt: createdAt ?? DateTime.now(),
-      updatedAt: updatedAt ?? DateTime.now(),
-      isTodo: true,
-      isCompleted: isCompleted,
-      reminderTime: reminderTime,
-      priority: priority,
-      category: category,
-      hasVoiceNote: hasVoiceNote,
-    );
-  }
-
-  factory UniversalItem.reminder({
-    required String id,
-    required String title,
-    required DateTime reminderTime,
-    String content = '',
-    DateTime? createdAt,
-    DateTime? updatedAt,
-    ItemPriority? priority,
-    String category = 'Reminder',
-  }) {
-    return UniversalItem(
-      id: id,
-      title: title,
-      content: content,
-      createdAt: createdAt ?? DateTime.now(),
-      updatedAt: updatedAt ?? DateTime.now(),
-      reminderTime: reminderTime,
-      priority: priority,
-      category: category,
-    );
-  }
-
-  factory UniversalItem.fromMap(Map<String, dynamic> map) {
-    return UniversalItem(
-      id: (map['id'] ?? '') as String,
-      title: (map['title'] ?? '') as String,
-      content: (map['content'] ?? '') as String,
-      createdAt: map['createdAt'] != null
-          ? DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now()
-          : DateTime.now(),
-      updatedAt: map['updatedAt'] != null
-          ? DateTime.tryParse(map['updatedAt'] as String) ?? DateTime.now()
-          : DateTime.now(),
-      isTodo: (map['isTodo'] == 1),
-      isCompleted: (map['isCompleted'] == 1),
-      reminderTime: map['reminderTime'] != null
-          ? DateTime.tryParse(map['reminderTime'] as String)
-          : null,
-      category: (map['category'] ?? '') as String,
-      priority: map['priority'] != null
-          ? ItemPriority.values.firstWhere(
-              (e) => e.name == map['priority'],
-              orElse: () => ItemPriority.medium,
-            )
-          : null,
-      hasVoiceNote: map['hasVoiceNote'] == 1,
-      hasImages: map['hasImages'] == 1,
-    );
-  }
-
-  // Utility methods
-  bool get isNote => !isTodo && reminderTime == null;
-  bool get isReminder => reminderTime != null;
-  bool get isOverdue => isReminder && reminderTime!.isBefore(DateTime.now());
-
-  UniversalItem copyWith({
-    String? title,
-    String? content,
-    bool? isTodo,
-    bool? isCompleted,
-    DateTime? reminderTime,
-    ItemPriority? priority,
-    String? category,
-    bool? hasVoiceNote,
-    bool? hasImages,
-  }) {
-    return UniversalItem(
-      id: id,
-      title: title ?? this.title,
-      content: content ?? this.content,
-      createdAt: createdAt,
-      updatedAt: DateTime.now(),
-      isTodo: isTodo ?? this.isTodo,
-      isCompleted: isCompleted ?? this.isCompleted,
-      reminderTime: reminderTime ?? this.reminderTime,
-      priority: priority ?? this.priority,
-      category: category ?? this.category,
-      hasVoiceNote: hasVoiceNote ?? this.hasVoiceNote,
-      hasImages: hasImages ?? this.hasImages,
-    );
-  }
-
-  // Conversion methods
-  Note toNote() {
-    return Note(
-      id: id,
-      title: title,
-      content: content,
-      createdAt: createdAt,
-      updatedAt: updatedAt,
-      // Default values for fields not in UniversalItem
-      isPinned: false,
-      isArchived: false,
-      tags: tags ?? [],
-      color: NoteColor.defaultColor,
-    );
-  }
-}
-
-enum ItemPriority { high, medium, low }

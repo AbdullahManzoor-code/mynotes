@@ -252,7 +252,7 @@ class AISuggestionEngine {
       suggestions.add({
         'type': 'media',
         'description':
-            'You have ${mediaCount} media items but only $reminderCount reminders',
+            'You have $mediaCount media items but only $reminderCount reminders',
         'recommendation': 'Create reminders to organize or review your media',
         'confidence': 65,
         'data': {'mediaCount': mediaCount, 'reminderCount': reminderCount},
@@ -263,7 +263,7 @@ class AISuggestionEngine {
     if (mediaCount > 20) {
       suggestions.add({
         'type': 'media_organization',
-        'description': 'Large media collection (${mediaCount} items) detected',
+        'description': 'Large media collection ($mediaCount items) detected',
         'recommendation': 'Create reminders to organize and tag your media',
         'confidence': 55,
         'data': {'mediaCount': mediaCount},

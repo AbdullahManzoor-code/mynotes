@@ -163,6 +163,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   }
 
   /// Get all reflection questions
+  @override
   Future<List<ReflectionQuestion>> getAllQuestions() async {
     final db = await _database.database;
 
@@ -265,7 +266,14 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
 
   @override
   Future<List<String>> getAvailableCategories() async {
-    return ['life', 'daily', 'career', 'mental_health'];
+    return [
+      'life',
+      'daily',
+      'career',
+      'mental_health',
+      'gratitude',
+      'mindfulness',
+    ];
   }
 
   @override

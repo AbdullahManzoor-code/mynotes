@@ -1,10 +1,12 @@
 import 'dart:ui';
-
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
 import 'media_item.dart';
 import 'todo_item.dart';
 import 'link.dart';
 import 'alarm.dart';
+
+part 'note.g.dart';
 
 enum NoteColor {
   defaultColor(0xFFFFFFFF, 0xFF1C1B1F),
@@ -40,14 +42,15 @@ enum NoteColor {
   }
 }
 
+@JsonSerializable()
 class Note extends Equatable {
   final String id;
   final String title;
-  final String content; // Could be richer (rich text) in a real app
-  final List<MediaItem> media; // Attached media (images, audio, video)
-  final List<Link> links; // Attached website links
-  final List<TodoItem>? todos; // Task list
-  final List<Alarm>? alarms; // Alarms
+  final String content;
+  final List<MediaItem> media;
+  final List<Link> links;
+  final List<TodoItem>? todos;
+  final List<Alarm>? alarms;
 
   final NoteColor color;
   final bool isPinned;
@@ -55,26 +58,46 @@ class Note extends Equatable {
   final List<String> tags;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final int priority;
 
   Note({
     required this.id,
     this.title = '',
     this.content = '',
-    List<MediaItem>? media,
-    List<Link>? links,
+    this.media = const [],
+    this.links = const [],
     this.todos,
     this.alarms,
     this.color = NoteColor.defaultColor,
     this.isPinned = false,
     this.isArchived = false,
-    List<String>? tags,
+    this.tags = const [],
     DateTime? createdAt,
     DateTime? updatedAt,
-  }) : media = media ?? [],
-       links = links ?? [],
-       tags = tags ?? [],
-       createdAt = createdAt ?? DateTime.now(),
+    this.priority = 1,
+  }) : createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
+
+  factory Note.fromJson(Map<String, dynamic> json) => _$NoteFromJson(json);
+  Map<String, dynamic> toJson() => _$NoteToJson(this);
+
+  @override
+  List<Object?> get props => [
+    id,
+    title,
+    content,
+    media,
+    links,
+    todos,
+    alarms,
+    color,
+    isPinned,
+    isArchived,
+    tags,
+    createdAt,
+    updatedAt,
+    priority,
+  ];
 
   Note copyWith({
     String? id,
@@ -90,6 +113,7 @@ class Note extends Equatable {
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
+    int? priority,
   }) {
     return Note(
       id: id ?? this.id,
@@ -105,6 +129,7 @@ class Note extends Equatable {
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      priority: priority ?? this.priority,
     );
   }
 
@@ -180,18 +205,21 @@ class Note extends Equatable {
     return (completed / todos!.length) * 100;
   }
 
-  @override
-  List<Object?> get props => [
-    id,
-    title,
-    content,
-    media,
-    links,
-    color,
-    isPinned,
-    isArchived,
-    tags,
-    createdAt,
-    updatedAt,
-  ];
+  // @override
+  // List<Object?> get props => [
+  //   id,
+  //   title,
+  //   content,
+  //   media,
+  //   links,
+  //   todos,
+  //   alarms,
+  //   color,
+  //   isPinned,
+  //   isArchived,
+  //   tags,
+  //   createdAt,
+  //   updatedAt,
+  //   priority,
+  // ];
 }

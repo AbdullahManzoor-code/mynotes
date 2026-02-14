@@ -215,7 +215,6 @@ class _ActionSheetTile extends StatelessWidget {
   final bool isDestructive;
 
   const _ActionSheetTile({
-    super.key,
     required this.icon,
     required this.label,
     required this.onTap,

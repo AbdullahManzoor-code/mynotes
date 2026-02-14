@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/note_event.dart';
-import 'package:mynotes/presentation/bloc/note_state.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_event.dart';
+import 'package:mynotes/presentation/bloc/note/note_state.dart';
+import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/alarm.dart';
 import '../../domain/entities/note.dart';
-import '../../presentation/bloc/alarms_bloc.dart';
-import '../../presentation/bloc/note_bloc.dart';
+import '../bloc/alarm/alarms_bloc.dart';
 import '../../injection_container.dart' show getIt;
 import '../../core/notifications/notification_service.dart'
     hide AlarmRecurrence;
 
 class CreateAlarmBottomSheet extends StatefulWidget {
-  final Alarm? alarm;
+  final dynamic alarm; // Can be Alarm or AlarmParams
 
   const CreateAlarmBottomSheet({super.key, this.alarm});
 
@@ -31,23 +32,73 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
   String? _soundPath;
   List<Note>? _availableNotes;
   List<int> _selectedWeekDays = [];
-  bool _isLoadingNotes = false;
+  final bool _isLoadingNotes = false;
+
+  // Helper getters for both Alarm and AlarmParams
+  String? get _alarmMessage {
+    if (widget.alarm == null) return null;
+    return widget.alarm is Alarm
+        ? (widget.alarm as Alarm).message
+        : (widget.alarm as AlarmParams).title;
+  }
+
+  DateTime? get _alarmScheduledTime {
+    if (widget.alarm == null) return null;
+    return widget.alarm is Alarm
+        ? (widget.alarm as Alarm).scheduledTime
+        : (widget.alarm as AlarmParams).alarmTime;
+  }
+
+  AlarmRecurrence get _alarmRecurrence {
+    if (widget.alarm == null) return AlarmRecurrence.none;
+    if (widget.alarm is Alarm) {
+      return (widget.alarm as Alarm).recurrence;
+    }
+    return (widget.alarm as AlarmParams).isRecurring
+        ? AlarmRecurrence.daily
+        : AlarmRecurrence.none;
+  }
+
+  bool get _alarmVibrate {
+    if (widget.alarm == null) return true;
+    return widget.alarm is Alarm
+        ? (widget.alarm as Alarm).vibrate
+        : (widget.alarm as AlarmParams).vibrate;
+  }
+
+  String? get _alarmLinkedNoteId {
+    if (widget.alarm == null) return null;
+    return widget.alarm is Alarm
+        ? (widget.alarm as Alarm).linkedNoteId
+        : (widget.alarm as AlarmParams).noteId;
+  }
+
+  String? get _alarmSoundPath {
+    if (widget.alarm == null) return null;
+    return widget.alarm is Alarm
+        ? (widget.alarm as Alarm).soundPath
+        : (widget.alarm as AlarmParams).sound;
+  }
+
+  List<int> get _alarmWeekDays {
+    if (widget.alarm == null) return [];
+    return widget.alarm is Alarm
+        ? (widget.alarm as Alarm).weekDays ?? []
+        : (widget.alarm as AlarmParams).repeatDays;
+  }
 
   @override
   void initState() {
     super.initState();
-    _titleController = TextEditingController(text: widget.alarm?.message ?? '');
-    _messageController = TextEditingController(
-      text: widget.alarm?.message ?? '',
-    );
+    _titleController = TextEditingController(text: _alarmMessage ?? '');
+    _messageController = TextEditingController(text: _alarmMessage ?? '');
     _selectedDateTime =
-        widget.alarm?.scheduledTime ??
-        DateTime.now().add(const Duration(hours: 1));
-    _selectedRecurrence = widget.alarm?.recurrence ?? AlarmRecurrence.none;
-    _vibrate = widget.alarm?.vibrate ?? true;
-    _linkedNoteId = widget.alarm?.linkedNoteId;
-    _soundPath = widget.alarm?.soundPath;
-    _selectedWeekDays = widget.alarm?.weekDays ?? [];
+        _alarmScheduledTime ?? DateTime.now().add(const Duration(hours: 1));
+    _selectedRecurrence = _alarmRecurrence;
+    _vibrate = _alarmVibrate;
+    _linkedNoteId = _alarmLinkedNoteId;
+    _soundPath = _alarmSoundPath;
+    _selectedWeekDays = _alarmWeekDays;
     _loadAvailableNotes();
   }
 
@@ -495,7 +546,7 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
               ],
               onChanged: (value) {
                 setState(() => _linkedNoteId = value);

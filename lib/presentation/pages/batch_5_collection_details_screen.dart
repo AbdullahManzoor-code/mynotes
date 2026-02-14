@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:mynotes/presentation/bloc/smart_collections_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_collections/smart_collections_bloc.dart';
 import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
 import '../design_system/app_spacing.dart';
@@ -13,8 +13,7 @@ import '../../injection_container.dart';
 class CollectionDetailsScreen extends StatelessWidget {
   final Map<String, dynamic> collection;
 
-  const CollectionDetailsScreen({Key? key, required this.collection})
-    : super(key: key);
+  const CollectionDetailsScreen({super.key, required this.collection});
 
   @override
   Widget build(BuildContext context) {
@@ -439,3 +438,4 @@ class CollectionDetailsScreen extends StatelessWidget {
     );
   }
 }
+

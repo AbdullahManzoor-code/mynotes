@@ -8,95 +8,64 @@ import '../design_system/design_system.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/design_system/app_typography.dart'; // Added
 
-/// Integrated Features Screen - Display all advanced features
-/// Includes: Media Gallery, Drawing Canvas, Collections, Kanban Board
-class IntegratedFeaturesScreen extends StatefulWidget {
+class IntegratedFeaturesScreen extends StatelessWidget {
   const IntegratedFeaturesScreen({super.key});
-
-  @override
-  State<IntegratedFeaturesScreen> createState() =>
-      _IntegratedFeaturesScreenState();
-}
-
-class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
-
-  @override
-  void initState() {
-    super.initState();
-    _tabController = TabController(length: 5, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Advanced Features',
-          style: AppTypography.heading3().copyWith(
-            color: isDark ? AppColors.lightText : AppColors.darkText,
+    return DefaultTabController(
+      length: 5,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Advanced Features',
+            style: AppTypography.heading3().copyWith(
+              color: isDark ? AppColors.lightText : AppColors.darkText,
+            ),
           ),
-        ),
-        backgroundColor: isDark
-            ? AppColors.darkSurface
-            : AppColors.lightSurface,
-        elevation: 0,
-        bottom: PreferredSize(
-          preferredSize: Size.fromHeight(50.h),
-          child: TabBar(
-            controller: _tabController,
-            isScrollable: true, // Made scrollable for smaller screens
-            tabs: [
-              _buildTab('Media', Icons.image),
-              _buildTab('Draw', Icons.brush),
-              _buildTab('Collections', Icons.folder),
-              _buildTab('Kanban', Icons.list_alt),
-              _buildTab('AI & Insights', Icons.auto_awesome),
-            ],
-            indicator: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(color: AppColors.primary, width: 3.h),
+          backgroundColor: isDark
+              ? AppColors.darkSurface
+              : AppColors.lightSurface,
+          elevation: 0,
+          bottom: PreferredSize(
+            preferredSize: Size.fromHeight(50.h),
+            child: TabBar(
+              isScrollable: true,
+              tabs: [
+                _buildTab('Media', Icons.image),
+                _buildTab('Draw', Icons.brush),
+                _buildTab('Collections', Icons.folder),
+                _buildTab('Kanban', Icons.list_alt),
+                _buildTab('AI & Insights', Icons.auto_awesome),
+              ],
+              indicator: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: AppColors.primary, width: 3.h),
+                ),
               ),
+              indicatorSize: TabBarIndicatorSize.tab,
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.getSecondaryTextColor(
+                Theme.of(context).brightness,
+              ),
+              labelStyle: AppTypography.body2().copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              unselectedLabelStyle: AppTypography.body2(),
             ),
-            indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: AppColors.primary,
-            unselectedLabelColor: AppColors.getSecondaryTextColor(
-              Theme.of(context).brightness,
-            ),
-            labelStyle: AppTypography.body2().copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-            unselectedLabelStyle: AppTypography.body2(),
           ),
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          // Tab 1: Media Gallery
-          _buildMediaGalleryTab(),
-
-          // Tab 2: Drawing Canvas
-          _buildDrawingCanvasTab(),
-
-          // Tab 3: Collections Manager
-          _buildCollectionsTab(),
-
-          // Tab 4: Kanban Board
-          _buildKanbanBoardTab(),
-
-          // Tab 5: AI & Insights
-          _buildAIInsightsTab(),
-        ],
+        body: TabBarView(
+          children: [
+            _buildMediaGalleryTab(context),
+            _buildDrawingCanvasTab(context),
+            _buildCollectionsTab(context),
+            _buildKanbanBoardTab(context),
+            _buildAIInsightsTab(context),
+          ],
+        ),
       ),
     );
   }
@@ -115,7 +84,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
   }
 
   // ==================== Tab 1: Media Gallery ====================
-  Widget _buildMediaGalleryTab() {
+  Widget _buildMediaGalleryTab(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(16.w),
@@ -123,6 +92,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTabHeader(
+              context,
               'Media Gallery',
               'Browse, filter, and organize your media files',
               Icons.image_outlined,
@@ -140,13 +110,16 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
               height: 400.h,
               child: MediaGalleryWidget(
                 onMediaSelected: (mediaItems) {
-                  _showSnackBar('Selected ${mediaItems.length} media item(s)');
+                  _showSnackBar(
+                    context,
+                    'Selected ${mediaItems.length} media item(s)',
+                  );
                 },
                 multiSelect: true,
               ),
             ),
             SizedBox(height: 16.h),
-            _buildFeatureList([
+            _buildFeatureList(context, [
               'Filter by type (Images, Videos, Audio, Documents)',
               'Real-time search functionality',
               'Multi-select capability',
@@ -160,7 +133,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
   }
 
   // ==================== Tab 2: Drawing Canvas ====================
-  Widget _buildDrawingCanvasTab() {
+  Widget _buildDrawingCanvasTab(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(16.w),
@@ -168,6 +141,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTabHeader(
+              context,
               'Drawing Canvas',
               'Create sketches and annotations with ease',
               Icons.brush_outlined,
@@ -185,12 +159,12 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
               height: 400.h,
               child: DrawingCanvasWidget(
                 onDrawingComplete: (image) {
-                  _showSnackBar('Drawing saved successfully!');
+                  _showSnackBar(context, 'Drawing saved successfully!');
                 },
               ),
             ),
             SizedBox(height: 16.h),
-            _buildFeatureList([
+            _buildFeatureList(context, [
               '8-color palette for drawing',
               '5 adjustable brush sizes',
               'Eraser tool with visual feedback',
@@ -205,7 +179,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
   }
 
   // ==================== Tab 3: Collections Manager ====================
-  Widget _buildCollectionsTab() {
+  Widget _buildCollectionsTab(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(16.w),
@@ -213,6 +187,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTabHeader(
+              context,
               'Collections Manager',
               'Organize notes into collections',
               Icons.folder_outlined,
@@ -230,15 +205,15 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
               height: 400.h,
               child: CollectionManagerWidget(
                 onCollectionSelected: (collection) {
-                  _showSnackBar('Collection: ${collection.name}');
+                  _showSnackBar(context, 'Collection: ${collection.name}');
                 },
                 onCollectionCreated: (collection) {
-                  _showSnackBar('Created: ${collection.name}');
+                  _showSnackBar(context, 'Created: ${collection.name}');
                 },
               ),
             ),
             SizedBox(height: 16.h),
-            _buildFeatureList([
+            _buildFeatureList(context, [
               'Create/Read/Update/Delete collections',
               'Color-coded organization (8 colors)',
               'Item count tracking',
@@ -253,7 +228,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
   }
 
   // ==================== Tab 4: Kanban Board ====================
-  Widget _buildKanbanBoardTab() {
+  Widget _buildKanbanBoardTab(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(16.w),
@@ -261,6 +236,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTabHeader(
+              context,
               'Kanban Board',
               '4-column task management with drag-drop',
               Icons.list_alt_outlined,
@@ -279,7 +255,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
               child: const KanbanBoardWidget(),
             ),
             SizedBox(height: 16.h),
-            _buildFeatureList([
+            _buildFeatureList(context, [
               '4-column layout (To Do, In Progress, In Review, Done)',
               'Drag-and-drop between columns',
               'Priority-based color coding',
@@ -294,7 +270,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
   }
 
   // ==================== Tab 5: AI & Insights ====================
-  Widget _buildAIInsightsTab() {
+  Widget _buildAIInsightsTab(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.all(16.w),
@@ -302,12 +278,14 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildTabHeader(
+              context,
               'AI & Smart Insights',
               'Advanced AI-driven tools for your productivity',
               Icons.auto_awesome_outlined,
             ),
             SizedBox(height: 16.h),
             _buildHubCard(
+              context,
               title: 'Reflection & Gratitude',
               subtitle: 'Daily prompts for mindfulness',
               icon: Icons.self_improvement,
@@ -316,6 +294,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
             ),
             SizedBox(height: 12.h),
             _buildHubCard(
+              context,
               title: 'Smart Recommendations',
               subtitle: 'AI-generated tips for your reminders',
               icon: Icons.lightbulb_outline,
@@ -326,6 +305,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
             ),
             SizedBox(height: 12.h),
             _buildHubCard(
+              context,
               title: 'Reminder Patterns',
               subtitle: 'Analyze your habits and frequency',
               icon: Icons.api_outlined,
@@ -334,6 +314,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
             ),
             SizedBox(height: 12.h),
             _buildHubCard(
+              context,
               title: 'Advanced Search',
               subtitle: 'Precision search with operators',
               icon: Icons.manage_search,
@@ -342,6 +323,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
             ),
             SizedBox(height: 12.h),
             _buildHubCard(
+              context,
               title: 'Template Gallery',
               subtitle: 'Quick-start your notes with templates',
               icon: Icons.auto_stories,
@@ -349,7 +331,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
                   Navigator.pushNamed(context, AppRoutes.templateGallery),
             ),
             SizedBox(height: 24.h),
-            _buildFeatureList([
+            _buildFeatureList(context, [
               'Dynamic suggestions based on usage',
               'Deep pattern analysis for better habit tracking',
               'Full-text search with Boolean operators',
@@ -361,7 +343,8 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
     );
   }
 
-  Widget _buildHubCard({
+  Widget _buildHubCard(
+    BuildContext context, {
     required String title,
     required String subtitle,
     required IconData icon,
@@ -428,7 +411,12 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
 
   // ==================== Helper Widgets ====================
 
-  Widget _buildTabHeader(String title, String subtitle, IconData icon) {
+  Widget _buildTabHeader(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -472,7 +460,7 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
     );
   }
 
-  Widget _buildFeatureList(List<String> features) {
+  Widget _buildFeatureList(BuildContext context, List<String> features) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -520,13 +508,13 @@ class _IntegratedFeaturesScreenState extends State<IntegratedFeaturesScreen>
                 ],
               ),
             );
-          }).toList(),
+          }),
         ],
       ),
     );
   }
 
-  void _showSnackBar(String message) {
+  void _showSnackBar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

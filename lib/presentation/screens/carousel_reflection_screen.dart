@@ -3,9 +3,9 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_colors.dart';
-import '../bloc/reflection_bloc.dart';
-import '../bloc/reflection_state.dart';
-import '../bloc/reflection_event.dart';
+import '../bloc/reflection/reflection_bloc.dart';
+import '../bloc/reflection/reflection_state.dart';
+import '../bloc/reflection/reflection_event.dart';
 import '../screens/answer_screen.dart';
 import '../screens/reflection_history_screen.dart';
 
@@ -458,3 +458,4 @@ class _CarouselReflectionScreenState extends State<CarouselReflectionScreen> {
     );
   }
 }
+

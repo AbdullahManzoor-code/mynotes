@@ -1,98 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
+import '../bloc/drawing_canvas/drawing_canvas_bloc.dart';
 import '../design_system/design_system.dart';
 
 /// Drawing Canvas Screen
 /// Freehand drawing capability with shapes, colors, and tools
-/// Features: pen, eraser, shapes, color picker, save as image
-class DrawingCanvasScreen extends StatefulWidget {
+/// Refactored to use BLoC and StatelessWidget
+class DrawingCanvasScreen extends StatelessWidget {
   final Function(Uint8List)? onDrawingSaved;
 
   const DrawingCanvasScreen({super.key, this.onDrawingSaved});
 
-  @override
-  State<DrawingCanvasScreen> createState() => _DrawingCanvasScreenState();
-}
-
-class _DrawingCanvasScreenState extends State<DrawingCanvasScreen>
-    with TickerProviderStateMixin {
-  late List<DrawingPath> _paths = [];
-  late List<List<DrawingPath>> _undoStack = [];
-  late List<List<DrawingPath>> _redoStack = [];
-
-  int _currentColor = 0xFF000000; // Black
-  double _currentWidth = 2.0;
-  String _currentTool = 'pen';
-  bool _isDrawing = false;
-
-  late AnimationController _toolbarController;
-  final List<int> _colorOptions = [
-    0xFF000000, // Black
-    0xFFFF0000, // Red
-    0xFF00FF00, // Green
-    0xFF0000FF, // Blue
-    0xFFFFFF00, // Yellow
-    0xFFFF00FF, // Magenta
-    0xFF00FFFF, // Cyan
-    0xFFFFFFFF, // White
-  ];
-
-  final List<double> _widthOptions = [1.0, 2.0, 4.0, 6.0, 8.0];
-
-  @override
-  void initState() {
-    super.initState();
-    _toolbarController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-    _toolbarController.forward();
-  }
-
-  @override
-  void dispose() {
-    _toolbarController.dispose();
-    super.dispose();
-  }
-
-  void _addPath(Offset point) {
-    setState(() {
-      if (_paths.isEmpty || _paths.last.tool != _currentTool) {
-        _paths.add(
-          DrawingPath(
-            points: [point],
-            color: _currentColor,
-            width: _currentWidth,
-            tool: _currentTool,
-          ),
-        );
-      } else {
-        _paths.last.points.add(point);
-      }
-    });
-  }
-
-  void _undo() {
-    if (_paths.isNotEmpty) {
-      setState(() {
-        _undoStack.add(List.from(_paths));
-        _paths.removeLast();
-      });
-    }
-  }
-
-  void _redo() {
-    if (_undoStack.isNotEmpty) {
-      setState(() {
-        _paths = _undoStack.removeLast();
-        _redoStack.add(List.from(_paths));
-      });
-    }
-  }
-
-  void _clear() {
+  void _showClearDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -105,7 +27,7 @@ class _DrawingCanvasScreenState extends State<DrawingCanvasScreen>
           ),
           TextButton(
             onPressed: () {
-              setState(() => _paths.clear());
+              context.read<DrawingCanvasBloc>().add(const ClearCanvasEvent());
               Navigator.pop(ctx);
             },
             child: const Text('Clear', style: TextStyle(color: Colors.red)),
@@ -115,7 +37,10 @@ class _DrawingCanvasScreenState extends State<DrawingCanvasScreen>
     );
   }
 
-  Future<void> _saveDrawing() async {
+  Future<void> _saveDrawing(
+    BuildContext context,
+    List<DrawingPath> paths,
+  ) async {
     try {
       // Create a recorder to capture the canvas
       final recorder = ui.PictureRecorder();
@@ -127,7 +52,7 @@ class _DrawingCanvasScreenState extends State<DrawingCanvasScreen>
       canvas.drawRect(rect, Paint()..color = Colors.white);
 
       // Draw all paths
-      for (final path in _paths) {
+      for (final path in paths) {
         final paint = Paint()
           ..color = Color(path.color)
           ..strokeWidth = path.width
@@ -158,18 +83,15 @@ class _DrawingCanvasScreenState extends State<DrawingCanvasScreen>
       final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
       final imageBytes = bytes!.buffer.asUint8List();
 
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Drawing saved!')));
-
-        widget.onDrawingSaved?.call(imageBytes);
-
-        // Pop with result
+        onDrawingSaved?.call(imageBytes);
         Navigator.of(context).pop(imageBytes);
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error saving drawing: $e')));
@@ -179,293 +101,233 @@ class _DrawingCanvasScreenState extends State<DrawingCanvasScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Drawing Canvas'),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.undo),
-            onPressed: _paths.isEmpty ? null : _undo,
-            tooltip: 'Undo',
+    return BlocBuilder<DrawingCanvasBloc, DrawingCanvasState>(
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Drawing Canvas'),
+            elevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.undo),
+                onPressed: state.paths.isEmpty
+                    ? null
+                    : () => context.read<DrawingCanvasBloc>().add(
+                        const UndoEvent(),
+                      ),
+                tooltip: 'Undo',
+              ),
+              IconButton(
+                icon: const Icon(Icons.redo),
+                onPressed: () =>
+                    context.read<DrawingCanvasBloc>().add(const RedoEvent()),
+                tooltip: 'Redo',
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline),
+                onPressed: () => _showClearDialog(context),
+                tooltip: 'Clear',
+              ),
+              IconButton(
+                icon: const Icon(Icons.save_alt),
+                onPressed: () => _saveDrawing(context, state.paths),
+                tooltip: 'Save',
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.redo),
-            onPressed: _undoStack.isEmpty ? null : _redo,
-            tooltip: 'Redo',
+          body: Column(
+            children: [
+              // Canvas Area
+              Expanded(
+                child: GestureDetector(
+                  onPanStart: (details) {
+                    context.read<DrawingCanvasBloc>().add(
+                      StartPathEvent(details.localPosition),
+                    );
+                  },
+                  onPanUpdate: (details) {
+                    context.read<DrawingCanvasBloc>().add(
+                      UpdatePathEvent(details.localPosition),
+                    );
+                  },
+                  onPanEnd: (details) {
+                    context.read<DrawingCanvasBloc>().add(EndPathEvent());
+                  },
+                  child: Container(
+                    color: Colors.white,
+                    child: CustomPaint(
+                      painter: DrawingPainter(paths: state.paths),
+                      isComplex: true,
+                      willChange: true,
+                    ),
+                  ),
+                ),
+              ),
+
+              // Toolbar
+              _buildToolbar(context, state),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: _clear,
-            tooltip: 'Clear',
-          ),
-        ],
+        );
+      },
+    );
+  }
+
+  Widget _buildToolbar(BuildContext context, DrawingCanvasState state) {
+    final List<int> colorOptions = [
+      0xFF000000,
+      0xFFFF0000,
+      0xFF00FF00,
+      0xFF0000FF,
+      0xFFFFFF00,
+      0xFFFF00FF,
+      0xFF00FFFF,
+      0xFFFFFFFF,
+    ];
+
+    final List<double> widthOptions = [1.0, 2.0, 4.0, 6.0, 8.0];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        border: Border(top: BorderSide(color: Colors.grey[300]!)),
       ),
-      body: Column(
+      padding: EdgeInsets.all(12.w),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Canvas Area
-          Expanded(
-            child: GestureDetector(
-              onPanStart: (details) {
-                setState(() => _isDrawing = true);
-                _addPath(details.localPosition);
-              },
-              onPanUpdate: (details) {
-                if (_isDrawing) {
-                  _addPath(details.localPosition);
-                }
-              },
-              onPanEnd: (details) {
-                setState(() => _isDrawing = false);
-              },
-              child: Container(
-                color: Colors.white,
-                child: CustomPaint(
-                  painter: DrawingPainter(paths: _paths),
-                  isComplex: true,
-                  willChange: true,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _toolButton(
+                  context,
+                  Icons.edit,
+                  'Pen',
+                  state.currentTool == 'pen',
+                  'pen',
                 ),
-              ),
+                _toolButton(
+                  context,
+                  Icons.cleaning_services,
+                  'Eraser',
+                  state.currentTool == 'eraser',
+                  'eraser',
+                ),
+                _toolButton(
+                  context,
+                  Icons.square_outlined,
+                  'Rectangle',
+                  state.currentTool == 'rectangle',
+                  'rectangle',
+                ),
+                _toolButton(
+                  context,
+                  Icons.circle_outlined,
+                  'Circle',
+                  state.currentTool == 'circle',
+                  'circle',
+                ),
+                _toolButton(
+                  context,
+                  Icons.remove,
+                  'Line',
+                  state.currentTool == 'line',
+                  'line',
+                ),
+              ],
             ),
           ),
-
-          // Toolbar
-          SlideTransition(
-            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-                .animate(
-                  CurvedAnimation(
-                    parent: _toolbarController,
-                    curve: Curves.easeOut,
+          SizedBox(height: 8.h),
+          Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: colorOptions
+                        .map(
+                          (color) => GestureDetector(
+                            onTap: () => context.read<DrawingCanvasBloc>().add(
+                              SetPenColorEvent(color),
+                            ),
+                            child: Container(
+                              margin: EdgeInsets.symmetric(horizontal: 4.w),
+                              width: 30.w,
+                              height: 30.w,
+                              decoration: BoxDecoration(
+                                color: Color(color),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: state.currentPenColor == color
+                                      ? Colors.blue
+                                      : Colors.grey,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
                   ),
                 ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                border: Border(top: BorderSide(color: Colors.grey[300]!)),
               ),
-              padding: EdgeInsets.all(12.w),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Tool Buttons
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _ToolButton(
-                          icon: Icons.edit,
-                          label: 'Pen',
-                          isSelected: _currentTool == 'pen',
-                          onPressed: () {
-                            setState(() => _currentTool = 'pen');
-                          },
-                        ),
-                        _ToolButton(
-                          icon: Icons.cleaning_services,
-                          label: 'Eraser',
-                          isSelected: _currentTool == 'eraser',
-                          onPressed: () {
-                            setState(() => _currentTool = 'eraser');
-                          },
-                        ),
-                        _ToolButton(
-                          icon: Icons.square_outlined,
-                          label: 'Rectangle',
-                          isSelected: _currentTool == 'rectangle',
-                          onPressed: () {
-                            setState(() => _currentTool = 'rectangle');
-                          },
-                        ),
-                        _ToolButton(
-                          icon: Icons.circle_outlined,
-                          label: 'Circle',
-                          isSelected: _currentTool == 'circle',
-                          onPressed: () {
-                            setState(() => _currentTool = 'circle');
-                          },
-                        ),
-                        _ToolButton(
-                          icon: Icons.remove,
-                          label: 'Line',
-                          isSelected: _currentTool == 'line',
-                          onPressed: () {
-                            setState(() => _currentTool = 'line');
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  SizedBox(height: 8.h),
-
-                  // Color & Width Selection
-                  Row(
-                    children: [
-                      // Colors
-                      Expanded(
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: [
-                              Text('Color:', style: TextStyle(fontSize: 12.sp)),
-                              SizedBox(width: 8.w),
-                              ..._colorOptions.map(
-                                (color) => GestureDetector(
-                                  onTap: () {
-                                    setState(() => _currentColor = color);
-                                  },
-                                  child: Container(
-                                    width: 30.w,
-                                    height: 30.w,
-                                    margin: EdgeInsets.symmetric(
-                                      horizontal: 4.w,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Color(color),
-                                      border: Border.all(
-                                        color: _currentColor == color
-                                            ? Colors.black
-                                            : Colors.grey[400]!,
-                                        width: _currentColor == color ? 2 : 1,
-                                      ),
-                                      borderRadius: BorderRadius.circular(4.r),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 8.h),
-
-                  // Pen Width
-                  Row(
-                    children: [
-                      Text('Width:', style: TextStyle(fontSize: 12.sp)),
-                      SizedBox(width: 8.w),
-                      ..._widthOptions.map(
-                        (width) => GestureDetector(
-                          onTap: () {
-                            setState(() => _currentWidth = width);
-                          },
-                          child: Container(
-                            width: 40.w,
-                            height: 40.w,
-                            margin: EdgeInsets.symmetric(horizontal: 4.w),
-                            decoration: BoxDecoration(
-                              border: Border.all(
-                                color: _currentWidth == width
-                                    ? Colors.black
-                                    : Colors.grey[400]!,
-                                width: _currentWidth == width ? 2 : 1,
-                              ),
-                              borderRadius: BorderRadius.circular(4.r),
-                            ),
-                            child: Center(
-                              child: Container(
-                                width: width,
-                                height: width,
-                                decoration: BoxDecoration(
-                                  color: Color(_currentColor),
-                                  borderRadius: BorderRadius.circular(
-                                    width / 2,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  SizedBox(height: 12.h),
-
-                  // Save Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _saveDrawing,
-                      icon: const Icon(Icons.save),
-                      label: const Text('Save Drawing'),
-                      style: ElevatedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: 12.h),
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
+              Container(
+                width: 1,
+                height: 30.h,
+                color: Colors.grey[400],
+                margin: EdgeInsets.symmetric(horizontal: 8.w),
               ),
-            ),
+              DropdownButton<double>(
+                value: widthOptions.contains(state.currentPenWidth)
+                    ? state.currentPenWidth
+                    : widthOptions.first,
+                items: widthOptions
+                    .map(
+                      (w) => DropdownMenuItem(
+                        value: w,
+                        child: Text('${w.toInt()}px'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (val) {
+                  if (val != null) {
+                    context.read<DrawingCanvasBloc>().add(
+                      SetPenWidthEvent(val),
+                    );
+                  }
+                },
+              ),
+            ],
           ),
         ],
       ),
     );
   }
-}
 
-/// Tool Button Widget
-class _ToolButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onPressed;
-
-  const _ToolButton({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _toolButton(
+    BuildContext context,
+    IconData icon,
+    String label,
+    bool isSelected,
+    String tool,
+  ) {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4.w),
-      child: Tooltip(
-        message: label,
-        child: InkWell(
-          onTap: onPressed,
-          borderRadius: BorderRadius.circular(8.r),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
-            decoration: BoxDecoration(
-              color: isSelected ? AppColors.primary : Colors.white,
-              border: Border.all(
-                color: isSelected ? AppColors.primary : Colors.grey[400]!,
-              ),
-              borderRadius: BorderRadius.circular(8.r),
-            ),
-            child: Icon(
-              icon,
-              color: isSelected ? Colors.white : Colors.black,
-              size: 20.sp,
-            ),
-          ),
+      padding: EdgeInsets.only(right: 8.w),
+      child: ActionChip(
+        avatar: Icon(
+          icon,
+          color: isSelected ? Colors.white : Colors.black,
+          size: 16,
         ),
+        label: Text(label),
+        onPressed: () =>
+            context.read<DrawingCanvasBloc>().add(SetToolEvent(tool)),
+        backgroundColor: isSelected ? Colors.blue : Colors.white,
+        labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
       ),
     );
   }
-}
-
-/// Drawing Path Model
-class DrawingPath {
-  final List<Offset> points;
-  final int color;
-  final double width;
-  final String tool;
-
-  DrawingPath({
-    required this.points,
-    required this.color,
-    required this.width,
-    required this.tool,
-  });
 }
 
 /// Custom Painter for Drawing Canvas

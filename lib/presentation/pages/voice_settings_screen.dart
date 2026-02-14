@@ -1,14 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/services/language_service.dart';
 import '../../core/services/voice_command_service.dart';
 import '../../core/services/audio_feedback_service.dart';
 import '../design_system/design_system.dart';
 import '../widgets/language_picker.dart';
-import '../bloc/voice_settings_bloc.dart';
-import '../bloc/params/voice_settings_params.dart';
+import '../bloc/voice_settings/voice_settings_bloc.dart';
 
 /// Voice and Speech Settings Screen
 /// Refactored to StatelessWidget using VoiceSettingsBloc and Design System
@@ -605,3 +603,4 @@ class _VoiceSettingsView extends StatelessWidget {
     );
   }
 }
+

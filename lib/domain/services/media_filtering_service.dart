@@ -170,8 +170,12 @@ class MediaFilteringService {
       (i) => List<int>.filled(len2 + 1, 0),
     );
 
-    for (int i = 0; i <= len1; i++) d[i][0] = i;
-    for (int j = 0; j <= len2; j++) d[0][j] = j;
+    for (int i = 0; i <= len1; i++) {
+      d[i][0] = i;
+    }
+    for (int j = 0; j <= len2; j++) {
+      d[0][j] = j;
+    }
 
     for (int i = 1; i <= len1; i++) {
       for (int j = 1; j <= len2; j++) {

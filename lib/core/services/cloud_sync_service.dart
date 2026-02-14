@@ -1,1 +1,103 @@
-/// Cloud Sync Service for preparing sync timestamps and conflict resolution\nclass CloudSyncService {\n  static final CloudSyncService _instance = CloudSyncService._internal();\n\n  CloudSyncService._internal();\n\n  factory CloudSyncService() {\n    return _instance;\n  }\n\n  /// Prepare sync data with timestamps\n  Future<Map<String, dynamic>> prepareSyncData({\n    required List<Map<String, dynamic>> notes,\n    required List<Map<String, dynamic>> todos,\n    required List<Map<String, dynamic>> reminders,\n  }) async {\n    try {\n      final now = DateTime.now();\n      \n      return {\n        'timestamp': now.toIso8601String(),\n        'notes': notes.map((n) => {\n          ...n,\n          'syncTimestamp': now.toIso8601String(),\n        }).toList(),\n        'todos': todos.map((t) => {\n          ...t,\n          'syncTimestamp': now.toIso8601String(),\n        }).toList(),\n        'reminders': reminders.map((r) => {\n          ...r,\n          'syncTimestamp': now.toIso8601String(),\n        }).toList(),\n      };\n    } catch (e) {\n      print('Sync preparation error: $e');\n      return {};\n    }\n  }\n\n  /// Resolve conflicts using last-write-wins strategy\n  Future<Map<String, dynamic>> resolveConflict({\n    required Map<String, dynamic> localVersion,\n    required Map<String, dynamic> remoteVersion,\n  }) async {\n    try {\n      final localTime = DateTime.parse(localVersion['updatedAt'] ?? '');\n      final remoteTime = DateTime.parse(remoteVersion['updatedAt'] ?? '');\n      \n      // Last write wins\n      if (localTime.isAfter(remoteTime)) {\n        return {...localVersion, 'syncStatus': 'local_newer'};\n      } else {\n        return {...remoteVersion, 'syncStatus': 'remote_newer'};\n      }\n    } catch (e) {\n      print('Conflict resolution error: $e');\n      return localVersion;\n    }\n  }\n\n  /// Resolve conflicts using 3-way merge\n  Future<Map<String, dynamic>> threeWayMerge({\n    required Map<String, dynamic> baseVersion,\n    required Map<String, dynamic> localVersion,\n    required Map<String, dynamic> remoteVersion,\n  }) async {\n    try {\n      final merged = <String, dynamic>{...baseVersion};\n      \n      // Merge local changes\n      for (final key in localVersion.keys) {\n        if (baseVersion[key] != localVersion[key]) {\n          merged[key] = localVersion[key];\n        }\n      }\n      \n      // Merge remote changes (remote takes precedence if both changed)\n      for (final key in remoteVersion.keys) {\n        if (baseVersion[key] != remoteVersion[key]) {\n          merged[key] = remoteVersion[key];\n        }\n      }\n      \n      return merged;\n    } catch (e) {\n      print('Three-way merge error: $e');\n      return localVersion;\n    }\n  }\n\n  /// Check sync readiness\n  Future<bool> isSyncReady() async {\n    // Check network, authentication, etc.\n    return false; // Not implemented\n  }\n}\n
+﻿import 'package:connectivity_plus/connectivity_plus.dart';
+
+/// Cloud Sync Service for preparing sync timestamps and conflict resolution
+class CloudSyncService {
+  static final CloudSyncService _instance = CloudSyncService._internal();
+
+  CloudSyncService._internal();
+
+  factory CloudSyncService() {
+    return _instance;
+  }
+
+  /// Prepare sync data with timestamps
+  Future<Map<String, dynamic>> prepareSyncData({
+    required List<Map<String, dynamic>> notes,
+    required List<Map<String, dynamic>> todos,
+    required List<Map<String, dynamic>> reminders,
+  }) async {
+    try {
+      final now = DateTime.now();
+      
+      return {
+        'timestamp': now.toIso8601String(),
+        'notes': notes.map((n) => {
+          ...n,
+          'syncTimestamp': now.toIso8601String(),
+        }).toList(),
+        'todos': todos.map((t) => {
+          ...t,
+          'syncTimestamp': now.toIso8601String(),
+        }).toList(),
+        'reminders': reminders.map((r) => {
+          ...r,
+          'syncTimestamp': now.toIso8601String(),
+        }).toList(),
+      };
+    } catch (e) {
+      print('Sync preparation error: ');
+      return {};
+    }
+  }
+
+  /// Resolve conflicts using last-write-wins strategy
+  Future<Map<String, dynamic>> resolveConflict({
+    required Map<String, dynamic> localVersion,
+    required Map<String, dynamic> remoteVersion,
+  }) async {
+    try {
+      final localTime = DateTime.parse(localVersion['updatedAt'] ?? '');
+      final remoteTime = DateTime.parse(remoteVersion['updatedAt'] ?? '');
+      
+      // Last write wins
+      if (localTime.isAfter(remoteTime)) {
+        return {...localVersion, 'syncStatus': 'local_newer'};
+      } else {
+        return {...remoteVersion, 'syncStatus': 'remote_newer'};
+      }
+    } catch (e) {
+      print('Conflict resolution error: ');
+      return localVersion;
+    }
+  }
+
+  /// Resolve conflicts using 3-way merge
+  Future<Map<String, dynamic>> threeWayMerge({
+    required Map<String, dynamic> baseVersion,
+    required Map<String, dynamic> localVersion,
+    required Map<String, dynamic> remoteVersion,
+  }) async {
+    try {
+      final merged = <String, dynamic>{...baseVersion};
+      
+      // Merge local changes
+      for (final key in localVersion.keys) {
+        if (baseVersion[key] != localVersion[key]) {
+          merged[key] = localVersion[key];
+        }
+      }
+      
+      // Merge remote changes (remote takes precedence if both changed)
+      for (final key in remoteVersion.keys) {
+        if (baseVersion[key] != remoteVersion[key]) {
+          merged[key] = remoteVersion[key];
+        }
+      }
+      
+      return merged;
+    } catch (e) {
+      print('Three-way merge error: ');
+      return localVersion;
+    }
+  }
+
+  /// Check sync readiness
+  Future<bool> isSyncReady() async {
+    final connectivityResult = await (Connectivity().checkConnectivity());
+    if (connectivityResult.contains(ConnectivityResult.none)) {
+      return false;
+    }
+    // In a real app, also check if user is authenticated
+    return true;
+  }
+}

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/constants/app_colors.dart';
-import '../bloc/theme_bloc.dart';
-import '../bloc/theme_event.dart';
-import '../bloc/theme_state.dart';
+import '../bloc/theme/theme_bloc.dart';
+import '../bloc/theme/theme_event.dart';
+import '../bloc/theme/theme_state.dart';
 
 /// A simple icon button to toggle between light and dark themes
 /// Can be added to any AppBar or toolbar
@@ -44,3 +44,4 @@ class ThemeToggleButton extends StatelessWidget {
     );
   }
 }
+

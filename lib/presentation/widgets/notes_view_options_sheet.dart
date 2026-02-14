@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../design_system/design_system.dart';
-import '../bloc/note_state.dart';
+import '../bloc/note/note_state.dart';
 
 /// Notes View Options Bottom Sheet
 /// Provides grid/list toggle, sort options, and filter controls (ORG-001, ORG-002)
-class NotesViewOptionsSheet extends StatefulWidget {
+class NotesViewOptionsSheet extends StatelessWidget {
   final NoteViewMode currentViewMode;
   final NoteSortOption currentSortOption;
   final bool sortDescending;
@@ -22,23 +22,6 @@ class NotesViewOptionsSheet extends StatefulWidget {
     required this.onSortChanged,
     this.onFilterTapped,
   });
-
-  @override
-  State<NotesViewOptionsSheet> createState() => _NotesViewOptionsSheetState();
-}
-
-class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
-  late NoteViewMode _viewMode;
-  late NoteSortOption _sortOption;
-  late bool _sortDescending;
-
-  @override
-  void initState() {
-    super.initState();
-    _viewMode = widget.currentViewMode;
-    _sortOption = widget.currentSortOption;
-    _sortDescending = widget.sortDescending;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,18 +72,30 @@ class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
           ),
 
           // View Mode Section
-          _buildSection(title: 'Display Mode', child: _buildViewModeSelector()),
+          _buildSection(
+            context,
+            title: 'Display Mode',
+            child: _buildViewModeSelector(context),
+          ),
 
           const SizedBox(height: 24),
 
           // Sort Options Section
-          _buildSection(title: 'Sort By', child: _buildSortOptions()),
+          _buildSection(
+            context,
+            title: 'Sort By',
+            child: _buildSortOptions(context),
+          ),
 
           const SizedBox(height: 24),
 
           // Additional Options
-          if (widget.onFilterTapped != null) ...[
-            _buildSection(title: 'Filters', child: _buildFilterOption()),
+          if (onFilterTapped != null) ...[
+            _buildSection(
+              context,
+              title: 'Filters',
+              child: _buildFilterOption(context),
+            ),
             const SizedBox(height: 24),
           ],
 
@@ -110,7 +105,11 @@ class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
     );
   }
 
-  Widget _buildSection({required String title, required Widget child}) {
+  Widget _buildSection(
+    BuildContext context, {
+    required String title,
+    required Widget child,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -130,7 +129,7 @@ class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
     );
   }
 
-  Widget _buildViewModeSelector() {
+  Widget _buildViewModeSelector(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface(context),
@@ -139,14 +138,11 @@ class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
       ),
       child: Row(
         children: NoteViewMode.values.map((mode) {
-          final isSelected = mode == _viewMode;
+          final isSelected = mode == currentViewMode;
           return Expanded(
             child: GestureDetector(
               onTap: () {
-                setState(() {
-                  _viewMode = mode;
-                });
-                widget.onViewModeChanged(mode);
+                onViewModeChanged(mode);
                 HapticFeedback.lightImpact();
               },
               child: Container(
@@ -187,10 +183,10 @@ class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
     );
   }
 
-  Widget _buildSortOptions() {
+  Widget _buildSortOptions(BuildContext context) {
     return Column(
       children: NoteSortOption.values.map((option) {
-        final isSelected = option == _sortOption;
+        final isSelected = option == currentSortOption;
         return Container(
           margin: const EdgeInsets.only(bottom: 8),
           decoration: BoxDecoration(
@@ -224,14 +220,11 @@ class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
             trailing: isSelected
                 ? GestureDetector(
                     onTap: () {
-                      setState(() {
-                        _sortDescending = !_sortDescending;
-                      });
-                      widget.onSortChanged(option, _sortDescending);
+                      onSortChanged(option, !sortDescending);
                       HapticFeedback.lightImpact();
                     },
                     child: Icon(
-                      _sortDescending
+                      sortDescending
                           ? Icons.arrow_downward
                           : Icons.arrow_upward,
                       color: AppColors.primary,
@@ -240,10 +233,7 @@ class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
                   )
                 : null,
             onTap: () {
-              setState(() {
-                _sortOption = option;
-              });
-              widget.onSortChanged(option, _sortDescending);
+              onSortChanged(option, sortDescending);
               HapticFeedback.lightImpact();
             },
           ),
@@ -252,10 +242,10 @@ class _NotesViewOptionsSheetState extends State<NotesViewOptionsSheet> {
     );
   }
 
-  Widget _buildFilterOption() {
+  Widget _buildFilterOption(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        widget.onFilterTapped?.call();
+        onFilterTapped?.call();
         Navigator.pop(context);
       },
       child: Container(

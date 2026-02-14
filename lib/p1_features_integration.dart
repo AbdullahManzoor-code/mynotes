@@ -1,10 +1,11 @@
 /// MyNotes P1 Features Integration Guide
 /// This file documents all 55 P1 features and their implementation status
 /// Generated: January 29, 2026
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../presentation/bloc/pomodoro_bloc.dart';
+import 'package:mynotes/presentation/bloc/pomodoro/pomodoro_bloc.dart';
 import '../presentation/widgets/pomodoro_timer.dart';
 import '../presentation/widgets/task_notes_widget.dart';
 import '../presentation/widgets/subtask_widget.dart';
@@ -155,6 +156,8 @@ class FeatureCategoryStatus {
 
 /// Example: Using Pomodoro Timer in a screen
 class PomodoroScreenExample extends StatelessWidget {
+  const PomodoroScreenExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<PomodoroBloc, PomodoroState>(
@@ -176,6 +179,8 @@ class PomodoroScreenExample extends StatelessWidget {
 
 /// Example: Using task notes in todo detail screen
 class TodoDetailScreenExample extends StatelessWidget {
+  const TodoDetailScreenExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -196,6 +201,8 @@ class TodoDetailScreenExample extends StatelessWidget {
 
 /// Example: Using subtasks in todo management
 class TodoManagementExample extends StatelessWidget {
+  const TodoManagementExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     final subtasks = <Subtask>[];
@@ -222,6 +229,8 @@ class TodoManagementExample extends StatelessWidget {
 
 /// Example: Using recurrence pattern picker
 class RecurringTaskExample extends StatelessWidget {
+  const RecurringTaskExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return RecurrencePickerWidget(
@@ -235,6 +244,8 @@ class RecurringTaskExample extends StatelessWidget {
 
 /// Example: Custom reflection questions
 class ReflectionScreenExample extends StatelessWidget {
+  const ReflectionScreenExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return CustomQuestionsListWidget(
@@ -262,6 +273,8 @@ class ReflectionScreenExample extends StatelessWidget {
 
 /// Example: Voice commands integration
 class VoiceCommandScreenExample extends StatelessWidget {
+  const VoiceCommandScreenExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return VoiceCommandWidget(
@@ -277,6 +290,8 @@ class VoiceCommandScreenExample extends StatelessWidget {
 
 /// Example: Activity tags for reflection
 class ActivityTaggingExample extends StatelessWidget {
+  const ActivityTaggingExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return ActivityTagSelector(
@@ -291,6 +306,8 @@ class ActivityTaggingExample extends StatelessWidget {
 
 /// Example: Privacy mode settings
 class PrivacySettingsExample extends StatelessWidget {
+  const PrivacySettingsExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return PrivacySettingsPanel(
@@ -304,6 +321,8 @@ class PrivacySettingsExample extends StatelessWidget {
 
 /// Example: Analytics dashboard
 class AnalyticsDashboardExample extends StatelessWidget {
+  const AnalyticsDashboardExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -346,6 +365,8 @@ class AnalyticsDashboardExample extends StatelessWidget {
 
 /// Example: Backup and restore
 class BackupManagementExample extends StatelessWidget {
+  const BackupManagementExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -367,6 +388,8 @@ class BackupManagementExample extends StatelessWidget {
 
 /// Example: Settings panel
 class SettingsPanelExample extends StatelessWidget {
+  const SettingsPanelExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -383,6 +406,8 @@ class SettingsPanelExample extends StatelessWidget {
 
 /// Example: Dashboard quick stats
 class DashboardExample extends StatelessWidget {
+  const DashboardExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     return QuickStatsWidget(

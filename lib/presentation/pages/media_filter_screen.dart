@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/injection_container.dart';
-import 'package:mynotes/presentation/bloc/media_gallery_bloc.dart';
-import 'package:mynotes/presentation/bloc/media_filter_bloc.dart';
+import 'package:mynotes/presentation/bloc/media/media_gallery/media_gallery_bloc.dart';
+import 'package:mynotes/presentation/bloc/media/media_filter/media_filter_bloc.dart';
 import 'package:mynotes/presentation/bloc/params/media_filter_params.dart';
 import 'package:mynotes/presentation/design_system/design_system.dart';
-import 'package:mynotes/core/services/global_ui_service.dart';
 
 /// Advanced Media Filter Screen - Batch 4, Screen 1
 /// Refactored to BLoC and Design System - ORG-004

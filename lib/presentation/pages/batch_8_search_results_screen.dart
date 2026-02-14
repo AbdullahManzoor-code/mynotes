@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart'; // Added
 import 'package:mynotes/domain/entities/note.dart';
-import 'package:mynotes/presentation/bloc/note_bloc.dart';
-import 'package:mynotes/presentation/bloc/note_state.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_state.dart';
 import 'package:mynotes/domain/services/advanced_search_ranking_service.dart';
 import 'package:mynotes/core/design_system/app_colors.dart'; // Added
 import 'package:mynotes/core/design_system/app_typography.dart'; // Added
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
 import 'package:mynotes/injection_container.dart';
-import 'package:mynotes/presentation/bloc/note_event.dart';
+import 'package:mynotes/presentation/bloc/note/note_event.dart';
 
 /// Search Results with Ranking - Batch 8, Screen 2
 /// Refactored to use Design System and converted to StatelessWidget
@@ -18,8 +18,7 @@ class SearchResultsScreen extends StatelessWidget {
   final String searchQuery;
   final String _sortBy = 'relevance';
 
-  const SearchResultsScreen({Key? key, required this.searchQuery})
-    : super(key: key);
+  const SearchResultsScreen({super.key, required this.searchQuery});
 
   @override
   Widget build(BuildContext context) {
@@ -544,3 +543,5 @@ class SearchResultsScreen extends StatelessWidget {
     }
   }
 }
+
+

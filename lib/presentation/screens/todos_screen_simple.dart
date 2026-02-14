@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/bloc/params/todo_params.dart';
-import 'package:mynotes/presentation/bloc/todo_bloc.dart' show TodoBloc;
-import 'package:mynotes/presentation/bloc/todo_event.dart'
+import 'package:mynotes/presentation/bloc/todo/todo_bloc.dart' show TodoBloc;
+import 'package:mynotes/presentation/bloc/todo/todo_event.dart'
     show AddTodoEvent, ToggleTodoEvent, UpdateTodoEvent;
 import '../widgets/create_todo_bottom_sheet.dart';
-import '../bloc/todos_bloc.dart';
+import '../bloc/todos/todos_bloc.dart';
 import '../../domain/entities/todo_item.dart';
 import '../../injection_container.dart' show getIt;
 import '../design_system/design_system.dart';
@@ -490,3 +490,6 @@ class _TodosScreenState extends State<TodosScreen> {
     );
   }
 }
+
+
+

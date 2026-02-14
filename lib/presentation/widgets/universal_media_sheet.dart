@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
 
 enum MediaOption { photoVideo, camera, audio, scan, sketch, link }

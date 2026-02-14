@@ -1,14 +1,43 @@
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/analytics_bloc.dart';
+import 'package:confetti/confetti.dart';
+import 'dart:ui' as ui;
+import 'dart:math' as math;
+import '../bloc/analytics/analytics_bloc.dart';
 import 'edit_daily_highlight_screen_new.dart';
 import '../design_system/design_system.dart';
 
 /// Daily Highlight Summary Screen
 /// Shows evening review with top 3 wins of the day
-class DailyHighlightSummaryScreen extends StatelessWidget {
+class DailyHighlightSummaryScreen extends StatefulWidget {
   const DailyHighlightSummaryScreen({super.key});
+
+  @override
+  State<DailyHighlightSummaryScreen> createState() =>
+      _DailyHighlightSummaryScreenState();
+}
+
+class _DailyHighlightSummaryScreenState
+    extends State<DailyHighlightSummaryScreen> {
+  late ConfettiController _confettiController;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
+    // Trigger confetti on entry
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _confettiController.play();
+    });
+  }
+
+  @override
+  void dispose() {
+    _confettiController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,55 +52,107 @@ class DailyHighlightSummaryScreen extends StatelessWidget {
               ];
 
         return AppScaffold(
-          body: Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF1a162e),
-                  Color(0xFF2d1b4d),
-                  Color(0xFF141121),
-                ],
-              ),
-            ),
-            child: SafeArea(
-              child: Column(
-                children: [
-                  // Top App Bar
-                  _buildTopAppBar(context),
+          body: Stack(
+            children: [
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Color(0xFF1a162e),
+                      Color(0xFF2d1b4d),
+                      Color(0xFF141121),
+                    ],
+                  ),
+                ),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      // Top App Bar
+                      _buildTopAppBar(context),
 
-                  // Main Content
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      child: Container(
-                        width: double.infinity,
-                        constraints: BoxConstraints(maxWidth: 480.w),
-                        padding: EdgeInsets.symmetric(horizontal: 24.w),
-                        child: Column(
-                          children: [
-                            SizedBox(height: 24.h),
-                            _buildHeader(),
-                            SizedBox(height: 24.h),
-                            _buildDecorativeImage(),
-                            SizedBox(height: 24.h),
-                            _buildWinsSummaryCard(highlights),
-                            SizedBox(height: 24.h),
-                            _buildActionButtons(context),
-                            SizedBox(height: 32.h),
-                          ],
+                      // Main Content
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const BouncingScrollPhysics(),
+                          child: Container(
+                            width: double.infinity,
+                            constraints: BoxConstraints(maxWidth: 480.w),
+                            padding: EdgeInsets.symmetric(horizontal: 24.w),
+                            child: Column(
+                              children: [
+                                SizedBox(height: 24.h),
+                                _buildHeader(),
+                                SizedBox(height: 24.h),
+                                _buildDecorativeImage(),
+                                SizedBox(height: 24.h),
+                                _buildWinsSummaryCard(highlights),
+                                SizedBox(height: 24.h),
+                                _buildActionButtons(context),
+                                SizedBox(height: 32.h),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  shouldLoop: false,
+                  colors: const [
+                    Colors.green,
+                    Colors.blue,
+                    Colors.pink,
+                    Colors.orange,
+                    Colors.purple,
+                  ],
+                  createParticlePath: drawStar,
+                ),
+              ),
+            ],
           ),
         );
       },
     );
+  }
+
+  Path drawStar(Size size) {
+    // Method to draw a star shape
+    double degToRad(double deg) => deg * (math.pi / 180.0);
+
+    const int numberOfPoints = 5;
+    final double halfWidth = size.width / 2;
+    final double externalRadius = halfWidth;
+    final double internalRadius = halfWidth / 2.5;
+    final double degreesPerStep = degToRad(360 / numberOfPoints);
+    final double halfDegreesPerStep = degreesPerStep / 2;
+    final path = Path();
+    final double fullAngle = degToRad(-90);
+
+    path.moveTo(size.width, halfWidth);
+
+    for (double step = 0; step < degToRad(360); step += degreesPerStep) {
+      path.lineTo(
+        halfWidth + externalRadius * math.cos(step + fullAngle),
+        halfWidth + externalRadius * math.sin(step + fullAngle),
+      );
+      path.lineTo(
+        halfWidth +
+            internalRadius * math.cos(step + halfDegreesPerStep + fullAngle),
+        halfWidth +
+            internalRadius * math.sin(step + halfDegreesPerStep + fullAngle),
+      );
+    }
+
+    path.close();
+    return path;
   }
 
   Widget _buildTopAppBar(BuildContext context) {
@@ -407,3 +488,4 @@ class DailyHighlightSummaryScreen extends StatelessWidget {
     );
   }
 }
+

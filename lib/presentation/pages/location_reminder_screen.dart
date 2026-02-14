@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/location_reminder_bloc.dart';
+import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bloc.dart';
 import 'package:mynotes/presentation/pages/location_picker_screen.dart';
 import 'package:mynotes/presentation/pages/saved_locations_screen.dart';
 import 'package:mynotes/presentation/widgets/location/location_reminder_card.dart';
@@ -8,119 +8,83 @@ import 'package:mynotes/presentation/widgets/location/location_permission_dialog
 import 'package:mynotes/domain/entities/location_reminder_model.dart';
 import 'package:mynotes/core/services/location_reminders_manager.dart';
 
-class LocationReminderScreen extends StatefulWidget {
+class LocationReminderScreen extends StatelessWidget {
   const LocationReminderScreen({super.key});
 
   @override
-  State<LocationReminderScreen> createState() => _LocationReminderScreenState();
-}
-
-class _LocationReminderScreenState extends State<LocationReminderScreen> {
-  final _locationManager = LocationRemindersManager();
-
-  @override
-  void initState() {
-    super.initState();
-    _initializeLocationServices();
-    context.read<LocationReminderBloc>().add(LoadLocationReminders());
-  }
-
-  Future<void> _initializeLocationServices() async {
-    try {
-      // Initialize all location services
-      await _locationManager.initialize();
-
-      // Check if permissions are granted
-      final permissionsGranted = await _locationManager.arePermissionsGranted();
-
-      if (!permissionsGranted && mounted) {
-        // Show permission dialog if not granted
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => LocationPermissionDialog(
-            onPermissionsGranted: () {
-              // Start monitoring after permissions granted
-              _locationManager.startMonitoring();
-            },
-          ),
-        );
-      } else if (permissionsGranted) {
-        // Start monitoring if permissions already granted
-        await _locationManager.startMonitoring();
-      }
-    } catch (e) {
-      debugPrint('Error initializing location services: $e');
-    }
-  }
-
-  @override
-  void dispose() {
-    _locationManager.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Location Reminders'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.bookmark),
-            tooltip: 'Saved locations',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SavedLocationsScreen()),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.help_outline),
-            tooltip: 'How it works',
-            onPressed: () => _showHelpDialog(context),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Permission banner
-          LocationPermissionBanner(
-            onPermissionGranted: () {
-              _locationManager.startMonitoring();
-              setState(() {});
-            },
-          ),
-          // Reminders list
-          Expanded(
-            child: BlocBuilder<LocationReminderBloc, LocationReminderState>(
-              builder: (context, state) {
-                if (state is LocationReminderLoading) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (state is LocationReminderError) {
-                  return _buildErrorState(context, state.message);
-                }
-
-                if (state is LocationReminderLoaded) {
-                  if (state.reminders.isEmpty) {
-                    return _buildEmptyState(context);
-                  }
-                  return _buildReminderList(context, state);
-                }
-
-                return const Center(child: CircularProgressIndicator());
+    return _LocationLifecycleWrapper(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Location Reminders'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.bookmark),
+              tooltip: 'Saved locations',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const SavedLocationsScreen(),
+                  ),
+                );
               },
             ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _createNewReminder(context),
-        icon: const Icon(Icons.add_location_alt),
-        label: const Text('New Location Reminder'),
+            IconButton(
+              icon: const Icon(Icons.help_outline),
+              tooltip: 'How it works',
+              onPressed: () => _showHelpDialog(context),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Permission banner
+            LocationPermissionBanner(
+              onPermissionGranted: () {
+                LocationRemindersManager().startMonitoring();
+                context.read<LocationReminderBloc>().add(
+                  LoadLocationReminders(),
+                );
+              },
+            ),
+            // Reminders list
+            Expanded(
+              child: BlocBuilder<LocationReminderBloc, LocationReminderState>(
+                builder: (context, state) {
+                  if (state is LocationReminderInitial) {
+                    context.read<LocationReminderBloc>().add(
+                      LoadLocationReminders(),
+                    );
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (state is LocationReminderLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (state is LocationReminderError) {
+                    return _buildErrorState(context, state.message);
+                  }
+
+                  if (state is LocationReminderLoaded) {
+                    if (state.reminders.isEmpty) {
+                      return _buildEmptyState(context);
+                    }
+                    return _buildReminderList(context, state);
+                  }
+
+                  return const Center(child: CircularProgressIndicator());
+                },
+              ),
+            ),
+          ],
+        ),
+        floatingActionButton: FloatingActionButton.extended(
+          onPressed: () => _createNewReminder(context),
+          icon: const Icon(Icons.add_location_alt),
+          label: const Text('New Location Reminder'),
+        ),
       ),
     );
   }
@@ -185,7 +149,7 @@ class _LocationReminderScreenState extends State<LocationReminderScreen> {
 
         // Active reminders
         if (activeReminders.isNotEmpty) ...[
-          _buildSectionHeader('Active', activeReminders.length),
+          _buildSectionHeader(context, 'Active', activeReminders.length),
           const SizedBox(height: 8),
           ...activeReminders.map(
             (reminder) => LocationReminderCard(
@@ -200,7 +164,7 @@ class _LocationReminderScreenState extends State<LocationReminderScreen> {
         // Inactive reminders
         if (inactiveReminders.isNotEmpty) ...[
           const SizedBox(height: 24),
-          _buildSectionHeader('Inactive', inactiveReminders.length),
+          _buildSectionHeader(context, 'Inactive', inactiveReminders.length),
           const SizedBox(height: 8),
           ...inactiveReminders.map(
             (reminder) => LocationReminderCard(
@@ -217,7 +181,7 @@ class _LocationReminderScreenState extends State<LocationReminderScreen> {
     );
   }
 
-  Widget _buildSectionHeader(String title, int count) {
+  Widget _buildSectionHeader(BuildContext context, String title, int count) {
     return Row(
       children: [
         Text(
@@ -245,65 +209,65 @@ class _LocationReminderScreenState extends State<LocationReminderScreen> {
     );
   }
 
-  Widget _buildPermissionBanner(BuildContext context) {
-    return Card(
-      color: Colors.orange.shade100,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Icon(Icons.warning_amber, color: Colors.orange),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Background location needed',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Enable "Always" location access for reminders to work when app is closed.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                context.read<LocationReminderBloc>().add(
-                  RequestLocationPermission(),
-                );
-              },
-              child: const Text('Enable'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildPermissionBanner(BuildContext context) {
+  //   return Card(
+  //     color: Colors.orange.shade100,
+  //     margin: const EdgeInsets.only(bottom: 16),
+  //     child: Padding(
+  //       padding: const EdgeInsets.all(16),
+  //       child: Row(
+  //         children: [
+  //           const Icon(Icons.warning_amber, color: Colors.orange),
+  //           const SizedBox(width: 12),
+  //           Expanded(
+  //             child: Column(
+  //               crossAxisAlignment: CrossAxisAlignment.start,
+  //               children: [
+  //                 const Text(
+  //                   'Background location needed',
+  //                   style: TextStyle(fontWeight: FontWeight.bold),
+  //                 ),
+  //                 const SizedBox(height: 4),
+  //                 Text(
+  //                   'Enable "Always" location access for reminders to work when app is closed.',
+  //                   style: Theme.of(context).textTheme.bodySmall,
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           TextButton(
+  //             onPressed: () {
+  //               context.read<LocationReminderBloc>().add(
+  //                 RequestLocationPermission(),
+  //               );
+  //             },
+  //             child: const Text('Enable'),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  Widget _buildErrorState(BuildContext context, String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(message),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              context.read<LocationReminderBloc>().add(LoadLocationReminders());
-            },
-            child: const Text('Retry'),
-          ),
-        ],
-      ),
-    );
-  }
+  // Widget _buildErrorState(BuildContext context, String message) {
+  //   return Center(
+  //     child: Column(
+  //       mainAxisAlignment: MainAxisAlignment.center,
+  //       children: [
+  //         const Icon(Icons.error_outline, size: 64, color: Colors.red),
+  //         const SizedBox(height: 16),
+  //         Text(message),
+  //         const SizedBox(height: 16),
+  //         ElevatedButton(
+  //           onPressed: () {
+  //             context.read<LocationReminderBloc>().add(LoadLocationReminders());
+  //           },
+  //           child: const Text('Retry'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  // }
 
   void _createNewReminder(BuildContext context) {
     Navigator.push(
@@ -420,5 +384,120 @@ class _LocationReminderScreenState extends State<LocationReminderScreen> {
       ),
     );
   }
+
+  Widget _buildPermissionBanner(BuildContext context) {
+    return Card(
+      color: Colors.orange.shade100,
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber, color: Colors.orange),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Background location needed',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Enable "Always" location access for reminders to work when app is closed.',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                context.read<LocationReminderBloc>().add(
+                  RequestLocationPermission(),
+                );
+              },
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 64, color: Colors.red),
+          const SizedBox(height: 16),
+          Text(message),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              context.read<LocationReminderBloc>().add(LoadLocationReminders());
+            },
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
+class _LocationLifecycleWrapper extends StatefulWidget {
+  final Widget child;
+  const _LocationLifecycleWrapper({required this.child});
+
+  @override
+  State<_LocationLifecycleWrapper> createState() =>
+      _LocationLifecycleWrapperState();
+}
+
+class _LocationLifecycleWrapperState extends State<_LocationLifecycleWrapper> {
+  final _locationManager = LocationRemindersManager();
+
+  @override
+  void initState() {
+    super.initState();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    try {
+      await _locationManager.initialize();
+      final permissionsGranted = await _locationManager.arePermissionsGranted();
+
+      if (!permissionsGranted && mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogContext) => LocationPermissionDialog(
+            onPermissionsGranted: () {
+              _locationManager.startMonitoring();
+              if (mounted) {
+                context.read<LocationReminderBloc>().add(
+                  LoadLocationReminders(),
+                );
+              }
+            },
+          ),
+        );
+      } else if (permissionsGranted) {
+        await _locationManager.startMonitoring();
+      }
+    } catch (e) {
+      debugPrint('Error initializing location services: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _locationManager.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
+}

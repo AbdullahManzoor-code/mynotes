@@ -1,114 +1,138 @@
 import 'dart:async';
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/core/constants/app_colors.dart';
 import 'package:mynotes/domain/entities/note.dart';
-import 'package:mynotes/presentation/bloc/focus_bloc.dart';
-import 'package:mynotes/presentation/bloc/note_bloc.dart';
-import 'package:mynotes/presentation/bloc/note_state.dart';
-import 'package:mynotes/presentation/bloc/note_event.dart';
+import 'package:mynotes/presentation/bloc/focus/focus_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_state.dart';
+import 'package:mynotes/presentation/bloc/note/note_event.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'focus_celebration_screen.dart';
 
 /// Focus Session Active Screen
 /// Pomodoro timer with immersive gradient design and task selection
-class FocusSessionScreen extends StatefulWidget {
+class FocusSessionScreen extends StatelessWidget {
   const FocusSessionScreen({super.key});
 
   @override
-  State<FocusSessionScreen> createState() => _FocusSessionScreenState();
-}
+  Widget build(BuildContext context) {
+    // Initial data load and timer setup
+    _initFocusScreen(context);
 
-class _FocusSessionScreenState extends State<FocusSessionScreen>
-    with TickerProviderStateMixin {
-  bool _isTaskSelectionStep = false;
-  bool _showSettings = false;
-  bool _distractionFreeMode = false;
+    return BlocConsumer<FocusBloc, FocusState>(
+      listener: (context, state) {
+        if (state.status == FocusStatus.completed) {
+          HapticFeedback.heavyImpact();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => FocusCelebrationScreen(
+                minutesFocused:
+                    state.initialMinutes *
+                    (state.completedWorkSessions > 0
+                        ? state.completedWorkSessions
+                        : 1),
+                streakDays: 1, // Placeholder for streak
+              ),
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        // If we are in initial state and selection step is true, show selection
+        if (state.status == FocusStatus.initial && state.isTaskSelectionStep) {
+          return _buildTaskSelectionView(context);
+        }
 
-  // Session settings
-  int _focusMinutes = 25;
-  int _shortBreakMinutes = 5;
-  int _longBreakMinutes = 15;
-  int _sessionsBeforeLongBreak = 4;
+        final isPaused = state.status == FocusStatus.paused;
+        final minutes = (state.secondsRemaining ~/ 60).toString().padLeft(
+          2,
+          '0',
+        );
+        final seconds = (state.secondsRemaining % 60).toString().padLeft(
+          2,
+          '0',
+        );
+        final progress = state.totalSeconds > 0
+            ? 1.0 - (state.secondsRemaining / state.totalSeconds)
+            : 0.0;
 
-  String _selectedCategory = 'Focus';
-  final List<String> _categories = [
-    'Focus',
-    'Work',
-    'Study',
-    'Personal',
-    'Other',
-  ];
-
-  // Ambient sound
-  String _selectedSound = 'None';
-  final List<String> _ambientSounds = [
-    'None',
-    'Rain',
-    'Forest',
-    'Ocean',
-    'Coffee Shop',
-    'White Noise',
-  ];
-
-  String _taskTitle = 'Focused Work Session';
-  String? _todoId;
-
-  late AnimationController _pulseController;
-  late AnimationController _settingsController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1500),
-    )..repeat(reverse: true);
-
-    _settingsController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
+        return Scaffold(
+          body: Container(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: const Alignment(0.8, -0.8),
+                radius: 1.5,
+                colors: [
+                  AppColors.focusDeepViolet,
+                  AppColors.focusMidnightBlue,
+                ],
+              ),
+            ),
+            child: Stack(
+              children: [
+                _buildBackgroundOrbs(),
+                _WakelockToggle(enabled: state.status == FocusStatus.active),
+                SafeArea(
+                  child: Column(
+                    children: [
+                      _buildHeader(context, state),
+                      Expanded(
+                        child: _buildTimerSection(
+                          context,
+                          minutes,
+                          seconds,
+                          progress,
+                          state,
+                        ),
+                      ),
+                      _buildBottomSection(context, state, isPaused),
+                    ],
+                  ),
+                ),
+                if (state.showSettings) _buildSettingsOverlay(context, state),
+              ],
+            ),
+          ),
+        );
+      },
     );
-
-    // Trigger load notes for selection if needed
-    context.read<NotesBloc>().add(const LoadNotesEvent());
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final args = ModalRoute.of(context)?.settings.arguments;
-    if (args is Map<String, dynamic>) {
-      if (args['todoTitle'] != null) {
-        _taskTitle = args['todoTitle'] as String;
+  void _initFocusScreen(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Trigger load notes for selection if needed
+      context.read<NotesBloc>().add(const LoadNotesEvent());
+
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map<String, dynamic>) {
+        if (args['todoTitle'] != null && args['todoId'] != null) {
+          context.read<FocusBloc>().add(
+            SelectTaskEvent(
+              title: args['todoTitle'] as String,
+              todoId: args['todoId'] as String?,
+            ),
+          );
+        }
+      } else {
+        // No todo passed, show task selection first if initial
+        final currentStatus = context.read<FocusBloc>().state.status;
+        if (currentStatus == FocusStatus.initial) {
+          context.read<FocusBloc>().add(const ToggleTaskSelectionEvent(true));
+        }
       }
-      if (args['todoId'] != null) {
-        _todoId = args['todoId'] as String;
-      }
-      // If we have a todo, we skip selection
-      _isTaskSelectionStep = false;
-    } else {
-      // No todo passed, show selection first
-      // But only if we are in initial status
-      final currentStatus = context.read<FocusBloc>().state.status;
-      if (currentStatus == FocusStatus.initial) {
-        _isTaskSelectionStep = true;
-      }
-    }
+    });
   }
 
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    _settingsController.dispose();
-    super.dispose();
-  }
-
-  void _startSession() async {
-    if (_distractionFreeMode) {
+  void _startSession(BuildContext context) async {
+    final focusState = context.read<FocusBloc>().state;
+    if (focusState.distractionFreeMode) {
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -127,11 +151,11 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false), // Cancel
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, true), // Proceed
+              onPressed: () => Navigator.pop(context, true),
               child: Text(
                 'I enabled it',
                 style: TextStyle(color: AppColors.focusAccentGreen),
@@ -144,41 +168,24 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
       if (confirmed != true) return;
     }
 
-    if (!mounted) return;
-
     context.read<FocusBloc>().add(
       StartFocusSessionEvent(
-        minutes: _focusMinutes,
-        taskTitle: _taskTitle,
-        category: _selectedCategory,
-        todoId: _todoId,
+        minutes: focusState.initialMinutes,
+        taskTitle: focusState.initialTaskTitle,
+        category: focusState.currentCategory,
+        todoId: focusState.linkedTodoId,
       ),
     );
 
-    // Update settings in bloc
-    context.read<FocusBloc>().add(
-      UpdateFocusSettingsEvent(
-        shortBreakMinutes: _shortBreakMinutes,
-        longBreakMinutes: _longBreakMinutes,
-        sessionsBeforeLongBreak: _sessionsBeforeLongBreak,
-      ),
-    );
-
-    setState(() {
-      _isTaskSelectionStep = false;
-    });
+    // Hide task selection screen
+    context.read<FocusBloc>().add(const ToggleTaskSelectionEvent(false));
   }
 
-  void _selectTask(String title, String? id) {
-    setState(() {
-      _taskTitle = title;
-      _todoId = id;
-      _isTaskSelectionStep = false;
-    });
-    // Auto start or let user review? Let's just go to timer view ready to start
+  void _selectTask(BuildContext context, String title, String? id) {
+    context.read<FocusBloc>().add(SelectTaskEvent(title: title, todoId: id));
   }
 
-  void _togglePause(FocusStatus status) {
+  void _togglePause(BuildContext context, FocusStatus status) {
     if (status == FocusStatus.active) {
       context.read<FocusBloc>().add(const PauseFocusSessionEvent());
     } else {
@@ -186,7 +193,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     }
   }
 
-  Future<void> _stopSession() async {
+  Future<void> _stopSession(BuildContext context) async {
     bool? shouldStop = true;
     final currentState = context.read<FocusBloc>().state;
     if (currentState.status == FocusStatus.active ||
@@ -225,111 +232,16 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     }
 
     if (shouldStop == true) {
-      if (!mounted) return;
       context.read<FocusBloc>().add(const StopFocusSessionEvent());
       Navigator.pop(context);
     }
   }
 
-  void _toggleSettings() {
-    setState(() {
-      _showSettings = !_showSettings;
-    });
-    if (_showSettings) {
-      _settingsController.forward();
-    } else {
-      _settingsController.reverse();
-    }
+  void _toggleSettings(BuildContext context) {
+    context.read<FocusBloc>().add(const ToggleSettingsEvent());
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocConsumer<FocusBloc, FocusState>(
-      listener: (context, state) {
-        if (state.status == FocusStatus.completed) {
-          HapticFeedback.heavyImpact();
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => FocusCelebrationScreen(
-                minutesFocused:
-                    state.initialMinutes *
-                    (state.completedWorkSessions > 0
-                        ? state.completedWorkSessions
-                        : 1),
-                streakDays: 1, // Placeholder for streak
-              ),
-            ),
-          );
-        }
-      },
-      builder: (context, state) {
-        // If we are in initial state and selection step is true, show selection
-        if (state.status == FocusStatus.initial && _isTaskSelectionStep) {
-          return _buildTaskSelectionView();
-        }
-
-        final isPaused = state.status == FocusStatus.paused;
-        final minutes = (state.secondsRemaining ~/ 60).toString().padLeft(
-          2,
-          '0',
-        );
-        final seconds = (state.secondsRemaining % 60).toString().padLeft(
-          2,
-          '0',
-        );
-        final progress = state.totalSeconds > 0
-            ? 1.0 - (state.secondsRemaining / state.totalSeconds)
-            : 0.0;
-
-        // Sync local state if initial
-        if (state.status == FocusStatus.initial) {
-          _focusMinutes = state.initialMinutes;
-          // Don't overwrite title if we just selected it
-          // _taskTitle = state.initialTaskTitle;
-        }
-
-        return Scaffold(
-          body: Container(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: const Alignment(0.8, -0.8),
-                radius: 1.5,
-                colors: [
-                  AppColors.focusDeepViolet,
-                  AppColors.focusMidnightBlue,
-                ],
-              ),
-            ),
-            child: Stack(
-              children: [
-                _buildBackgroundOrbs(),
-                SafeArea(
-                  child: Column(
-                    children: [
-                      _buildHeader(),
-                      Expanded(
-                        child: _buildTimerSection(
-                          minutes,
-                          seconds,
-                          progress,
-                          state,
-                        ),
-                      ),
-                      _buildBottomSection(state, isPaused),
-                    ],
-                  ),
-                ),
-                if (_showSettings) _buildSettingsOverlay(state.status),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildTaskSelectionView() {
+  Widget _buildTaskSelectionView(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.focusMidnightBlue,
       appBar: AppBar(
@@ -349,13 +261,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
           Padding(
             padding: EdgeInsets.all(16.w),
             child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _taskTitle = 'Focused Work Session';
-                  _todoId = null;
-                  _isTaskSelectionStep = false;
-                });
-              },
+              onTap: () => _selectTask(context, 'Focused Work Session', null),
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 20.h, horizontal: 24.w),
                 decoration: BoxDecoration(
@@ -409,16 +315,14 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
               builder: (context, state) {
                 if (state is NotesLoaded) {
                   final todos = state.notes.where((n) => n.hasTodos).toList();
-
                   if (todos.isEmpty) {
-                    return Center(
+                    return const Center(
                       child: Text(
                         'No active todos found',
                         style: TextStyle(color: Colors.white54),
                       ),
                     );
                   }
-
                   return ListView.builder(
                     padding: EdgeInsets.symmetric(horizontal: 16.w),
                     itemCount: todos.length,
@@ -441,14 +345,15 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                           subtitle: todo.tags.isNotEmpty
                               ? Text(
                                   todo.tags.join(', '),
-                                  style: TextStyle(color: Colors.white38),
+                                  style: const TextStyle(color: Colors.white38),
                                 )
                               : null,
                           trailing: const Icon(
                             Icons.play_circle_outline,
                             color: Colors.white,
                           ),
-                          onTap: () => _selectTask(todo.title, todo.id),
+                          onTap: () =>
+                              _selectTask(context, todo.title, todo.id),
                         ),
                       );
                     },
@@ -504,7 +409,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context, FocusState state) {
     return Padding(
       padding: EdgeInsets.all(24.w),
       child: Row(
@@ -528,7 +433,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
               ),
               SizedBox(height: 4.h),
               Text(
-                'TODAY: ${context.read<FocusBloc>().state.todayTotalFocusMinutes}m',
+                'TODAY: ${state.todayTotalFocusMinutes}m',
                 style: AppTypography.captionSmall(null).copyWith(
                   color: AppColors.focusAccentGreen.withOpacity(0.8),
                   fontWeight: FontWeight.bold,
@@ -537,7 +442,10 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
               ),
             ],
           ),
-          _buildGlassButton(Icons.settings_outlined, _toggleSettings),
+          _buildGlassButton(
+            Icons.settings_outlined,
+            () => _toggleSettings(context),
+          ),
         ],
       ),
     );
@@ -560,6 +468,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
   }
 
   Widget _buildTimerSection(
+    BuildContext context,
     String minutes,
     String seconds,
     double progress,
@@ -568,7 +477,6 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     final status = state.status;
     final taskTitle = state.currentTaskTitle ?? 'Untitled';
     final isBreak = state.isBreak;
-    final sessionType = state.sessionType;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 32.w),
@@ -598,8 +506,6 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                   ),
                   backgroundColor: Colors.transparent,
                 ),
-
-                // Alternative Timer Ring Painter could go here if implemented
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -614,7 +520,7 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
                       ),
                     ),
                     SizedBox(height: 16.h),
-                    if (status == FocusStatus.active) _buildLiveIndicator(),
+                    if (status == FocusStatus.active) const _LiveIndicator(),
                   ],
                 ),
               ],
@@ -663,9 +569,189 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
     );
   }
 
-  Widget _buildLiveIndicator() {
-    return FadeTransition(
-      opacity: _pulseController,
+  Widget _buildBottomSection(
+    BuildContext context,
+    FocusState state,
+    bool isPaused,
+  ) {
+    if (state.status == FocusStatus.initial) {
+      return Padding(
+        padding: EdgeInsets.only(bottom: 40.h, left: 32.w, right: 32.w),
+        child: SizedBox(
+          width: double.infinity,
+          height: 56.h,
+          child: ElevatedButton(
+            onPressed: () => _startSession(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.focusAccentGreen,
+              foregroundColor: AppColors.focusMidnightBlue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+            ),
+            child: const Text(
+              'Start Session',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: 40.h, left: 32.w, right: 32.w),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: _ControlButton(
+                  icon: isPaused ? Icons.play_arrow : Icons.pause,
+                  label: isPaused ? 'Resume' : 'Pause',
+                  onTap: () => _togglePause(context, state.status),
+                ),
+              ),
+              SizedBox(width: 16.w),
+              _ControlButton(
+                icon: Icons.stop,
+                label: 'Stop',
+                onTap: () => _stopSession(context),
+                isDestructive: true,
+              ),
+            ],
+          ),
+          if (state.isBreak) ...[
+            SizedBox(height: 16.h),
+            TextButton(
+              onPressed: () =>
+                  context.read<FocusBloc>().add(const SkipBreakEvent()),
+              child: const Text(
+                'Skip Break',
+                style: TextStyle(color: Colors.white70),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsOverlay(BuildContext context, FocusState state) {
+    return Container(
+      color: Colors.black87,
+      child: Center(
+        child: Container(
+          margin: EdgeInsets.all(24.w),
+          padding: EdgeInsets.all(24.w),
+          decoration: BoxDecoration(
+            color: AppColors.darkCardBackground,
+            borderRadius: BorderRadius.circular(24.r),
+            border: Border.all(color: Colors.white10),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Session Settings',
+                    style: AppTypography.heading3(
+                      context,
+                    ).copyWith(color: Colors.white),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white),
+                    onPressed: () => _toggleSettings(context),
+                  ),
+                ],
+              ),
+              SizedBox(height: 24.h),
+              _SettingsSlider(
+                label: 'Focus Duration',
+                value: state.initialMinutes,
+                min: 15,
+                max: 60,
+                divisions: 9,
+                onChanged: (val) {
+                  context.read<FocusBloc>().add(
+                    UpdateFocusSettingsEvent(minutes: val),
+                  );
+                },
+              ),
+              _SettingsSlider(
+                label: 'Short Break',
+                value: state.shortBreakMinutes,
+                min: 3,
+                max: 15,
+                divisions: 12,
+                onChanged: (val) {
+                  context.read<FocusBloc>().add(
+                    UpdateFocusSettingsEvent(shortBreakMinutes: val),
+                  );
+                },
+              ),
+              _SettingsSlider(
+                label: 'Long Break',
+                value: state.longBreakMinutes,
+                min: 10,
+                max: 45,
+                divisions: 7,
+                onChanged: (val) {
+                  context.read<FocusBloc>().add(
+                    UpdateFocusSettingsEvent(longBreakMinutes: val),
+                  );
+                },
+              ),
+              _SettingsSlider(
+                label: 'Sessions per Cycle',
+                value: state.sessionsBeforeLongBreak,
+                min: 1,
+                max: 8,
+                divisions: 7,
+                onChanged: (val) {
+                  context.read<FocusBloc>().add(
+                    UpdateFocusSettingsEvent(sessionsBeforeLongBreak: val),
+                  );
+                },
+              ),
+              SwitchListTile(
+                activeColor: AppColors.focusAccentGreen,
+                title: const Text(
+                  'Deep Focus Mode (Silent)',
+                  style: TextStyle(color: Colors.white),
+                ),
+                subtitle: const Text(
+                  'Ask to enable DND before session',
+                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                ),
+                value: state.distractionFreeMode,
+                onChanged: (val) {
+                  context.read<FocusBloc>().add(
+                    UpdateDistractionFreeModeEvent(val),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _LiveIndicator extends StatelessWidget {
+  const _LiveIndicator();
+
+  @override
+  Widget build(BuildContext context) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.3, end: 1.0),
+      duration: const Duration(milliseconds: 1000),
+      builder: (context, value, child) {
+        return Opacity(opacity: value, child: child);
+      },
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -691,76 +777,23 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
       ),
     );
   }
+}
 
-  Widget _buildBottomSection(FocusState state, bool isPaused) {
-    if (state.status == FocusStatus.initial) {
-      return Padding(
-        padding: EdgeInsets.only(bottom: 40.h, left: 32.w, right: 32.w),
-        child: SizedBox(
-          width: double.infinity,
-          height: 56.h,
-          child: ElevatedButton(
-            onPressed: _startSession,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.focusAccentGreen,
-              foregroundColor: AppColors.focusMidnightBlue,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16.r),
-              ),
-            ),
-            child: const Text(
-              'Start Session',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ),
-      );
-    }
+class _ControlButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool isDestructive;
 
-    return Padding(
-      padding: EdgeInsets.only(bottom: 40.h, left: 32.w, right: 32.w),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _buildControlButton(
-                  icon: isPaused ? Icons.play_arrow : Icons.pause,
-                  label: isPaused ? 'Resume' : 'Pause',
-                  onTap: () => _togglePause(state.status),
-                ),
-              ),
-              SizedBox(width: 16.w),
-              _buildControlButton(
-                icon: Icons.stop,
-                label: 'Stop',
-                onTap: _stopSession,
-                isDestructive: true,
-              ),
-            ],
-          ),
-          if (state.isBreak) ...[
-            SizedBox(height: 16.h),
-            TextButton(
-              onPressed: () =>
-                  context.read<FocusBloc>().add(const SkipBreakEvent()),
-              child: const Text(
-                'Skip Break',
-                style: TextStyle(color: Colors.white70),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
+  const _ControlButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.isDestructive = false,
+  });
 
-  Widget _buildControlButton({
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool isDestructive = false,
-  }) {
+  @override
+  Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -793,101 +826,27 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
       ),
     );
   }
+}
 
-  Widget _buildSettingsOverlay(FocusStatus status) {
-    return Container(
-      color: Colors.black87,
-      child: Center(
-        child: Container(
-          margin: EdgeInsets.all(24.w),
-          padding: EdgeInsets.all(24.w),
-          decoration: BoxDecoration(
-            color: AppColors.darkCardBackground,
-            borderRadius: BorderRadius.circular(24.r),
-            border: Border.all(color: Colors.white10),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Session Settings',
-                    style: AppTypography.heading3(
-                      context,
-                    ).copyWith(color: Colors.white),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: _toggleSettings,
-                  ),
-                ],
-              ),
-              SizedBox(height: 24.h),
-              _buildSettingSlider('Focus Duration', _focusMinutes, 15, 60, 5, (
-                val,
-              ) {
-                setState(() => _focusMinutes = val);
-                if (status == FocusStatus.initial) {
-                  context.read<FocusBloc>().add(
-                    UpdateFocusSettingsEvent(minutes: val),
-                  );
-                }
-              }),
-              _buildSettingSlider(
-                'Short Break',
-                _shortBreakMinutes,
-                3,
-                15,
-                1,
-                (val) => setState(() => _shortBreakMinutes = val),
-              ),
-              _buildSettingSlider(
-                'Long Break',
-                _longBreakMinutes,
-                10,
-                45,
-                5,
-                (val) => setState(() => _longBreakMinutes = val),
-              ),
-              _buildSettingSlider(
-                'Sessions per Cycle',
-                _sessionsBeforeLongBreak,
-                1,
-                8,
-                1,
-                (val) => setState(() => _sessionsBeforeLongBreak = val),
-              ),
-              SwitchListTile(
-                activeColor: AppColors.focusAccentGreen,
-                title: const Text(
-                  'Deep Focus Mode (Silent)',
-                  style: TextStyle(color: Colors.white),
-                ),
-                subtitle: const Text(
-                  'Ask to enable DND before session',
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
-                ),
-                value: _distractionFreeMode,
-                onChanged: (val) => setState(() => _distractionFreeMode = val),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+class _SettingsSlider extends StatelessWidget {
+  final String label;
+  final int value;
+  final double min;
+  final double max;
+  final int divisions;
+  final Function(int) onChanged;
 
-  Widget _buildSettingSlider(
-    String label,
-    int value,
-    double min,
-    double max,
-    int divisions,
-    Function(int) onChanged,
-  ) {
+  const _SettingsSlider({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.divisions,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -908,12 +867,27 @@ class _FocusSessionScreenState extends State<FocusSessionScreen>
           value: value.toDouble(),
           min: min,
           max: max,
-          divisions: ((max - min) / divisions).round(),
+          divisions: divisions,
           activeColor: AppColors.focusAccentGreen,
           onChanged: (val) => onChanged(val.round()),
         ),
         SizedBox(height: 16.h),
       ],
     );
+  }
+}
+
+class _WakelockToggle extends StatelessWidget {
+  final bool enabled;
+  const _WakelockToggle({required this.enabled});
+
+  @override
+  Widget build(BuildContext context) {
+    if (enabled) {
+      WakelockPlus.enable();
+    } else {
+      WakelockPlus.disable();
+    }
+    return const SizedBox.shrink();
   }
 }

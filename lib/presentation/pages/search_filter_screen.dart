@@ -1,258 +1,184 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../domain/entities/note.dart';
-import '../bloc/note_bloc.dart';
-import '../bloc/note_state.dart';
-import '../bloc/note_event.dart';
+import '../bloc/note/note_bloc.dart';
+import '../bloc/note/note_state.dart';
+import '../bloc/note/note_event.dart';
 import '../design_system/design_system.dart';
 import '../widgets/note_card_widget.dart';
 import 'enhanced_note_editor_screen.dart';
 
 /// Search & Filter Screen
 /// Advanced search with filtering by content, media, reminders, and date
-class SearchFilterScreen extends StatefulWidget {
+/// Refactored to use NotesBloc for centralized state management
+class SearchFilterScreen extends StatelessWidget {
   const SearchFilterScreen({super.key});
 
   @override
-  State<SearchFilterScreen> createState() => _SearchFilterScreenState();
-}
-
-class _SearchFilterScreenState extends State<SearchFilterScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocus = FocusNode();
-
-  // Filter options
-  bool _filterImages = false;
-  bool _filterAudio = false;
-  bool _filterVideo = false;
-  bool _filterReminders = false;
-  bool _filterTodos = false;
-  NoteSortBy _sortBy = NoteSortBy.newest;
-
-  List<dynamic> _searchResults = [];
-
-  @override
-  void initState() {
-    super.initState();
-    _searchFocus.requestFocus();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _searchFocus.dispose();
-    super.dispose();
-  }
-
-  void _performSearch(String query) {
-    if (query.trim().isEmpty) {
-      setState(() => _searchResults = []);
-      return;
-    }
-
-    context.read<NotesBloc>().add(SearchNotesEvent(query));
-  }
-
-  void _applyFilters(List<dynamic> results) {
-    // Convert results to Notes if they are in Map format
-    var filtered = results
-        .map((item) {
-          if (item is Note) return item;
-          if (item is Map<String, dynamic> && item['note'] is Note) {
-            return item['note'] as Note;
-          }
-          return null;
-        })
-        .whereType<Note>()
-        .toList();
-
-    // Filter by media types
-    if (_filterImages) {
-      filtered = filtered.where((note) => note.imagesCount > 0).toList();
-    }
-    if (_filterAudio) {
-      filtered = filtered.where((note) => note.audioCount > 0).toList();
-    }
-    if (_filterVideo) {
-      filtered = filtered.where((note) => note.videoCount > 0).toList();
-    }
-
-    // Filter by features
-    if (_filterReminders) {
-      filtered = filtered
-          .where((note) => note.alarms != null && note.alarms!.isNotEmpty)
-          .toList();
-    }
-    if (_filterTodos) {
-      filtered = filtered.where((note) => note.hasTodos).toList();
-    }
-
-    // Apply sorting
-    switch (_sortBy) {
-      case NoteSortBy.newest:
-        filtered.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        break;
-      case NoteSortBy.oldest:
-        filtered.sort((a, b) => a.createdAt.compareTo(b.createdAt));
-        break;
-      case NoteSortBy.alphabetical:
-        filtered.sort((a, b) => a.title.compareTo(b.title));
-        break;
-      case NoteSortBy.mostModified:
-        filtered.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-        break;
-      case NoteSortBy.pinned:
-        filtered.sort((a, b) {
-          if (a.isPinned == b.isPinned) return 0;
-          return a.isPinned ? -1 : 1;
-        });
-        break;
-      case NoteSortBy.completion:
-        filtered.sort((a, b) {
-          final aPercent = a.completionPercentage;
-          final bPercent = b.completionPercentage;
-          return bPercent.compareTo(aPercent);
-        });
-        break;
-    }
-
-    setState(() => _searchResults = filtered);
-  }
-
-  void _clearFilters() {
-    setState(() {
-      _filterImages = false;
-      _filterAudio = false;
-      _filterVideo = false;
-      _filterReminders = false;
-      _filterTodos = false;
-      _sortBy = NoteSortBy.newest;
-    });
-    _performSearch(_searchController.text);
-  }
-
-  bool get _hasActiveFilters =>
-      _filterImages ||
-      _filterAudio ||
-      _filterVideo ||
-      _filterReminders ||
-      _filterTodos;
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: PreferredSize(
-        preferredSize: Size.fromHeight(60.h),
-        child: ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: AppBar(
-              backgroundColor: AppColors.background(context).withOpacity(0.8),
-              elevation: 0,
-              leading: IconButton(
-                icon: Icon(Icons.arrow_back_ios_new, size: 20.sp),
-                onPressed: () => Navigator.pop(context),
-              ),
-              title: TextField(
-                controller: _searchController,
-                focusNode: _searchFocus,
-                style: AppTypography.bodyLarge(null, null, FontWeight.w500),
-                decoration: InputDecoration(
-                  hintText: 'Search notes...',
-                  hintStyle: AppTypography.bodyLarge(
-                    null,
-                    AppColors.textMuted.withOpacity(0.5),
-                    FontWeight.w500,
-                  ),
-                  border: InputBorder.none,
-                  prefixIcon: Icon(Icons.search, size: 22.sp),
-                ),
-                onChanged: _performSearch,
-              ),
-              actions: [
-                IconButton(
-                  icon: Badge(
-                    isLabelVisible: _hasActiveFilters,
-                    child: Icon(Icons.filter_list, size: 22.sp),
-                  ),
-                  onPressed: _showFilterSheet,
-                ),
-                SizedBox(width: 4.w),
-              ],
-            ),
-          ),
-        ),
-      ),
-      body: BlocListener<NotesBloc, NoteState>(
-        listener: (context, state) {
-          if (state is SearchResultsLoaded) {
-            _applyFilters(state.results);
-          }
-        },
-        child: BlocBuilder<NotesBloc, NoteState>(
-          builder: (context, state) {
-            if (state is NoteLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        final query = state is NotesLoaded ? state.searchQuery : '';
+        final searchController = TextEditingController(text: query);
+        searchController.selection = TextSelection.fromPosition(
+          TextPosition(offset: searchController.text.length),
+        );
 
-            if (state is NoteError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 64,
-                      color: AppColors.errorColor,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error loading notes',
-                      style: AppTypography.heading3(
-                        context,
-                        AppColors.textPrimary(context),
+        return Scaffold(
+          backgroundColor: AppColors.background(context),
+          appBar: PreferredSize(
+            preferredSize: Size.fromHeight(60.h),
+            child: ClipRRect(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: AppBar(
+                  backgroundColor: AppColors.background(
+                    context,
+                  ).withOpacity(0.8),
+                  elevation: 0,
+                  leading: IconButton(
+                    icon: Icon(Icons.arrow_back_ios_new, size: 20.sp),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  title: TextField(
+                    controller: searchController,
+                    style: AppTypography.bodyLarge(null, null, FontWeight.w500),
+                    decoration: InputDecoration(
+                      hintText: 'Search notes...',
+                      hintStyle: AppTypography.bodyLarge(
+                        null,
+                        AppColors.textMuted.withOpacity(0.5),
+                        FontWeight.w500,
                       ),
+                      border: InputBorder.none,
+                      prefixIcon: Icon(Icons.search, size: 22.sp),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      state.message,
-                      style: AppTypography.bodyMedium(
-                        context,
-                        AppColors.textSecondary(context),
+                    onChanged: (value) => _performSearch(context, value),
+                    onSubmitted: (value) => _performSearch(context, value),
+                  ),
+                  actions: [
+                    IconButton(
+                      icon: Badge(
+                        isLabelVisible: _hasActiveFilters(state),
+                        child: Icon(Icons.filter_list, size: 22.sp),
                       ),
-                      textAlign: TextAlign.center,
+                      onPressed: () => _showFilterSheet(context, state),
                     ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        context.read<NotesBloc>().add(const LoadNotesEvent());
-                      },
-                      child: Text('Retry'),
-                    ),
+                    SizedBox(width: 4.w),
                   ],
                 ),
-              );
-            }
+              ),
+            ),
+          ),
+          body: _buildBody(context, state),
+        );
+      },
+    );
+  }
 
-            if (_searchController.text.isEmpty) {
-              return _buildEmptySearch();
-            }
+  // ---------------------------------------------------------------------------
+  // Search
+  // ---------------------------------------------------------------------------
 
-            if (_searchResults.isEmpty) {
-              return _buildNoResults();
-            }
+  void _performSearch(BuildContext context, String query) {
+    context.read<NotesBloc>().add(
+      UpdateNoteViewConfigEvent(searchQuery: query),
+    );
+  }
 
-            return _buildResultsList();
-          },
-        ),
+  // ---------------------------------------------------------------------------
+  // Filters
+  // ---------------------------------------------------------------------------
+
+  bool _hasActiveFilters(NoteState state) {
+    if (state is! NotesLoaded) return false;
+    return state.filterWithImages ||
+        state.filterWithAudio ||
+        state.filterWithVideo ||
+        state.filterWithReminders ||
+        state.filterWithTodos;
+  }
+
+  void _clearFilters(BuildContext context) {
+    context.read<NotesBloc>().add(
+      const UpdateNoteViewConfigEvent(
+        filterWithImages: false,
+        filterWithAudio: false,
+        filterWithVideo: false,
+        filterWithReminders: false,
+        filterWithTodos: false,
+        sortBy: NoteSortOption.dateModified,
       ),
     );
   }
 
-  Widget _buildResultsList() {
+  // ---------------------------------------------------------------------------
+  // Body
+  // ---------------------------------------------------------------------------
+
+  Widget _buildBody(BuildContext context, NoteState state) {
+    if (state is NoteLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state is NoteError) {
+      return _buildError(context, state);
+    }
+
+    if (state is NotesLoaded) {
+      if (state.searchQuery.isEmpty) return _buildEmptySearch();
+      if (state.displayedNotes.isEmpty) return _buildNoResults(context);
+      return _buildResultsList(context, state);
+    }
+
+    return const SizedBox.shrink();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Error
+  // ---------------------------------------------------------------------------
+
+  Widget _buildError(BuildContext context, NoteError state) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: AppColors.errorColor),
+          const SizedBox(height: 16),
+          Text(
+            'Error loading notes',
+            style: AppTypography.heading3(
+              context,
+              AppColors.textPrimary(context),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            state.message,
+            style: AppTypography.bodyMedium(
+              context,
+              AppColors.textSecondary(context),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () =>
+                context.read<NotesBloc>().add(const LoadNotesEvent()),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Results list
+  // ---------------------------------------------------------------------------
+
+  Widget _buildResultsList(BuildContext context, NotesLoaded state) {
     return Column(
       children: [
         // Results header
@@ -270,13 +196,14 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           child: Row(
             children: [
               Text(
-                '${_searchResults.length} result${_searchResults.length == 1 ? '' : 's'}',
+                '${state.displayedNotes.length} result'
+                '${state.displayedNotes.length == 1 ? '' : 's'}',
                 style: AppTypography.bodyLarge(null, null, FontWeight.w600),
               ),
               const Spacer(),
-              if (_hasActiveFilters)
+              if (_hasActiveFilters(state))
                 GestureDetector(
-                  onTap: _clearFilters,
+                  onTap: () => _clearFilters(context),
                   child: Container(
                     padding: EdgeInsets.symmetric(
                       horizontal: 12.w,
@@ -312,18 +239,18 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
           ),
         ),
 
-        // Results list
+        // Notes
         Expanded(
           child: ListView.builder(
             padding: EdgeInsets.all(16.w),
-            itemCount: _searchResults.length,
+            itemCount: state.displayedNotes.length,
             itemBuilder: (context, index) {
-              final note = _searchResults[index];
+              final note = state.displayedNotes[index];
               return Padding(
                 padding: EdgeInsets.only(bottom: 12.h),
                 child: NoteCardWidget(
                   note: note,
-                  onTap: () => _openNote(note),
+                  onTap: () => _openNote(context, note),
                   onLongPress: () {},
                   onDelete: () {},
                   onPin: () {},
@@ -336,6 +263,10 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
       ],
     );
   }
+
+  // ---------------------------------------------------------------------------
+  // Empty / no‑results states
+  // ---------------------------------------------------------------------------
 
   Widget _buildEmptySearch() {
     return Center(
@@ -382,7 +313,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  Widget _buildNoResults() {
+  Widget _buildNoResults(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -412,54 +343,63 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 24.h),
-          if (_hasActiveFilters)
-            GestureDetector(
-              onTap: _clearFilters,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.filter_list_off,
-                      size: 20.sp,
-                      color: AppColors.primary,
+          GestureDetector(
+            onTap: () => _clearFilters(context),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.filter_list_off,
+                    size: 20.sp,
+                    color: AppColors.primary,
+                  ),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'Clear all filters',
+                    style: AppTypography.bodyMedium(
+                      null,
+                      AppColors.primary,
+                      FontWeight.w600,
                     ),
-                    SizedBox(width: 8.w),
-                    Text(
-                      'Clear all filters',
-                      style: AppTypography.bodyMedium(
-                        null,
-                        AppColors.primary,
-                        FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
+          ),
         ],
       ),
     );
   }
 
-  void _showFilterSheet() {
+  // ---------------------------------------------------------------------------
+  // Filter bottom sheet
+  // ---------------------------------------------------------------------------
+
+  void _showFilterSheet(BuildContext context, NoteState state) {
+    if (state is! NotesLoaded) return;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setModalState) {
-          return DraggableScrollableSheet(
-            initialChildSize: 0.7,
-            minChildSize: 0.5,
-            maxChildSize: 0.9,
-            expand: false,
-            builder: (context, scrollController) {
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, scrollController) {
+          return BlocBuilder<NotesBloc, NoteState>(
+            builder: (context, currentState) {
+              if (currentState is! NotesLoaded) {
+                return const SizedBox.shrink();
+              }
+
               return Container(
                 padding: const EdgeInsets.all(24),
                 child: Column(
@@ -487,7 +427,7 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                       child: ListView(
                         controller: scrollController,
                         children: [
-                          // Media filters
+                          // --- Media filters ---
                           Text(
                             'Filter by Media',
                             style: Theme.of(context).textTheme.titleMedium
@@ -497,34 +437,31 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                           _buildFilterChip(
                             'Images',
                             Icons.image,
-                            _filterImages,
-                            (value) {
-                              setState(() => _filterImages = value);
-                              setModalState(() => _filterImages = value);
-                            },
+                            currentState.filterWithImages,
+                            (v) => context.read<NotesBloc>().add(
+                              UpdateNoteViewConfigEvent(filterWithImages: v),
+                            ),
                           ),
                           _buildFilterChip(
                             'Audio',
                             Icons.audiotrack,
-                            _filterAudio,
-                            (value) {
-                              setState(() => _filterAudio = value);
-                              setModalState(() => _filterAudio = value);
-                            },
+                            currentState.filterWithAudio,
+                            (v) => context.read<NotesBloc>().add(
+                              UpdateNoteViewConfigEvent(filterWithAudio: v),
+                            ),
                           ),
                           _buildFilterChip(
                             'Video',
                             Icons.videocam,
-                            _filterVideo,
-                            (value) {
-                              setState(() => _filterVideo = value);
-                              setModalState(() => _filterVideo = value);
-                            },
+                            currentState.filterWithVideo,
+                            (v) => context.read<NotesBloc>().add(
+                              UpdateNoteViewConfigEvent(filterWithVideo: v),
+                            ),
                           ),
 
                           SizedBox(height: 24.h),
 
-                          // Feature filters
+                          // --- Feature filters ---
                           Text(
                             'Filter by Features',
                             style: Theme.of(context).textTheme.titleMedium
@@ -534,40 +471,41 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
                           _buildFilterChip(
                             'Has Reminders',
                             Icons.alarm,
-                            _filterReminders,
-                            (value) {
-                              setState(() => _filterReminders = value);
-                              setModalState(() => _filterReminders = value);
-                            },
+                            currentState.filterWithReminders,
+                            (v) => context.read<NotesBloc>().add(
+                              UpdateNoteViewConfigEvent(filterWithReminders: v),
+                            ),
                           ),
                           _buildFilterChip(
                             'Has To-dos',
                             Icons.checklist,
-                            _filterTodos,
-                            (value) {
-                              setState(() => _filterTodos = value);
-                              setModalState(() => _filterTodos = value);
-                            },
+                            currentState.filterWithTodos,
+                            (v) => context.read<NotesBloc>().add(
+                              UpdateNoteViewConfigEvent(filterWithTodos: v),
+                            ),
                           ),
 
                           SizedBox(height: 24.h),
 
-                          // Sort options
+                          // --- Sort options ---
                           Text(
                             'Sort by',
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontWeight: FontWeight.bold),
                           ),
                           SizedBox(height: 12.h),
-                          ...NoteSortBy.values.map((sortOption) {
-                            return RadioListTile<NoteSortBy>(
-                              value: sortOption,
-                              groupValue: _sortBy,
+                          ...NoteSortOption.values.map((option) {
+                            return RadioListTile<NoteSortOption>(
+                              value: option,
+                              groupValue: currentState.sortBy,
                               onChanged: (value) {
-                                setState(() => _sortBy = value!);
-                                setModalState(() => _sortBy = value!);
+                                if (value != null) {
+                                  context.read<NotesBloc>().add(
+                                    UpdateNoteViewConfigEvent(sortBy: value),
+                                  );
+                                }
                               },
-                              title: Text(_getSortLabel(sortOption)),
+                              title: Text(option.displayName),
                               activeColor: AppColors.primaryColor,
                             );
                           }),
@@ -577,18 +515,19 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
 
                     SizedBox(height: 16.h),
 
-                    // Apply button
+                    // Close button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _performSearch(_searchController.text);
-                        },
+                        onPressed: () => Navigator.pop(context),
                         style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primaryColor,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        child: const Text('Apply Filters'),
+                        child: const Text(
+                          'Close',
+                          style: TextStyle(color: Colors.white),
+                        ),
                       ),
                     ),
                   ],
@@ -626,24 +565,11 @@ class _SearchFilterScreenState extends State<SearchFilterScreen> {
     );
   }
 
-  String _getSortLabel(NoteSortBy sortBy) {
-    switch (sortBy) {
-      case NoteSortBy.newest:
-        return 'Newest first';
-      case NoteSortBy.oldest:
-        return 'Oldest first';
-      case NoteSortBy.alphabetical:
-        return 'Alphabetical (A-Z)';
-      case NoteSortBy.mostModified:
-        return 'Recently modified';
-      case NoteSortBy.pinned:
-        return 'Pinned first';
-      case NoteSortBy.completion:
-        return 'Completion %';
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // Navigation
+  // ---------------------------------------------------------------------------
 
-  void _openNote(Note note) {
+  void _openNote(BuildContext context, Note note) {
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => EnhancedNoteEditorScreen(note: note)),

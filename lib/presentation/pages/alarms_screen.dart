@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../design_system/design_system.dart';
-import '../../injection_container.dart' show getIt;
-import '../../domain/entities/alarm.dart';
-import '../bloc/alarms_bloc.dart';
-import '../widgets/alarm_card_widget.dart';
-import '../widgets/create_alarm_bottom_sheet.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/injection_container.dart' show getIt;
+import 'package:mynotes/domain/entities/alarm.dart';
+import 'package:mynotes/presentation/bloc/alarm/alarms_bloc.dart';
+import 'package:mynotes/presentation/bloc/alarm/alarm_filter.dart';
+import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
+import 'package:mynotes/presentation/widgets/alarm_card_widget.dart';
+import 'package:mynotes/presentation/widgets/create_alarm_bottom_sheet.dart';
 
 class AlarmsScreen extends StatelessWidget {
   const AlarmsScreen({super.key});
@@ -13,7 +15,7 @@ class AlarmsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Initial load
-    context.read<AlarmsBloc>().add(LoadAlarms());
+    context.read<AlarmsBloc>().add(const LoadAlarmsEvent());
 
     return DefaultTabController(
       length: 6, // All, Today, Upcoming, Overdue, Snoozed, Completed
@@ -42,7 +44,7 @@ class AlarmsScreen extends StatelessWidget {
                 AlarmFilter.snoozed,
                 AlarmFilter.completed,
               ];
-              context.read<AlarmsBloc>().add(FilterAlarms(filters[index]));
+              context.read<AlarmsBloc>().add(FilterAlarms(filters[index].name));
             },
             tabs: const [
               Tab(text: 'All', icon: Icon(Icons.list, size: 20)),
@@ -159,32 +161,33 @@ class AlarmsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, AlarmFilter filter) {
+  Widget _buildEmptyState(BuildContext context, String filter) {
     String message;
     IconData icon;
 
     switch (filter) {
-      case AlarmFilter.overdue:
+      case 'overdue':
         message = 'No overdue reminders!\nYou\'re all caught up.';
         icon = Icons.celebration;
         break;
-      case AlarmFilter.today:
+      case 'today':
         message = 'No reminders for today.\nEnjoy your day!';
         icon = Icons.wb_sunny;
         break;
-      case AlarmFilter.upcoming:
+      case 'upcoming':
         message = 'No upcoming reminders.\nTime to relax!';
         icon = Icons.event_available;
         break;
-      case AlarmFilter.snoozed:
+      case 'snoozed':
         message = 'No snoozed reminders.\nStay focused!';
         icon = Icons.timer_off;
         break;
-      case AlarmFilter.completed:
+      case 'completed':
         message = 'No completed reminders yet.';
         icon = Icons.inbox;
         break;
-      case AlarmFilter.all:
+      case 'all':
+      default:
         message = 'No reminders yet.\nCreate your first one!';
         icon = Icons.alarm_add;
         break;
@@ -314,7 +317,7 @@ class AlarmsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAlarmsList(BuildContext context, List<Alarm> alarms) {
+  Widget _buildAlarmsList(BuildContext context, List<AlarmParams> alarms) {
     return ListView.builder(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 16.h),
       itemCount: alarms.length,
@@ -325,10 +328,13 @@ class AlarmsScreen extends StatelessWidget {
           child: AlarmCardWidget(
             alarm: alarm,
             onTap: () => _handleAlarmTap(context, alarm),
-            onToggle: () =>
-                context.read<AlarmsBloc>().add(ToggleAlarmEnabled(alarm.id)),
+            onToggle: () => context.read<AlarmsBloc>().add(
+              ToggleAlarmEvent(alarmId: alarm.alarmId!),
+            ),
             onSnooze: (preset) {
-              context.read<AlarmsBloc>().add(SnoozeAlarm(alarm.id, preset));
+              context.read<AlarmsBloc>().add(
+                SnoozeAlarmEvent(alarmId: alarm.alarmId!, snoozeMinutes: 10),
+              );
               getIt<GlobalUiService>().showInfo('Snoozed: ${preset.name}');
             },
             onReschedule: () {
@@ -340,16 +346,10 @@ class AlarmsScreen extends StatelessWidget {
               );
             },
             onDelete: () {
-              context.read<AlarmsBloc>().add(DeleteAlarm(alarm.id));
-              getIt<GlobalUiService>().showInfo(
-                'Reminder deleted',
-                // action: SnackBarAction(
-                //   label: 'UNDO',
-                //   onPressed: () {
-                //     context.read<AlarmsBloc>().add(UndoDeleteAlarm(alarm));
-                  // },
-                // ),
+              context.read<AlarmsBloc>().add(
+                DeleteAlarmEvent(alarmId: alarm.alarmId!),
               );
+              getIt<GlobalUiService>().showInfo('Reminder deleted');
             },
           ),
         );
@@ -366,16 +366,14 @@ class AlarmsScreen extends StatelessWidget {
     );
   }
 
-  void _handleAlarmTap(BuildContext context, Alarm alarm) {
-    if (alarm.linkedNoteId != null) {
+  void _handleAlarmTap(BuildContext context, AlarmParams alarm) {
+    if (alarm.noteId != null) {
       // Navigate to note
-      getIt<GlobalUiService>().showInfo(
-        'Opening linked note: ${alarm.linkedNoteId}',
-      );
+      getIt<GlobalUiService>().showInfo('Opening linked note: ${alarm.noteId}');
       // Implementation: Navigation.pushNamed(context, AppRoutes.noteDetail, arguments: alarm.linkedNoteId);
-    } else if (alarm.linkedTodoId != null) {
+    } else if (alarm.reminderId != null) {
       getIt<GlobalUiService>().showInfo(
-        'Opening linked todo: ${alarm.linkedTodoId}',
+        'Opening linked reminder: ${alarm.reminderId}',
       );
     } else {
       // Edit alarm
@@ -401,7 +399,7 @@ class _AlarmSearchDelegate extends SearchDelegate<String> {
         icon: const Icon(Icons.clear),
         onPressed: () {
           query = '';
-          alarmsBloc.add(SearchAlarms(''));
+          alarmsBloc.add(const SearchAlarms(query: ''));
         },
       ),
     ];
@@ -413,14 +411,14 @@ class _AlarmSearchDelegate extends SearchDelegate<String> {
       icon: const Icon(Icons.arrow_back),
       onPressed: () {
         close(context, '');
-        alarmsBloc.add(SearchAlarms('')); // Reset search on exit
+        alarmsBloc.add(const SearchAlarms(query: '')); // Reset search on exit
       },
     );
   }
 
   @override
   Widget buildResults(BuildContext context) {
-    alarmsBloc.add(SearchAlarms(query));
+    alarmsBloc.add(SearchAlarms(query: query));
 
     return BlocBuilder<AlarmsBloc, AlarmsState>(
       bloc: alarmsBloc,
@@ -437,11 +435,11 @@ class _AlarmSearchDelegate extends SearchDelegate<String> {
             itemBuilder: (context, index) {
               final alarm = results[index];
               return ListTile(
-                title: Text(alarm.message),
-                subtitle: Text(alarm.scheduledTime.toString()),
+                title: Text(alarm.title),
+                subtitle: Text(alarm.alarmTime.toString()),
                 onTap: () {
                   // Handle selection
-                  close(context, alarm.id);
+                  close(context, alarm.id ?? '');
                 },
               );
             },

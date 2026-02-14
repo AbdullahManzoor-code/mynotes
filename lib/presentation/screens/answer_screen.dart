@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../domain/entities/reflection_question.dart';
 import '../../injection_container.dart' show getIt;
-import '../bloc/reflection_bloc.dart';
-import '../bloc/reflection_event.dart';
-import '../bloc/reflection_state.dart';
+import '../bloc/reflection/reflection_bloc.dart';
+import '../bloc/reflection/reflection_event.dart';
+import '../bloc/reflection/reflection_state.dart';
 import '../design_system/design_system.dart';
 
 class AnswerScreen extends StatefulWidget {
@@ -512,3 +511,4 @@ class _AnswerScreenState extends State<AnswerScreen> {
     }
   }
 }
+

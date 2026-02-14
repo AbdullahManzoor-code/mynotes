@@ -1,6 +1,10 @@
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'link.g.dart';
 
 /// Link entity for storing website/URL links in notes
+@JsonSerializable()
 class Link extends Equatable {
   final String id;
   final String url;
@@ -37,31 +41,9 @@ class Link extends Equatable {
     );
   }
 
-  /// Convert to map for database storage
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'url': url,
-      'title': title,
-      'description': description,
-      'iconUrl': iconUrl,
-      'createdAt': createdAt.toIso8601String(),
-    };
-  }
+  factory Link.fromJson(Map<String, dynamic> json) => _$LinkFromJson(json);
 
-  /// Create from database map
-  factory Link.fromMap(Map<String, dynamic> map) {
-    return Link(
-      id: map['id'] ?? '',
-      url: map['url'] ?? '',
-      title: map['title'],
-      description: map['description'],
-      iconUrl: map['iconUrl'],
-      createdAt: DateTime.parse(
-        map['createdAt'] ?? DateTime.now().toIso8601String(),
-      ),
-    );
-  }
+  Map<String, dynamic> toJson() => _$LinkToJson(this);
 
   /// Validate URL format
   static bool isValidUrl(String url) {
@@ -84,4 +66,3 @@ class Link extends Equatable {
   @override
   List<Object?> get props => [id, url, title, description, iconUrl, createdAt];
 }
-

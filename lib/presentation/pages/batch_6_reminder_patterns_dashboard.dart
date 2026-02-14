@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/smart_reminders_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_reminders/smart_reminders_bloc.dart';
 import 'package:mynotes/domain/services/ai_suggestion_engine.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
@@ -11,7 +11,7 @@ import '../../core/services/global_ui_service.dart';
 /// Reminder Patterns Dashboard - Batch 6, Screen 2
 /// Refactored to use Design System and BLoC integration
 class ReminderPatternsDashboard extends StatelessWidget {
-  const ReminderPatternsDashboard({Key? key}) : super(key: key);
+  const ReminderPatternsDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -419,3 +419,4 @@ class ReminderPatternsDashboard extends StatelessWidget {
     }
   }
 }
+

@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/domain/entities/todo_item.dart';
-import 'package:mynotes/presentation/bloc/note_bloc.dart';
-import 'package:mynotes/presentation/bloc/note_state.dart';
-import 'package:mynotes/presentation/bloc/focus_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_state.dart';
+import 'package:mynotes/presentation/bloc/focus/focus_bloc.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'package:mynotes/core/constants/app_colors.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
@@ -198,3 +198,5 @@ class DailyFocusHighlightScreen extends StatelessWidget {
     );
   }
 }
+
+

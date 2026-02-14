@@ -12,6 +12,7 @@
 /// - Built-in copyWith() for immutable updates
 /// - Clean and scannable BLoC interfaces
 /// - Better testability and mocking
+library;
 
 // Core Features
 export 'note_params.dart';

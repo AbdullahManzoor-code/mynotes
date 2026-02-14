@@ -1,17 +1,18 @@
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/injection_container.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../bloc/audio_recorder/audio_recorder_bloc.dart';
 import '../design_system/design_system.dart';
-import '../../core/services/global_ui_service.dart';
 
 /// Audio Recorder Screen
 /// Records voice notes with waveform visualization
+/// Refactored to use BLoC for state management
 class AudioRecorderScreen extends StatefulWidget {
   final String? noteId;
 
@@ -26,20 +27,9 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  bool _isRecording = false;
-  bool _isPaused = false;
-  bool _hasRecording = false;
-  bool _isPlaying = false;
-  String? _recordingPath;
-
-  Duration _recordingDuration = Duration.zero;
-  Duration _playbackDuration = Duration.zero;
-  Duration _totalDuration = Duration.zero;
-  Timer? _timer;
-
   late AnimationController _pulseController;
   late AnimationController _waveController;
-  List<double> _waveformData = [];
+  Timer? _waveformTimer;
 
   static const int maxDurationSeconds = 60;
 
@@ -62,7 +52,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _waveformTimer?.cancel();
     _pulseController.dispose();
     _waveController.dispose();
     _recorder.dispose();
@@ -79,27 +69,26 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
   void _setupAudioPlayerListeners() {
     _audioPlayer.onPositionChanged.listen((position) {
-      if (mounted) {
-        setState(() {
-          _playbackDuration = position;
-        });
+      if (mounted && context.mounted) {
+        final state = context.read<AudioRecorderBloc>().state;
+        context.read<AudioRecorderBloc>().add(
+          UpdatePlaybackPosition(position, state.totalDuration),
+        );
       }
     });
 
     _audioPlayer.onDurationChanged.listen((duration) {
-      if (mounted) {
-        setState(() {
-          _totalDuration = duration;
-        });
+      if (mounted && context.mounted) {
+        final state = context.read<AudioRecorderBloc>().state;
+        context.read<AudioRecorderBloc>().add(
+          UpdatePlaybackPosition(state.playbackDuration, duration),
+        );
       }
     });
 
     _audioPlayer.onPlayerComplete.listen((_) {
-      if (mounted) {
-        setState(() {
-          _isPlaying = false;
-          _playbackDuration = Duration.zero;
-        });
+      if (mounted && context.mounted) {
+        context.read<AudioRecorderBloc>().add(PlaybackCompleted());
       }
     });
   }
@@ -120,97 +109,70 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
           path: path,
         );
 
-        setState(() {
-          _isRecording = true;
-          _isPaused = false;
-          _hasRecording = false;
-          _recordingPath = path;
-          _recordingDuration = Duration.zero;
-          _waveformData = [];
-        });
-
-        _startTimer();
-        _startWaveformSimulation();
+        if (context.mounted) {
+          context.read<AudioRecorderBloc>().add(StartRecording());
+          _startWaveformSimulation();
+        }
       }
     } catch (e) {
       getIt<GlobalUiService>().showError('Failed to start recording: $e');
     }
   }
 
-  void _startTimer() {
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_isRecording && !_isPaused) {
-        setState(() {
-          _recordingDuration += const Duration(seconds: 1);
-        });
-
-        // Auto-stop at max duration
-        if (_recordingDuration.inSeconds >= maxDurationSeconds) {
-          _stopRecording();
-        }
-      }
-    });
-  }
-
   void _startWaveformSimulation() {
-    Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (!_isRecording || _isPaused) {
+    _waveformTimer?.cancel();
+    _waveformTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
+      final state = context.read<AudioRecorderBloc>().state;
+      if (!state.isRecording || state.isPaused) {
         timer.cancel();
         return;
       }
 
-      if (mounted) {
-        setState(() {
-          _waveformData.add(math.Random().nextDouble() * 0.8 + 0.2);
-          if (_waveformData.length > 50) {
-            _waveformData.removeAt(0);
-          }
-        });
+      if (mounted && context.mounted) {
+        context.read<AudioRecorderBloc>().add(
+          UpdateWaveform(math.Random().nextDouble() * 0.8 + 0.2),
+        );
       }
     });
   }
 
   Future<void> _pauseRecording() async {
     await _recorder.pause();
-    setState(() {
-      _isPaused = true;
-    });
+    if (context.mounted) {
+      context.read<AudioRecorderBloc>().add(PauseRecording());
+    }
   }
 
   Future<void> _resumeRecording() async {
     await _recorder.resume();
-    setState(() {
-      _isPaused = false;
-    });
-    _startWaveformSimulation();
+    if (context.mounted) {
+      context.read<AudioRecorderBloc>().add(ResumeRecording());
+      _startWaveformSimulation();
+    }
   }
 
   Future<void> _stopRecording() async {
-    _timer?.cancel();
+    _waveformTimer?.cancel();
     final path = await _recorder.stop();
-
-    setState(() {
-      _isRecording = false;
-      _isPaused = false;
-      _hasRecording = path != null;
-      _recordingPath = path;
-    });
+    if (context.mounted) {
+      context.read<AudioRecorderBloc>().add(StopRecording());
+    }
   }
 
   Future<void> _playRecording() async {
-    if (_recordingPath == null) return;
+    final state = context.read<AudioRecorderBloc>().state;
+    if (state.recordingPath == null) return;
 
-    if (_isPlaying) {
+    if (state.isPlaying) {
       await _audioPlayer.pause();
-      setState(() {
-        _isPlaying = false;
-      });
+      if (context.mounted) {
+        context.read<AudioRecorderBloc>().add(PausePlayback());
+      }
     } else {
-      await _audioPlayer.play(DeviceFileSource(_recordingPath!));
-      setState(() {
-        _isPlaying = true;
-      });
+      await _audioPlayer.play(DeviceFileSource(state.recordingPath!));
+      if (context.mounted) {
+        context.read<AudioRecorderBloc>().add(PlayRecording());
+      }
     }
   }
 
@@ -238,10 +200,11 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   }
 
   void _saveRecording() {
-    if (_recordingPath != null) {
+    final state = context.read<AudioRecorderBloc>().state;
+    if (state.recordingPath != null) {
       Navigator.pop(context, {
-        'audioPath': _recordingPath,
-        'duration': _recordingDuration.inSeconds,
+        'audioPath': state.recordingPath,
+        'duration': state.recordingDuration.inSeconds,
       });
     }
   }
@@ -256,126 +219,137 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: AppBar(
-        backgroundColor: AppColors.background(context),
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
-          onPressed: () {
-            if (_hasRecording || _isRecording) {
-              _discardRecording();
-            } else {
-              Navigator.pop(context);
-            }
-          },
-        ),
-        title: Text(
-          'Voice Note',
-          style: AppTypography.bodyLarge(
-            context,
-            AppColors.textPrimary(context),
-            FontWeight.bold,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          if (_hasRecording && !_isRecording)
-            TextButton(
-              onPressed: _saveRecording,
-              child: Text(
-                'Save',
-                style: TextStyle(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16.sp,
+    return BlocBuilder<AudioRecorderBloc, AudioRecorderState>(
+      builder: (context, state) {
+        return Scaffold(
+          backgroundColor: AppColors.background(context),
+          appBar: AppBar(
+            backgroundColor: AppColors.background(context),
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
+              onPressed: () {
+                if (state.hasRecording || state.isRecording) {
+                  _discardRecording();
+                } else {
+                  Navigator.pop(context);
+                }
+              },
+            ),
+            title: Text(
+              'Voice Note',
+              style: AppTypography.bodyLarge(
+                context,
+                AppColors.textPrimary(context),
+                FontWeight.bold,
+              ),
+            ),
+            centerTitle: true,
+            actions: [
+              if (state.hasRecording && !state.isRecording)
+                TextButton(
+                  onPressed: _saveRecording,
+                  child: Text(
+                    'Save',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16.sp,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  // Timer display
-                  Text(
-                    _formatDuration(
-                      _isRecording ? _recordingDuration : _playbackDuration,
-                    ),
-                    style: TextStyle(
-                      fontSize: 64.sp,
-                      fontWeight: FontWeight.w200,
-                      color: AppColors.textPrimary(context),
-                      letterSpacing: 2,
-                    ),
-                  ),
-                  SizedBox(height: 8.h),
-
-                  // Status text
-                  Text(
-                    _isRecording
-                        ? (_isPaused ? 'Paused' : 'Recording...')
-                        : (_hasRecording
-                              ? (_isPlaying ? 'Playing' : 'Ready to save')
-                              : 'Tap to record'),
-                    style: TextStyle(
-                      fontSize: 14.sp,
-                      color: _isRecording && !_isPaused
-                          ? AppColors.error
-                          : AppColors.textSecondary(context),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  SizedBox(height: 48.h),
-
-                  // Waveform visualization
-                  SizedBox(
-                    height: 100.h,
-                    child: _isRecording
-                        ? _buildWaveform()
-                        : (_hasRecording
-                              ? _buildPlaybackProgress()
-                              : _buildIdleWaveform(isDark)),
-                  ),
-                  SizedBox(height: 48.h),
-
-                  // Max duration indicator
-                  if (_isRecording)
-                    Text(
-                      'Max ${maxDurationSeconds ~/ 60}:${(maxDurationSeconds % 60).toString().padLeft(2, '0')}',
-                      style: TextStyle(
-                        fontSize: 12.sp,
-                        color: AppColors.textSecondary(context),
+            ],
+          ),
+          body: SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Timer display
+                      Text(
+                        _formatDuration(
+                          state.isRecording
+                              ? state.recordingDuration
+                              : state.playbackDuration,
+                        ),
+                        style: TextStyle(
+                          fontSize: 64.sp,
+                          fontWeight: FontWeight.w200,
+                          color: AppColors.textPrimary(context),
+                          letterSpacing: 2,
+                        ),
                       ),
-                    ),
-                ],
-              ),
-            ),
+                      SizedBox(height: 8.h),
 
-            // Controls
-            Padding(
-              padding: EdgeInsets.all(32.w),
-              child: _buildControls(isDark),
+                      // Status text
+                      Text(
+                        state.isRecording
+                            ? (state.isPaused ? 'Paused' : 'Recording...')
+                            : (state.hasRecording
+                                  ? (state.isPlaying
+                                        ? 'Playing'
+                                        : 'Ready to save')
+                                  : 'Tap to record'),
+                        style: TextStyle(
+                          fontSize: 14.sp,
+                          color: state.isRecording && !state.isPaused
+                              ? AppColors.error
+                              : AppColors.textSecondary(context),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 48.h),
+
+                      // Waveform visualization
+                      SizedBox(
+                        height: 100.h,
+                        child: state.isRecording
+                            ? _buildWaveform(state.waveformData)
+                            : (state.hasRecording
+                                  ? _buildPlaybackProgress(
+                                      state.playbackDuration,
+                                      state.totalDuration,
+                                    )
+                                  : _buildIdleWaveform(isDark)),
+                      ),
+                      SizedBox(height: 48.h),
+
+                      // Max duration indicator
+                      if (state.isRecording)
+                        Text(
+                          'Max ${maxDurationSeconds ~/ 60}:${(maxDurationSeconds % 60).toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                            fontSize: 12.sp,
+                            color: AppColors.textSecondary(context),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Controls
+                Padding(
+                  padding: EdgeInsets.all(32.w),
+                  child: _buildControls(isDark, state),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildWaveform() {
+  Widget _buildWaveform(List<double> waveformData) {
     return AnimatedBuilder(
       animation: _waveController,
       builder: (context, child) {
         return CustomPaint(
           size: Size(double.infinity, 100.h),
           painter: _WaveformPainter(
-            data: _waveformData,
+            data: waveformData,
             color: AppColors.primary,
           ),
         );
@@ -400,9 +374,12 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
     );
   }
 
-  Widget _buildPlaybackProgress() {
-    final progress = _totalDuration.inMilliseconds > 0
-        ? _playbackDuration.inMilliseconds / _totalDuration.inMilliseconds
+  Widget _buildPlaybackProgress(
+    Duration playbackDuration,
+    Duration totalDuration,
+  ) {
+    final progress = totalDuration.inMilliseconds > 0
+        ? playbackDuration.inMilliseconds / totalDuration.inMilliseconds
         : 0.0;
 
     return Column(
@@ -425,7 +402,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
             Padding(
               padding: EdgeInsets.only(left: 32.w),
               child: Text(
-                _formatDuration(_playbackDuration),
+                _formatDuration(playbackDuration),
                 style: TextStyle(
                   fontSize: 12.sp,
                   color: AppColors.textSecondary(context),
@@ -435,7 +412,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
             Padding(
               padding: EdgeInsets.only(right: 32.w),
               child: Text(
-                _formatDuration(_totalDuration),
+                _formatDuration(totalDuration),
                 style: TextStyle(
                   fontSize: 12.sp,
                   color: AppColors.textSecondary(context),
@@ -448,8 +425,8 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
     );
   }
 
-  Widget _buildControls(bool isDark) {
-    if (_hasRecording && !_isRecording) {
+  Widget _buildControls(bool isDark, AudioRecorderState state) {
+    if (state.hasRecording && !state.isRecording) {
       // Playback controls
       return Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -457,11 +434,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
           // Re-record button
           GestureDetector(
             onTap: () {
-              setState(() {
-                _hasRecording = false;
-                _recordingPath = null;
-                _playbackDuration = Duration.zero;
-              });
+              context.read<AudioRecorderBloc>().add(ResetRecording());
             },
             child: Container(
               width: 56.w,
@@ -498,7 +471,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
                 ],
               ),
               child: Icon(
-                _isPlaying ? Icons.pause : Icons.play_arrow,
+                state.isPlaying ? Icons.pause : Icons.play_arrow,
                 color: Colors.white,
                 size: 40.sp,
               ),
@@ -531,7 +504,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        if (_isRecording) ...[
+        if (state.isRecording) ...[
           // Stop button
           GestureDetector(
             onTap: _stopRecording,
@@ -551,13 +524,13 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
         // Record/Pause button
         GestureDetector(
-          onTap: _isRecording
-              ? (_isPaused ? _resumeRecording : _pauseRecording)
+          onTap: state.isRecording
+              ? (state.isPaused ? _resumeRecording : _pauseRecording)
               : _startRecording,
           child: AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
-              final scale = _isRecording && !_isPaused
+              final scale = state.isRecording && !state.isPaused
                   ? 1.0 + (_pulseController.value * 0.1)
                   : 1.0;
 
@@ -567,12 +540,16 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
                   width: 80.w,
                   height: 80.w,
                   decoration: BoxDecoration(
-                    color: _isRecording ? AppColors.error : AppColors.primary,
+                    color: state.isRecording
+                        ? AppColors.error
+                        : AppColors.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
                         color:
-                            (_isRecording ? AppColors.error : AppColors.primary)
+                            (state.isRecording
+                                    ? AppColors.error
+                                    : AppColors.primary)
                                 .withOpacity(0.3),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
@@ -580,8 +557,8 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
                     ],
                   ),
                   child: Icon(
-                    _isRecording
-                        ? (_isPaused ? Icons.play_arrow : Icons.pause)
+                    state.isRecording
+                        ? (state.isPaused ? Icons.play_arrow : Icons.pause)
                         : Icons.mic,
                     color: Colors.white,
                     size: 40.sp,
@@ -629,3 +606,4 @@ class _WaveformPainter extends CustomPainter {
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) => true;
 }
+

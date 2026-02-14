@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/injection_container.dart';
-import 'package:mynotes/presentation/bloc/template_management_bloc.dart';
+import 'package:mynotes/presentation/bloc/template_management/template_management_bloc.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
@@ -12,8 +12,7 @@ import 'package:mynotes/core/services/global_ui_service.dart';
 class TemplateEditorScreen extends StatefulWidget {
   final dynamic existingTemplate;
 
-  const TemplateEditorScreen({Key? key, this.existingTemplate})
-    : super(key: key);
+  const TemplateEditorScreen({super.key, this.existingTemplate});
 
   @override
   State<TemplateEditorScreen> createState() => _TemplateEditorScreenState();
@@ -536,3 +535,4 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     Navigator.pop(context);
   }
 }
+

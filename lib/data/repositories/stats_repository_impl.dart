@@ -55,7 +55,7 @@ class StatsRepositoryImpl implements StatsRepository {
         (SELECT COUNT(*) FROM ${NotesDatabase.focusSessionsTable} WHERE isCompleted = 1) as focus_sessions_count
     ''');
 
-    if (result.isEmpty)
+    if (result.isEmpty) {
       return {
         'notes': 0,
         'todos': 0,
@@ -63,6 +63,7 @@ class StatsRepositoryImpl implements StatsRepository {
         'completed_todos': 0,
         'focus_sessions': 0,
       };
+    }
 
     final row = result.first;
     return {

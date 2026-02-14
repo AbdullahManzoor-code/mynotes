@@ -1,5 +1,4 @@
 // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
-import 'package:flutter/foundation.dart';
 
 class LinkParserService {
   /// Regex to find [[Wiki Links]]

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/domain/entities/universal_item.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import '../design_system/design_system.dart';
@@ -7,6 +8,9 @@ import '../widgets/universal_item_card.dart';
 import '../../core/utils/smart_voice_parser.dart';
 import '../../data/repositories/unified_repository.dart';
 import '../../injection_container.dart' show getIt;
+import '../../core/services/app_logger.dart';
+import '../bloc/quick_add/quick_add_bloc.dart';
+import '../../core/services/global_ui_service.dart';
 
 /// Fixed Universal Quick Add Screen
 /// Fully working manual and voice input with proper UI
@@ -29,23 +33,16 @@ class _FixedUniversalQuickAddScreenState
 
   // Voice recognition
   late stt.SpeechToText _speechToText;
-  bool _isListening = false;
-  bool _isVoiceAvailable = false;
 
-  // State
-  UniversalItem? _previewItem;
-  double _parseConfidence = 0.0;
-  bool _showPreview = false;
-  bool _isSaving = false;
-
-  final _repository = UnifiedRepository.instance;
+  late QuickAddBloc _bloc;
 
   @override
   void initState() {
     super.initState();
+    _bloc = QuickAddBloc();
+    _bloc.add(InitializeQuickAdd());
     _initializeAnimations();
     _initializeVoice();
-    _initializeRepository();
     _focusNode.requestFocus();
   }
 
@@ -63,24 +60,14 @@ class _FixedUniversalQuickAddScreenState
     _slideController.forward();
   }
 
-  Future<void> _initializeRepository() async {
-    try {
-      await _repository.initialize();
-    } catch (e) {
-      AppLogger.e('Repository init error: $e');
-    }
-  }
-
   Future<void> _initializeVoice() async {
     try {
       _speechToText = stt.SpeechToText();
-      _isVoiceAvailable = await _speechToText.initialize(
+      final isAvailable = await _speechToText.initialize(
         onStatus: (status) {
           AppLogger.i('Voice status: $status');
-          if (status == 'notListening' && _isListening) {
-            setState(() {
-              _isListening = false;
-            });
+          if (status == 'notListening' && _bloc.state.isListening) {
+            _bloc.add(const ToggleListening(false));
           }
         },
         onError: (error) {
@@ -88,7 +75,7 @@ class _FixedUniversalQuickAddScreenState
           _handleVoiceError(error);
         },
       );
-      setState(() {});
+      _bloc.add(SetVoiceAvailable(isAvailable));
     } catch (e) {
       AppLogger.e('Voice init error: $e');
     }
@@ -101,36 +88,16 @@ class _FixedUniversalQuickAddScreenState
     _controller.dispose();
     _focusNode.dispose();
     _speechToText.stop();
+    _bloc.close();
     super.dispose();
   }
 
   void _onTextChanged() {
-    final text = _controller.text;
-
-    if (text.isEmpty) {
-      setState(() {
-        _showPreview = false;
-        _previewItem = null;
-        _parseConfidence = 0.0;
-      });
-      return;
-    }
-
-    // Parse the text
-    try {
-      final parseResult = SmartVoiceParser.parseComplexVoice(text);
-      setState(() {
-        _previewItem = parseResult['item'] as UniversalItem;
-        _parseConfidence = parseResult['confidence'] as double;
-        _showPreview = true;
-      });
-    } catch (e) {
-      AppLogger.e('Parse error: $e');
-    }
+    _bloc.add(UpdateText(_controller.text));
   }
 
   Future<void> _startListening() async {
-    if (!_isVoiceAvailable) {
+    if (!_bloc.state.isVoiceAvailable) {
       _showErrorSnackbar('Voice not available');
       return;
     }
@@ -142,16 +109,12 @@ class _FixedUniversalQuickAddScreenState
     }
 
     try {
-      setState(() {
-        _isListening = true;
-      });
+      _bloc.add(const ToggleListening(true));
       _voiceController.forward();
 
       await _speechToText.listen(
         onResult: (result) {
-          setState(() {
-            _controller.text = result.recognizedWords;
-          });
+          _controller.text = result.recognizedWords;
           _onTextChanged();
         },
         listenFor: const Duration(seconds: 15),
@@ -166,9 +129,7 @@ class _FixedUniversalQuickAddScreenState
   void _stopListening() {
     try {
       _speechToText.stop();
-      setState(() {
-        _isListening = false;
-      });
+      _bloc.add(const ToggleListening(false));
       _voiceController.reverse();
     } catch (e) {
       AppLogger.e('Stop listening error: $e');
@@ -176,48 +137,26 @@ class _FixedUniversalQuickAddScreenState
   }
 
   void _handleVoiceError(dynamic error) {
-    setState(() {
-      _isListening = false;
-    });
+    _bloc.add(const ToggleListening(false));
     _voiceController.reverse();
     _showErrorSnackbar('Voice error: $error');
   }
 
-  Future<void> _handleSubmit() async {
-    if (_controller.text.isEmpty || _previewItem == null) {
+  void _handleSubmit() {
+    if (_controller.text.isEmpty || _bloc.state.previewItem == null) {
       _showErrorSnackbar('Please enter something');
       return;
     }
 
-    setState(() {
-      _isSaving = true;
-    });
-
-    try {
-      await _repository.createItem(_previewItem!);
-
-      if (mounted) {
-        getIt<GlobalUiService>().showSuccess(_getSuccessMessage());
-        Navigator.pop(context, true);
-      }
-    } catch (error) {
-      AppLogger.e('Save error: $error');
-      _showErrorSnackbar('Failed to save: $error');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isSaving = false;
-        });
-      }
-    }
+    _bloc.add(SubmitItem(_bloc.state.previewItem!));
   }
 
-  String _getSuccessMessage() {
-    if (_previewItem!.isTodo && _previewItem!.isReminder) {
+  String _getSuccessMessage(UniversalItem item) {
+    if (item.isTodo && item.isReminder) {
       return 'Todo with reminder created!';
-    } else if (_previewItem!.isTodo) {
+    } else if (item.isTodo) {
       return 'Todo created!';
-    } else if (_previewItem!.isReminder) {
+    } else if (item.isReminder) {
       return 'Reminder set!';
     } else {
       return 'Note saved!';
@@ -230,38 +169,56 @@ class _FixedUniversalQuickAddScreenState
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black.withOpacity(0.7),
-      body: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Stack(
-          children: [
-            SlideTransition(
-              position:
-                  Tween<Offset>(
-                    begin: const Offset(0, 1),
-                    end: Offset.zero,
-                  ).animate(
-                    CurvedAnimation(
-                      parent: _slideController,
-                      curve: Curves.easeOutCubic,
+    return BlocProvider.value(
+      value: _bloc,
+      child: BlocConsumer<QuickAddBloc, QuickAddState>(
+        listener: (context, state) {
+          if (state.isSuccess) {
+            getIt<GlobalUiService>().showSuccess(
+              _getSuccessMessage(state.previewItem!),
+            );
+            Navigator.pop(context, true);
+          }
+          if (state.errorMessage != null) {
+            _showErrorSnackbar(state.errorMessage!);
+          }
+        },
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: Colors.black.withOpacity(0.7),
+            body: GestureDetector(
+              onTap: () => Navigator.pop(context),
+              child: Stack(
+                children: [
+                  SlideTransition(
+                    position:
+                        Tween<Offset>(
+                          begin: const Offset(0, 1),
+                          end: Offset.zero,
+                        ).animate(
+                          CurvedAnimation(
+                            parent: _slideController,
+                            curve: Curves.easeOutCubic,
+                          ),
+                        ),
+                    child: Align(
+                      alignment: Alignment.bottomCenter,
+                      child: GestureDetector(
+                        onTap: () {}, // Prevent dismissal when tapping sheet
+                        child: _buildBottomSheet(state),
+                      ),
                     ),
                   ),
-              child: Align(
-                alignment: Alignment.bottomCenter,
-                child: GestureDetector(
-                  onTap: () {}, // Prevent dismissal when tapping sheet
-                  child: _buildBottomSheet(),
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildBottomSheet() {
+  Widget _buildBottomSheet(QuickAddState state) {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
@@ -287,9 +244,12 @@ class _FixedUniversalQuickAddScreenState
           children: [
             _buildHandle(),
             _buildHeader(),
-            _buildInputSection(),
-            if (_showPreview) ...[SizedBox(height: 16.h), _buildPreview()],
-            _buildActionButtons(),
+            _buildInputSection(state),
+            if (state.showPreview) ...[
+              SizedBox(height: 16.h),
+              _buildPreview(state),
+            ],
+            _buildActionButtons(state),
             SizedBox(height: 24.h),
           ],
         ),
@@ -335,7 +295,7 @@ class _FixedUniversalQuickAddScreenState
     );
   }
 
-  Widget _buildInputSection() {
+  Widget _buildInputSection(QuickAddState state) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Column(
@@ -378,7 +338,7 @@ class _FixedUniversalQuickAddScreenState
             children: [
               Expanded(
                 child: GestureDetector(
-                  onTap: _isListening ? _stopListening : _startListening,
+                  onTap: state.isListening ? _stopListening : _startListening,
                   child: AnimatedBuilder(
                     animation: _voiceController,
                     builder: (context, child) {
@@ -390,12 +350,12 @@ class _FixedUniversalQuickAddScreenState
                             vertical: 12.h,
                           ),
                           decoration: BoxDecoration(
-                            color: _isListening
+                            color: state.isListening
                                 ? AppColors.primary.withOpacity(0.2)
                                 : Colors.white.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(12.r),
                             border: Border.all(
-                              color: _isListening
+                              color: state.isListening
                                   ? AppColors.primary
                                   : Colors.white.withOpacity(0.1),
                             ),
@@ -403,7 +363,7 @@ class _FixedUniversalQuickAddScreenState
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (_isListening)
+                              if (state.isListening)
                                 SizedBox(
                                   width: 16.w,
                                   height: 16.w,
@@ -422,11 +382,13 @@ class _FixedUniversalQuickAddScreenState
                                 ),
                               SizedBox(width: 8.w),
                               Text(
-                                _isListening ? 'Listening...' : 'Voice Input',
+                                state.isListening
+                                    ? 'Listening...'
+                                    : 'Voice Input',
                                 style: TextStyle(
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.w500,
-                                  color: _isListening
+                                  color: state.isListening
                                       ? AppColors.primary
                                       : Colors.grey.shade300,
                                 ),
@@ -466,8 +428,8 @@ class _FixedUniversalQuickAddScreenState
     );
   }
 
-  Widget _buildPreview() {
-    if (_previewItem == null) return const SizedBox.shrink();
+  Widget _buildPreview(QuickAddState state) {
+    if (state.previewItem == null) return const SizedBox.shrink();
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
@@ -489,7 +451,9 @@ class _FixedUniversalQuickAddScreenState
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
                 decoration: BoxDecoration(
-                  color: _getConfidenceColor().withOpacity(0.2),
+                  color: _getConfidenceColor(
+                    state.parseConfidence,
+                  ).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(6.r),
                 ),
                 child: Row(
@@ -497,16 +461,16 @@ class _FixedUniversalQuickAddScreenState
                   children: [
                     Icon(
                       Icons.psychology,
-                      color: _getConfidenceColor(),
+                      color: _getConfidenceColor(state.parseConfidence),
                       size: 12.sp,
                     ),
                     SizedBox(width: 4.w),
                     Text(
-                      '${(_parseConfidence * 100).round()}%',
+                      '${(state.parseConfidence * 100).round()}%',
                       style: TextStyle(
                         fontSize: 10.sp,
                         fontWeight: FontWeight.w600,
-                        color: _getConfidenceColor(),
+                        color: _getConfidenceColor(state.parseConfidence),
                       ),
                     ),
                   ],
@@ -516,7 +480,7 @@ class _FixedUniversalQuickAddScreenState
           ),
           SizedBox(height: 12.h),
           UniversalItemCard(
-            item: _previewItem!,
+            item: state.previewItem!,
             showActions: false,
             onTap: () {},
           ),
@@ -525,7 +489,7 @@ class _FixedUniversalQuickAddScreenState
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(QuickAddState state) {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: Row(
@@ -555,11 +519,11 @@ class _FixedUniversalQuickAddScreenState
           SizedBox(width: 12.w),
           Expanded(
             child: GestureDetector(
-              onTap: _isSaving ? null : _handleSubmit,
+              onTap: state.isSaving ? null : _handleSubmit,
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 14.h),
                 decoration: BoxDecoration(
-                  color: _isSaving
+                  color: state.isSaving
                       ? AppColors.primary.withOpacity(0.5)
                       : AppColors.primary,
                   borderRadius: BorderRadius.circular(12.r),
@@ -567,7 +531,7 @@ class _FixedUniversalQuickAddScreenState
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (_isSaving)
+                    if (state.isSaving)
                       SizedBox(
                         width: 16.w,
                         height: 16.w,
@@ -584,7 +548,7 @@ class _FixedUniversalQuickAddScreenState
                       ),
                     SizedBox(width: 8.w),
                     Text(
-                      _isSaving ? 'Saving...' : 'Save',
+                      state.isSaving ? 'Saving...' : 'Save',
                       style: TextStyle(
                         fontSize: 16.sp,
                         fontWeight: FontWeight.w600,
@@ -601,9 +565,10 @@ class _FixedUniversalQuickAddScreenState
     );
   }
 
-  Color _getConfidenceColor() {
-    if (_parseConfidence >= 0.8) return AppColors.accentGreen;
-    if (_parseConfidence >= 0.6) return Colors.orange;
+  Color _getConfidenceColor(double confidence) {
+    if (confidence >= 0.8) return AppColors.accentGreen;
+    if (confidence >= 0.6) return Colors.orange;
     return Colors.red;
   }
 }
+

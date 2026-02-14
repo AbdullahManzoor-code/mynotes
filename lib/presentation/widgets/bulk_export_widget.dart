@@ -132,10 +132,10 @@ class BulkExportFormatSelector extends StatelessWidget {
   final int noteCount;
 
   const BulkExportFormatSelector({
-    Key? key,
+    super.key,
     required this.onFormatSelected,
     required this.noteCount,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +162,7 @@ class BulkExportFormatSelector extends StatelessWidget {
               onTap: () => onFormatSelected(format),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -185,10 +185,10 @@ class BulkExportProgressDialog extends StatefulWidget {
   final BulkExportFormat format;
 
   const BulkExportProgressDialog({
-    Key? key,
+    super.key,
     required this.notes,
     required this.format,
-  }) : super(key: key);
+  });
 
   @override
   State<BulkExportProgressDialog> createState() =>
@@ -291,10 +291,10 @@ class BulkExportNoteSelector extends StatefulWidget {
   final Function(List<ExportableNote>) onNotesSelected;
 
   const BulkExportNoteSelector({
-    Key? key,
+    super.key,
     required this.notes,
     required this.onNotesSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<BulkExportNoteSelector> createState() => _BulkExportNoteSelectorState();
@@ -377,10 +377,10 @@ class BulkExportNotesDialog extends StatefulWidget {
   final VoidCallback? onExportComplete;
 
   const BulkExportNotesDialog({
-    Key? key,
+    super.key,
     required this.notes,
     this.onExportComplete,
-  }) : super(key: key);
+  });
 
   static void show(BuildContext context, List<ExportableNote> notes) {
     showDialog(
@@ -471,8 +471,11 @@ class BulkExportButton extends StatelessWidget {
   final List<ExportableNote> notes;
   final VoidCallback? onExportComplete;
 
-  const BulkExportButton({Key? key, required this.notes, this.onExportComplete})
-    : super(key: key);
+  const BulkExportButton({
+    super.key,
+    required this.notes,
+    this.onExportComplete,
+  });
 
   @override
   Widget build(BuildContext context) {

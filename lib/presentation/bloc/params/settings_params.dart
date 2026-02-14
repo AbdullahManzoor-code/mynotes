@@ -29,6 +29,8 @@ class SettingsParams extends Equatable {
   final int noteCount;
   final String fontFamily;
   final double fontScale;
+  final bool developerModeEnabled;
+  final bool showDebugInfo;
 
   const SettingsParams({
     this.notificationsEnabled = true,
@@ -56,6 +58,8 @@ class SettingsParams extends Equatable {
     this.noteCount = 0,
     this.fontFamily = 'System Default',
     this.fontScale = 1.0,
+    this.developerModeEnabled = false,
+    this.showDebugInfo = false,
   });
 
   SettingsParams copyWith({
@@ -84,6 +88,8 @@ class SettingsParams extends Equatable {
     int? noteCount,
     String? fontFamily,
     double? fontScale,
+    bool? developerModeEnabled,
+    bool? showDebugInfo,
   }) {
     return SettingsParams(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -113,6 +119,8 @@ class SettingsParams extends Equatable {
       noteCount: noteCount ?? this.noteCount,
       fontFamily: fontFamily ?? this.fontFamily,
       fontScale: fontScale ?? this.fontScale,
+      developerModeEnabled: developerModeEnabled ?? this.developerModeEnabled,
+      showDebugInfo: showDebugInfo ?? this.showDebugInfo,
     );
   }
 
@@ -131,6 +139,9 @@ class SettingsParams extends Equatable {
       copyWith(passwordProtected: !passwordProtected);
   SettingsParams toggleAnalytics() =>
       copyWith(analyticsEnabled: !analyticsEnabled);
+  SettingsParams toggleDeveloperMode() =>
+      copyWith(developerModeEnabled: !developerModeEnabled);
+  SettingsParams toggleDebugInfo() => copyWith(showDebugInfo: !showDebugInfo);
 
   @override
   List<Object?> get props => [
@@ -159,5 +170,7 @@ class SettingsParams extends Equatable {
     noteCount,
     fontFamily,
     fontScale,
+    developerModeEnabled,
+    showDebugInfo,
   ];
 }

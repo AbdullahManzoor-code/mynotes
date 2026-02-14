@@ -5,81 +5,70 @@ import 'package:mynotes/core/services/location_service.dart';
 import 'package:mynotes/core/services/places_service.dart';
 import 'package:mynotes/core/services/location_reminders_manager.dart';
 import 'package:mynotes/domain/entities/location_reminder_model.dart';
-import 'package:mynotes/presentation/bloc/location_reminder_bloc.dart';
+import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bloc.dart';
+import 'package:mynotes/presentation/bloc/location_picker/location_picker_bloc.dart';
 
 // Type alias for PlacePrediction from PlacesService
 typedef PlacePredictionLocal = PlacePrediction;
 
-class LocationPickerScreen extends StatefulWidget {
+class LocationPickerScreen extends StatelessWidget {
   final LocationReminder? existingReminder;
 
   const LocationPickerScreen({super.key, this.existingReminder});
 
   @override
-  State<LocationPickerScreen> createState() => _LocationPickerScreenState();
+  Widget build(BuildContext context) {
+    return _LocationPickerLifecycleWrapper(existingReminder: existingReminder);
+  }
 }
 
-class _LocationPickerScreenState extends State<LocationPickerScreen> {
-  late GoogleMapController _mapController;
+class _LocationPickerLifecycleWrapper extends StatefulWidget {
+  final LocationReminder? existingReminder;
+
+  const _LocationPickerLifecycleWrapper({this.existingReminder});
+
+  @override
+  State<_LocationPickerLifecycleWrapper> createState() =>
+      _LocationPickerLifecycleWrapperState();
+}
+
+class _LocationPickerLifecycleWrapperState
+    extends State<_LocationPickerLifecycleWrapper> {
+  late final LocationPickerBloc _pickerBloc;
+  GoogleMapController? _mapController;
   late LocationService _locationService;
   late PlacesService _placesService;
   final _locationManager = LocationRemindersManager();
 
-  // State variables
-  LatLng? _selectedLocation;
-  String _selectedAddress = '';
-  String _messageText = '';
-  LocationTriggerType _triggerType = LocationTriggerType.arrive;
-  double _radius = 100.0;
-  String? _linkedNoteId;
-  Marker? _selectedMarker;
-  Circle? _radiusCircle;
-  bool _isLoading = false;
-
-  // Search state
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
-  List<PlacePredictionLocal> _placePredictions = [];
-  bool _showPredictions = false;
 
   @override
   void initState() {
     super.initState();
     _locationService = LocationService.instance;
     _placesService = PlacesService.instance;
-    _initializeState();
-  }
-
-  void _initializeState() {
-    if (widget.existingReminder != null) {
-      _selectedLocation = LatLng(
-        widget.existingReminder!.latitude,
-        widget.existingReminder!.longitude,
-      );
-      _selectedAddress = widget.existingReminder!.placeAddress ?? '';
-      _messageText = widget.existingReminder!.message;
-      _triggerType = widget.existingReminder!.triggerType;
-      _radius = widget.existingReminder!.radius;
-      _linkedNoteId = widget.existingReminder!.linkedNoteId;
-      _messageController.text = _messageText;
-    }
+    _pickerBloc = LocationPickerBloc();
+    _pickerBloc.add(InitializeLocationPicker(widget.existingReminder));
+    _messageController.text = widget.existingReminder?.message ?? '';
   }
 
   @override
   void dispose() {
     _messageController.dispose();
     _searchController.dispose();
+    _pickerBloc.close();
     super.dispose();
   }
 
   Future<void> _getCurrentLocation() async {
     try {
-      setState(() => _isLoading = true);
+      _pickerBloc.add(const SetLoadingState(true));
       final position = await _locationService.getCurrentPosition();
       if (position != null) {
         final location = LatLng(position.latitude, position.longitude);
-        _selectLocation(location);
-        _mapController.animateCamera(CameraUpdate.newLatLng(location));
+        await _selectLocation(location);
+        _mapController?.animateCamera(CameraUpdate.newLatLng(location));
       }
     } catch (e) {
       if (mounted) {
@@ -88,15 +77,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         ).showSnackBar(SnackBar(content: Text('Error getting location: $e')));
       }
     } finally {
-      setState(() => _isLoading = false);
+      _pickerBloc.add(const SetLoadingState(false));
     }
   }
 
   Future<void> _selectLocation(LatLng location) async {
-    setState(() {
-      _selectedLocation = location;
-      _updateMarkerAndCircle();
-    });
+    _pickerBloc.add(SelectLocation(location));
 
     // Reverse geocode to get address
     try {
@@ -104,7 +90,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         location.latitude,
         location.longitude,
       );
-      setState(() => _selectedAddress = address ?? '');
+      _pickerBloc.add(UpdateAddress(address ?? ''));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -114,46 +100,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     }
   }
 
-  void _updateMarkerAndCircle() {
-    if (_selectedLocation != null) {
-      setState(() {
-        _selectedMarker = Marker(
-          markerId: const MarkerId('selected_location'),
-          position: _selectedLocation!,
-          infoWindow: InfoWindow(
-            title: _selectedAddress.isNotEmpty
-                ? _selectedAddress
-                : 'Selected Location',
-          ),
-        );
-
-        _radiusCircle = Circle(
-          circleId: const CircleId('radius_circle'),
-          center: _selectedLocation!,
-          radius: _radius,
-          fillColor: Colors.blue.withOpacity(0.2),
-          strokeColor: Colors.blue,
-          strokeWidth: 2,
-        );
-      });
-    }
-  }
-
   Future<void> _searchPlaces(String query) async {
     if (query.isEmpty) {
-      setState(() {
-        _placePredictions = [];
-        _showPredictions = false;
-      });
+      _pickerBloc.add(const UpdatePlacePredictions([]));
       return;
     }
 
     try {
       final predictions = await _placesService.searchPlaces(query);
-      setState(() {
-        _placePredictions = predictions.cast<PlacePredictionLocal>();
-        _showPredictions = true;
-      });
+      _pickerBloc.add(
+        UpdatePlacePredictions(predictions.cast<PlacePredictionLocal>()),
+      );
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -165,20 +122,18 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   Future<void> _selectPrediction(PlacePredictionLocal prediction) async {
     try {
-      setState(() => _isLoading = true);
+      _pickerBloc.add(const SetLoadingState(true));
       final details = await _placesService.getPlaceDetails(prediction.placeId);
 
       if (details != null) {
         final location = LatLng(details.latitude, details.longitude);
         await _selectLocation(location);
 
-        _mapController.animateCamera(CameraUpdate.newLatLng(location));
+        _mapController?.animateCamera(CameraUpdate.newLatLng(location));
 
-        setState(() {
-          _selectedAddress = details.name;
-          _showPredictions = false;
-          _searchController.clear();
-        });
+        _pickerBloc.add(UpdateAddress(details.name));
+        _pickerBloc.add(const TogglePredictions(false));
+        _searchController.clear();
       }
     } catch (e) {
       if (mounted) {
@@ -187,19 +142,20 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         ).showSnackBar(SnackBar(content: Text('Error selecting place: $e')));
       }
     } finally {
-      setState(() => _isLoading = false);
+      _pickerBloc.add(const SetLoadingState(false));
     }
   }
 
   void _saveReminder() {
-    if (_selectedLocation == null) {
+    final state = _pickerBloc.state;
+    if (state.selectedLocation == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please select a location')));
       return;
     }
 
-    if (_messageText.isEmpty) {
+    if (state.messageText.isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please enter a message')));
@@ -209,13 +165,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     if (widget.existingReminder != null) {
       // Update existing reminder
       final updatedReminder = widget.existingReminder!.copyWith(
-        message: _messageText,
-        latitude: _selectedLocation!.latitude,
-        longitude: _selectedLocation!.longitude,
-        radius: _radius,
-        triggerType: _triggerType,
-        placeAddress: _selectedAddress,
-        linkedNoteId: _linkedNoteId,
+        message: state.messageText,
+        latitude: state.selectedLocation!.latitude,
+        longitude: state.selectedLocation!.longitude,
+        radius: state.radius,
+        triggerType: state.triggerType,
+        placeAddress: state.selectedAddress,
+        linkedNoteId: state.linkedNoteId,
       );
 
       context.read<LocationReminderBloc>().add(
@@ -224,13 +180,13 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     } else {
       // Create new reminder
       final newReminder = LocationReminder.create(
-        message: _messageText,
-        latitude: _selectedLocation!.latitude,
-        longitude: _selectedLocation!.longitude,
-        radius: _radius,
-        triggerType: _triggerType,
-        placeAddress: _selectedAddress,
-        linkedNoteId: _linkedNoteId,
+        message: state.messageText,
+        latitude: state.selectedLocation!.latitude,
+        longitude: state.selectedLocation!.longitude,
+        radius: state.radius,
+        triggerType: state.triggerType,
+        placeAddress: state.selectedAddress,
+        linkedNoteId: state.linkedNoteId,
       );
 
       context.read<LocationReminderBloc>().add(
@@ -246,197 +202,242 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.existingReminder != null
-              ? 'Edit Location Reminder'
-              : 'New Location Reminder',
-        ),
-        actions: [
-          if (_selectedLocation != null && _messageText.isNotEmpty)
-            IconButton(
-              icon: const Icon(Icons.check),
-              tooltip: 'Save reminder',
-              onPressed: _saveReminder,
-            ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          // Map
-          GoogleMap(
-            onMapCreated: (controller) {
-              _mapController = controller;
-              if (_selectedLocation != null) {
-                _mapController.animateCamera(
-                  CameraUpdate.newLatLngZoom(_selectedLocation!, 15),
-                );
-              } else {
-                _getCurrentLocation();
-              }
-            },
-            initialCameraPosition: CameraPosition(
-              target: _selectedLocation ?? const LatLng(37.7749, -122.4194),
-              zoom: 15,
-            ),
-            markers: _selectedMarker != null ? {_selectedMarker!} : {},
-            circles: _radiusCircle != null ? {_radiusCircle!} : {},
-            onTap: _selectLocation,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false,
-            compassEnabled: true,
-            zoomControlsEnabled: false,
-          ),
-
-          // My Location Button
-          Positioned(
-            right: 16,
-            bottom: 100,
-            child: FloatingActionButton(
-              mini: true,
-              onPressed: _getCurrentLocation,
-              tooltip: 'My location',
-              child: const Icon(Icons.my_location),
-            ),
-          ),
-
-          // Bottom sheet with controls
-          DraggableScrollableSheet(
-            initialChildSize: 0.35,
-            minChildSize: 0.2,
-            maxChildSize: 0.85,
-            builder: (context, scrollController) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).scaffoldBackgroundColor,
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(20),
+    return BlocProvider.value(
+      value: _pickerBloc,
+      child: BlocBuilder<LocationPickerBloc, LocationPickerState>(
+        builder: (context, state) {
+          final markers = state.selectedLocation != null
+              ? {
+                  Marker(
+                    markerId: const MarkerId('selected_location'),
+                    position: state.selectedLocation!,
+                    infoWindow: InfoWindow(
+                      title: state.selectedAddress.isNotEmpty
+                          ? state.selectedAddress
+                          : 'Selected Location',
+                    ),
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
+                }
+              : <Marker>{};
+
+          final circles = state.selectedLocation != null
+              ? {
+                  Circle(
+                    circleId: const CircleId('radius_circle'),
+                    center: state.selectedLocation!,
+                    radius: state.radius,
+                    fillColor: state.triggerType == LocationTriggerType.arrive
+                        ? Colors.green.withOpacity(0.2)
+                        : Colors.orange.withOpacity(0.2),
+                    strokeColor: state.triggerType == LocationTriggerType.arrive
+                        ? Colors.green
+                        : Colors.orange,
+                    strokeWidth: 2,
+                  ),
+                }
+              : <Circle>{};
+
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(
+                widget.existingReminder != null
+                    ? 'Edit Location Reminder'
+                    : 'New Location Reminder',
+              ),
+              actions: [
+                if (state.selectedLocation != null &&
+                    state.messageText.isNotEmpty)
+                  IconButton(
+                    icon: const Icon(Icons.check),
+                    tooltip: 'Save reminder',
+                    onPressed: _saveReminder,
+                  ),
+              ],
+            ),
+            body: Stack(
+              children: [
+                // Map
+                GoogleMap(
+                  onMapCreated: (controller) {
+                    _mapController = controller;
+                    if (state.selectedLocation != null) {
+                      _mapController!.animateCamera(
+                        CameraUpdate.newLatLngZoom(state.selectedLocation!, 15),
+                      );
+                    } else {
+                      _getCurrentLocation();
+                    }
+                  },
+                  initialCameraPosition: CameraPosition(
+                    target:
+                        state.selectedLocation ??
+                        const LatLng(37.7749, -122.4194),
+                    zoom: 15,
+                  ),
+                  markers: markers,
+                  circles: circles,
+                  onTap: _selectLocation,
+                  myLocationEnabled: true,
+                  myLocationButtonEnabled: false,
+                  compassEnabled: true,
+                  zoomControlsEnabled: false,
                 ),
-                child: ListView(
-                  controller: scrollController,
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    // Handle
-                    Center(
-                      child: Container(
-                        width: 40,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[400],
-                          borderRadius: BorderRadius.circular(2),
+
+                // My Location Button
+                Positioned(
+                  right: 16,
+                  bottom: 100,
+                  child: FloatingActionButton(
+                    mini: true,
+                    onPressed: _getCurrentLocation,
+                    tooltip: 'My location',
+                    child: const Icon(Icons.my_location),
+                  ),
+                ),
+
+                // Bottom sheet with controls
+                DraggableScrollableSheet(
+                  initialChildSize: 0.35,
+                  minChildSize: 0.2,
+                  maxChildSize: 0.85,
+                  builder: (context, scrollController) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(20),
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 16),
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          // Handle
+                          Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[400],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
 
-                    // Search bar
-                    _buildSearchBar(),
-                    const SizedBox(height: 16),
+                          // Search bar
+                          _buildSearchBar(state),
+                          const SizedBox(height: 16),
 
-                    // Search predictions
-                    if (_showPredictions && _placePredictions.isNotEmpty)
-                      _buildPredictionsList(),
+                          // Search predictions
+                          if (state.showPredictions &&
+                              state.placePredictions.isNotEmpty)
+                            _buildPredictionsList(state),
 
-                    // Saved locations chips
-                    if (!_showPredictions) _buildSavedLocationsChips(),
+                          // Saved locations chips
+                          if (!state.showPredictions)
+                            _buildSavedLocationsChips(state),
 
-                    const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                    // Selected location display
-                    if (_selectedLocation != null) ...[
-                      Card(
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Icon(
-                                    Icons.location_on,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                          // Selected location display
+                          if (state.selectedLocation != null) ...[
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
                                       children: [
-                                        Text(
-                                          _selectedAddress.isNotEmpty
-                                              ? _selectedAddress
-                                              : 'Coordinates: ${_selectedLocation!.latitude.toStringAsFixed(4)}, ${_selectedLocation!.longitude.toStringAsFixed(4)}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodyMedium
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
+                                        Icon(
+                                          Icons.location_on,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                state.selectedAddress.isNotEmpty
+                                                    ? state.selectedAddress
+                                                    : 'Coordinates: ${state.selectedLocation!.latitude.toStringAsFixed(4)}, ${state.selectedLocation!.longitude.toStringAsFixed(4)}',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodyMedium
+                                                    ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
+                                            ],
+                                          ),
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
-                            ],
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+
+                          // Message input
+                          _buildMessageInput(state),
+                          const SizedBox(height: 16),
+
+                          // Trigger type selector
+                          _buildTriggerTypeSelector(state),
+                          const SizedBox(height: 16),
+
+                          // Radius slider
+                          _buildRadiusSlider(state),
+                          const SizedBox(height: 16),
+
+                          // Save button
+                          ElevatedButton.icon(
+                            onPressed:
+                                state.selectedLocation != null &&
+                                    state.messageText.isNotEmpty
+                                ? _saveReminder
+                                : null,
+                            icon: const Icon(Icons.check),
+                            label: const Text('Save Reminder'),
                           ),
-                        ),
+                        ],
                       ),
-                      const SizedBox(height: 16),
-                    ],
-
-                    // Message input
-                    _buildMessageInput(),
-                    const SizedBox(height: 16),
-
-                    // Trigger type selector
-                    _buildTriggerTypeSelector(),
-                    const SizedBox(height: 16),
-
-                    // Radius slider
-                    _buildRadiusSlider(),
-                    const SizedBox(height: 16),
-
-                    // Save button
-                    ElevatedButton.icon(
-                      onPressed:
-                          _selectedLocation != null && _messageText.isNotEmpty
-                          ? _saveReminder
-                          : null,
-                      icon: const Icon(Icons.check),
-                      label: const Text('Save Reminder'),
-                    ),
-                  ],
+                    );
+                  },
                 ),
-              );
-            },
-          ),
 
-          // Loading overlay
-          if (_isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(child: CircularProgressIndicator()),
+                // Loading overlay
+                if (state.isLoading)
+                  Container(
+                    color: Colors.black.withOpacity(0.3),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+              ],
             ),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(LocationPickerState state) {
     return TextField(
       controller: _searchController,
       decoration: InputDecoration(
@@ -447,32 +448,25 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 icon: const Icon(Icons.close),
                 onPressed: () {
                   _searchController.clear();
-                  setState(() {
-                    _placePredictions = [];
-                    _showPredictions = false;
-                  });
+                  _pickerBloc.add(const UpdatePlacePredictions([]));
                 },
               )
             : null,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
       ),
       onChanged: (value) {
-        setState(() {});
         if (value.isNotEmpty) {
           _searchPlaces(value);
         } else {
-          setState(() {
-            _placePredictions = [];
-            _showPredictions = false;
-          });
+          _pickerBloc.add(const UpdatePlacePredictions([]));
         }
       },
     );
   }
 
-  Widget _buildPredictionsList() {
+  Widget _buildPredictionsList(LocationPickerState state) {
     return Column(
-      children: _placePredictions.map((prediction) {
+      children: state.placePredictions.map((prediction) {
         return ListTile(
           leading: const Icon(Icons.location_on_outlined),
           title: Text(prediction.mainText),
@@ -487,39 +481,38 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
   }
 
-  Widget _buildSavedLocationsChips() {
-    return BlocBuilder<LocationReminderBloc, LocationReminderState>(
-      builder: (context, state) {
-        if (state is LocationReminderLoaded &&
-            state.savedLocations.isNotEmpty) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Quick Select',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              const SizedBox(height: 8),
-              SingleChildScrollView(
+  Widget _buildSavedLocationsChips(LocationPickerState pickerState) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Quick Select', style: Theme.of(context).textTheme.labelMedium),
+        const SizedBox(height: 8),
+        BlocBuilder<LocationReminderBloc, LocationReminderState>(
+          builder: (context, state) {
+            if (state is LocationReminderLoaded &&
+                state.savedLocations.isNotEmpty) {
+              return SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
                   children: state.savedLocations.map((location) {
                     final isSelected =
-                        _selectedLocation?.latitude == location.latitude &&
-                        _selectedLocation?.longitude == location.longitude;
+                        pickerState.selectedLocation?.latitude ==
+                            location.latitude &&
+                        pickerState.selectedLocation?.longitude ==
+                            location.longitude;
                     return Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: FilterChip(
                         selected: isSelected,
                         label: Text(location.name),
-                        avatar: Icon(Icons.location_on, size: 16),
+                        avatar: const Icon(Icons.location_on, size: 16),
                         onSelected: (_) {
                           final newLocation = LatLng(
                             location.latitude,
                             location.longitude,
                           );
                           _selectLocation(newLocation);
-                          _mapController.animateCamera(
+                          _mapController?.animateCamera(
                             CameraUpdate.newLatLng(newLocation),
                           );
                         },
@@ -527,16 +520,16 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                     );
                   }).toList(),
                 ),
-              ),
-            ],
-          );
-        }
-        return const SizedBox.shrink();
-      },
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
     );
   }
 
-  Widget _buildMessageInput() {
+  Widget _buildMessageInput(LocationPickerState state) {
     return TextField(
       controller: _messageController,
       maxLines: 3,
@@ -547,12 +540,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         prefixIcon: const Icon(Icons.message),
       ),
       onChanged: (value) {
-        setState(() => _messageText = value);
+        _pickerBloc.add(UpdateMessageText(value));
       },
     );
   }
 
-  Widget _buildTriggerTypeSelector() {
+  Widget _buildTriggerTypeSelector(LocationPickerState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -565,11 +558,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
           children: [
             Expanded(
               child: ChoiceChip(
-                selected: _triggerType == LocationTriggerType.arrive,
+                selected: state.triggerType == LocationTriggerType.arrive,
                 label: const Text('Arrive'),
                 onSelected: (_) {
-                  setState(() => _triggerType = LocationTriggerType.arrive);
-                  _updateMarkerAndCircle();
+                  _pickerBloc.add(
+                    const UpdateTriggerType(LocationTriggerType.arrive),
+                  );
                 },
                 avatar: const Icon(Icons.login),
               ),
@@ -577,11 +571,12 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: ChoiceChip(
-                selected: _triggerType == LocationTriggerType.leave,
+                selected: state.triggerType == LocationTriggerType.leave,
                 label: const Text('Leave'),
                 onSelected: (_) {
-                  setState(() => _triggerType = LocationTriggerType.leave);
-                  _updateMarkerAndCircle();
+                  _pickerBloc.add(
+                    const UpdateTriggerType(LocationTriggerType.leave),
+                  );
                 },
                 avatar: const Icon(Icons.logout),
               ),
@@ -592,7 +587,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     );
   }
 
-  Widget _buildRadiusSlider() {
+  Widget _buildRadiusSlider(LocationPickerState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -607,7 +602,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                '${_radius.toInt()}m',
+                '${state.radius.toInt()}m',
                 style: Theme.of(
                   context,
                 ).textTheme.labelSmall?.copyWith(fontWeight: FontWeight.bold),
@@ -617,20 +612,16 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         ),
         const SizedBox(height: 8),
         Slider(
-          value: _radius,
+          value: state.radius,
           min: 50,
           max: 500,
           divisions: 9,
-          label: '${_radius.toInt()}m',
+          label: '${state.radius.toInt()}m',
           onChanged: (value) {
-            setState(() {
-              _radius = value;
-              _updateMarkerAndCircle();
-            });
+            _pickerBloc.add(UpdateRadius(value));
           },
         ),
       ],
     );
   }
 }
-

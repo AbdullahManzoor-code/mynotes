@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/backup_bloc.dart';
+import '../bloc/backup/backup_bloc.dart';
 import '../bloc/params/backup_params.dart';
 
 /// Full-text search enhancement (DB-005)
@@ -34,10 +34,10 @@ class BackupRestoreWidget extends StatelessWidget {
   final VoidCallback? onRestoreComplete;
 
   const BackupRestoreWidget({
-    Key? key,
+    super.key,
     this.onBackupComplete,
     this.onRestoreComplete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -206,7 +206,7 @@ class BackupRestoreWidget extends StatelessWidget {
 
 /// Cache management widget
 class CacheManagementWidget extends StatelessWidget {
-  const CacheManagementWidget({Key? key}) : super(key: key);
+  const CacheManagementWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -298,3 +298,4 @@ class CacheManagementWidget extends StatelessWidget {
     );
   }
 }
+

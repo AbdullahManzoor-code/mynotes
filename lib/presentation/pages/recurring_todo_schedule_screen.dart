@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
-import '../bloc/recurrence_bloc.dart';
+import '../bloc/recurrence/recurrence_bloc.dart';
 
 /// Recurring Todo Schedule Screen
 /// Refactored to StatelessWidget using RecurrenceBloc and Design System
@@ -547,3 +546,4 @@ class _RecurrenceView extends StatelessWidget {
     );
   }
 }
+

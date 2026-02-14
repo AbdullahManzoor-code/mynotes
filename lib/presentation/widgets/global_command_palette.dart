@@ -47,6 +47,10 @@ class _GlobalCommandPaletteState extends State<GlobalCommandPalette>
 
     _animationController.forward();
 
+    _searchController.addListener(() {
+      if (mounted) setState(() {});
+    });
+
     // Auto-focus search field
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
@@ -125,6 +129,13 @@ class _GlobalCommandPaletteState extends State<GlobalCommandPalette>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (_searchController.text.contains(':')) ...[
+                    _buildSectionHeader('SMART ACTIONS'),
+                    SizedBox(height: 4.h),
+                    ..._buildSmartActions(),
+                    SizedBox(height: 24.h),
+                  ],
+
                   // Quick Actions Section
                   _buildSectionHeader('QUICK ACTIONS'),
                   SizedBox(height: 4.h),
@@ -300,6 +311,77 @@ class _GlobalCommandPaletteState extends State<GlobalCommandPalette>
     ];
 
     return actions.map((action) => _buildActionItem(action)).toList();
+  }
+
+  List<Widget> _buildSmartActions() {
+    final query = _searchController.text.trim();
+    if (!query.contains(':')) return [];
+
+    final parts = query.split(':');
+    final prefix = parts[0].toLowerCase().trim();
+    final content = parts.length > 1 ? parts.sublist(1).join(':').trim() : '';
+
+    List<_QuickAction> smartActions = [];
+
+    if (prefix == 't' || prefix == 'todo' || prefix == 'task') {
+      smartActions.add(
+        _QuickAction(
+          icon: Icons.check_circle_outline,
+          title: 'Quick Todo',
+          subtitle: content.isEmpty ? 'Type task...' : 'Add "$content"',
+          colors: [const Color(0xFF065F46), const Color(0xFF6EE7B7)],
+          onTap: () {
+            _closeAndNavigate(() {
+              QuickAddBottomSheet.show(
+                context,
+                initialTab: QuickAddTab.todo,
+                initialText: content,
+              );
+            });
+          },
+        ),
+      );
+    } else if (prefix == 'rem' || prefix == 'alarm' || prefix == 'r') {
+      smartActions.add(
+        _QuickAction(
+          icon: Icons.notifications_active_outlined,
+          title: 'Quick Reminder',
+          subtitle: content.isEmpty ? 'Type reminder...' : 'Notify: "$content"',
+          colors: [const Color(0xFF92400E), const Color(0xFFFEF08A)],
+          onTap: () {
+            _closeAndNavigate(() {
+              QuickAddBottomSheet.show(
+                context,
+                initialTab: QuickAddTab.reminder,
+                initialText: content,
+              );
+            });
+          },
+        ),
+      );
+    } else if (prefix == 'n' || prefix == 'note') {
+      smartActions.add(
+        _QuickAction(
+          icon: Icons.note_add_outlined,
+          title: 'Quick Note',
+          subtitle: content.isEmpty ? 'Type note...' : 'Save "$content"',
+          colors: [const Color(0xFF164E63), const Color(0xFFA5F3FC)],
+          onTap: () {
+            _closeAndNavigate(() {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) =>
+                      EnhancedNoteEditorScreen(initialContent: content),
+                ),
+              );
+            });
+          },
+        ),
+      );
+    }
+
+    return smartActions.map((action) => _buildActionItem(action)).toList();
   }
 
   List<Widget> _buildRecentItems() {

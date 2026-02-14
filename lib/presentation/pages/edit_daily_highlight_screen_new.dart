@@ -1,6 +1,5 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
 
 /// Edit Daily Highlight Screen
@@ -534,4 +533,3 @@ class _EditDailyHighlightScreenState extends State<EditDailyHighlightScreen> {
     Navigator.pop(context);
   }
 }
-

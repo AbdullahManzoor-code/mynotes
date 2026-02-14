@@ -1,12 +1,13 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flex_color_picker/flex_color_picker.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/services/global_ui_service.dart';
-import '../bloc/theme_bloc.dart';
-import '../bloc/theme_event.dart';
-import '../bloc/theme_state.dart';
-import '../bloc/settings_bloc.dart';
+import '../bloc/theme/theme_bloc.dart';
+import '../bloc/theme/theme_event.dart';
+import '../bloc/theme/theme_state.dart';
+import '../bloc/settings/settings_bloc.dart';
 import '../bloc/params/settings_params.dart';
 import '../design_system/design_system.dart';
 import 'font_settings_screen.dart';
@@ -33,7 +34,7 @@ class SettingsScreen extends StatelessWidget {
 }
 
 class _SettingsScreenContent extends StatelessWidget {
-  const _SettingsScreenContent({Key? key}) : super(key: key);
+  const _SettingsScreenContent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -675,11 +676,20 @@ class _SettingsScreenContent extends StatelessWidget {
       padding: EdgeInsets.symmetric(vertical: AppSpacing.massive),
       child: Column(
         children: [
-          Text(
-            'MyNotes version 4.2.0 (Build 882)',
-            style: AppTypography.caption(
-              context,
-            ).copyWith(color: AppColors.secondaryText.withOpacity(0.5)),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final info = snapshot.data!;
+                return Text(
+                  'MyNotes version ${info.version} (Build ${info.buildNumber})',
+                  style: AppTypography.caption(
+                    context,
+                  ).copyWith(color: AppColors.secondaryText.withOpacity(0.5)),
+                );
+              }
+              return const SizedBox.shrink();
+            },
           ),
           SizedBox(height: AppSpacing.md),
           Row(
@@ -929,33 +939,58 @@ class _SettingsScreenContent extends StatelessWidget {
     );
   }
 
-  void _showThemePicker(BuildContext context) {
-    final themeParams = context.read<ThemeBloc>().state.params;
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Select Theme', style: AppTypography.heading3(context)),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: ListView.builder(
-            shrinkWrap: true,
-            itemCount: AppThemeType.values.length,
-            itemBuilder: (context, index) {
-              final type = AppThemeType.values[index];
-              return ListTile(
-                title: Text(AppTheme.themeNames[type] ?? type.name),
-                onTap: () {
-                  context.read<ThemeBloc>().add(
-                    ChangeThemeVariantEvent(themeParams, type),
-                  );
-                  Navigator.pop(context);
-                },
-              );
-            },
+  Future<void> _showThemePicker(BuildContext context) async {
+    final themeBloc = context.read<ThemeBloc>();
+    final themeParams = themeBloc.state.params;
+
+    Color screenPickerColor = themeParams.primaryColor;
+
+    final bool colorChanged =
+        await ColorPicker(
+          color: screenPickerColor,
+          onColorChanged: (Color color) {
+            screenPickerColor = color;
+            themeBloc.add(UpdateThemeEvent.changeColor(themeParams, color));
+          },
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          spacing: 10,
+          runSpacing: 10,
+          wheelDiameter: 165,
+          heading: Text(
+            'Select Primary Color',
+            style: Theme.of(context).textTheme.titleSmall,
           ),
-        ),
-      ),
-    );
+          subheading: Text(
+            'Select color shade',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          wheelSubheading: Text(
+            'Selected color and its shades',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          showColorName: true,
+          showColorCode: true,
+          copyPasteBehavior: const ColorPickerCopyPasteBehavior(
+            longPressMenu: true,
+          ),
+          materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
+          colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
+          colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
+          pickerTypeLabels: const <ColorPickerType, String>{
+            ColorPickerType.both: 'Custom',
+            ColorPickerType.primary: 'Material',
+            ColorPickerType.accent: 'Accent',
+          },
+        ).showPickerDialog(
+          context,
+          constraints: const BoxConstraints(
+            minHeight: 460,
+            minWidth: 300,
+            maxWidth: 320,
+          ),
+        );
   }
 
   void _clearCache(BuildContext context) {
@@ -988,3 +1023,4 @@ class _SettingsScreenContent extends StatelessWidget {
     );
   }
 }
+

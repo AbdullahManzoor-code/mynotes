@@ -68,7 +68,6 @@ class LocationNotificationService {
             requestAlertPermission: true,
             requestBadgePermission: true,
             requestSoundPermission: true,
-            onDidReceiveLocalNotification: _onDidReceiveLocalNotification,
           );
 
       final InitializationSettings initSettings = InitializationSettings(
@@ -267,7 +266,7 @@ class LocationNotificationService {
         reminder.message,
         tzScheduledTime,
         details,
-        androidAllowWhileIdle: true,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         payload: 'location_reminder:${reminder.id}',

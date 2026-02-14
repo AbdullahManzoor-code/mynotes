@@ -4,12 +4,13 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   audioplayers_windows
+  awesome_notifications
   connectivity_plus
   file_selector_windows
+  flutter_secure_storage_windows
   flutter_timezone
   gal
   geolocator_windows
-  irondash_engine_context
   local_auth_windows
   permission_handler_windows
   printing
@@ -17,7 +18,6 @@ list(APPEND FLUTTER_PLUGIN_LIST
   share_plus
   speech_to_text_windows
   sqlite3_flutter_libs
-  super_native_extensions
   url_launcher_windows
 )
 

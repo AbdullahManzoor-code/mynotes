@@ -3,8 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/domain/entities/smart_collection.dart';
-import 'package:mynotes/presentation/bloc/smart_collections_bloc.dart';
-import 'package:mynotes/presentation/bloc/smart_collection_wizard_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_collections/smart_collections_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_collection_wizard/smart_collection_wizard_bloc.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
@@ -14,7 +14,7 @@ import 'package:mynotes/core/services/global_ui_service.dart';
 /// Create Smart Collection Wizard - Batch 5, Screen 1
 /// Refactored to use Design System, Global UI Services, and BLoC
 class CreateSmartCollectionWizard extends StatefulWidget {
-  const CreateSmartCollectionWizard({Key? key}) : super(key: key);
+  const CreateSmartCollectionWizard({super.key});
 
   @override
   State<CreateSmartCollectionWizard> createState() =>
@@ -668,3 +668,4 @@ class _CreateSmartCollectionWizardState
     Navigator.pop(context);
   }
 }
+

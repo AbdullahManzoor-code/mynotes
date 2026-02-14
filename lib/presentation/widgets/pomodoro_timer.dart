@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/pomodoro_bloc.dart';
+import '../bloc/pomodoro/pomodoro_bloc.dart';
 
 /// Pomodoro timer display widget (POM-001)
 class PomodoroTimer extends StatelessWidget {
   final VoidCallback? onSessionStart;
   final VoidCallback? onSessionEnd;
 
-  const PomodoroTimer({Key? key, this.onSessionStart, this.onSessionEnd})
-    : super(key: key);
+  const PomodoroTimer({super.key, this.onSessionStart, this.onSessionEnd});
 
   @override
   Widget build(BuildContext context) {
@@ -256,3 +255,4 @@ class PomodoroTimer extends StatelessWidget {
     );
   }
 }
+

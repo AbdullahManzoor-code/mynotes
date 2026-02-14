@@ -1,6 +1,5 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
 import '../pages/enhanced_note_editor_screen.dart';
 import '../pages/focus_session_screen.dart';

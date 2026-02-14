@@ -343,10 +343,10 @@ class TemplateSelector extends StatefulWidget {
   final VoidCallback? onCancel;
 
   const TemplateSelector({
-    Key? key,
+    super.key,
     required this.onTemplateSelected,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   State<TemplateSelector> createState() => _TemplateSelectorState();
@@ -420,7 +420,7 @@ class _TemplateSelectorState extends State<TemplateSelector> {
                     },
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),
@@ -455,8 +455,7 @@ class _TemplateCard extends StatelessWidget {
   final NoteTemplate template;
   final VoidCallback onTap;
 
-  const _TemplateCard({Key? key, required this.template, required this.onTap})
-    : super(key: key);
+  const _TemplateCard({super.key, required this.template, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -502,8 +501,7 @@ class _TemplateCard extends StatelessWidget {
 class TemplatePreviewDialog extends StatelessWidget {
   final NoteTemplate template;
 
-  const TemplatePreviewDialog({Key? key, required this.template})
-    : super(key: key);
+  const TemplatePreviewDialog({super.key, required this.template});
 
   static void show(BuildContext context, NoteTemplate template) {
     showDialog(

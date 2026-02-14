@@ -1,11 +1,48 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'dart:ui' as ui;
-
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../design_system/design_system.dart';
+import '../bloc/pdf_annotation/pdf_annotation_bloc.dart';
+import '../bloc/pdf_annotation/pdf_annotation_state.dart';
+import '../bloc/pdf_annotation/pdf_annotation_event.dart';
+
+/// Annotation tools available in PDF editor
+enum AnnotationTool { pen, highlight, eraser, text }
+
+/// Model representing a single annotation on PDF
+class Annotation {
+  final List<Offset> points;
+  final Color color;
+  final double opacity;
+  final AnnotationTool tool;
+  final DateTime? createdAt;
+
+  Annotation({
+    required this.points,
+    required this.color,
+    required this.opacity,
+    required this.tool,
+    this.createdAt,
+  });
+
+  Annotation copyWith({
+    List<Offset>? points,
+    Color? color,
+    double? opacity,
+    AnnotationTool? tool,
+    DateTime? createdAt,
+  }) {
+    return Annotation(
+      points: points ?? this.points,
+      color: color ?? this.color,
+      opacity: opacity ?? this.opacity,
+      tool: tool ?? this.tool,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+}
 
 /// PDF Annotation Screen - Annotate PDFs with drawings and highlights
-class PDFAnnotationScreen extends StatefulWidget {
+class PDFAnnotationScreen extends StatelessWidget {
   final String pdfPath;
   final String pdfTitle;
 
@@ -16,47 +53,44 @@ class PDFAnnotationScreen extends StatefulWidget {
   });
 
   @override
-  State<PDFAnnotationScreen> createState() => _PDFAnnotationScreenState();
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => PdfAnnotationBloc(),
+      child: _PDFAnnotationView(pdfTitle: pdfTitle),
+    );
+  }
 }
 
-class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
-  late PDFAnnotationController _controller;
-  AnnotationTool _selectedTool = AnnotationTool.pen;
-  Color _selectedColor = Colors.black;
-  double _selectedOpacity = 1.0;
-  int _currentPage = 1;
-  final int _totalPages = 5; // Placeholder
+class _PDFAnnotationView extends StatelessWidget {
+  final String pdfTitle;
 
-  @override
-  void initState() {
-    super.initState();
-    _controller = PDFAnnotationController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  const _PDFAnnotationView({required this.pdfTitle});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildAnnotationAppBar(context),
-      body: Column(
-        children: [
-          // Main PDF Canvas
-          Expanded(child: _buildAnnotationCanvas()),
-          // Toolbar
-          _buildAnnotationToolbar(context),
-          // Page Navigation
-          _buildPageNavigator(context),
-        ],
-      ),
+    return BlocBuilder<PdfAnnotationBloc, PdfAnnotationState>(
+      builder: (context, state) {
+        return Scaffold(
+          appBar: _buildAnnotationAppBar(context, state),
+          body: Column(
+            children: [
+              // Main PDF Canvas
+              Expanded(child: _buildAnnotationCanvas(context, state)),
+              // Toolbar
+              _buildAnnotationToolbar(context, state),
+              // Page Navigation
+              _buildPageNavigator(context, state),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  PreferredSizeWidget _buildAnnotationAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAnnotationAppBar(
+    BuildContext context,
+    PdfAnnotationState state,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return AppBar(
       backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
@@ -66,20 +100,23 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
         onPressed: () => Navigator.pop(context),
       ),
       title: Text(
-        widget.pdfTitle,
+        pdfTitle,
         style: TextStyle(fontSize: 16.sp, fontWeight: FontWeight.w600),
       ),
       actions: [
         PopupMenuButton(
           itemBuilder: (context) => [
-            PopupMenuItem(child: const Text('Save'), onTap: () => _savePDF()),
+            PopupMenuItem(
+              child: const Text('Save'),
+              onTap: () => _savePDF(context),
+            ),
             PopupMenuItem(
               child: const Text('Export'),
-              onTap: () => _exportPDF(),
+              onTap: () => _exportPDF(context),
             ),
             PopupMenuItem(
               child: const Text('Clear'),
-              onTap: () => _clearAnnotations(),
+              onTap: () => _clearAnnotations(context),
             ),
           ],
         ),
@@ -87,7 +124,10 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
     );
   }
 
-  Widget _buildAnnotationCanvas() {
+  Widget _buildAnnotationCanvas(
+    BuildContext context,
+    PdfAnnotationState state,
+  ) {
     return Container(
       color: Colors.grey[200],
       child: Stack(
@@ -97,22 +137,25 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
             color: Colors.white,
             child: Center(
               child: Text(
-                'PDF Page $_currentPage / $_totalPages',
+                'PDF Page ${state.currentPage} / ${state.totalPages}',
                 style: TextStyle(fontSize: 18.sp, color: Colors.grey[400]),
               ),
             ),
           ),
           // Annotation Canvas
           GestureDetector(
-            onPanDown: (details) =>
-                _controller.startStroke(details.localPosition),
-            onPanUpdate: (details) =>
-                _controller.updateStroke(details.localPosition),
-            onPanEnd: (details) => _controller.endStroke(),
+            onPanDown: (details) => context.read<PdfAnnotationBloc>().add(
+              StartDrawing(details.localPosition),
+            ),
+            onPanUpdate: (details) => context.read<PdfAnnotationBloc>().add(
+              UpdateDrawing(details.localPosition),
+            ),
+            onPanEnd: (details) =>
+                context.read<PdfAnnotationBloc>().add(const EndDrawing()),
             child: CustomPaint(
               painter: AnnotationPainter(
-                _controller.annotations,
-                _controller.currentStroke,
+                (state.annotations as List<Annotation>?) ?? [],
+                state.currentStroke,
               ),
               size: Size.infinite,
             ),
@@ -122,7 +165,10 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
     );
   }
 
-  Widget _buildAnnotationToolbar(BuildContext context) {
+  Widget _buildAnnotationToolbar(
+    BuildContext context,
+    PdfAnnotationState state,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.all(12.w),
@@ -138,24 +184,36 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildToolButton(AnnotationTool.pen, Icons.create, 'Pen'),
+                _buildToolButton(
+                  context,
+                  AnnotationTool.pen,
+                  Icons.create,
+                  'Pen',
+                  state.selectedTool,
+                ),
                 SizedBox(width: 8.w),
                 _buildToolButton(
+                  context,
                   AnnotationTool.highlight,
                   Icons.highlight,
                   'Highlight',
+                  state.selectedTool,
                 ),
                 SizedBox(width: 8.w),
                 _buildToolButton(
+                  context,
                   AnnotationTool.eraser,
                   Icons.cleaning_services,
                   'Eraser',
+                  state.selectedTool,
                 ),
                 SizedBox(width: 8.w),
                 _buildToolButton(
+                  context,
                   AnnotationTool.text,
                   Icons.text_fields,
                   'Text',
+                  state.selectedTool,
                 ),
                 SizedBox(width: 12.w),
                 Divider(thickness: 2, height: 40.h),
@@ -163,12 +221,16 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
                 // Undo/Redo
                 IconButton(
                   icon: const Icon(Icons.undo),
-                  onPressed: () => _controller.undo(),
+                  onPressed: () => context.read<PdfAnnotationBloc>().add(
+                    const UndoAnnotation(),
+                  ),
                   tooltip: 'Undo',
                 ),
                 IconButton(
                   icon: const Icon(Icons.redo),
-                  onPressed: () => _controller.redo(),
+                  onPressed: () => context.read<PdfAnnotationBloc>().add(
+                    const RedoAnnotation(),
+                  ),
                   tooltip: 'Redo',
                 ),
               ],
@@ -193,8 +255,9 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
                 final color = colors[index];
                 return GestureDetector(
                   onTap: () {
-                    setState(() => _selectedColor = color);
-                    _controller.setColor(color);
+                    context.read<PdfAnnotationBloc>().add(
+                      ChangeAnnotationColor(color),
+                    );
                   },
                   child: Container(
                     width: 32.w,
@@ -202,7 +265,7 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
                     margin: EdgeInsets.symmetric(horizontal: 4.w),
                     decoration: BoxDecoration(
                       color: color,
-                      border: _selectedColor == color
+                      border: state.selectedColor == color
                           ? Border.all(color: Colors.grey, width: 2)
                           : null,
                       borderRadius: BorderRadius.circular(4.r),
@@ -215,20 +278,27 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
           SizedBox(height: 8.h),
           // Opacity Slider
           Slider(
-            value: _selectedOpacity,
+            value: state.selectedOpacity,
             onChanged: (value) {
-              setState(() => _selectedOpacity = value);
-              _controller.setOpacity(value);
+              context.read<PdfAnnotationBloc>().add(
+                ChangeAnnotationOpacity(value),
+              );
             },
-            label: '${(_selectedOpacity * 100).toInt()}%',
+            label: '${(state.selectedOpacity * 100).toInt()}%',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildToolButton(AnnotationTool tool, IconData icon, String label) {
-    final isSelected = _selectedTool == tool;
+  Widget _buildToolButton(
+    BuildContext context,
+    AnnotationTool tool,
+    IconData icon,
+    String label,
+    AnnotationTool selectedTool,
+  ) {
+    final isSelected = selectedTool == tool;
     return FilterChip(
       label: Row(
         children: [
@@ -239,13 +309,12 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
       ),
       selected: isSelected,
       onSelected: (selected) {
-        setState(() => _selectedTool = tool);
-        _controller.selectTool(tool);
+        context.read<PdfAnnotationBloc>().add(SelectAnnotationTool(tool));
       },
     );
   }
 
-  Widget _buildPageNavigator(BuildContext context) {
+  Widget _buildPageNavigator(BuildContext context, PdfAnnotationState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -258,60 +327,56 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.navigate_before),
-            onPressed: _currentPage > 1 ? () => _previousPage() : null,
+            onPressed: state.currentPage > 1
+                ? () => context.read<PdfAnnotationBloc>().add(
+                    ChangePdfPage(state.currentPage - 1),
+                  )
+                : null,
           ),
           Text(
-            'Page $_currentPage / $_totalPages',
+            'Page ${state.currentPage} / ${state.totalPages}',
             style: TextStyle(fontSize: 14.sp),
           ),
           IconButton(
             icon: const Icon(Icons.navigate_next),
-            onPressed: _currentPage < _totalPages ? () => _nextPage() : null,
+            onPressed: state.currentPage < state.totalPages
+                ? () => context.read<PdfAnnotationBloc>().add(
+                    ChangePdfPage(state.currentPage + 1),
+                  )
+                : null,
           ),
         ],
       ),
     );
   }
 
-  void _previousPage() {
-    if (_currentPage > 1) {
-      setState(() => _currentPage--);
-    }
-  }
-
-  void _nextPage() {
-    if (_currentPage < _totalPages) {
-      setState(() => _currentPage++);
-    }
-  }
-
-  void _savePDF() {
+  void _savePDF(BuildContext context) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('PDF saved successfully')));
   }
 
-  void _exportPDF() {
+  void _exportPDF(BuildContext context) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Exporting PDF...')));
   }
 
-  void _clearAnnotations() {
+  void _clearAnnotations(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Clear All Annotations?'),
         content: const Text('This cannot be undone.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              _controller.clear();
-              Navigator.pop(context);
+              context.read<PdfAnnotationBloc>().add(const ClearAnnotations());
+              Navigator.pop(dialogContext);
             },
             child: const Text('Clear', style: TextStyle(color: Colors.red)),
           ),
@@ -321,93 +386,7 @@ class _PDFAnnotationScreenState extends State<PDFAnnotationScreen> {
   }
 }
 
-// Annotation Types
-enum AnnotationTool { pen, highlight, eraser, text }
-
-// Annotation Model
-class Annotation {
-  final List<Offset> points;
-  final Color color;
-  final double opacity;
-  final AnnotationTool tool;
-  final DateTime createdAt;
-
-  Annotation({
-    required this.points,
-    required this.color,
-    required this.opacity,
-    required this.tool,
-    required this.createdAt,
-  });
-}
-
-// PDF Annotation Controller
-class PDFAnnotationController {
-  final List<Annotation> annotations = [];
-  final List<Annotation> _undoStack = [];
-  List<Offset> currentStroke = [];
-  Color _currentColor = Colors.black;
-  double _currentOpacity = 1.0;
-  AnnotationTool _currentTool = AnnotationTool.pen;
-
-  void startStroke(Offset point) {
-    currentStroke = [point];
-  }
-
-  void updateStroke(Offset point) {
-    currentStroke.add(point);
-  }
-
-  void endStroke() {
-    if (currentStroke.isNotEmpty) {
-      annotations.add(
-        Annotation(
-          points: currentStroke,
-          color: _currentColor,
-          opacity: _currentOpacity,
-          tool: _currentTool,
-          createdAt: DateTime.now(),
-        ),
-      );
-      currentStroke = [];
-    }
-  }
-
-  void setColor(Color color) {
-    _currentColor = color;
-  }
-
-  void setOpacity(double opacity) {
-    _currentOpacity = opacity;
-  }
-
-  void selectTool(AnnotationTool tool) {
-    _currentTool = tool;
-  }
-
-  void undo() {
-    if (annotations.isNotEmpty) {
-      _undoStack.add(annotations.removeLast());
-    }
-  }
-
-  void redo() {
-    if (_undoStack.isNotEmpty) {
-      annotations.add(_undoStack.removeLast());
-    }
-  }
-
-  void clear() {
-    annotations.clear();
-    _undoStack.clear();
-  }
-
-  void dispose() {
-    // Cleanup
-  }
-}
-
-// Custom Painter for Annotations
+// Annotation Painter remains similar but uses the Annotation model from BLoC
 class AnnotationPainter extends CustomPainter {
   final List<Annotation> annotations;
   final List<Offset> currentStroke;
@@ -423,6 +402,9 @@ class AnnotationPainter extends CustomPainter {
 
     // Draw current stroke
     if (currentStroke.isNotEmpty) {
+      // For current stroke, we use the default pen style as it's being drawn
+      // OR we could pass the current settings to the painter.
+      // For simplicity, let's use a standard pen.
       final paint = Paint()
         ..color = Colors.black
         ..strokeWidth = 2
@@ -455,4 +437,3 @@ class AnnotationPainter extends CustomPainter {
   @override
   bool shouldRepaint(AnnotationPainter oldDelegate) => true;
 }
-

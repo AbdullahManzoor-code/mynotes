@@ -361,31 +361,40 @@ class PasswordTextField extends StatefulWidget {
 }
 
 class _PasswordTextFieldState extends State<PasswordTextField> {
-  bool _obscureText = true;
+  final ValueNotifier<bool> _obscureText = ValueNotifier<bool>(true);
 
   void _toggleVisibility() {
-    setState(() {
-      _obscureText = !_obscureText;
-    });
+    _obscureText.value = !_obscureText.value;
   }
 
   @override
   Widget build(BuildContext context) {
-    return AppTextField(
-      controller: widget.controller,
-      focusNode: widget.focusNode,
-      hintText: widget.hintText,
-      labelText: widget.labelText,
-      obscureText: _obscureText,
-      prefixIcon: Icons.lock_outline,
-      suffixIcon: _obscureText ? Icons.visibility_off : Icons.visibility,
-      onSuffixIconTap: _toggleVisibility,
-      onChanged: widget.onChanged,
-      onSubmitted: widget.onSubmitted,
-      validator: widget.validator,
-      autovalidateMode: widget.autovalidateMode,
-      textInputAction: TextInputAction.done,
+    return ValueListenableBuilder<bool>(
+      valueListenable: _obscureText,
+      builder: (context, isObscure, _) {
+        return AppTextField(
+          controller: widget.controller,
+          focusNode: widget.focusNode,
+          hintText: widget.hintText,
+          labelText: widget.labelText,
+          obscureText: isObscure,
+          prefixIcon: Icons.lock_outline,
+          suffixIcon: isObscure ? Icons.visibility_off : Icons.visibility,
+          onSuffixIconTap: _toggleVisibility,
+          onChanged: widget.onChanged,
+          onSubmitted: widget.onSubmitted,
+          validator: widget.validator,
+          autovalidateMode: widget.autovalidateMode,
+          textInputAction: TextInputAction.done,
+        );
+      },
     );
+  }
+
+  @override
+  void dispose() {
+    _obscureText.dispose();
+    super.dispose();
   }
 }
 

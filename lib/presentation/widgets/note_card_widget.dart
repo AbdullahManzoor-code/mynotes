@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/note.dart';
@@ -199,14 +198,24 @@ class NoteCardWidget extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(4.r),
               color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
-              image: media.type == MediaType.image
+              image:
+                  (media.type == MediaType.image ||
+                      (media.type == MediaType.video &&
+                          media.thumbnailPath.isNotEmpty))
                   ? DecorationImage(
-                      image: FileImage(File(media.filePath)),
+                      image: FileImage(
+                        File(
+                          media.type == MediaType.image
+                              ? media.filePath
+                              : media.thumbnailPath,
+                        ),
+                      ),
                       fit: BoxFit.cover,
                     )
                   : null,
             ),
-            child: media.type != MediaType.image
+            child:
+                (media.type != MediaType.image && media.thumbnailPath.isEmpty)
                 ? Center(
                     child: Icon(
                       media.type == MediaType.video
@@ -214,6 +223,15 @@ class NoteCardWidget extends StatelessWidget {
                           : Icons.mic_outlined,
                       size: 16.sp,
                       color: AppColors.textMuted,
+                    ),
+                  )
+                : (media.type == MediaType.video &&
+                      media.thumbnailPath.isNotEmpty)
+                ? Center(
+                    child: Icon(
+                      Icons.play_circle_filled,
+                      size: 16.sp,
+                      color: Colors.white70,
                     ),
                   )
                 : null,

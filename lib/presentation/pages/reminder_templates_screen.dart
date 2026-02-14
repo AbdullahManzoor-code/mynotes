@@ -3,24 +3,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/reminder_templates_bloc.dart';
+import 'package:mynotes/presentation/bloc/reminder_templates/reminder_templates_bloc.dart';
 
 /// Reminder Templates Screen (ALM-004)
 /// Pre-built reminder templates for quick reminder creation
-class ReminderTemplatesScreen extends StatefulWidget {
-  const ReminderTemplatesScreen({Key? key}) : super(key: key);
-
-  @override
-  State<ReminderTemplatesScreen> createState() =>
-      _ReminderTemplatesScreenState();
-}
-
-class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
-  @override
-  void initState() {
-    super.initState();
-    context.read<ReminderTemplatesBloc>().add(const LoadTemplatesEvent());
-  }
+class ReminderTemplatesScreen extends StatelessWidget {
+  const ReminderTemplatesScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +16,10 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
 
     return BlocBuilder<ReminderTemplatesBloc, ReminderTemplatesState>(
       builder: (context, state) {
+        if (state is ReminderTemplatesInitial) {
+          context.read<ReminderTemplatesBloc>().add(const LoadTemplatesEvent());
+        }
+
         if (state is ReminderTemplatesLoading) {
           return Scaffold(
             backgroundColor: AppColors.background(context),
@@ -531,3 +523,4 @@ class _ReminderTemplatesScreenState extends State<ReminderTemplatesScreen> {
     );
   }
 }
+

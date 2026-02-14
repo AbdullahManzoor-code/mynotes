@@ -1,5 +1,7 @@
 /// Global Error Handler & Recovery Manager
 /// Handles all exceptions across app flows with recovery strategies
+library;
+
 import 'package:flutter/material.dart';
 import 'package:mynotes/core/exceptions/app_exceptions.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
@@ -245,8 +247,8 @@ class ErrorBoundary extends StatefulWidget {
     required this.child,
     this.errorBuilder,
     this.onError,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ErrorBoundary> createState() => _ErrorBoundaryState();

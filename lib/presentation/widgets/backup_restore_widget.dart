@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/injection_container.dart';
 import 'dart:io';
-import '../bloc/backup_bloc.dart';
+import '../bloc/backup/backup_bloc.dart';
 import '../bloc/params/backup_params.dart';
 import '../../core/services/global_ui_service.dart';
 
@@ -143,10 +143,10 @@ class BackupRestoreWidget extends StatelessWidget {
   final VoidCallback? onRestoreComplete;
 
   const BackupRestoreWidget({
-    Key? key,
+    super.key,
     this.onBackupComplete,
     this.onRestoreComplete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -315,7 +315,7 @@ class BackupRestoreWidget extends StatelessWidget {
 
 /// Cache management widget (now using BLoC)
 class CacheManagementWidget extends StatelessWidget {
-  const CacheManagementWidget({Key? key}) : super(key: key);
+  const CacheManagementWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -410,3 +410,4 @@ class CacheManagementWidget extends StatelessWidget {
     );
   }
 }
+

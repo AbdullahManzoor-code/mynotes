@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../domain/entities/media_item.dart';
-import '../bloc/media_bloc.dart';
-import '../bloc/media_event.dart';
-import '../bloc/media_state.dart';
+import '../bloc/media/media_bloc.dart';
+import '../bloc/media/media_event.dart';
+import '../bloc/media/media_state.dart';
 import '../design_system/design_system.dart';
 
 /// Media Gallery Widget - Browse and manage all media files
@@ -30,7 +30,7 @@ class MediaGalleryWidget extends StatefulWidget {
 class _MediaGalleryWidgetState extends State<MediaGalleryWidget> {
   late String _selectedFilter;
   final TextEditingController _searchController = TextEditingController();
-  List<MediaItem> _selectedItems = [];
+  final List<MediaItem> _selectedItems = [];
 
   @override
   void initState() {
@@ -528,3 +528,4 @@ class _MediaGalleryWidgetState extends State<MediaGalleryWidget> {
     );
   }
 }
+

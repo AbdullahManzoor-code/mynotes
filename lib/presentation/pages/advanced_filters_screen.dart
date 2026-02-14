@@ -7,12 +7,12 @@ import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/injection_container.dart';
 import '../design_system/design_system.dart';
 import '../../core/services/global_ui_service.dart';
-import '../bloc/filters_bloc.dart';
+import '../bloc/filters/filters_bloc.dart';
 
 /// Advanced Filters Screen (ORG-005)
 /// Complex visual filter builder with multiple conditions
 class AdvancedFiltersScreen extends StatelessWidget {
-  const AdvancedFiltersScreen({Key? key}) : super(key: key);
+  const AdvancedFiltersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +24,7 @@ class AdvancedFiltersScreen extends StatelessWidget {
 }
 
 class _AdvancedFiltersScreenContent extends StatefulWidget {
-  const _AdvancedFiltersScreenContent({Key? key}) : super(key: key);
+  const _AdvancedFiltersScreenContent({super.key});
 
   @override
   State<_AdvancedFiltersScreenContent> createState() =>
@@ -669,3 +669,4 @@ class _AdvancedFiltersScreenContentState
     );
   }
 }
+

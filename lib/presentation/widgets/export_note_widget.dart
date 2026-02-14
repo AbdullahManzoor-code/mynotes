@@ -1,7 +1,6 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:io';
-import '../bloc/export_bloc.dart';
 
 enum ExportFormat {
   txt('Text File', '.txt'),
@@ -43,7 +42,7 @@ class NoteExportManager {
       await file.writeAsString(fileContent);
       return filePath;
     } catch (e) {
-      print('Export error: $e');
+      debugPrint('Export error: $e');
       return null;
     }
   }
@@ -143,8 +142,7 @@ startxref
 class ExportFormatSelector extends StatelessWidget {
   final Function(ExportFormat) onFormatSelected;
 
-  const ExportFormatSelector({Key? key, required this.onFormatSelected})
-    : super(key: key);
+  const ExportFormatSelector({super.key, required this.onFormatSelected});
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +165,7 @@ class ExportFormatSelector extends StatelessWidget {
               onTap: () => onFormatSelected(format),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -180,11 +178,11 @@ class ExportNoteDialog extends StatefulWidget {
   final VoidCallback? onExportComplete;
 
   const ExportNoteDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.content,
     this.onExportComplete,
-  }) : super(key: key);
+  });
 
   static void show(BuildContext context, String title, String content) {
     showDialog(
@@ -324,11 +322,11 @@ class ExportNoteButton extends StatelessWidget {
   final VoidCallback? onExportComplete;
 
   const ExportNoteButton({
-    Key? key,
+    super.key,
     required this.title,
     required this.content,
     this.onExportComplete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

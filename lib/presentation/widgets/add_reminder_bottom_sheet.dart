@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/injection_container.dart';
-import 'package:uuid/uuid.dart';
+import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/alarm.dart';
-import '../bloc/alarms_bloc.dart';
-import '../../core/services/global_ui_service.dart';
+import '../bloc/alarm/alarms_bloc.dart';
 
 /// Add Reminder Bottom Sheet
 /// Specialized sheet for creating system alarms/reminders
-class AddReminderBottomSheet extends StatefulWidget {
+/// Refactored to use AlarmsBloc for centralized state management
+class AddReminderBottomSheet extends StatelessWidget {
   final Function(Alarm)? onReminderCreated;
   final Alarm? editAlarm;
 
@@ -20,379 +20,202 @@ class AddReminderBottomSheet extends StatefulWidget {
     this.editAlarm,
   });
 
-  @override
-  State<AddReminderBottomSheet> createState() => _AddReminderBottomSheetState();
-}
-
-class _AddReminderBottomSheetState extends State<AddReminderBottomSheet>
-    with SingleTickerProviderStateMixin {
-  late TextEditingController _textController;
-
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
-
-  bool _isLoading = false;
-
-  late AnimationController _animationController;
-  late Animation<double> _slideAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _textController = TextEditingController();
-
-    // Initialize with existing alarm data if editing
-    if (widget.editAlarm != null) {
-      final alarm = widget.editAlarm!;
-      _textController.text = alarm.message;
-      _selectedDate = alarm.scheduledTime;
-      _selectedTime = TimeOfDay.fromDateTime(alarm.scheduledTime);
-    } else {
-      // Default to next hour
-      final now = DateTime.now();
-      final nextHour = now.add(const Duration(hours: 1));
-      _selectedDate = nextHour;
-      _selectedTime = TimeOfDay.fromDateTime(nextHour);
-    }
-
-    _animationController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _slideAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
-    );
-
-    _animationController.forward();
-  }
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  void _selectDate() async {
-    final now = DateTime.now();
-    final date = await showDatePicker(
+  static void show(
+    BuildContext context, {
+    Alarm? editAlarm,
+    Function(Alarm)? onReminderCreated,
+  }) {
+    showModalBottomSheet(
       context: context,
-      initialDate: _selectedDate ?? now,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365 * 2)), // 2 years
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: AppColors.surface(context),
-              onSurface: AppColors.textPrimary(context),
-            ),
-          ),
-          child: child!,
-        );
-      },
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => AddReminderBottomSheet(
+        editAlarm: editAlarm,
+        onReminderCreated: onReminderCreated,
+      ),
     );
-
-    if (date != null) {
-      setState(() {
-        // Keep time if selected, or default to current time
-        final time = _selectedTime ?? TimeOfDay.now();
-        _selectedDate = DateTime(
-          date.year,
-          date.month,
-          date.day,
-          time.hour,
-          time.minute,
-        );
-      });
-    }
-  }
-
-  void _selectTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime ?? TimeOfDay.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(
-              primary: AppColors.primary,
-              onPrimary: Colors.white,
-              surface: AppColors.surface(context),
-              onSurface: AppColors.textPrimary(context),
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (time != null) {
-      setState(() {
-        _selectedTime = time;
-        if (_selectedDate != null) {
-          _selectedDate = DateTime(
-            _selectedDate!.year,
-            _selectedDate!.month,
-            _selectedDate!.day,
-            time.hour,
-            time.minute,
-          );
-        } else {
-          final now = DateTime.now();
-          _selectedDate = DateTime(
-            now.year,
-            now.month,
-            now.day,
-            time.hour,
-            time.minute,
-          );
-        }
-      });
-    }
-  }
-
-  void _createReminder() {
-    if (_textController.text.trim().isEmpty) {
-      getIt<GlobalUiService>().showWarning('Please enter a reminder message');
-      return;
-    }
-
-    if (_selectedDate == null || _selectedTime == null) {
-      getIt<GlobalUiService>().showWarning('Please start date and time');
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      // Construct final DateTime
-      final scheduledTime = DateTime(
-        _selectedDate!.year,
-        _selectedDate!.month,
-        _selectedDate!.day,
-        _selectedTime!.hour,
-        _selectedTime!.minute,
-      );
-
-      final now = DateTime.now();
-      if (scheduledTime.isBefore(now)) {
-        getIt<GlobalUiService>().showWarning(
-          'Cannot schedule reminder in the past',
-        );
-        setState(() => _isLoading = false);
-        return;
-      }
-
-      final alarm = Alarm(
-        id: widget.editAlarm?.id ?? const Uuid().v4(),
-        message: _textController.text.trim(),
-        scheduledTime: scheduledTime,
-        isActive: true,
-        createdAt: widget.editAlarm?.createdAt ?? now,
-        updatedAt: now,
-      );
-
-      if (widget.editAlarm != null) {
-        context.read<AlarmsBloc>().add(UpdateAlarm(alarm));
-      } else {
-        context.read<AlarmsBloc>().add(AddAlarm(alarm));
-      }
-
-      if (widget.onReminderCreated != null) {
-        widget.onReminderCreated!(alarm);
-      }
-
-      Navigator.pop(context);
-      HapticFeedback.mediumImpact();
-    } catch (e) {
-      getIt<GlobalUiService>().showError('Error creating reminder: $e');
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _slideAnimation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(
-            0,
-            (1 - _slideAnimation.value) *
-                MediaQuery.of(context).size.height *
-                0.3,
-          ),
-          child: child,
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface(context),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Container(
-              width: 40,
-              height: 4,
-              margin: const EdgeInsets.only(top: 12),
-              decoration: BoxDecoration(
-                color: AppColors.textSecondary(context).withOpacity(0.3),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
+    // Initialize draft in bloc if not already there or if editing a different one
+    final alarmsBloc = context.read<AlarmsBloc>();
+    final currentState = alarmsBloc.state;
 
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Row(
+    if (currentState is AlarmLoaded) {
+      if (currentState.draftParams == null ||
+          (editAlarm != null &&
+              currentState.draftParams!.alarmId != editAlarm!.id)) {
+        final initialParams = editAlarm != null
+            ? AlarmParams.fromAlarm(editAlarm!)
+            : AlarmParams(
+                alarmTime: DateTime.now().add(const Duration(hours: 1)),
+                title: '',
+                createdAt: DateTime.now(),
+              );
+        alarmsBloc.add(UpdateAlarmDraftEvent(params: initialParams));
+      }
+    }
+
+    return BlocBuilder<AlarmsBloc, AlarmState>(
+      builder: (context, state) {
+        if (state is! AlarmLoaded || state.draftParams == null) {
+          return Container(
+            height: 200.h,
+            color: AppColors.surface(context),
+            child: const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final draft = state.draftParams!;
+        final textController = TextEditingController(text: draft.title);
+        textController.selection = TextSelection.fromPosition(
+          TextPosition(offset: textController.text.length),
+        );
+
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface(context),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom + 24.h,
+            left: 24.w,
+            right: 24.w,
+            top: 24.h,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      widget.editAlarm != null
-                          ? Icons.edit
-                          : Icons.notification_add,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
                   Text(
-                    widget.editAlarm != null ? 'Edit Reminder' : 'New Reminder',
-                    style: AppTypography.heading3(
+                    editAlarm != null ? 'Edit Reminder' : 'New Reminder',
+                    style: AppTypography.heading3(context),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ],
+              ),
+              SizedBox(height: 24.h),
+              TextField(
+                controller: textController,
+                autofocus: editAlarm == null,
+                style: AppTypography.bodyLarge(context),
+                decoration: InputDecoration(
+                  hintText: 'What do you want to be reminded about?',
+                  hintStyle: AppTypography.bodyLarge(
+                    context,
+                    AppColors.textMuted,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                    borderSide: BorderSide(color: AppColors.border(context)),
+                  ),
+                ),
+                onChanged: (value) =>
+                    _updateDraft(context, draft.copyWith(title: value)),
+              ),
+              SizedBox(height: 24.h),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildPickerTile(
                       context,
-                      AppColors.textPrimary(context),
+                      label: 'Date',
+                      value: _formatDate(draft.alarmTime),
+                      icon: Icons.calendar_today,
+                      onTap: () => _selectDate(context, draft),
                     ),
                   ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: Icon(
-                      Icons.close,
-                      color: AppColors.textSecondary(context),
+                  SizedBox(width: 16.w),
+                  Expanded(
+                    child: _buildPickerTile(
+                      context,
+                      label: 'Time',
+                      value: _formatTime(draft.alarmTime),
+                      icon: Icons.access_time,
+                      onTap: () => _selectTime(context, draft),
                     ),
                   ),
                 ],
               ),
-            ),
-
-            // Content
-            Flexible(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Text Input
-                    TextField(
-                      controller: _textController,
-                      autofocus: widget.editAlarm == null,
-                      decoration: InputDecoration(
-                        hintText: 'Remind me to...',
-                        hintStyle: AppTypography.bodyLarge(context).copyWith(
-                          color: AppColors.textSecondary(
-                            context,
-                          ).withOpacity(0.5),
-                        ),
-                        border: InputBorder.none,
-                      ),
-                      style: AppTypography.heading3(
-                        context,
-                        AppColors.textPrimary(context),
-                      ),
-                      maxLines: null,
-                    ),
-
-                    const SizedBox(height: 24),
-
-                    // Date & Time Selectors
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildSelector(
-                            context: context,
-                            icon: Icons.calendar_today,
-                            label: _selectedDate == null
-                                ? 'Select Date'
-                                : '${_selectedDate!.day}/${_selectedDate!.month}/${_selectedDate!.year}',
-                            onTap: _selectDate,
-                            isActive: _selectedDate != null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildSelector(
-                            context: context,
-                            icon: Icons.access_time,
-                            label: _selectedTime == null
-                                ? 'Select Time'
-                                : _selectedTime!.format(context),
-                            onTap: _selectTime,
-                            isActive: _selectedTime != null,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-                  ],
-                ),
-              ),
-            ),
-
-            // Action Button
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: SizedBox(
+              SizedBox(height: 32.h),
+              SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : _createReminder,
+                  onPressed: state is AlarmLoading
+                      ? null
+                      : () => _saveReminder(context, draft),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    elevation: 0,
+                    padding: EdgeInsets.symmetric(vertical: 16.h),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12.r),
                     ),
                   ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                            strokeWidth: 2,
-                          ),
-                        )
+                  child: state is AlarmLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
                       : Text(
-                          widget.editAlarm != null
+                          editAlarm != null
                               ? 'Update Reminder'
                               : 'Set Reminder',
-                          style: AppTypography.labelLarge(
+                          style: AppTypography.bodyLarge(
                             context,
                             Colors.white,
+                            FontWeight.bold,
                           ),
                         ),
                 ),
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPickerTile(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: AppColors.background(context),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: AppColors.border(context)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: AppTypography.captionSmall(context, AppColors.textMuted),
+            ),
+            SizedBox(height: 4.h),
+            Row(
+              children: [
+                Icon(icon, size: 16.sp, color: AppColors.primary),
+                SizedBox(width: 8.w),
+                Text(
+                  value,
+                  style: AppTypography.bodyMedium(
+                    context,
+                    null,
+                    FontWeight.w600,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -400,48 +223,75 @@ class _AddReminderBottomSheetState extends State<AddReminderBottomSheet>
     );
   }
 
-  Widget _buildSelector({
-    required BuildContext context,
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required bool isActive,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isActive
-              ? AppColors.primary.withOpacity(0.1)
-              : AppColors.surface(context),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isActive ? AppColors.primary : AppColors.border(context),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isActive
-                  ? AppColors.primary
-                  : AppColors.textSecondary(context),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: AppTypography.bodyMedium(context).copyWith(
-                color: isActive
-                    ? AppColors.primary
-                    : AppColors.textPrimary(context),
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
-      ),
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _formatTime(DateTime date) {
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
+  void _updateDraft(BuildContext context, AlarmParams params) {
+    context.read<AlarmsBloc>().add(UpdateAlarmDraftEvent(params: params));
+  }
+
+  void _selectDate(BuildContext context, AlarmParams draft) async {
+    final date = await showDatePicker(
+      context: context,
+      initialDate: draft.alarmTime,
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
     );
+
+    if (date != null) {
+      final newTime = DateTime(
+        date.year,
+        date.month,
+        date.day,
+        draft.alarmTime.hour,
+        draft.alarmTime.minute,
+      );
+      _updateDraft(context, draft.copyWith(alarmTime: newTime));
+    }
+  }
+
+  void _selectTime(BuildContext context, AlarmParams draft) async {
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(draft.alarmTime),
+    );
+
+    if (time != null) {
+      final newTime = DateTime(
+        draft.alarmTime.year,
+        draft.alarmTime.month,
+        draft.alarmTime.day,
+        time.hour,
+        time.minute,
+      );
+      _updateDraft(context, draft.copyWith(alarmTime: newTime));
+    }
+  }
+
+  void _saveReminder(BuildContext context, AlarmParams draft) {
+    if (draft.title.trim().isEmpty) {
+      getIt<GlobalUiService>().showWarning('Please enter a reminder message');
+      return;
+    }
+
+    if (editAlarm != null) {
+      context.read<AlarmsBloc>().add(UpdateAlarmEvent(draft));
+    } else {
+      context.read<AlarmsBloc>().add(AddAlarmEvent(draft));
+    }
+
+    context.read<AlarmsBloc>().add(const UpdateAlarmDraftEvent(clear: true));
+    Navigator.pop(context);
+
+    if (onReminderCreated != null) {
+      onReminderCreated!(draft.toAlarm());
+    }
   }
 }

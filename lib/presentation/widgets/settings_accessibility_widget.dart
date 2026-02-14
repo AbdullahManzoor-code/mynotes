@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/settings_bloc.dart';
+import '../bloc/settings/settings_bloc.dart';
 
 /// Encrypted preferences service (SEC-003)
 class EncryptedPreferencesService extends ChangeNotifier {
   bool _isEncryptionEnabled = true;
-  Map<String, String> _encryptedData = {};
+  final Map<String, String> _encryptedData = {};
 
   bool get isEncryptionEnabled => _isEncryptionEnabled;
 
@@ -32,7 +32,7 @@ class EncryptedPreferencesService extends ChangeNotifier {
 class StorageSettingsPanel extends StatelessWidget {
   final VoidCallback? onClose;
 
-  const StorageSettingsPanel({Key? key, this.onClose}) : super(key: key);
+  const StorageSettingsPanel({super.key, this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -109,7 +109,7 @@ class StorageSettingsPanel extends StatelessWidget {
 class DefaultSettingsPanel extends StatelessWidget {
   final VoidCallback? onClose;
 
-  const DefaultSettingsPanel({Key? key, this.onClose}) : super(key: key);
+  const DefaultSettingsPanel({super.key, this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -205,12 +205,12 @@ class QuickStatsWidget extends StatelessWidget {
   final int reflectionsCount;
 
   const QuickStatsWidget({
-    Key? key,
+    super.key,
     required this.notesCount,
     required this.todosCount,
     required this.todosCompleted,
     required this.reflectionsCount,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +337,7 @@ class QuickStatsWidget extends StatelessWidget {
 class AccessibilitySettingsWidget extends StatelessWidget {
   final VoidCallback? onClose;
 
-  const AccessibilitySettingsWidget({Key? key, this.onClose}) : super(key: key);
+  const AccessibilitySettingsWidget({super.key, this.onClose});
 
   @override
   Widget build(BuildContext context) {
@@ -418,3 +418,4 @@ class AccessibilitySettingsWidget extends StatelessWidget {
     );
   }
 }
+

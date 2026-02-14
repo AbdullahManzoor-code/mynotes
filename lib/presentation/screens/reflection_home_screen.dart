@@ -1,12 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import '../../domain/entities/reflection_answer.dart';
-import '../bloc/reflection_bloc.dart';
-import '../bloc/reflection_event.dart';
-import '../bloc/reflection_state.dart';
+import '../bloc/reflection/reflection_bloc.dart';
+import '../bloc/reflection/reflection_event.dart';
+import '../bloc/reflection/reflection_state.dart';
 import '../design_system/design_system.dart';
 import '../pages/settings_screen.dart';
 import 'package:local_auth/local_auth.dart';
@@ -14,7 +13,7 @@ import '../../injection_container.dart' show getIt;
 import 'question_list_screen.dart';
 import 'answer_screen.dart';
 import 'reflection_history_screen.dart';
-import '../../core/design_system/app_typography.dart'; // Ensure correct import
+// Ensure correct import
 
 class ReflectionHomeScreen extends StatefulWidget {
   const ReflectionHomeScreen({super.key});
@@ -51,10 +50,8 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
 
       final bool didAuthenticate = await _auth.authenticate(
         localizedReason: 'Authenticate to view your private reflections',
-        options: const AuthenticationOptions(
-          stickyAuth: true,
-          biometricOnly: false,
-        ),
+        sensitiveTransaction: true,
+        biometricOnly: false,
       );
 
       if (didAuthenticate) {
@@ -650,6 +647,22 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
             'mental_health',
             'Mental Health',
           ),
+          _buildCategoryItem(
+            context,
+            isDark,
+            'Gratitude',
+            Icons.favorite_outline,
+            'gratitude',
+            'Gratitude',
+          ),
+          _buildCategoryItem(
+            context,
+            isDark,
+            'Mindful',
+            Icons.self_improvement_outlined,
+            'mindfulness',
+            'Mindfulness',
+          ),
         ],
       ),
     );
@@ -933,3 +946,4 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
     );
   }
 }
+

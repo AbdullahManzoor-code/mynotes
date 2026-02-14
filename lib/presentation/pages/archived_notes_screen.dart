@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../presentation/bloc/note_bloc.dart';
-import '../../presentation/bloc/note_event.dart';
-import '../../presentation/bloc/note_state.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_event.dart';
+import 'package:mynotes/presentation/bloc/note/note_state.dart';
+
 import '../../presentation/bloc/params/note_params.dart';
 import '../../domain/entities/note.dart';
 import '../design_system/design_system.dart';

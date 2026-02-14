@@ -5,289 +5,45 @@ import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 import 'dart:ui' as ui;
 import '../design_system/design_system.dart';
-import '../bloc/note_bloc.dart';
-import '../bloc/note_event.dart';
-import '../bloc/note_state.dart';
+import '../bloc/search/search_bloc.dart';
 import '../../domain/entities/note.dart';
 
 /// Enhanced Global Search Results Screen
 /// Advanced search with real-time results and filters
-/// Based on global_search_results_1 template
-class EnhancedGlobalSearchScreen extends StatefulWidget {
+/// Refactored to use SearchBloc for centralized state management
+class EnhancedGlobalSearchScreen extends StatelessWidget {
   final String? initialQuery;
 
   const EnhancedGlobalSearchScreen({super.key, this.initialQuery});
 
   @override
-  State<EnhancedGlobalSearchScreen> createState() =>
-      _EnhancedGlobalSearchScreenState();
-}
-
-class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
-    with TickerProviderStateMixin {
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _searchFocusNode = FocusNode();
-
-  late AnimationController _filterController;
-  late AnimationController _resultsController;
-  late AnimationController _voiceController;
-
-  // Voice search
-  late stt.SpeechToText _speechToText;
-  bool _isListening = false;
-  bool _isVoiceAvailable = false;
-
-  String _searchQuery = '';
-  List<String> _recentSearches = [];
-  List<dynamic> _searchResults = [];
-  bool _isSearching = false;
-  bool _showFilters = false;
-
-  // Filter options
-  String _selectedFilter = 'all'; // all, notes, todos, reminders
-
-  Timer? _debounceTimer;
-
-  @override
-  void initState() {
-    super.initState();
-
-    _filterController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    _resultsController = AnimationController(
-      duration: const Duration(milliseconds: 200),
-      vsync: this,
-    );
-
-    _voiceController = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
-
-    if (widget.initialQuery != null) {
-      _searchController.text = widget.initialQuery!;
-      _searchQuery = widget.initialQuery!;
-    }
-
-    _searchController.addListener(_onSearchChanged);
-    _initializeVoiceSearch();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchFocusNode.requestFocus();
-      if (widget.initialQuery != null) {
-        _performSearch();
-      }
-    });
-
-    _loadRecentSearches();
-  }
-
-  @override
-  void dispose() {
-    _debounceTimer?.cancel();
-    _filterController.dispose();
-    _resultsController.dispose();
-    _voiceController.dispose();
-    _searchController.dispose();
-    _searchFocusNode.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged() {
-    final query = _searchController.text;
-
-    _debounceTimer?.cancel();
-    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      if (mounted && query.trim() != _searchQuery) {
-        setState(() {
-          _searchQuery = query.trim();
-        });
-
-        if (_searchQuery.isNotEmpty) {
-          _performSearch();
-        } else {
-          setState(() {
-            _searchResults = [];
-            _isSearching = false;
-          });
-        }
-      }
-    });
-  }
-
-  void _performSearch() {
-    if (_searchQuery.isEmpty) return;
-
-    setState(() {
-      _isSearching = true;
-    });
-
-    // Add to recent searches
-    if (!_recentSearches.contains(_searchQuery)) {
-      _recentSearches.insert(0, _searchQuery);
-      if (_recentSearches.length > 10) {
-        _recentSearches = _recentSearches.take(10).toList();
-      }
-      _saveRecentSearches();
-    }
-
-    // Dispatch search event to NotesBloc
-    context.read<NotesBloc>().add(SearchNotesEvent(_searchQuery));
-    
-    setState(() {
-      _isSearching = false;
-    });
-  }
-
-  void _clearSearch() {
-    _searchController.clear();
-    setState(() {
-      _searchQuery = '';
-      _searchResults = [];
-      _isSearching = false;
-    });
-    _searchFocusNode.requestFocus();
-  }
-
-  void _toggleFilters() {
-    setState(() {
-      _showFilters = !_showFilters;
-    });
-
-    if (_showFilters) {
-      _filterController.forward();
-    } else {
-      _filterController.reverse();
-    }
-  }
-
-  void _applyFilter(String filter) {
-    setState(() {
-      _selectedFilter = filter;
-    });
-
-    if (_searchQuery.isNotEmpty) {
-      _performSearch();
-    }
-  }
-
-  void _loadRecentSearches() {
-    // TODO: Load from persistent storage
-    setState(() {
-      _recentSearches = [
-        'Weekly Review',
-        'Meeting Notes',
-        'Project Planning',
-        'Shopping List',
-      ];
-    });
-  }
-
-  void _saveRecentSearches() {
-    // TODO: Save to persistent storage
-  }
-
-  void _selectRecentSearch(String query) {
-    _searchController.text = query;
-    setState(() {
-      _searchQuery = query;
-    });
-    _performSearch();
-  }
-
-  // Voice search methods
-  Future<void> _initializeVoiceSearch() async {
-    _speechToText = stt.SpeechToText();
-    _isVoiceAvailable = await _speechToText.initialize(
-      onStatus: (status) {
-        if (status == 'notListening' && _isListening) {
-          setState(() {
-            _isListening = false;
-          });
-          _voiceController.reverse();
-        }
-      },
-      onError: (error) => _handleVoiceError(error),
-    );
-  }
-
-  Future<void> _startVoiceSearch() async {
-    if (!_isVoiceAvailable) return;
-
-    final permission = await Permission.microphone.request();
-    if (permission != PermissionStatus.granted) {
-      _showErrorSnackbar('Microphone permission required');
-      return;
-    }
-
-    setState(() {
-      _isListening = true;
-    });
-    _voiceController.forward();
-
-    await _speechToText.listen(
-      onResult: (result) {
-        setState(() {
-          _searchController.text = result.recognizedWords;
-          _searchQuery = result.recognizedWords;
-        });
-        if (result.finalResult) {
-          _performSearch();
-        }
-      },
-      listenFor: const Duration(seconds: 10),
-      pauseFor: const Duration(seconds: 2),
-    );
-  }
-
-  void _stopVoiceSearch() {
-    _speechToText.stop();
-    setState(() {
-      _isListening = false;
-    });
-    _voiceController.reverse();
-  }
-
-  void _handleVoiceError(dynamic error) {
-    setState(() {
-      _isListening = false;
-    });
-    _voiceController.reverse();
-    _showErrorSnackbar('Voice recognition error');
-  }
-
-  void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.redAccent,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        margin: EdgeInsets.all(16.w),
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      body: Column(
-        children: [
-          _buildSearchHeader(),
-          if (_showFilters) _buildFilterSection(),
-          Expanded(child: _buildSearchContent()),
-        ],
+    return _SearchLifecycleWrapper(
+      initialQuery: initialQuery,
+      child: BlocBuilder<SearchBloc, SearchState>(
+        builder: (context, state) {
+          if (state is! SearchLoaded) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          return Scaffold(
+            backgroundColor: AppColors.darkBackground,
+            body: Column(
+              children: [
+                _buildSearchHeader(context, state),
+                _buildFilterSection(context, state),
+                Expanded(child: _buildSearchContent(context, state)),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildSearchHeader() {
+  Widget _buildSearchHeader(BuildContext context, SearchLoaded state) {
     return Container(
       color: AppColors.darkBackground.withOpacity(0.95),
       child: BackdropFilter(
@@ -329,7 +85,7 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
               // Search bar
               Padding(
                 padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
-                child: _buildSearchBar(),
+                child: _buildSearchBar(context, state),
               ),
             ],
           ),
@@ -338,16 +94,17 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
     );
   }
 
-  Widget _buildSearchBar() {
+  Widget _buildSearchBar(BuildContext context, SearchLoaded state) {
+    final wrapper = _SearchLifecycleWrapper.of(context);
     return Container(
       height: 48.h,
       decoration: BoxDecoration(
         color: AppColors.darkCardBackground,
         borderRadius: BorderRadius.circular(12.r),
-        border: _isListening
+        border: state.isListening
             ? Border.all(color: AppColors.primary, width: 2)
             : null,
-        boxShadow: _isListening
+        boxShadow: state.isListening
             ? [
                 BoxShadow(
                   color: AppColors.primary.withOpacity(0.3),
@@ -362,24 +119,26 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
             child: Icon(
-              _isListening ? Icons.mic : Icons.search,
-              color: _isListening ? AppColors.primary : Colors.grey.shade500,
+              state.isListening ? Icons.mic : Icons.search,
+              color: state.isListening
+                  ? AppColors.primary
+                  : Colors.grey.shade500,
               size: 24.sp,
             ),
           ),
 
           Expanded(
             child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
+              controller: wrapper?.searchController,
+              focusNode: wrapper?.searchFocusNode,
               style: TextStyle(fontSize: 16.sp, color: Colors.white),
               decoration: InputDecoration(
-                hintText: _isListening
+                hintText: state.isListening
                     ? 'Listening...'
                     : 'Search notes, todos...',
                 hintStyle: TextStyle(
                   fontSize: 16.sp,
-                  color: _isListening
+                  color: state.isListening
                       ? AppColors.primary.withOpacity(0.7)
                       : Colors.grey.shade500,
                 ),
@@ -387,14 +146,18 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
                 contentPadding: EdgeInsets.zero,
               ),
               textInputAction: TextInputAction.search,
-              onSubmitted: (_) => _performSearch(),
+              onSubmitted: (query) {
+                if (query.isNotEmpty) {
+                  context.read<SearchBloc>().add(PerformSearch(query));
+                }
+              },
             ),
           ),
 
           // Voice search button
-          if (_isVoiceAvailable && !_isListening)
+          if (state.isVoiceAvailable && !state.isListening)
             GestureDetector(
-              onTap: _startVoiceSearch,
+              onTap: () => wrapper?.startVoiceSearch(),
               child: Container(
                 padding: EdgeInsets.all(8.w),
                 margin: EdgeInsets.symmetric(horizontal: 4.w),
@@ -411,9 +174,9 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
             ),
 
           // Stop voice button
-          if (_isListening)
+          if (state.isListening)
             GestureDetector(
-              onTap: _stopVoiceSearch,
+              onTap: () => wrapper?.stopVoiceSearch(),
               child: Container(
                 padding: EdgeInsets.all(8.w),
                 margin: EdgeInsets.symmetric(horizontal: 4.w),
@@ -426,9 +189,10 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
             ),
 
           // Clear button
-          if (_searchController.text.isNotEmpty && !_isListening)
+          if ((wrapper?.searchController.text.isNotEmpty ?? false) &&
+              !state.isListening)
             GestureDetector(
-              onTap: _clearSearch,
+              onTap: () => wrapper?.clearSearch(),
               child: Container(
                 padding: EdgeInsets.all(8.w),
                 child: Icon(
@@ -441,12 +205,14 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
 
           // Filter button
           GestureDetector(
-            onTap: _toggleFilters,
+            onTap: () => context.read<SearchBloc>().add(ToggleFilters()),
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Icon(
                 Icons.tune,
-                color: _showFilters ? AppColors.primary : Colors.grey.shade500,
+                color: state.showFilters
+                    ? AppColors.primary
+                    : Colors.grey.shade500,
                 size: 24.sp,
               ),
             ),
@@ -456,56 +222,81 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
     );
   }
 
-  Widget _buildFilterSection() {
-    return SlideTransition(
-      position: Tween<Offset>(begin: const Offset(0, -1), end: Offset.zero)
-          .animate(
-            CurvedAnimation(parent: _filterController, curve: Curves.easeOut),
-          ),
-      child: Container(
-        padding: EdgeInsets.all(16.w),
-        decoration: BoxDecoration(
-          color: AppColors.darkCardBackground,
-          border: Border(
-            bottom: BorderSide(color: Colors.grey.shade800, width: 1),
-          ),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'FILTERS',
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: Colors.grey.shade500,
+  Widget _buildFilterSection(BuildContext context, SearchLoaded state) {
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
+      child: state.showFilters
+          ? Container(
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: AppColors.darkCardBackground,
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey.shade800, width: 1),
+                ),
               ),
-            ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'FILTERS',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.2,
+                      color: Colors.grey.shade500,
+                    ),
+                  ),
 
-            SizedBox(height: 12.h),
+                  SizedBox(height: 12.h),
 
-            Wrap(
-              spacing: 8.w,
-              runSpacing: 8.h,
-              children: [
-                _buildFilterChip('All', 'all'),
-                _buildFilterChip('Notes', 'notes'),
-                _buildFilterChip('Todos', 'todos'),
-                _buildFilterChip('Reminders', 'reminders'),
-              ],
-            ),
-          ],
-        ),
-      ),
+                  Wrap(
+                    spacing: 8.w,
+                    runSpacing: 8.h,
+                    children: [
+                      _buildFilterChip(
+                        context,
+                        'All',
+                        SearchFilter.all,
+                        state.selectedFilter,
+                      ),
+                      _buildFilterChip(
+                        context,
+                        'Notes',
+                        SearchFilter.notes,
+                        state.selectedFilter,
+                      ),
+                      _buildFilterChip(
+                        context,
+                        'Todos',
+                        SearchFilter.todos,
+                        state.selectedFilter,
+                      ),
+                      _buildFilterChip(
+                        context,
+                        'Reminders',
+                        SearchFilter.reminders,
+                        state.selectedFilter,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            )
+          : const SizedBox.shrink(),
     );
   }
 
-  Widget _buildFilterChip(String label, String value) {
-    final isSelected = _selectedFilter == value;
+  Widget _buildFilterChip(
+    BuildContext context,
+    String label,
+    SearchFilter value,
+    SearchFilter selected,
+  ) {
+    final isSelected = selected == value;
 
     return GestureDetector(
-      onTap: () => _applyFilter(value),
+      onTap: () => context.read<SearchBloc>().add(ApplyFilter(value)),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         decoration: BoxDecoration(
@@ -529,20 +320,20 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
     );
   }
 
-  Widget _buildSearchContent() {
-    if (_isSearching) {
+  Widget _buildSearchContent(BuildContext context, SearchLoaded state) {
+    if (state.isSearching) {
       return _buildLoadingState();
     }
 
-    if (_searchQuery.isEmpty) {
-      return _buildRecentSearches();
+    if (state.searchQuery.isEmpty) {
+      return _buildRecentSearches(state);
     }
 
-    if (_searchResults.isEmpty) {
+    if (state.searchResults.isEmpty) {
       return _buildEmptyResults();
     }
 
-    return _buildSearchResults();
+    return _buildSearchResults(context, state);
   }
 
   Widget _buildLoadingState() {
@@ -564,7 +355,7 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
     );
   }
 
-  Widget _buildRecentSearches() {
+  Widget _buildRecentSearches(SearchLoaded state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -584,9 +375,9 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
         Expanded(
           child: ListView.builder(
             padding: EdgeInsets.symmetric(horizontal: 16.w),
-            itemCount: _recentSearches.length,
+            itemCount: state.recentSearches.length,
             itemBuilder: (context, index) {
-              final search = _recentSearches[index];
+              final search = state.recentSearches[index];
               return ListTile(
                 leading: Icon(
                   Icons.history,
@@ -597,7 +388,8 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
                   search,
                   style: TextStyle(fontSize: 16.sp, color: Colors.white),
                 ),
-                onTap: () => _selectRecentSearch(search),
+                onTap: () =>
+                    context.read<SearchBloc>().add(PerformSearch(search)),
               );
             },
           ),
@@ -631,52 +423,53 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
     );
   }
 
-  Widget _buildSearchResults() {
-    return FadeTransition(
-      opacity: _resultsController,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(16.w),
-            child: Text(
-              '${_searchResults.length} RESULTS',
-              style: TextStyle(
-                fontSize: 12.sp,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.2,
-                color: Colors.grey.shade500,
-              ),
+  Widget _buildSearchResults(BuildContext context, SearchLoaded state) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Text(
+            '${state.searchResults.length} RESULTS',
+            style: TextStyle(
+              fontSize: 12.sp,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: Colors.grey.shade500,
             ),
           ),
+        ),
 
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16.w),
-              itemCount: _searchResults.length,
-              itemBuilder: (context, index) {
-                final note = _searchResults[index];
-                return Padding(
-                  padding: EdgeInsets.only(bottom: 12.h),
-                  child: _buildSearchResultCard(note),
-                );
-              },
-            ),
+        Expanded(
+          child: ListView.builder(
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            itemCount: state.searchResults.length,
+            itemBuilder: (_, index) {
+              final note = state.searchResults[index];
+              return Padding(
+                padding: EdgeInsets.only(bottom: 12.h),
+                child: _buildSearchResultCard(context, note),
+              );
+            },
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildSearchResultCard(Note note) {
+  Widget _buildSearchResultCard(BuildContext context, Note note) {
     return GestureDetector(
-      onTap: () {
-        Navigator.pop(context);
-        Navigator.pushNamed(
-          context,
-          '/notes/editor/enhanced',
-          arguments: {'note': note},
-        );
+      onTap: () async {
+        if (context.mounted) {
+          Navigator.pop(context);
+          if (context.mounted) {
+            Navigator.pushNamed(
+              context,
+              '/notes/editor/enhanced',
+              arguments: {'note': note},
+            );
+          }
+        }
       },
       child: Container(
         padding: EdgeInsets.all(16.w),
@@ -762,3 +555,144 @@ class _EnhancedGlobalSearchScreenState extends State<EnhancedGlobalSearchScreen>
   }
 }
 
+class _SearchLifecycleWrapper extends StatefulWidget {
+  final Widget child;
+  final String? initialQuery;
+
+  const _SearchLifecycleWrapper({required this.child, this.initialQuery});
+
+  @override
+  State<_SearchLifecycleWrapper> createState() =>
+      _SearchLifecycleWrapperState();
+
+  static _SearchLifecycleWrapperState? of(BuildContext context) {
+    return context.findAncestorStateOfType<_SearchLifecycleWrapperState>();
+  }
+}
+
+class _SearchLifecycleWrapperState extends State<_SearchLifecycleWrapper> {
+  final TextEditingController searchController = TextEditingController();
+  final FocusNode searchFocusNode = FocusNode();
+  late stt.SpeechToText _speechToText;
+  Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    searchController.addListener(_onSearchChanged);
+    _initializeVoiceSearch();
+
+    // Initialize search bloc with initial query
+    context.read<SearchBloc>().add(
+      InitializeSearch(initialQuery: widget.initialQuery),
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      searchFocusNode.requestFocus();
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    searchController.dispose();
+    searchFocusNode.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = searchController.text;
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        context.read<SearchBloc>().add(SearchQueryChanged(query.trim()));
+        if (query.trim().isNotEmpty) {
+          context.read<SearchBloc>().add(PerformSearch(query.trim()));
+        } else {
+          context.read<SearchBloc>().add(ClearSearch());
+        }
+      }
+    });
+  }
+
+  void clearSearch() {
+    searchController.clear();
+    context.read<SearchBloc>().add(ClearSearch());
+    searchFocusNode.requestFocus();
+  }
+
+  Future<void> _initializeVoiceSearch() async {
+    _speechToText = stt.SpeechToText();
+    await _speechToText.initialize(
+      onStatus: (status) {
+        if (status == 'notListening') {
+          context.read<SearchBloc>().add(StopVoiceSearch());
+        }
+      },
+      onError: (error) => _handleVoiceError(error),
+    );
+  }
+
+  Future<void> startVoiceSearch() async {
+    final permission = await Permission.microphone.request();
+    if (permission != PermissionStatus.granted) {
+      _showErrorSnackbar('Microphone permission required');
+      return;
+    }
+
+    context.read<SearchBloc>().add(StartVoiceSearch());
+    await _speechToText.listen(
+      onResult: (result) {
+        searchController.text = result.recognizedWords;
+        context.read<SearchBloc>().add(
+          VoiceSearchResult(
+            result.recognizedWords,
+            isFinal: result.finalResult,
+          ),
+        );
+      },
+      listenFor: const Duration(seconds: 10),
+      pauseFor: const Duration(seconds: 2),
+    );
+  }
+
+  void stopVoiceSearch() {
+    _speechToText.stop();
+    context.read<SearchBloc>().add(StopVoiceSearch());
+  }
+
+  void _handleVoiceError(dynamic error) {
+    context.read<SearchBloc>().add(StopVoiceSearch());
+    _showErrorSnackbar('Voice recognition error');
+  }
+
+  void _showErrorSnackbar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.redAccent,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          margin: EdgeInsets.all(16.w),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocListener<SearchBloc, SearchState>(
+      listener: (context, state) {
+        if (state is SearchLoaded) {
+          if (state.searchQuery != searchController.text) {
+            searchController.text = state.searchQuery;
+          }
+        }
+      },
+      child: widget.child,
+    );
+  }
+}

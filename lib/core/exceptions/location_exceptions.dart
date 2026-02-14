@@ -5,84 +5,54 @@ import 'package:mynotes/core/exceptions/app_exceptions.dart';
 
 class LocationRemindersException extends AppException {
   LocationRemindersException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'LOCATION_REMINDERS_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'LOCATION_REMINDERS_ERROR');
 }
 
 class LocationPermissionException extends LocationRemindersException {
   LocationPermissionException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'PERMISSION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'PERMISSION_ERROR');
 }
 
 class GeofenceException extends LocationRemindersException {
   GeofenceException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'GEOFENCE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'GEOFENCE_ERROR');
 }
 
 class NotificationException extends LocationRemindersException {
   NotificationException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'NOTIFICATION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'NOTIFICATION_ERROR');
 }
 
 class LocationServiceException extends LocationRemindersException {
   LocationServiceException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'LOCATION_SERVICE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'LOCATION_SERVICE_ERROR');
 }
 
 class DatabaseException extends LocationRemindersException {
   DatabaseException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'DATABASE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'DATABASE_ERROR');
 }

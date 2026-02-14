@@ -1,12 +1,14 @@
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:record/record.dart';
 import './permission_handler_service.dart';
 
 /// Service for capturing media (photos, videos, audio)
 class MediaCaptureService {
   static final MediaCaptureService _instance = MediaCaptureService._internal();
   final ImagePicker _imagePicker = ImagePicker();
+  final AudioRecorder _audioRecorder = AudioRecorder();
   final PermissionHandlerService _permissionService =
       PermissionHandlerService();
 
@@ -103,8 +105,16 @@ class MediaCaptureService {
         return false;
       }
 
-      // Mock: In real app, use record package
-      // For now, just return success
+      if (await _audioRecorder.isRecording()) {
+        return false;
+      }
+
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$fileName';
+
+      const config = RecordConfig(); // Default config: AAC, 44.1kHz, etc.
+
+      await _audioRecorder.start(config, path: filePath);
       return true;
     } catch (e) {
       print('Error starting audio recording: $e');
@@ -115,11 +125,8 @@ class MediaCaptureService {
   /// Stop audio recording and return file path
   Future<String?> stopAudioRecording() async {
     try {
-      final directory = await getApplicationDocumentsDirectory();
-      final filePath =
-          '${directory.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
-      // Mock: In real app, would be set by record package
-      return filePath;
+      final path = await _audioRecorder.stop();
+      return path;
     } catch (e) {
       print('Error stopping audio recording: $e');
     }
@@ -129,8 +136,7 @@ class MediaCaptureService {
   /// Check if currently recording
   Future<bool> isRecording() async {
     try {
-      // Mock implementation
-      return false;
+      return await _audioRecorder.isRecording();
     } catch (e) {
       return false;
     }
@@ -139,7 +145,7 @@ class MediaCaptureService {
   /// Pause audio recording
   Future<void> pauseAudioRecording() async {
     try {
-      // Mock implementation
+      await _audioRecorder.pause();
     } catch (e) {
       print('Error pausing audio recording: $e');
     }
@@ -148,7 +154,7 @@ class MediaCaptureService {
   /// Resume audio recording
   Future<void> resumeAudioRecording() async {
     try {
-      // Mock implementation
+      await _audioRecorder.resume();
     } catch (e) {
       print('Error resuming audio recording: $e');
     }
@@ -159,10 +165,11 @@ class MediaCaptureService {
     try {
       final file = File(filePath);
       if (await file.exists()) {
-        // In a real app, use audio_session or similar to get duration
-        // For now, return file size as approximation
+        // Ideally we'd use a package like 'audioplayers' or 'just_audio' to read metadata
+        // For now, we'll keep the estimate or use the player if available elsewhere
         final fileSize = await file.length();
-        return (fileSize / 16000).toInt(); // Rough estimate
+        return (fileSize / 16000)
+            .toInt(); // Still a rough estimate without decoding metadata
       }
     } catch (e) {
       print('Error getting audio duration: $e');
@@ -173,7 +180,7 @@ class MediaCaptureService {
   /// Cleanup - dispose resources
   Future<void> dispose() async {
     try {
-      // Mock implementation
+      await _audioRecorder.dispose();
     } catch (e) {
       print('Error disposing media capture service: $e');
     }

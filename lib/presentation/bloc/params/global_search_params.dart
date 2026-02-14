@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:mynotes/presentation/widgets/universal_item_card.dart';
+import 'package:mynotes/domain/entities/universal_item.dart';
 import '../../../domain/models/search_filters.dart';
-import '../../../data/repositories/unified_repository.dart';
 
 class GlobalSearchParams extends Equatable {
   final String query;

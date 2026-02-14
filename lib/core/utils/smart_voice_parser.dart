@@ -1,6 +1,6 @@
 import 'dart:math';
 
-import 'package:mynotes/presentation/widgets/universal_item_card.dart';
+import '../../domain/entities/universal_item.dart';
 
 /// Smart Voice Parser
 /// Converts speech to appropriate item type (Note/Todo/Reminder)

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/core/exceptions/app_exceptions.dart';
-import 'package:mynotes/core/exceptions/location_exceptions.dart'
-    hide DatabaseException;
 import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'package:mynotes/injection_container.dart' show getIt;
 import 'package:mynotes/core/services/global_ui_service.dart';
@@ -267,13 +265,13 @@ class ErrorStateBuilder extends StatelessWidget {
   final String title;
 
   const ErrorStateBuilder({
-    Key? key,
+    super.key,
     required this.errorMessage,
     this.errorCode,
     this.onRetry,
     this.icon = Icons.error_outline,
     this.title = 'Error',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

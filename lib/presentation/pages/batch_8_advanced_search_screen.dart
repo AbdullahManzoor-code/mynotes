@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:mynotes/presentation/bloc/note_bloc.dart';
-import 'package:mynotes/presentation/bloc/note_event.dart';
-import 'package:mynotes/presentation/bloc/advanced_search_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_event.dart';
+import 'package:mynotes/presentation/bloc/advanced_search/advanced_search_bloc.dart';
 import 'package:mynotes/domain/services/advanced_search_ranking_service.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
@@ -15,7 +15,7 @@ import 'package:mynotes/injection_container.dart';
 /// Advanced Search Interface - Batch 8, Screen 1
 /// Modernized to use Design System, Global UI Services, and BLoC
 class AdvancedSearchScreen extends StatelessWidget {
-  const AdvancedSearchScreen({Key? key}) : super(key: key);
+  const AdvancedSearchScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +41,7 @@ class AdvancedSearchScreen extends StatelessWidget {
 }
 
 class _AdvancedSearchBody extends StatefulWidget {
-  const _AdvancedSearchBody({Key? key}) : super(key: key);
+  const _AdvancedSearchBody({super.key});
 
   @override
   State<_AdvancedSearchBody> createState() => _AdvancedSearchBodyState();
@@ -402,7 +402,7 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
               ),
             ),
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -477,3 +477,5 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
     Navigator.pushNamed(context, AppRoutes.searchResults, arguments: query);
   }
 }
+
+

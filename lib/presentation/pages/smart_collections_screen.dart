@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:mynotes/presentation/bloc/smart_collections_bloc.dart';
-import 'package:mynotes/presentation/bloc/params/smart_collections_params.dart';
+import 'package:mynotes/presentation/bloc/smart_collections/smart_collections_bloc.dart';
 import 'package:mynotes/domain/entities/smart_collection.dart';
 import 'package:mynotes/presentation/design_system/design_system.dart';
 import '../../domain/repositories/smart_collection_repository.dart';
@@ -871,3 +869,4 @@ class _RuleBuilderSheet extends StatelessWidget {
     );
   }
 }
+

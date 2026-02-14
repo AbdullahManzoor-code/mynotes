@@ -1,0 +1,10 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Move BLoC File",
+			"type": "shell",
+			"command": "powershell -Command \"Move-Item -Path 'f:\\GitHub\\mynotes\\lib\\presentation\\bloc\\accessibility_features_bloc.dart' -Destination 'f:\\GitHub\\mynotes\\lib\\presentation\\bloc\\accessibility_features\\' -Force\""
+		}
+	]
+}

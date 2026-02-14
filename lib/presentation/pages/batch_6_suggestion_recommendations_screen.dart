@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/smart_reminders_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_reminders/smart_reminders_bloc.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
@@ -10,7 +10,7 @@ import '../../injection_container.dart';
 /// Suggestion Recommendations - Batch 6, Screen 1
 /// Refactored to use Design System and Global UI Services
 class SuggestionRecommendationsScreen extends StatelessWidget {
-  const SuggestionRecommendationsScreen({Key? key}) : super(key: key);
+  const SuggestionRecommendationsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -321,3 +321,4 @@ class SuggestionRecommendationsScreen extends StatelessWidget {
     }
   }
 }
+

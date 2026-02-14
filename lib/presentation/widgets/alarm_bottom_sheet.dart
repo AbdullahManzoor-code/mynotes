@@ -8,8 +8,8 @@ import 'package:uuid/uuid.dart';
 import '../../core/constants/app_colors.dart';
 import '../../domain/entities/alarm.dart';
 import '../../domain/entities/note.dart';
-import '../bloc/alarm_bloc.dart';
-import '../bloc/alarm_event.dart';
+import '../bloc/alarm/alarm_bloc.dart';
+import '../bloc/alarm/alarm_event.dart';
 import '../../core/services/global_ui_service.dart';
 
 class AlarmBottomSheet extends StatefulWidget {
@@ -74,11 +74,11 @@ class _AlarmBottomSheetState extends State<AlarmBottomSheet> {
     );
 
     if (widget.existingAlarm != null) {
-      context.read<AlarmBloc>().add(
+      context.read<AlarmsBloc>().add(
         UpdateAlarmEvent(AlarmParams.fromAlarm(alarm)),
       );
     } else {
-      context.read<AlarmBloc>().add(
+      context.read<AlarmsBloc>().add(
         AddAlarmEvent(AlarmParams.fromAlarm(alarm)),
       );
     }

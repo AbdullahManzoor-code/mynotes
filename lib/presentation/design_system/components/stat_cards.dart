@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system.dart';
 
 /// Stat Card Widget - Displays key metrics with icon, label, value, and trend

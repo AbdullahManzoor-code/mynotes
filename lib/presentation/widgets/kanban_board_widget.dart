@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/bloc/params/todo_params.dart';
-import 'package:mynotes/presentation/bloc/todo_state.dart';
-import 'package:mynotes/presentation/bloc/todo_event.dart';
+import 'package:mynotes/presentation/bloc/todo/todo_state.dart';
+import 'package:mynotes/presentation/bloc/todo/todo_event.dart';
 import '../../domain/entities/todo_item.dart';
-import '../bloc/todo_bloc.dart';
+import '../bloc/todo/todo_bloc.dart';
 import '../design_system/design_system.dart';
 
 /// Kanban Board View - Column-based task visualization
@@ -76,9 +75,9 @@ class _KanbanBoardWidgetState extends State<KanbanBoardWidget> {
     for (var todo in todos) {
       if (todo.isCompleted) {
         _columnTasks['Done']?.add(todo);
-      } else if (todo.priority == 'high') {
+      } else if (todo.priority == TodoPriority.high) {
         _columnTasks['In Progress']?.add(todo);
-      } else if (todo.priority == 'medium') {
+      } else if (todo.priority == TodoPriority.medium) {
         _columnTasks['In Review']?.add(todo);
       } else {
         _columnTasks['To Do']?.add(todo);
@@ -332,11 +331,11 @@ class _KanbanBoardWidgetState extends State<KanbanBoardWidget> {
 
   Color _getPriorityColor(TodoPriority? priority) {
     switch (priority) {
-      case 'high':
+      case TodoPriority.high:
         return Colors.red;
-      case 'medium':
+      case TodoPriority.medium:
         return Colors.orange;
-      case 'low':
+      case TodoPriority.low:
         return Colors.green;
       default:
         return Colors.grey;

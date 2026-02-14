@@ -7,11 +7,11 @@ class TaskNotesWidget extends StatefulWidget {
   final VoidCallback? onSave;
 
   const TaskNotesWidget({
-    Key? key,
+    super.key,
     this.initialNotes = '',
     required this.onNotesChanged,
     this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<TaskNotesWidget> createState() => _TaskNotesWidgetState();
@@ -136,8 +136,7 @@ class TaskNotesDisplay extends StatelessWidget {
   final String notes;
   final VoidCallback? onEdit;
 
-  const TaskNotesDisplay({Key? key, required this.notes, this.onEdit})
-    : super(key: key);
+  const TaskNotesDisplay({super.key, required this.notes, this.onEdit});
 
   @override
   Widget build(BuildContext context) {

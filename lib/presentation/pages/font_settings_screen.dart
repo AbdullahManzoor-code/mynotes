@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
 import '../../core/services/theme_customization_service.dart';
-import '../bloc/settings_bloc.dart';
+import '../bloc/settings/settings_bloc.dart';
 import '../bloc/params/settings_params.dart';
 import '../../injection_container.dart' show getIt;
 
@@ -325,3 +324,4 @@ class _FontSettingsView extends StatelessWidget {
     getIt<GlobalUiService>().showSuccess('Font settings reset to defaults');
   }
 }
+

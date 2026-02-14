@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/domain/entities/note.dart';
 import 'package:mynotes/injection_container.dart';
 import '../design_system/design_system.dart';
-import '../bloc/theme_bloc.dart';
-import '../bloc/theme_event.dart';
-import '../bloc/theme_state.dart';
+import '../bloc/theme/theme_bloc.dart';
+import '../bloc/theme/theme_event.dart';
+import '../bloc/theme/theme_state.dart';
+import '../bloc/settings/settings_bloc.dart';
 
 // ==================== Core Screens ====================
 import 'analytics_dashboard_screen.dart';
@@ -22,7 +22,6 @@ import 'enhanced_note_editor_screen.dart';
 // import 'advanced_note_editor.dart';
 
 // ==================== Todos Screens ====================
-import 'todos_list_screen.dart';
 import 'recurring_todo_schedule_screen.dart';
 
 // ==================== Reminders Screens ====================
@@ -38,201 +37,205 @@ import 'main_home_screen.dart';
 // ==================== Special Screens ====================
 import 'cross_feature_demo.dart';
 import 'search_filter_screen.dart';
+import 'todos_list_screen.dart' show TodosListScreen;
 import 'voice_settings_screen.dart';
 import 'settings_screen.dart';
 import 'privacy_policy_screen.dart';
 
 // ==================== Utilities ====================
 import 'document_scan_screen.dart';
-// ignore: unused_import
 import 'ocr_text_extraction_screen.dart';
-// ignore: unused_import
 import 'pdf_preview_screen.dart';
-// ignore: unused_import
 import 'calendar_integration_screen.dart';
-// ignore: unused_import
 import 'backup_export_screen.dart';
-// ignore: unused_import
 import 'biometric_lock_screen.dart';
 
 // ==================== Empty States & Helpers ====================
-// ignore: unused_import
 import 'empty_state_notes_help_screen.dart';
-// ignore: unused_import
 import 'empty_state_todos_help_screen.dart';
-// ignore: unused_import
 import 'daily_highlight_summary_screen.dart';
-// ignore: unused_import
-import 'quick_add_confirmation_screen.dart';
-// ignore: unused_import
 import 'location_reminder_coming_soon_screen.dart';
 
 /// Advanced Settings Screen
 /// Master navigation hub with developer/debug section
 /// Links to every screen in the project for testing
-class AdvancedSettingsScreen extends StatefulWidget {
+class AdvancedSettingsScreen extends StatelessWidget {
   const AdvancedSettingsScreen({super.key});
 
   @override
-  State<AdvancedSettingsScreen> createState() => _AdvancedSettingsScreenState();
-}
-
-class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
-  bool _isDeveloperMode = false;
-  bool _showDebugInfo = false;
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: AppColors.darkBackground,
-        elevation: 0,
-        actions: [
-          IconButton(
-            onPressed: () {
-              setState(() {
-                _isDeveloperMode = !_isDeveloperMode;
-              });
-              HapticFeedback.lightImpact();
-            },
-            icon: Icon(
-              _isDeveloperMode ? Icons.developer_mode : Icons.developer_board,
-              color: _isDeveloperMode ? AppColors.primary : Colors.grey,
+    return BlocBuilder<SettingsBloc, SettingsState>(
+      builder: (context, state) {
+        final params = state is SettingsLoaded ? state.params : null;
+        final isDeveloperMode = params?.developerModeEnabled ?? false;
+        final showDebugInfo = params?.showDebugInfo ?? false;
+
+        return Scaffold(
+          backgroundColor: AppColors.darkBackground,
+          appBar: AppBar(
+            title: const Text('Settings'),
+            backgroundColor: AppColors.darkBackground,
+            elevation: 0,
+            actions: [
+              IconButton(
+                onPressed: () {
+                  if (params != null) {
+                    context.read<SettingsBloc>().add(
+                      UpdateSettingsEvent(params.toggleDeveloperMode()),
+                    );
+                  }
+                  HapticFeedback.lightImpact();
+                },
+                icon: Icon(
+                  isDeveloperMode
+                      ? Icons.developer_mode
+                      : Icons.developer_board,
+                  color: isDeveloperMode ? AppColors.primary : Colors.grey,
+                ),
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            padding: EdgeInsets.all(24.w),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // App Settings
+                _buildSection('App Settings', [
+                  _buildThemeTile(),
+                  _buildSettingTile(
+                    'Voice Recognition',
+                    'Enhanced AI parsing enabled',
+                    Icons.mic,
+                    trailing: Switch(
+                      value: true,
+                      onChanged: (value) {},
+                      activeColor: AppColors.primary,
+                    ),
+                  ),
+                  _buildSettingTile(
+                    'Smart Notifications',
+                    'Intelligent reminder system',
+                    Icons.notifications_active,
+                    trailing: Switch(
+                      value: true,
+                      onChanged: (value) {},
+                      activeColor: AppColors.primary,
+                    ),
+                  ),
+                ]),
+
+                SizedBox(height: 32.h),
+
+                // Quick Actions
+                _buildSection('Quick Actions', [
+                  _buildActionTile(
+                    'Analytics Dashboard',
+                    'View productivity insights',
+                    Icons.analytics,
+                    () => _navigateToScreen(
+                      context,
+                      const AnalyticsDashboardScreen(),
+                    ),
+                  ),
+                  _buildActionTile(
+                    'Global Search',
+                    'Search across everything',
+                    Icons.search,
+                    () => _navigateToScreen(
+                      context,
+                      const EnhancedGlobalSearchScreen(),
+                    ),
+                  ),
+                  _buildActionTile(
+                    'Focus Session',
+                    'Start Pomodoro timer',
+                    Icons.psychology,
+                    () =>
+                        _navigateToScreen(context, const FocusSessionScreen()),
+                  ),
+                ]),
+
+                SizedBox(height: 32.h),
+
+                // Data & Privacy
+                _buildSection('Data & Privacy', [
+                  _buildActionTile(
+                    'Export Data',
+                    'Backup your items',
+                    Icons.download,
+                    () => _handleExportData(context),
+                  ),
+                  _buildActionTile(
+                    'Clear Cache',
+                    'Free up storage space',
+                    Icons.cleaning_services,
+                    () => _handleClearCache(context),
+                  ),
+                  _buildSettingTile(
+                    'Debug Info',
+                    'Show technical details',
+                    Icons.bug_report,
+                    trailing: Switch(
+                      value: showDebugInfo,
+                      onChanged: (value) {
+                        if (params != null) {
+                          context.read<SettingsBloc>().add(
+                            UpdateSettingsEvent(params.toggleDebugInfo()),
+                          );
+                        }
+                      },
+                      activeColor: AppColors.primary,
+                    ),
+                  ),
+                ]),
+
+                if (showDebugInfo) ...[
+                  SizedBox(height: 16.h),
+                  _buildDebugSection(),
+                ],
+
+                // Developer Mode Section
+                if (isDeveloperMode) ...[
+                  SizedBox(height: 32.h),
+                  _buildDeveloperSection(context),
+                ],
+
+                SizedBox(height: 32.h),
+
+                // About
+                _buildSection('About', [
+                  _buildInfoTile(
+                    'MyNotes',
+                    'Universal Productivity Hub v2.0',
+                    Icons.info_outline,
+                  ),
+                  _buildInfoTile(
+                    'Built with Flutter',
+                    'Unified Notes • Todos • Reminders',
+                    Icons.flutter_dash,
+                  ),
+                  _buildActionTile(
+                    'Rate App',
+                    'Help us improve',
+                    Icons.star_outline,
+                    () => _handleRateApp(context),
+                  ),
+                  _buildActionTile(
+                    'Privacy Policy',
+                    'Read how we protect your data',
+                    Icons.privacy_tip_outlined,
+                    () =>
+                        _navigateToScreen(context, const PrivacyPolicyScreen()),
+                  ),
+                ]),
+
+                SizedBox(height: 50.h),
+              ],
             ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // App Settings
-            _buildSection('App Settings', [
-              _buildThemeTile(),
-              _buildSettingTile(
-                'Voice Recognition',
-                'Enhanced AI parsing enabled',
-                Icons.mic,
-                trailing: Switch(
-                  value: true,
-                  onChanged: (value) {},
-                  activeColor: AppColors.primary,
-                ),
-              ),
-              _buildSettingTile(
-                'Smart Notifications',
-                'Intelligent reminder system',
-                Icons.notifications_active,
-                trailing: Switch(
-                  value: true,
-                  onChanged: (value) {},
-                  activeColor: AppColors.primary,
-                ),
-              ),
-            ]),
-
-            SizedBox(height: 32.h),
-
-            // Quick Actions
-            _buildSection('Quick Actions', [
-              _buildActionTile(
-                'Analytics Dashboard',
-                'View productivity insights',
-                Icons.analytics,
-                () => _navigateToScreen(const AnalyticsDashboardScreen()),
-              ),
-              _buildActionTile(
-                'Global Search',
-                'Search across everything',
-                Icons.search,
-                () => _navigateToScreen(const EnhancedGlobalSearchScreen()),
-              ),
-              _buildActionTile(
-                'Focus Session',
-                'Start Pomodoro timer',
-                Icons.psychology,
-                () => _navigateToScreen(const FocusSessionScreen()),
-              ),
-            ]),
-
-            SizedBox(height: 32.h),
-
-            // Data & Privacy
-            _buildSection('Data & Privacy', [
-              _buildActionTile(
-                'Export Data',
-                'Backup your items',
-                Icons.download,
-                _handleExportData,
-              ),
-              _buildActionTile(
-                'Clear Cache',
-                'Free up storage space',
-                Icons.cleaning_services,
-                _handleClearCache,
-              ),
-              _buildSettingTile(
-                'Debug Info',
-                'Show technical details',
-                Icons.bug_report,
-                trailing: Switch(
-                  value: _showDebugInfo,
-                  onChanged: (value) {
-                    setState(() {
-                      _showDebugInfo = value;
-                    });
-                  },
-                  activeColor: AppColors.primary,
-                ),
-              ),
-            ]),
-
-            if (_showDebugInfo) ...[
-              SizedBox(height: 16.h),
-              _buildDebugSection(),
-            ],
-
-            // Developer Mode Section
-            if (_isDeveloperMode) ...[
-              SizedBox(height: 32.h),
-              _buildDeveloperSection(),
-            ],
-
-            SizedBox(height: 32.h),
-
-            // About
-            _buildSection('About', [
-              _buildInfoTile(
-                'MyNotes',
-                'Universal Productivity Hub v2.0',
-                Icons.info_outline,
-              ),
-              _buildInfoTile(
-                'Built with Flutter',
-                'Unified Notes • Todos • Reminders',
-                Icons.flutter_dash,
-              ),
-              _buildActionTile(
-                'Rate App',
-                'Help us improve',
-                Icons.star_outline,
-                _handleRateApp,
-              ),
-              _buildActionTile(
-                'Privacy Policy',
-                'Read how we protect your data',
-                Icons.privacy_tip_outlined,
-                () => _navigateToScreen(const PrivacyPolicyScreen()),
-              ),
-            ]),
-
-            SizedBox(height: 50.h),
-          ],
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -468,7 +471,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
     );
   }
 
-  Widget _buildDeveloperSection() {
+  Widget _buildDeveloperSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -493,27 +496,31 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Main Home',
             'Main dashboard with bottom navigation',
-            () => _navigateToScreen(const MainHomeScreen()),
+            () => _navigateToScreen(context, const MainHomeScreen()),
           ),
           _buildDevTile(
             'Universal Quick Add',
             'AI-powered smart input',
-            () => _navigateToScreen(const FixedUniversalQuickAddScreen()),
+            () => _navigateToScreen(
+              context,
+              const FixedUniversalQuickAddScreen(),
+            ),
           ),
           _buildDevTile(
             'Enhanced Search',
             'Voice-powered global search',
-            () => _navigateToScreen(const EnhancedGlobalSearchScreen()),
+            () =>
+                _navigateToScreen(context, const EnhancedGlobalSearchScreen()),
           ),
           _buildDevTile(
             'Focus Session',
             'Pomodoro timer',
-            () => _navigateToScreen(const FocusSessionScreen()),
+            () => _navigateToScreen(context, const FocusSessionScreen()),
           ),
           _buildDevTile(
             'Focus Celebration',
             'Celebration screen',
-            () => _navigateToScreen(const FocusCelebrationScreen()),
+            () => _navigateToScreen(context, const FocusCelebrationScreen()),
           ),
         ]),
 
@@ -524,12 +531,12 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Analytics Dashboard',
             'Comprehensive insights',
-            () => _navigateToScreen(const AnalyticsDashboardScreen()),
+            () => _navigateToScreen(context, const AnalyticsDashboardScreen()),
           ),
           _buildDevTile(
             'Today Dashboard',
             'Today\'s overview',
-            () => _navigateToScreen(const TodayDashboardScreen()),
+            () => _navigateToScreen(context, const TodayDashboardScreen()),
           ),
         ]),
 
@@ -540,22 +547,22 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Enhanced Notes List',
             'Enhanced notes view',
-            () => _navigateToScreen(const EnhancedNotesListScreen()),
+            () => _navigateToScreen(context, const EnhancedNotesListScreen()),
           ),
           _buildDevTile(
             'Enhanced Note Editor',
             'Advanced editor',
-            () => _navigateToScreen(const EnhancedNoteEditorScreen()),
+            () => _navigateToScreen(context, const EnhancedNoteEditorScreen()),
           ),
           // _buildDevTile(
           //   'Advanced Note Editor',
           //   'Professional editor with Quill',
-          //   () => _navigateToScreen(const AdvancedNoteEditor()),
+          //   () => _navigateToScreen(context, const AdvancedNoteEditor()),
           // ),
           _buildDevTile(
             'Empty Notes Help',
             'Help for empty state',
-            () => _navigateToScreen(const EmptyStateNotesHelpScreen()),
+            () => _navigateToScreen(context, const EmptyStateNotesHelpScreen()),
           ),
         ]),
 
@@ -566,19 +573,20 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Todos List',
             'All todos',
-            () => _navigateToScreen(const TodosListScreen()),
+            () => _navigateToScreen(context, TodosListScreen()),
           ),
           // AdvancedTodoScreen and TodoFocusScreen require Note parameters
           // Available through Todos List when editing
           _buildDevTile(
             'Recurring Schedule',
             'Recurring todo scheduler',
-            () => _navigateToScreen(const RecurringTodoScheduleScreen()),
+            () =>
+                _navigateToScreen(context, const RecurringTodoScheduleScreen()),
           ),
           _buildDevTile(
             'Empty Todos Help',
             'Help for empty state',
-            () => _navigateToScreen(const EmptyStateTodosHelpScreen()),
+            () => _navigateToScreen(context, const EmptyStateTodosHelpScreen()),
           ),
         ]),
 
@@ -589,7 +597,8 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Enhanced Reminders',
             'Enhanced reminders view',
-            () => _navigateToScreen(const EnhancedRemindersListScreen()),
+            () =>
+                _navigateToScreen(context, const EnhancedRemindersListScreen()),
           ),
         ]),
 
@@ -600,12 +609,12 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Search Filter',
             'Advanced filtering',
-            () => _navigateToScreen(const SearchFilterScreen()),
+            () => _navigateToScreen(context, const SearchFilterScreen()),
           ),
           _buildDevTile(
             'Cross Feature Demo',
             'Cross-feature demo',
-            () => _navigateToScreen(const CrossFeatureDemo()),
+            () => _navigateToScreen(context, const CrossFeatureDemo()),
           ),
         ]),
 
@@ -616,22 +625,22 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Settings',
             'General settings',
-            () => _navigateToScreen(const SettingsScreen()),
+            () => _navigateToScreen(context, const SettingsScreen()),
           ),
           _buildDevTile(
             'Voice Settings',
             'Voice configuration',
-            () => _navigateToScreen(const VoiceSettingsScreen()),
+            () => _navigateToScreen(context, const VoiceSettingsScreen()),
           ),
           _buildDevTile(
             'Backup & Export',
             'Backup your data',
-            () => _navigateToScreen(const BackupExportScreen()),
+            () => _navigateToScreen(context, const BackupExportScreen()),
           ),
           _buildDevTile(
             'Biometric Lock',
             'Security settings',
-            () => _navigateToScreen(const BiometricLockScreen()),
+            () => _navigateToScreen(context, const BiometricLockScreen()),
           ),
         ]),
 
@@ -642,27 +651,31 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Document Scan',
             'Scan documents',
-            () => _navigateToScreen(const DocumentScanScreen()),
+            () => _navigateToScreen(context, const DocumentScanScreen()),
           ),
           _buildDevTile(
             'OCR Text Extraction',
             'Extract text from images',
-            () => _navigateToScreen(const OcrTextExtractionScreen()),
+            () => _navigateToScreen(context, const OcrTextExtractionScreen()),
           ),
           _buildDevTile(
             'PDF Preview',
             'Preview PDFs',
-            () => _navigateToScreen(PdfPreviewScreen(note: Note(id: '1'))),
+            () => _navigateToScreen(
+              context,
+              PdfPreviewScreen(note: Note(id: '1')),
+            ),
           ),
           _buildDevTile(
             'Calendar Integration',
             'Calendar view',
-            () => _navigateToScreen(const CalendarIntegrationScreen()),
+            () => _navigateToScreen(context, const CalendarIntegrationScreen()),
           ),
           _buildDevTile(
             'Daily Highlights',
             'Daily summary',
-            () => _navigateToScreen(const DailyHighlightSummaryScreen()),
+            () =>
+                _navigateToScreen(context, const DailyHighlightSummaryScreen()),
           ),
           // EditDailyHighlightScreen is in edit_daily_highlight_screen_new.dart
           // Uncomment if needed - currently using alternative
@@ -677,7 +690,10 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
           _buildDevTile(
             'Location Reminder',
             'Location-based reminders',
-            () => _navigateToScreen(const LocationReminderComingSoonScreen()),
+            () => _navigateToScreen(
+              context,
+              const LocationReminderComingSoonScreen(),
+            ),
           ),
         ]),
 
@@ -690,17 +706,17 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
             'Create test items',
             _generateSampleData,
           ),
-          _buildDevTile('Clear All Data', 'Reset database', _clearAllData),
+          // _buildDevTile('Clear All Data', 'Reset database', _clearAllData),
           _buildDevTile(
             'Export Database',
             'Download SQLite file',
             _exportDatabase,
           ),
-          _buildDevTile(
-            'Test Voice Parser',
-            'Try smart parsing',
-            _testVoiceParser,
-          ),
+          // _buildDevTile(
+          //   'Test Voice Parser',
+          //   'Try smart parsing',
+          //   _testVoiceParser,
+          // ),
         ]),
       ],
     );
@@ -764,31 +780,29 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
   }
 
   // Action methods
-  void _navigateToScreen(Widget screen) {
+  void _navigateToScreen(BuildContext context, Widget screen) {
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
-  void _handleExportData() {
+  void _handleExportData(BuildContext context) {
     // TODO: Implement data export
     _showSnackbar('Export feature coming soon');
   }
 
-  void _handleClearCache() {
+  void _handleClearCache(BuildContext context) {
     // TODO: Implement cache clearing
     _showSnackbar('Cache cleared successfully');
   }
 
-  void _handleRateApp() {
+  void _handleRateApp(BuildContext context) {
     // TODO: Open app store rating
     _showSnackbar('Thank you for your support!');
   }
 
-  Future<void> _launchUrl(String urlString) async {
+  Future<void> _launchUrl(BuildContext context, String urlString) async {
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
-      if (mounted) {
-        _showSnackbar('Could not launch $urlString');
-      }
+      _showSnackbar('Could not launch $urlString');
     }
   }
 
@@ -797,7 +811,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
     _showSnackbar('Sample data generated');
   }
 
-  void _clearAllData() {
+  void _clearAllData(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -817,7 +831,7 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
               // TODO: Clear database
               _showSnackbar('All data cleared');
             },
-            child: Text('Clear', style: TextStyle(color: Colors.red)),
+            child: const Text('Clear', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -829,9 +843,9 @@ class _AdvancedSettingsScreenState extends State<AdvancedSettingsScreen> {
     _showSnackbar('Database exported to Downloads');
   }
 
-  void _testVoiceParser() {
+  void _testVoiceParser(BuildContext context) {
     // TODO: Open voice parser test dialog
-    _navigateToScreen(const FixedUniversalQuickAddScreen());
+    _navigateToScreen(context, const FixedUniversalQuickAddScreen());
   }
 
   void _showSnackbar(String message) {

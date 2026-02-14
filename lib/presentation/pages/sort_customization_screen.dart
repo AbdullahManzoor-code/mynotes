@@ -1,113 +1,50 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
-import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_state.dart';
+import 'package:mynotes/presentation/bloc/note/note_event.dart';
 
 /// Sort Customization Screen (ORG-007)
 /// Multiple sort options with persistence and drag-drop manual sort
-class SortCustomizationScreen extends StatefulWidget {
-  const SortCustomizationScreen({Key? key}) : super(key: key);
-
-  @override
-  State<SortCustomizationScreen> createState() =>
-      _SortCustomizationScreenState();
-}
-
-class _SortCustomizationScreenState extends State<SortCustomizationScreen>
-    with SingleTickerProviderStateMixin {
-  late TabController tabController;
-
-  String primarySort = 'date';
-  bool sortAscending = false; // false = descending
-  String secondarySort = 'title';
-  bool secondarySortAscending = true;
-
-  List<String> manualOrderItems = [
-    'Project Alpha',
-    'Meeting Notes',
-    'Grocery List',
-    'Design System',
-    'Daily Standup',
-  ];
-
-  final quickSortOptions = [
-    {
-      'name': 'Newest First',
-      'primary': 'date',
-      'ascending': false,
-      'icon': Icons.calendar_today,
-      'color': Colors.blue,
-    },
-    {
-      'name': 'Oldest First',
-      'primary': 'date',
-      'ascending': true,
-      'icon': Icons.calendar_today,
-      'color': Colors.grey,
-    },
-    {
-      'name': 'A to Z',
-      'primary': 'title',
-      'ascending': true,
-      'icon': Icons.sort_by_alpha,
-      'color': Colors.green,
-    },
-    {
-      'name': 'Z to A',
-      'primary': 'title',
-      'ascending': false,
-      'icon': Icons.sort_by_alpha,
-      'color': Colors.orange,
-    },
-    {
-      'name': 'Most Used',
-      'primary': 'frequency',
-      'ascending': false,
-      'icon': Icons.trending_up,
-      'color': Colors.purple,
-    },
-    {
-      'name': 'Priority',
-      'primary': 'priority',
-      'ascending': false,
-      'icon': Icons.priority_high,
-      'color': Colors.red,
-    },
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    tabController = TabController(length: 3, vsync: this);
-  }
-
-  @override
-  void dispose() {
-    tabController.dispose();
-    super.dispose();
-  }
+/// Refactored to use NotesBloc for centralized state management
+class SortCustomizationScreen extends StatelessWidget {
+  const SortCustomizationScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return DefaultTabController(
+      length: 3,
+      child: BlocBuilder<NotesBloc, NoteState>(
+        builder: (context, state) {
+          if (state is! NotesLoaded) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: _buildAppBar(context),
-      body: TabBarView(
-        controller: tabController,
-        children: [
-          _buildQuickSortTab(context),
-          _buildCustomSortTab(context),
-          _buildManualSortTab(context),
-        ],
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+
+          return Scaffold(
+            backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+            appBar: _buildAppBar(context, state),
+            body: TabBarView(
+              children: [
+                _buildQuickSortTab(context, state),
+                _buildCustomSortTab(context, state),
+                _buildManualSortTab(context, state),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, NotesLoaded state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AppBar(
@@ -127,13 +64,12 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
         ),
       ),
       bottom: TabBar(
-        controller: tabController,
         labelColor: AppColors.primaryColor,
         unselectedLabelColor: isDark
             ? AppColors.lightTextSecondary
             : AppColors.darkTextSecondary,
         indicatorColor: AppColors.primaryColor,
-        tabs: [
+        tabs: const [
           Tab(text: 'Quick Sort'),
           Tab(text: 'Custom'),
           Tab(text: 'Manual'),
@@ -142,8 +78,53 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
     );
   }
 
-  Widget _buildQuickSortTab(BuildContext context) {
+  Widget _buildQuickSortTab(BuildContext context, NotesLoaded state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final quickSortOptions = [
+      {
+        'name': 'Newest First',
+        'primary': NoteSortOption.dateModified,
+        'descending': true,
+        'icon': Icons.calendar_today,
+        'color': Colors.blue,
+      },
+      {
+        'name': 'Oldest First',
+        'primary': NoteSortOption.dateModified,
+        'descending': false,
+        'icon': Icons.calendar_today,
+        'color': Colors.grey,
+      },
+      {
+        'name': 'A to Z',
+        'primary': NoteSortOption.titleAZ,
+        'descending': false,
+        'icon': Icons.sort_by_alpha,
+        'color': Colors.green,
+      },
+      {
+        'name': 'Z to A',
+        'primary': NoteSortOption.titleAZ,
+        'descending': true,
+        'icon': Icons.sort_by_alpha,
+        'color': Colors.orange,
+      },
+      {
+        'name': 'Most Used',
+        'primary': NoteSortOption.frequency,
+        'descending': true,
+        'icon': Icons.trending_up,
+        'color': Colors.purple,
+      },
+      {
+        'name': 'Priority',
+        'primary': NoteSortOption.priority,
+        'descending': true,
+        'icon': Icons.priority_high,
+        'color': Colors.red,
+      },
+    ];
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(16.w),
@@ -159,7 +140,7 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
           SizedBox(height: 16.h),
           GridView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               mainAxisSpacing: 12.h,
@@ -185,10 +166,12 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
 
     return GestureDetector(
       onTap: () {
-        setState(() {
-          primarySort = option['primary'] as String;
-          sortAscending = option['ascending'] as bool;
-        });
+        context.read<NotesBloc>().add(
+          UpdateNoteViewConfigEvent(
+            sortBy: option['primary'] as NoteSortOption,
+            sortDescending: option['descending'] as bool,
+          ),
+        );
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Sorted: ${option['name']}')));
@@ -219,14 +202,14 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
             Text(
               option['name'] as String,
               textAlign: TextAlign.center,
-              style: AppTypography.body2().copyWith(
+              style: AppTypography.bodyLarge(context).copyWith(
                 color: isDark ? AppColors.lightText : AppColors.darkText,
                 fontWeight: FontWeight.w600,
               ),
             ),
             SizedBox(height: 4.h),
             Text(
-              option['ascending'] == true ? '↑' : '↓',
+              option['descending'] == false ? '↑' : '↓',
               style: AppTypography.heading3().copyWith(color: color),
             ),
           ],
@@ -235,9 +218,7 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
     );
   }
 
-  Widget _buildCustomSortTab(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+  Widget _buildCustomSortTab(BuildContext context, NotesLoaded state) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(16.w),
       child: Column(
@@ -245,38 +226,50 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
         children: [
           _buildSortLevelSection(
             'Primary Sort',
-            primarySort,
-            sortAscending,
-            (value) => setState(() => primarySort = value),
-            (value) => setState(() => sortAscending = value),
+            state.sortBy,
+            !state.sortDescending,
+            (value) => context.read<NotesBloc>().add(
+              UpdateNoteViewConfigEvent(sortBy: _stringToOption(value!)),
+            ),
+            (isAscending) => context.read<NotesBloc>().add(
+              UpdateNoteViewConfigEvent(sortDescending: !isAscending),
+            ),
             context,
           ),
           SizedBox(height: 24.h),
           _buildSortLevelSection(
             'Secondary Sort',
-            secondarySort,
-            secondarySortAscending,
-            (value) => setState(() => secondarySort = value),
-            (value) => setState(() => secondarySortAscending = value),
+            state.secondarySortBy ?? NoteSortOption.titleAZ,
+            !(state.secondarySortDescending ?? false),
+            (value) => context.read<NotesBloc>().add(
+              UpdateNoteViewConfigEvent(
+                secondarySortBy: _stringToOption(value!),
+              ),
+            ),
+            (isAscending) => context.read<NotesBloc>().add(
+              UpdateNoteViewConfigEvent(secondarySortDescending: !isAscending),
+            ),
             context,
           ),
           SizedBox(height: 24.h),
-          _buildPreviewSection(context),
+          _buildPreviewSection(context, state),
           SizedBox(height: 16.h),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
-                    setState(() {
-                      primarySort = 'date';
-                      sortAscending = false;
-                      secondarySort = 'title';
-                      secondarySortAscending = true;
-                    });
+                    context.read<NotesBloc>().add(
+                      const UpdateNoteViewConfigEvent(
+                        sortBy: NoteSortOption.dateModified,
+                        sortDescending: true,
+                        secondarySortBy: NoteSortOption.titleAZ,
+                        secondarySortDescending: false,
+                      ),
+                    );
                   },
-                  icon: Icon(Icons.refresh),
-                  label: Text('Reset'),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Reset'),
                 ),
               ),
               SizedBox(width: 12.w),
@@ -284,11 +277,11 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
                 child: ElevatedButton.icon(
                   onPressed: () {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Sort settings saved')),
+                      const SnackBar(content: Text('Sort settings saved')),
                     );
                   },
-                  icon: Icon(Icons.save),
-                  label: Text('Save'),
+                  icon: const Icon(Icons.save),
+                  label: const Text('Save'),
                 ),
               ),
             ],
@@ -298,11 +291,52 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
     );
   }
 
+  NoteSortOption _stringToOption(String value) {
+    switch (value) {
+      case 'date':
+        return NoteSortOption.dateModified;
+      case 'title':
+        return NoteSortOption.titleAZ;
+      case 'color':
+        return NoteSortOption.color;
+      case 'priority':
+        return NoteSortOption.priority;
+      case 'frequency':
+        return NoteSortOption.frequency;
+      case 'manual':
+        return NoteSortOption.manual;
+      default:
+        return NoteSortOption.dateModified;
+    }
+  }
+
+  String _optionToString(NoteSortOption option) {
+    switch (option) {
+      case NoteSortOption.dateModified:
+      case NoteSortOption.dateCreated:
+        return 'date';
+      case NoteSortOption.titleAZ:
+      case NoteSortOption.titleZA:
+      case NoteSortOption.alphabetical:
+        return 'title';
+      case NoteSortOption.color:
+        return 'color';
+      case NoteSortOption.priority:
+        return 'priority';
+      case NoteSortOption.frequency:
+        return 'frequency';
+      case NoteSortOption.manual:
+        return 'manual';
+      default:
+        return 'date';
+    }
+  }
+
   Widget _buildSortLevelSection(
     String label,
-    String selectedSort,
+    NoteSortOption selectedSort,
     bool isAscending,
-    Function(String) onSortChanged,
+    Function(String?) onSortChanged,
     Function(bool) onOrderChanged,
     BuildContext context,
   ) {
@@ -320,14 +354,14 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
         children: [
           Text(
             label,
-            style: AppTypography.body2().copyWith(
+            style: AppTypography.bodySmall(context).copyWith(
               fontWeight: FontWeight.w600,
               color: isDark ? AppColors.lightText : AppColors.darkText,
             ),
           ),
           SizedBox(height: 12.h),
           DropdownButton<String>(
-            value: selectedSort,
+            value: _optionToString(selectedSort),
             isExpanded: true,
             items: ['date', 'title', 'color', 'priority', 'frequency', 'manual']
                 .map((sort) {
@@ -335,7 +369,7 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
                     value: sort,
                     child: Text(
                       sort.replaceFirst(sort[0], sort[0].toUpperCase()),
-                      style: AppTypography.body2().copyWith(
+                      style: AppTypography.bodyLarge(context).copyWith(
                         color: isDark
                             ? AppColors.lightText
                             : AppColors.darkText,
@@ -344,9 +378,7 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
                   );
                 })
                 .toList(),
-            onChanged: (value) {
-              if (value != null) onSortChanged(value);
-            },
+            onChanged: onSortChanged,
           ),
           SizedBox(height: 12.h),
           Row(
@@ -359,11 +391,11 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
               SizedBox(width: 8.w),
               Text(
                 isAscending ? 'Ascending' : 'Descending',
-                style: AppTypography.body2().copyWith(
+                style: AppTypography.bodyLarge(context).copyWith(
                   color: isDark ? AppColors.lightText : AppColors.darkText,
                 ),
               ),
-              Spacer(),
+              const Spacer(),
               Switch(
                 value: isAscending,
                 onChanged: onOrderChanged,
@@ -376,7 +408,7 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
     );
   }
 
-  Widget _buildPreviewSection(BuildContext context) {
+  Widget _buildPreviewSection(BuildContext context, NotesLoaded state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
@@ -384,7 +416,7 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
       children: [
         Text(
           'Preview',
-          style: AppTypography.body2().copyWith(
+          style: AppTypography.bodyLarge(context).copyWith(
             fontWeight: FontWeight.w600,
             color: isDark ? AppColors.lightText : AppColors.darkText,
           ),
@@ -400,15 +432,15 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Primary: ${primarySort.toUpperCase()} (${sortAscending ? '↑' : '↓'})',
-                style: AppTypography.body3().copyWith(
+                'Primary: ${state.sortBy.displayName.toUpperCase()} (${!state.sortDescending ? '↑' : '↓'})',
+                style: AppTypography.bodyMedium(context).copyWith(
                   color: isDark ? AppColors.lightText : AppColors.darkText,
                 ),
               ),
               SizedBox(height: 4.h),
               Text(
-                'Secondary: ${secondarySort.toUpperCase()} (${secondarySortAscending ? '↑' : '↓'})',
-                style: AppTypography.body3().copyWith(
+                'Secondary: ${(state.secondarySortBy ?? NoteSortOption.titleAZ).displayName.toUpperCase()} (${!(state.secondarySortDescending ?? false) ? '↑' : '↓'})',
+                style: AppTypography.bodySmall(context).copyWith(
                   color: isDark
                       ? AppColors.lightTextSecondary
                       : AppColors.darkTextSecondary,
@@ -421,8 +453,9 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
     );
   }
 
-  Widget _buildManualSortTab(BuildContext context) {
+  Widget _buildManualSortTab(BuildContext context, NotesLoaded state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final manualOrderItems = state.manualSortItems;
 
     return SingleChildScrollView(
       padding: EdgeInsets.all(16.w),
@@ -447,9 +480,9 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
                 Expanded(
                   child: Text(
                     'Drag items to reorder them manually',
-                    style: AppTypography.body3().copyWith(
-                      color: AppColors.primaryColor,
-                    ),
+                    style: AppTypography.bodySmall(
+                      context,
+                    ).copyWith(color: AppColors.primaryColor),
                   ),
                 ),
               ],
@@ -458,15 +491,17 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
           SizedBox(height: 16.h),
           ReorderableListView(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             onReorder: (oldIndex, newIndex) {
-              setState(() {
-                if (newIndex > oldIndex) {
-                  newIndex -= 1;
-                }
-                final item = manualOrderItems.removeAt(oldIndex);
-                manualOrderItems.insert(newIndex, item);
-              });
+              final newItems = List<String>.from(manualOrderItems);
+              if (newIndex > oldIndex) {
+                newIndex -= 1;
+              }
+              final item = newItems.removeAt(oldIndex);
+              newItems.insert(newIndex, item);
+              context.read<NotesBloc>().add(
+                UpdateNoteViewConfigEvent(manualSortItems: newItems),
+              );
             },
             children: List.generate(manualOrderItems.length, (index) {
               return Container(
@@ -503,7 +538,7 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
                           children: [
                             Text(
                               '${index + 1}. ${manualOrderItems[index]}',
-                              style: AppTypography.body2().copyWith(
+                              style: AppTypography.bodySmall(context).copyWith(
                                 color: isDark
                                     ? AppColors.lightText
                                     : AppColors.darkText,
@@ -512,27 +547,37 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
                             SizedBox(height: 4.h),
                             Text(
                               'Last modified today',
-                              style: AppTypography.caption().copyWith(
-                                color: isDark
-                                    ? AppColors.lightTextSecondary
-                                    : AppColors.darkTextSecondary,
-                              ),
+                              style: AppTypography.captionSmall(context)
+                                  .copyWith(
+                                    color: isDark
+                                        ? AppColors.lightTextSecondary
+                                        : AppColors.darkTextSecondary,
+                                  ),
                             ),
                           ],
                         ),
                       ),
                     ),
-                    PopupMenuButton(
-                      icon: Icon(Icons.more_vert),
+                    PopupMenuButton<String>(
+                      icon: const Icon(Icons.more_vert),
                       itemBuilder: (context) => [
-                        PopupMenuItem(child: Text('Edit'), onTap: () {}),
-                        PopupMenuItem(
+                        const PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        const PopupMenuItem(
+                          value: 'delete',
                           child: Text('Delete'),
-                          onTap: () {
-                            setState(() => manualOrderItems.removeAt(index));
-                          },
                         ),
                       ],
+                      onSelected: (value) {
+                        if (value == 'delete') {
+                          final newItems = List<String>.from(manualOrderItems);
+                          newItems.removeAt(index);
+                          context.read<NotesBloc>().add(
+                            UpdateNoteViewConfigEvent(
+                              manualSortItems: newItems,
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ],
                 ),
@@ -543,12 +588,12 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
           Center(
             child: ElevatedButton.icon(
               onPressed: () {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text('Manual order saved')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Manual order saved')),
+                );
               },
-              icon: Icon(Icons.save),
-              label: Text('Save Manual Order'),
+              icon: const Icon(Icons.save),
+              label: const Text('Save Manual Order'),
             ),
           ),
         ],
@@ -556,4 +601,3 @@ class _SortCustomizationScreenState extends State<SortCustomizationScreen>
     );
   }
 }
-

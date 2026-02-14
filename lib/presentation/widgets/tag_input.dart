@@ -28,13 +28,13 @@ class TagChip extends StatelessWidget {
   final bool isSelected;
 
   const TagChip({
-    Key? key,
+    super.key,
     required this.tag,
     this.onTap,
     this.onDelete,
     this.isSelectable = false,
     this.isSelected = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -60,12 +60,12 @@ class TagInput extends StatefulWidget {
   final Function(Tag) onTagRemoved;
 
   const TagInput({
-    Key? key,
+    super.key,
     required this.selectedTags,
     required this.availableTags,
     required this.onTagAdded,
     required this.onTagRemoved,
-  }) : super(key: key);
+  });
 
   @override
   State<TagInput> createState() => _TagInputState();
@@ -266,12 +266,12 @@ class TagFilter extends StatelessWidget {
   final Function(Tag) onTagDeselected;
 
   const TagFilter({
-    Key? key,
+    super.key,
     required this.tags,
     required this.selectedTags,
     required this.onTagSelected,
     required this.onTagDeselected,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

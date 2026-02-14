@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../injection_container.dart';
-import '../bloc/media_analytics_bloc.dart';
+import '../bloc/media/media_analytics/media_analytics_bloc.dart';
 import '../../domain/repositories/media_repository.dart';
 import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
@@ -10,7 +10,7 @@ import '../../core/services/global_ui_service.dart';
 /// Media Analytics Dashboard - Batch 4, Screen 2
 /// Refactored to StatelessWidget with BLoC and Design System
 class MediaAnalyticsDashboard extends StatelessWidget {
-  const MediaAnalyticsDashboard({Key? key}) : super(key: key);
+  const MediaAnalyticsDashboard({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +24,7 @@ class MediaAnalyticsDashboard extends StatelessWidget {
 }
 
 class _MediaAnalyticsDashboardView extends StatelessWidget {
-  const _MediaAnalyticsDashboardView({Key? key}) : super(key: key);
+  const _MediaAnalyticsDashboardView({super.key});
 
   @override
   Widget build(BuildContext context) {

@@ -295,6 +295,51 @@ class ReflectionDatabase {
       'category': 'mental_health',
       'frequency': 'daily',
     },
+
+    // Gratitude & Positivity (Additional)
+    {
+      'prompt': 'What are three small things that brought you joy today?',
+      'category': 'gratitude',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'Who is someone you\'re thankful for, and why?',
+      'category': 'gratitude',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt':
+          'What is a comfort in your life that you often take for granted?',
+      'category': 'gratitude',
+      'frequency': 'monthly',
+    },
+    {
+      'prompt': 'What beautiful thing did you see today?',
+      'category': 'gratitude',
+      'frequency': 'daily',
+    },
+
+    // Mindfulness & Presence (Additional)
+    {
+      'prompt': 'How would you describe your current energy level?',
+      'category': 'mindfulness',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What is a thought that has been repeating in your mind today?',
+      'category': 'mindfulness',
+      'frequency': 'daily',
+    },
+    {
+      'prompt': 'What does "peace" look like to you right now?',
+      'category': 'mindfulness',
+      'frequency': 'weekly',
+    },
+    {
+      'prompt': 'What can you hear right now if you listen closely?',
+      'category': 'mindfulness',
+      'frequency': 'daily',
+    },
   ];
 
   static String generateId() => const Uuid().v4();

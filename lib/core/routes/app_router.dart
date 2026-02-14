@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/domain/entities/note.dart';
+import 'package:mynotes/presentation/pages/search_filter_screen.dart'
+    show SearchFilterScreen;
 import 'package:mynotes/presentation/widgets/create_alarm_bottom_sheet.dart';
 import '../../domain/entities/todo_item.dart';
 import '../../presentation/pages/splash_screen.dart';
@@ -15,7 +17,7 @@ import '../../presentation/pages/advanced_todo_screen.dart';
 import '../../presentation/pages/settings_screen.dart';
 import '../../presentation/pages/analytics_dashboard_screen.dart';
 import '../../presentation/pages/enhanced_global_search_screen.dart';
-import '../../presentation/pages/search_filter_screen.dart';
+// import '../../presentation/pages/search_filter_screen.dart';
 import '../../presentation/pages/media_viewer_screen.dart';
 import '../../presentation/pages/media_picker_screen.dart';
 import '../../presentation/pages/audio_recorder_screen.dart';

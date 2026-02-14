@@ -55,13 +55,13 @@ class SubtaskListWidget extends StatefulWidget {
   final VoidCallback? onAddSubtask;
 
   const SubtaskListWidget({
-    Key? key,
+    super.key,
     required this.parentTodoId,
     required this.subtasks,
     required this.onSubtaskToggle,
     required this.onSubtaskDelete,
     this.onAddSubtask,
-  }) : super(key: key);
+  });
 
   @override
   State<SubtaskListWidget> createState() => _SubtaskListWidgetState();
@@ -141,7 +141,7 @@ class _SubtaskListWidgetState extends State<SubtaskListWidget> {
               shrinkWrap: true,
               physics: NeverScrollableScrollPhysics(),
               itemCount: relatedSubtasks.length,
-              separatorBuilder: (_, __) => Divider(),
+              separatorBuilder: (context, index) => Divider(),
               itemBuilder: (context, index) {
                 final subtask = relatedSubtasks[index];
                 return _buildSubtaskTile(context, subtask);
@@ -185,10 +185,10 @@ class SubtaskCreatorWidget extends StatefulWidget {
   final ValueChanged<String> onSubtaskCreated;
 
   const SubtaskCreatorWidget({
-    Key? key,
+    super.key,
     required this.parentTodoId,
     required this.onSubtaskCreated,
-  }) : super(key: key);
+  });
 
   @override
   State<SubtaskCreatorWidget> createState() => _SubtaskCreatorWidgetState();
@@ -257,10 +257,10 @@ class SubtaskProgressIndicator extends StatelessWidget {
   final String parentTodoId;
 
   const SubtaskProgressIndicator({
-    Key? key,
+    super.key,
     required this.subtasks,
     required this.parentTodoId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

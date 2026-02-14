@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:math' as math;
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'package:mynotes/domain/entities/universal_item.dart';
 import '../design_system/design_system.dart';
 import '../widgets/universal_item_card.dart';
-import '../bloc/analytics_bloc.dart';
+import '../bloc/analytics/analytics_bloc.dart';
 
 /// Analytics Dashboard Screen
 /// Unified productivity insights across Notes, Todos, and Reminders
@@ -503,9 +503,8 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
 
     final maxValue = weeklyActivity.values.reduce(math.max);
     if (maxValue == 0) {
-      // Show empty state for chart
       return SizedBox(
-        height: 120.h,
+        height: 200.h,
         child: Center(
           child: Text(
             'No activity yet',
@@ -515,33 +514,98 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
       );
     }
 
+    final barGroups = weeklyActivity.entries.toList().asMap().entries.map((e) {
+      final index = e.key;
+      final entry = e.value;
+      return BarChartGroupData(
+        x: index,
+        barRods: [
+          BarChartRodData(
+            toY: entry.value * _chartAnimation.value,
+            color: AppColors.primary,
+            width: 16.w,
+            borderRadius: BorderRadius.circular(4.r),
+            backDrawRodData: BackgroundBarChartRodData(
+              show: true,
+              toY: maxValue,
+              color: Colors.white.withOpacity(0.05),
+            ),
+          ),
+        ],
+      );
+    }).toList();
+
     return SizedBox(
-      height: 120.h,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: weeklyActivity.entries.map((entry) {
-          final height =
-              (entry.value / maxValue) * 80.h * _chartAnimation.value;
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              Container(
-                width: 24.w,
-                height: height.clamped(4.h, 80.h),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(4.r),
-                ),
+      height: 200.h,
+      child: BarChart(
+        BarChartData(
+          alignment: BarChartAlignment.spaceAround,
+          maxY: maxValue * 1.2,
+          barTouchData: BarTouchData(
+            enabled: true,
+            touchTooltipData: BarTouchTooltipData(
+              getTooltipColor: (_) => AppColors.darkCardBackground,
+              tooltipBorderRadius: BorderRadius.circular(8.r),
+              getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                return BarTooltipItem(
+                  '${weeklyActivity.entries.elementAt(groupIndex).key}\n',
+                  TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12.sp,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: rod.toY.toStringAsFixed(0),
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          titlesData: FlTitlesData(
+            show: true,
+            bottomTitles: AxisTitles(
+              sideTitles: SideTitles(
+                showTitles: true,
+                getTitlesWidget: (value, meta) {
+                  final index = value.toInt();
+                  if (index >= 0 && index < weeklyActivity.length) {
+                    return Padding(
+                      padding: EdgeInsets.only(top: 8.h),
+                      child: Text(
+                        weeklyActivity.keys.elementAt(index),
+                        style: TextStyle(
+                          color: Colors.grey.shade500,
+                          fontSize: 10.sp,
+                        ),
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+                reservedSize: 30.h,
               ),
-              SizedBox(height: 8.h),
-              Text(
-                entry.key,
-                style: TextStyle(fontSize: 12.sp, color: Colors.grey.shade400),
-              ),
-            ],
-          );
-        }).toList(),
+            ),
+            leftTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            topTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+            rightTitles: const AxisTitles(
+              sideTitles: SideTitles(showTitles: false),
+            ),
+          ),
+          gridData: const FlGridData(show: false),
+          borderData: FlBorderData(show: false),
+          barGroups: barGroups,
+        ),
       ),
     );
   }
@@ -573,10 +637,36 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 14.sp),
               ),
             )
-          else
+          else ...[
+            SizedBox(
+              height: 180.h,
+              child: PieChart(
+                PieChartData(
+                  sectionsSpace: 4,
+                  centerSpaceRadius: 40.r,
+                  sections: categoryBreakdown.map((category) {
+                    final color = _getCategoryColor(category['name']);
+                    final percentage = category['percentage'] as double;
+                    return PieChartSectionData(
+                      color: color,
+                      value: percentage,
+                      title: '${percentage.round()}%',
+                      radius: 50.r,
+                      titleStyle: TextStyle(
+                        fontSize: 12.sp,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+            ),
+            SizedBox(height: 24.h),
             ...categoryBreakdown.map(
               (category) => _buildCategoryItem(category),
             ),
+          ],
         ],
       ),
     );
@@ -800,3 +890,4 @@ extension DoubleClamped on double {
     return this;
   }
 }
+

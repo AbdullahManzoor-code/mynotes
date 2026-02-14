@@ -49,10 +49,10 @@ class CustomQuestionCreatorWidget extends StatefulWidget {
   final CustomQuestion? initialQuestion;
 
   const CustomQuestionCreatorWidget({
-    Key? key,
+    super.key,
     required this.onQuestionCreated,
     this.initialQuestion,
-  }) : super(key: key);
+  });
 
   @override
   State<CustomQuestionCreatorWidget> createState() =>
@@ -67,13 +67,15 @@ class _CustomQuestionCreatorWidgetState
   bool _isDailyPrompt = false;
 
   static const List<String> categories = [
-    'Personal',
+    'Daily Reflection',
+    'Life & Purpose',
+    'Gratitude',
     'Growth',
-    'Health',
-    'Work',
+    'Mental Health',
+    'Mindfulness',
+    'Career & Study',
     'Relationships',
-    'Creativity',
-    'Goals',
+    'Personal',
     'Other',
   ];
 
@@ -242,8 +244,7 @@ class DailyPromptWidget extends StatelessWidget {
   final CustomQuestion prompt;
   final VoidCallback? onAnswerTap;
 
-  const DailyPromptWidget({Key? key, required this.prompt, this.onAnswerTap})
-    : super(key: key);
+  const DailyPromptWidget({super.key, required this.prompt, this.onAnswerTap});
 
   @override
   Widget build(BuildContext context) {
@@ -331,12 +332,12 @@ class CustomQuestionsListWidget extends StatelessWidget {
   final VoidCallback? onAddQuestion;
 
   const CustomQuestionsListWidget({
-    Key? key,
+    super.key,
     required this.questions,
     required this.onQuestionToggle,
     required this.onQuestionDelete,
     this.onAddQuestion,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

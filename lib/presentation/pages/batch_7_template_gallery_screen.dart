@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/injection_container.dart';
-import 'package:mynotes/presentation/bloc/template_management_bloc.dart';
+import 'package:mynotes/presentation/bloc/template_management/template_management_bloc.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
@@ -10,7 +10,7 @@ import 'package:mynotes/core/services/global_ui_service.dart';
 /// Template Gallery - Batch 7, Screen 1
 /// Refactored to use Design System and optimized UI patterns
 class TemplateGalleryScreen extends StatelessWidget {
-  const TemplateGalleryScreen({Key? key}) : super(key: key);
+  const TemplateGalleryScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -433,3 +433,4 @@ class TemplateGalleryScreen extends StatelessWidget {
     }
   }
 }
+

@@ -1,11 +1,18 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import '../../core/constants/app_colors.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/presentation/design_system/app_colors.dart';
+import 'package:photo_view/photo_view.dart';
+import 'package:photo_view/photo_view_gallery.dart';
 import '../../domain/entities/media_item.dart';
 import '../widgets/voice_message_widget.dart';
 import '../widgets/video_player_widget.dart';
 import '../widgets/note_overlay_widget.dart';
 import '../../domain/entities/annotation_stroke.dart';
+import '../bloc/media_viewer/media_viewer_bloc.dart';
+import '../bloc/media_viewer/media_viewer_event.dart';
+import '../bloc/media_viewer/media_viewer_state.dart';
+import '../../injection_container.dart';
 import 'image_editor_screen.dart';
 import 'video_editor_screen.dart';
 import 'text_editor_screen.dart';
@@ -33,47 +40,11 @@ class MediaViewerScreen extends StatefulWidget {
 
 class _MediaViewerScreenState extends State<MediaViewerScreen> {
   late PageController _pageController;
-  late int _currentIndex;
-  bool _isMarkupEnabled = false;
-  late Map<int, List<AnnotationStroke>> _annotationsByPage;
 
   @override
   void initState() {
     super.initState();
-    _currentIndex = widget.initialIndex;
-    _pageController = PageController(initialPage: _currentIndex);
-    _annotationsByPage = {};
-    _loadAnnotations();
-  }
-
-  void _loadAnnotations() {
-    for (int i = 0; i < widget.mediaItems.length; i++) {
-      final media = widget.mediaItems[i];
-      if (media.metadata.containsKey('annotations')) {
-        final list = media.metadata['annotations'] as List;
-        _annotationsByPage[i] = list
-            .map(
-              (item) => AnnotationStroke.fromJson(item as Map<String, dynamic>),
-            )
-            .toList();
-      } else {
-        _annotationsByPage[i] = [];
-      }
-    }
-  }
-
-  void _saveAnnotations() {
-    final media = widget.mediaItems[_currentIndex];
-    final strokes = _annotationsByPage[_currentIndex] ?? [];
-    final updatedMedia = media.copyWith(
-      metadata: {
-        ...media.metadata,
-        'annotations': strokes.map((s) => s.toJson()).toList(),
-      },
-    );
-    if (widget.onUpdate != null) {
-      widget.onUpdate!(media, updatedMedia);
-    }
+    _pageController = PageController(initialPage: widget.initialIndex);
   }
 
   @override
@@ -82,22 +53,176 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     super.dispose();
   }
 
-  void _onPageChanged(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => getIt<MediaViewerBloc>()
+        ..add(
+          MediaViewerInitEvent(
+            mediaItems: widget.mediaItems,
+            initialIndex: widget.initialIndex,
+          ),
+        ),
+      child: BlocConsumer<MediaViewerBloc, MediaViewerState>(
+        listener: (context, state) {
+          if (state is MediaViewerDeleted) {
+            if (widget.onDelete != null) {
+              widget.onDelete!(state.media);
+            }
+            Navigator.pop(context);
+          } else if (state is MediaViewerUpdated && state.message != null) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.message!)));
+          } else if (state is MediaViewerFailure) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.error)));
+          }
+        },
+        builder: (context, state) {
+          if (state is! MediaViewerUpdated) {
+            return const Scaffold(
+              backgroundColor: Colors.black,
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final currentIndex = state.currentIndex;
+          final currentMedia = state.mediaItems[currentIndex];
+          final isMarkupEnabled = state.isMarkupEnabled;
+
+          return Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              backgroundColor: Colors.black87,
+              leading: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                '${currentIndex + 1} / ${state.mediaItems.length}',
+                style: const TextStyle(color: Colors.white),
+              ),
+              actions: [
+                IconButton(
+                  icon: Icon(
+                    isMarkupEnabled ? Icons.brush : Icons.brush_outlined,
+                    color: isMarkupEnabled ? Colors.orange : Colors.white,
+                  ),
+                  onPressed: () {
+                    context.read<MediaViewerBloc>().add(
+                      const ToggleMarkupEvent(),
+                    );
+                  },
+                ),
+                if (currentMedia.type == MediaType.image ||
+                    currentMedia.type == MediaType.video)
+                  IconButton(
+                    icon: const Icon(Icons.download, color: Colors.white),
+                    onPressed: () {
+                      context.read<MediaViewerBloc>().add(
+                        SaveMediaToGalleryEvent(currentMedia),
+                      );
+                    },
+                    tooltip: 'Save to Gallery',
+                  ),
+                if (currentMedia.type == MediaType.image ||
+                    currentMedia.type == MediaType.video ||
+                    (currentMedia.type == MediaType.document &&
+                        currentMedia.name.endsWith('.txt')))
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.white),
+                    onPressed: () => _editCurrentMedia(context, state),
+                  ),
+                if (widget.onDelete != null)
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.white),
+                    onPressed: () {
+                      context.read<MediaViewerBloc>().add(
+                        DeleteMediaItemEvent(currentMedia),
+                      );
+                    },
+                  ),
+              ],
+            ),
+            body: PhotoViewGallery.builder(
+              scrollPhysics: isMarkupEnabled
+                  ? const NeverScrollableScrollPhysics()
+                  : const BouncingScrollPhysics(),
+              builder: (BuildContext context, int index) {
+                final media = state.mediaItems[index];
+
+                if (media.type != MediaType.image) {
+                  return PhotoViewGalleryPageOptions.customChild(
+                    child: Stack(
+                      children: [
+                        _buildMediaView(media),
+                        NoteOverlayWidget(
+                          strokes: state.annotationsByPage[index] ?? [],
+                          isDrawingMode:
+                              isMarkupEnabled && currentIndex == index,
+                          onStrokeAdded: (stroke) {
+                            context.read<MediaViewerBloc>().add(
+                              AddStrokeEvent(index, stroke),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    initialScale: PhotoViewComputedScale.contained,
+                  );
+                }
+
+                return PhotoViewGalleryPageOptions.customChild(
+                  child: Stack(
+                    children: [
+                      PhotoView(
+                        imageProvider: media.filePath.startsWith('assets/')
+                            ? AssetImage(media.filePath) as ImageProvider
+                            : FileImage(File(media.filePath)),
+                        initialScale: PhotoViewComputedScale.contained,
+                        minScale: PhotoViewComputedScale.contained * 0.8,
+                        maxScale: PhotoViewComputedScale.covered * 2.0,
+                        heroAttributes: PhotoViewHeroAttributes(tag: media.id),
+                        backgroundDecoration: const BoxDecoration(
+                          color: Colors.black,
+                        ),
+                      ),
+                      NoteOverlayWidget(
+                        strokes: state.annotationsByPage[index] ?? [],
+                        isDrawingMode: isMarkupEnabled && currentIndex == index,
+                        onStrokeAdded: (stroke) {
+                          context.read<MediaViewerBloc>().add(
+                            AddStrokeEvent(index, stroke),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              },
+              itemCount: state.mediaItems.length,
+              loadingBuilder: (context, event) =>
+                  const Center(child: CircularProgressIndicator()),
+              backgroundDecoration: const BoxDecoration(color: Colors.black),
+              pageController: _pageController,
+              onPageChanged: (index) {
+                context.read<MediaViewerBloc>().add(PageChangedEvent(index));
+              },
+            ),
+            bottomNavigationBar: _buildBottomInfo(context, state),
+          );
+        },
+      ),
+    );
   }
 
-  void _deleteCurrentMedia() {
-    if (widget.onDelete != null) {
-      final mediaToDelete = widget.mediaItems[_currentIndex];
-      widget.onDelete!(mediaToDelete);
-      Navigator.pop(context);
-    }
-  }
+  void _editCurrentMedia(BuildContext context, MediaViewerUpdated state) {
+    final media = state.mediaItems[state.currentIndex];
+    final bloc = context.read<MediaViewerBloc>();
+    final index = state.currentIndex;
 
-  void _editCurrentMedia() {
-    final media = widget.mediaItems[_currentIndex];
     if (media.type == MediaType.image) {
       Navigator.push(
         context,
@@ -109,10 +234,7 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
               if (widget.onUpdate != null) {
                 widget.onUpdate!(media, updatedMedia);
               }
-              // Update local state to reflect changes in viewer
-              setState(() {
-                widget.mediaItems[_currentIndex] = updatedMedia;
-              });
+              bloc.add(UpdateMediaItemEvent(index, updatedMedia));
             },
           ),
         ),
@@ -128,9 +250,7 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
               if (widget.onUpdate != null) {
                 widget.onUpdate!(media, updatedMedia);
               }
-              setState(() {
-                widget.mediaItems[_currentIndex] = updatedMedia;
-              });
+              bloc.add(UpdateMediaItemEvent(index, updatedMedia));
             },
           ),
         ),
@@ -147,87 +267,12 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
               if (widget.onUpdate != null) {
                 widget.onUpdate!(media, updatedMedia);
               }
-              setState(() {
-                widget.mediaItems[_currentIndex] = updatedMedia;
-              });
+              bloc.add(UpdateMediaItemEvent(index, updatedMedia));
             },
           ),
         ),
       );
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black87,
-        leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          '${_currentIndex + 1} / ${widget.mediaItems.length}',
-          style: const TextStyle(color: Colors.white),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isMarkupEnabled ? Icons.brush : Icons.brush_outlined,
-              color: _isMarkupEnabled ? Colors.orange : Colors.white,
-            ),
-            onPressed: () {
-              setState(() {
-                _isMarkupEnabled = !_isMarkupEnabled;
-              });
-              if (!_isMarkupEnabled) {
-                _saveAnnotations();
-              }
-            },
-          ),
-          if (widget.mediaItems[_currentIndex].type == MediaType.image ||
-              widget.mediaItems[_currentIndex].type == MediaType.video ||
-              (widget.mediaItems[_currentIndex].type == MediaType.document &&
-                  widget.mediaItems[_currentIndex].name.endsWith('.txt')))
-            IconButton(
-              icon: const Icon(Icons.edit, color: Colors.white),
-              onPressed: _editCurrentMedia,
-            ),
-          if (widget.onDelete != null)
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.white),
-              onPressed: _deleteCurrentMedia,
-            ),
-        ],
-      ),
-      body: PageView.builder(
-        controller: _pageController,
-        onPageChanged: _onPageChanged,
-        itemCount: widget.mediaItems.length,
-        itemBuilder: (context, index) {
-          final media = widget.mediaItems[index];
-          return Stack(
-            children: [
-              _buildMediaView(media),
-              NoteOverlayWidget(
-                strokes: _annotationsByPage[index] ?? [],
-                isDrawingMode: _isMarkupEnabled && _currentIndex == index,
-                onStrokeAdded: (stroke) {
-                  setState(() {
-                    _annotationsByPage[index] = [
-                      ...(_annotationsByPage[index] ?? []),
-                      stroke,
-                    ];
-                  });
-                },
-              ),
-            ],
-          );
-        },
-      ),
-      bottomNavigationBar: _buildBottomInfo(),
-    );
   }
 
   Widget _buildMediaView(MediaItem media) {
@@ -369,9 +414,9 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.audiotrack_rounded,
-                        color: AppColors.audioColor,
+                        color: AppColors.accentBlue,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -403,8 +448,8 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     );
   }
 
-  Widget _buildBottomInfo() {
-    final media = widget.mediaItems[_currentIndex];
+  Widget _buildBottomInfo(BuildContext context, MediaViewerUpdated state) {
+    final media = state.mediaItems[state.currentIndex];
     return Container(
       color: Colors.black87,
       padding: const EdgeInsets.all(16),
@@ -491,11 +536,11 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   Color _getMediaColor(MediaType type) {
     switch (type) {
       case MediaType.image:
-        return AppColors.imageColor;
+        return AppColors.accentPink;
       case MediaType.video:
-        return AppColors.videoColor;
+        return AppColors.accentGreen;
       case MediaType.audio:
-        return AppColors.audioColor;
+        return AppColors.accentBlue;
       case MediaType.document:
         return Colors.orange;
     }
@@ -514,3 +559,4 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     }
   }
 }
+

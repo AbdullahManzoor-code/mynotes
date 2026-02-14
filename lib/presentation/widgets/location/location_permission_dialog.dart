@@ -10,10 +10,10 @@ class LocationPermissionDialog extends StatefulWidget {
   final VoidCallback? onPermissionsDenied;
 
   const LocationPermissionDialog({
-    Key? key,
+    super.key,
     this.onPermissionsGranted,
     this.onPermissionsDenied,
-  }) : super(key: key);
+  });
 
   @override
   State<LocationPermissionDialog> createState() =>
@@ -246,8 +246,7 @@ class _PermissionStep {
 class LocationPermissionBanner extends StatefulWidget {
   final VoidCallback? onPermissionGranted;
 
-  const LocationPermissionBanner({Key? key, this.onPermissionGranted})
-    : super(key: key);
+  const LocationPermissionBanner({super.key, this.onPermissionGranted});
 
   @override
   State<LocationPermissionBanner> createState() =>

@@ -1,27 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_state.dart';
+import 'package:mynotes/presentation/bloc/note/note_event.dart';
 
 /// Search Operators Screen (ORG-006)
 /// Advanced query syntax support (tag:work, color:blue, etc.)
-class SearchOperatorsScreen extends StatefulWidget {
-  const SearchOperatorsScreen({Key? key}) : super(key: key);
+/// Refactored to use NotesBloc for centralized state management
+class SearchOperatorsScreen extends StatelessWidget {
+  const SearchOperatorsScreen({super.key});
 
-  @override
-  State<SearchOperatorsScreen> createState() => _SearchOperatorsScreenState();
-}
-
-class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
-  final TextEditingController searchController = TextEditingController();
-  List<String> searchHistory = [
-    'tag:work color:blue',
-    'before:2024-01-01',
-    '"exact phrase" -tag:personal',
-  ];
-  List<String> appliedOperators = [];
-
-  final operatorDefinitions = [
+  final operatorDefinitions = const [
     {
       'operator': 'tag:',
       'description': 'Filter by tag',
@@ -74,25 +66,39 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        if (state is! NotesLoaded) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
-      appBar: _buildAppBar(context),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildSearchBar(context),
-            if (appliedOperators.isNotEmpty) ...[
-              _buildAppliedOperators(context),
-            ],
-            _buildOperatorsGrid(context),
-            _buildSearchHistory(context),
-            _buildHelpSection(context),
-          ],
-        ),
-      ),
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final searchController = TextEditingController(text: state.searchQuery);
+        searchController.selection = TextSelection.fromPosition(
+          TextPosition(offset: searchController.text.length),
+        );
+
+        return Scaffold(
+          backgroundColor: isDark ? AppColors.darkBg : AppColors.lightBg,
+          appBar: _buildAppBar(context),
+          body: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSearchBar(context, state, searchController),
+                if (_parseAppliedOperators(state.searchQuery).isNotEmpty) ...[
+                  _buildAppliedOperators(context, state),
+                ],
+                _buildOperatorsGrid(context, state, searchController),
+                _buildSearchHistory(context, state),
+                _buildHelpSection(context),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -128,7 +134,11 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
     );
   }
 
-  Widget _buildSearchBar(BuildContext context) {
+  Widget _buildSearchBar(
+    BuildContext context,
+    NotesLoaded state,
+    TextEditingController controller,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -142,7 +152,7 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           TextField(
-            controller: searchController,
+            controller: controller,
             decoration: InputDecoration(
               hintText: 'Try: tag:work color:blue before:2024-01-01',
               hintStyle: AppTypography.body2().copyWith(
@@ -156,12 +166,13 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
                     ? AppColors.lightTextSecondary
                     : AppColors.darkTextSecondary,
               ),
-              suffixIcon: searchController.text.isNotEmpty
+              suffixIcon: controller.text.isNotEmpty
                   ? IconButton(
-                      icon: Icon(Icons.clear),
+                      icon: const Icon(Icons.clear),
                       onPressed: () {
-                        searchController.clear();
-                        setState(() {});
+                        context.read<NotesBloc>().add(
+                          const UpdateNoteViewConfigEvent(searchQuery: ''),
+                        );
                       },
                     )
                   : null,
@@ -174,15 +185,23 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
               ),
             ),
             onChanged: (value) {
-              setState(() {});
-              _parseSearchQuery(value);
+              context.read<NotesBloc>().add(
+                UpdateNoteViewConfigEvent(searchQuery: value),
+              );
             },
             onSubmitted: (value) {
-              // Execute search
+              final newHistory = List<String>.from(state.searchHistory);
+              if (value.isNotEmpty && !newHistory.contains(value)) {
+                newHistory.insert(0, value);
+                if (newHistory.length > 10) newHistory.removeLast();
+                context.read<NotesBloc>().add(
+                  UpdateNoteViewConfigEvent(searchHistory: newHistory),
+                );
+              }
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Search: $value'),
-                  duration: Duration(seconds: 2),
+                  duration: const Duration(seconds: 2),
                 ),
               );
             },
@@ -191,10 +210,10 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
           Wrap(
             spacing: 8.w,
             children: [
-              _buildQuickOperatorChip('tag:', context),
-              _buildQuickOperatorChip('color:', context),
-              _buildQuickOperatorChip('before:', context),
-              _buildQuickOperatorChip('is:', context),
+              _buildQuickOperatorChip('tag:', context, controller),
+              _buildQuickOperatorChip('color:', context, controller),
+              _buildQuickOperatorChip('before:', context, controller),
+              _buildQuickOperatorChip('is:', context, controller),
             ],
           ),
         ],
@@ -202,11 +221,20 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
     );
   }
 
-  Widget _buildQuickOperatorChip(String operator, BuildContext context) {
+  Widget _buildQuickOperatorChip(
+    String operator,
+    BuildContext context,
+    TextEditingController controller,
+  ) {
     return GestureDetector(
       onTap: () {
-        searchController.text += '$operator ';
-        setState(() {});
+        final newText =
+            controller.text +
+            (controller.text.isEmpty ? '' : ' ') +
+            '$operator ';
+        context.read<NotesBloc>().add(
+          UpdateNoteViewConfigEvent(searchQuery: newText),
+        );
       },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
@@ -227,8 +255,19 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
     );
   }
 
-  Widget _buildAppliedOperators(BuildContext context) {
+  List<String> _parseAppliedOperators(String query) {
+    final ops = <String>[];
+    for (final def in operatorDefinitions) {
+      if (query.contains(def['operator'] as String)) {
+        ops.add(def['operator'] as String);
+      }
+    }
+    return ops;
+  }
+
+  Widget _buildAppliedOperators(BuildContext context, NotesLoaded state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final ops = _parseAppliedOperators(state.searchQuery);
 
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -251,7 +290,7 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
           SizedBox(height: 8.h),
           Wrap(
             spacing: 8.w,
-            children: appliedOperators.map((op) {
+            children: ops.map((op) {
               return Container(
                 padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
@@ -271,7 +310,12 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
                     SizedBox(width: 6.w),
                     GestureDetector(
                       onTap: () {
-                        setState(() => appliedOperators.remove(op));
+                        final newQuery = state.searchQuery
+                            .replaceAll(op, '')
+                            .trim();
+                        context.read<NotesBloc>().add(
+                          UpdateNoteViewConfigEvent(searchQuery: newQuery),
+                        );
                       },
                       child: Icon(
                         Icons.close,
@@ -289,7 +333,11 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
     );
   }
 
-  Widget _buildOperatorsGrid(BuildContext context) {
+  Widget _buildOperatorsGrid(
+    BuildContext context,
+    NotesLoaded state,
+    TextEditingController controller,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -311,7 +359,7 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
           SizedBox(height: 16.h),
           GridView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 2,
               mainAxisSpacing: 12.h,
@@ -320,166 +368,65 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
             ),
             itemCount: operatorDefinitions.length,
             itemBuilder: (context, index) {
-              final opDef = operatorDefinitions[index];
-              return _buildOperatorCard(opDef, context);
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOperatorCard(Map<String, dynamic> opDef, BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = opDef['color'] as Color;
-
-    return GestureDetector(
-      onTap: () {
-        searchController.text += '${opDef['example']} ';
-        setState(() {});
-      },
-      child: Container(
-        padding: EdgeInsets.all(12.w),
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-          borderRadius: BorderRadius.circular(12.r),
-          border: Border.all(color: AppColors.divider(context), width: 0.5),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: EdgeInsets.all(8.w),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(8.r),
-              ),
-              child: Text(
-                opDef['operator'] as String,
-                style: AppTypography.heading4().copyWith(
-                  color: color,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
-            SizedBox(height: 8.h),
-            Text(
-              opDef['description'] as String,
-              style: AppTypography.body3().copyWith(
-                color: isDark ? AppColors.lightText : AppColors.darkText,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: 8.h),
-            Container(
-              padding: EdgeInsets.all(6.w),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkBg : AppColors.lightBg,
-                borderRadius: BorderRadius.circular(4.r),
-              ),
-              child: Text(
-                opDef['example'] as String,
-                style: AppTypography.caption().copyWith(
-                  color: isDark
-                      ? AppColors.lightTextSecondary
-                      : AppColors.darkTextSecondary,
-                  fontFamily: 'monospace',
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchHistory(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: AppColors.divider(context), width: 0.5),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Recent Searches',
-                style: AppTypography.heading4().copyWith(
-                  color: isDark ? AppColors.lightText : AppColors.darkText,
-                ),
-              ),
-              TextButton(
-                onPressed: () => setState(() => searchHistory.clear()),
-                child: Text('Clear', style: TextStyle(color: Colors.red)),
-              ),
-            ],
-          ),
-          SizedBox(height: 12.h),
-          ListView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: searchHistory.length,
-            itemBuilder: (context, index) {
-              return GestureDetector(
+              final def = operatorDefinitions[index];
+              final opColor = def['color'] as Color;
+              return InkWell(
                 onTap: () {
-                  searchController.text = searchHistory[index];
-                  setState(() {});
+                  final newText =
+                      controller.text +
+                      (controller.text.isEmpty ? '' : ' ') +
+                      (def['operator'] as String);
+                  context.read<NotesBloc>().add(
+                    UpdateNoteViewConfigEvent(searchQuery: newText),
+                  );
                 },
                 child: Container(
                   padding: EdgeInsets.all(12.w),
-                  margin: EdgeInsets.only(bottom: 8.h),
                   decoration: BoxDecoration(
-                    color: isDark
-                        ? AppColors.darkSurface
-                        : AppColors.lightSurface,
-                    borderRadius: BorderRadius.circular(8.r),
-                    border: Border.all(
-                      color: AppColors.divider(context),
-                      width: 0.5,
-                    ),
+                    color: opColor.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(12.r),
+                    border: Border.all(color: opColor.withOpacity(0.2)),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.history,
-                        size: 18.sp,
-                        color: isDark
-                            ? AppColors.lightTextSecondary
-                            : AppColors.darkTextSecondary,
-                      ),
-                      SizedBox(width: 12.w),
-                      Expanded(
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 8.w,
+                          vertical: 4.h,
+                        ),
+                        decoration: BoxDecoration(
+                          color: opColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8.r),
+                        ),
                         child: Text(
-                          searchHistory[index],
-                          style: AppTypography.body3().copyWith(
-                            color: isDark
-                                ? AppColors.lightText
-                                : AppColors.darkText,
+                          def['operator'] as String,
+                          style: TextStyle(
+                            color: opColor,
+                            fontWeight: FontWeight.bold,
                             fontFamily: 'monospace',
+                            fontSize: 14.sp,
                           ),
                         ),
                       ),
-                      IconButton(
-                        icon: Icon(
-                          Icons.close,
-                          size: 16.sp,
+                      SizedBox(height: 8.h),
+                      Text(
+                        def['description'] as String,
+                        style: AppTypography.body3().copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: isDark
+                              ? AppColors.lightText
+                              : AppColors.darkText,
+                        ),
+                      ),
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Example: ${def['example']}',
+                        style: AppTypography.caption().copyWith(
                           color: isDark
                               ? AppColors.lightTextSecondary
                               : AppColors.darkTextSecondary,
                         ),
-                        onPressed: () {
-                          setState(() => searchHistory.removeAt(index));
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: BoxConstraints(minWidth: 24.w),
                       ),
                     ],
                   ),
@@ -492,155 +439,138 @@ class _SearchOperatorsScreenState extends State<SearchOperatorsScreen> {
     );
   }
 
-  Widget _buildHelpSection(BuildContext context) {
+  Widget _buildSearchHistory(BuildContext context, NotesLoaded state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: EdgeInsets.all(16.w),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Search Examples',
-            style: AppTypography.heading4().copyWith(
-              color: isDark ? AppColors.lightText : AppColors.darkText,
-            ),
-          ),
-          SizedBox(height: 12.h),
-          _buildHelpExample(
-            'tag:work color:blue',
-            'Find notes tagged "work" AND colored blue',
-            context,
-          ),
-          _buildHelpExample(
-            'tag:personal before:2024-01-01',
-            'Find personal notes created before date',
-            context,
-          ),
-          _buildHelpExample(
-            '"exact phrase" -tag:archive',
-            'Find exact phrase excluding archived notes',
-            context,
-          ),
-          _buildHelpExample(
-            'is:pinned type:text',
-            'Find pinned text-type notes',
-            context,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHelpExample(
-    String query,
-    String description,
-    BuildContext context,
-  ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(12.w),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-        borderRadius: BorderRadius.circular(8.r),
-        border: Border.all(color: AppColors.divider(context), width: 0.5),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: EdgeInsets.all(8.w),
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkBg : AppColors.lightBg,
-              borderRadius: BorderRadius.circular(4.r),
-            ),
-            child: Text(
-              query,
-              style: AppTypography.body3().copyWith(
-                color: AppColors.primaryColor,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-          SizedBox(height: 6.h),
-          Text(
-            description,
-            style: AppTypography.caption().copyWith(
-              color: isDark
-                  ? AppColors.lightTextSecondary
-                  : AppColors.darkTextSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _parseSearchQuery(String query) {
-    final regex = RegExp(r'(\w+):(\S+)');
-    final matches = regex.allMatches(query);
-    final ops = matches.map((m) => '${m.group(1)}:${m.group(2)}').toList();
-    setState(() => appliedOperators = ops);
-  }
-
-  void _showSearchHelp(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: isDark
-            ? AppColors.darkSurface
-            : AppColors.lightSurface,
-        title: Text(
-          'Search Help',
-          style: AppTypography.heading3().copyWith(
-            color: isDark ? AppColors.lightText : AppColors.darkText,
-          ),
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.all(16.w),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Available Operators:',
-                style: AppTypography.body2().copyWith(
-                  fontWeight: FontWeight.w600,
+                'Recent Searches',
+                style: AppTypography.heading3().copyWith(
                   color: isDark ? AppColors.lightText : AppColors.darkText,
                 ),
               ),
-              SizedBox(height: 8.h),
-              ...[
-                'tag:name - Filter by tag',
-                'color:blue - Filter by color',
-                'type:text - Filter by type',
-                'before:2024 - Created before date',
-                'after:2024 - Created after date',
-                'is:pinned - Filter by status',
-                '"text" - Exact phrase match',
-                '-tag:x - Exclude term',
-                'term1 term2 - Explicit AND',
-                'term1 | term2 - Explicit OR',
-              ].map(
-                (e) => Padding(
-                  padding: EdgeInsets.only(bottom: 8.h),
-                  child: Text(
-                    e,
-                    style: AppTypography.body3().copyWith(
-                      color: isDark ? AppColors.lightText : AppColors.darkText,
-                    ),
-                  ),
+              TextButton(
+                onPressed: () {
+                  context.read<NotesBloc>().add(
+                    const UpdateNoteViewConfigEvent(searchHistory: []),
+                  );
+                },
+                child: Text(
+                  'Clear All',
+                  style: TextStyle(color: AppColors.primaryColor),
                 ),
               ),
+            ],
+          ),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: state.searchHistory.length,
+          itemBuilder: (context, index) {
+            final query = state.searchHistory[index];
+            return ListTile(
+              leading: Icon(
+                Icons.history,
+                size: 20.sp,
+                color: isDark
+                    ? AppColors.lightTextSecondary
+                    : AppColors.darkTextSecondary,
+              ),
+              title: Text(
+                query,
+                style: AppTypography.body2().copyWith(
+                  color: isDark ? AppColors.lightText : AppColors.darkText,
+                ),
+              ),
+              onTap: () {
+                context.read<NotesBloc>().add(
+                  UpdateNoteViewConfigEvent(searchQuery: query),
+                );
+              },
+              trailing: IconButton(
+                icon: Icon(Icons.close, size: 16.sp),
+                onPressed: () {
+                  final newHistory = List<String>.from(state.searchHistory);
+                  newHistory.removeAt(index);
+                  context.read<NotesBloc>().add(
+                    UpdateNoteViewConfigEvent(searchHistory: newHistory),
+                  );
+                },
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHelpSection(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.all(16.w),
+      child: Container(
+        padding: EdgeInsets.all(16.w),
+        decoration: BoxDecoration(
+          color: Colors.amber.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12.r),
+          border: Border.all(color: Colors.amber.withOpacity(0.3)),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.lightbulb, color: Colors.amber, size: 20.sp),
+                SizedBox(width: 8.w),
+                Text(
+                  'Pro Tip',
+                  style: AppTypography.body2().copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Combine multiple operators for precise results. '
+              'Example: tag:work before:2024-01-01 -tag:todo',
+              style: AppTypography.body3(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSearchHelp(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Search Syntax Help'),
+        content: const SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('• tag:name - find tags'),
+              Text('• color:blue - find by color'),
+              Text('• before:YYYY-MM-DD - older than'),
+              Text('• after:YYYY-MM-DD - newer than'),
+              Text('• is:pinned - find pinned only'),
+              Text('• "phrase" - exact match'),
+              Text('• -term - exclude term'),
             ],
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Got it'),
+            child: const Text('Got it'),
           ),
         ],
       ),

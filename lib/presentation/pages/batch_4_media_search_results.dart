@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/presentation/bloc/media/media_search/media_search_bloc.dart';
 import '../../injection_container.dart';
-import '../bloc/media_search_bloc.dart';
 import '../../domain/repositories/media_repository.dart';
 import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
@@ -14,8 +14,7 @@ import '../../core/services/global_ui_service.dart';
 class MediaSearchResultsScreen extends StatelessWidget {
   final String query;
 
-  const MediaSearchResultsScreen({Key? key, required this.query})
-    : super(key: key);
+  const MediaSearchResultsScreen({super.key, required this.query});
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +30,7 @@ class MediaSearchResultsScreen extends StatelessWidget {
 class _MediaSearchResultsView extends StatelessWidget {
   final String query;
 
-  const _MediaSearchResultsView({Key? key, required this.query})
-    : super(key: key);
+  const _MediaSearchResultsView({super.key, required this.query});
 
   @override
   Widget build(BuildContext context) {
@@ -496,8 +494,9 @@ class _MediaSearchResultsView extends StatelessWidget {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 }

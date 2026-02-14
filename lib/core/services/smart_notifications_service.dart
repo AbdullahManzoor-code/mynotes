@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:mynotes/presentation/widgets/universal_item_card.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:mynotes/domain/entities/universal_item.dart';
+import '../../injection_container.dart';
+import '../notifications/notification_service.dart';
 import '../../data/repositories/unified_repository.dart';
 
 /// Smart Notifications Service
@@ -13,6 +16,7 @@ class SmartNotificationsService {
   SmartNotificationsService._();
 
   final _repository = UnifiedRepository.instance;
+  final _notificationService = getIt<NotificationService>();
   Timer? _notificationTimer;
   StreamSubscription? _remindersSubscription;
 
@@ -26,6 +30,24 @@ class SmartNotificationsService {
   /// Initialize the smart notification system
   Future<void> initialize() async {
     await _repository.initialize();
+
+    // Initialize Awesome Notifications
+    await AwesomeNotifications().initialize(
+      null, // use default icon
+      [
+        NotificationChannel(
+          channelKey: 'smart_reminders',
+          channelName: 'Smart Reminders',
+          channelDescription:
+              'Intelligent notifications for your tasks and notes',
+          defaultColor: const Color(0xFF9D50BB),
+          ledColor: Colors.white,
+          importance: NotificationImportance.High,
+        ),
+      ],
+      debug: true,
+    );
+
     _startNotificationScheduler();
     _listenToRemindersStream();
   }
@@ -204,13 +226,40 @@ class SmartNotificationsService {
   }
 
   Future<void> _deliverNotification(NotificationItem notification) async {
-    // In a real app, this would integrate with flutter_local_notifications
-    debugPrint(
-      'Delivering notification: ${notification.title} - ${notification.body}',
+    // Deliver actual system notification
+    await _notificationService.schedule(
+      id: notification.id.hashCode,
+      title: notification.title,
+      body: notification.body,
+      scheduledTime: notification.scheduledTime,
+      payload: notification.id,
     );
 
-    // For demo purposes, we'll add it to a delivered notifications list
-    // This could trigger actual system notifications, in-app banners, etc.
+    // Also use Awesome Notifications for a richer experience if it's high priority
+    if (notification.priority == NotificationPriority.high) {
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: notification.id.hashCode,
+          channelKey: 'smart_reminders',
+          title: notification.title,
+          body: notification.body,
+          notificationLayout: NotificationLayout.Default,
+          payload: {'id': notification.id},
+          category: notification.type == NotificationType.todo
+              ? NotificationCategory.Reminder
+              : NotificationCategory.Message,
+        ),
+        actionButtons: notification.actions.map((action) {
+          return NotificationActionButton(
+            key: action.id,
+            label: action.title,
+            actionType: action.id == 'view'
+                ? ActionType.Default
+                : ActionType.SilentAction,
+          );
+        }).toList(),
+      );
+    }
   }
 
   /// Handle notification action (complete, snooze, etc.)

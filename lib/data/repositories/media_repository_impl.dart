@@ -101,9 +101,9 @@ class MediaRepositoryImpl implements MediaRepository {
 
     for (final map in allMedia) {
       final type = map['type'] as String;
-      if (type == 'image')
+      if (type == 'image') {
         images++;
-      else if (type == 'video')
+      } else if (type == 'video')
         videos++;
       else if (type == 'audio')
         audio++;

@@ -479,7 +479,7 @@ class NotesDatabase {
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
     // v1 → v2: Upgrade alarms table
     if (oldVersion < 2) {
-      await db.execute('DROP TABLE IF EXISTS ${remindersTable}');
+      await db.execute('DROP TABLE IF EXISTS $remindersTable');
       await db.execute('''
         CREATE TABLE IF NOT EXISTS $remindersTable (
           id TEXT PRIMARY KEY,

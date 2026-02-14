@@ -6,7 +6,7 @@ import '../../domain/repositories/alarm_repository.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/todo_item.dart';
 import '../../domain/entities/alarm.dart';
-import '../../presentation/widgets/universal_item_card.dart';
+import '../../domain/entities/universal_item.dart';
 
 /// Unified Repository Facade
 /// Centralizes access to Notes, Todos, and Alarms

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/smart_reminders_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_reminders/smart_reminders_bloc.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
@@ -10,7 +10,7 @@ import '../../core/services/global_ui_service.dart';
 /// Frequency Analytics - Batch 6, Screen 3
 /// Modernized to use Design System and converted to StatelessWidget
 class FrequencyAnalyticsScreen extends StatelessWidget {
-  const FrequencyAnalyticsScreen({Key? key}) : super(key: key);
+  const FrequencyAnalyticsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -502,3 +502,4 @@ class FrequencyAnalyticsScreen extends StatelessWidget {
     );
   }
 }
+

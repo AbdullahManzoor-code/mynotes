@@ -58,11 +58,11 @@ class ActivityTagSelector extends StatefulWidget {
   final ValueChanged<List<String>> onTagsSelected;
 
   const ActivityTagSelector({
-    Key? key,
+    super.key,
     required this.availableTags,
     required this.selectedTagIds,
     required this.onTagsSelected,
-  }) : super(key: key);
+  });
 
   @override
   State<ActivityTagSelector> createState() => _ActivityTagSelectorState();
@@ -133,7 +133,7 @@ class _ActivityTagSelectorState extends State<ActivityTagSelector> {
 class ActivityTagDisplay extends StatelessWidget {
   final List<ActivityTag> tags;
 
-  const ActivityTagDisplay({Key? key, required this.tags}) : super(key: key);
+  const ActivityTagDisplay({super.key, required this.tags});
 
   @override
   Widget build(BuildContext context) {
@@ -205,10 +205,10 @@ class PrivacySettingsPanel extends StatefulWidget {
   final ValueChanged<PrivacyMode> onSettingsChanged;
 
   const PrivacySettingsPanel({
-    Key? key,
+    super.key,
     required this.initialSettings,
     required this.onSettingsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<PrivacySettingsPanel> createState() => _PrivacySettingsPanelState();
@@ -316,8 +316,11 @@ class PrivateAnswerIndicator extends StatelessWidget {
   final bool isPrivate;
   final VoidCallback? onTap;
 
-  const PrivateAnswerIndicator({Key? key, required this.isPrivate, this.onTap})
-    : super(key: key);
+  const PrivateAnswerIndicator({
+    super.key,
+    required this.isPrivate,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {

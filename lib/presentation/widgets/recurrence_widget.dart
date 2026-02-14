@@ -102,10 +102,10 @@ class RecurrencePickerWidget extends StatefulWidget {
   final ValueChanged<RecurrencePattern> onPatternChanged;
 
   const RecurrencePickerWidget({
-    Key? key,
+    super.key,
     required this.initialPattern,
     required this.onPatternChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<RecurrencePickerWidget> createState() => _RecurrencePickerWidgetState();
@@ -281,8 +281,7 @@ class RecurrenceDisplay extends StatelessWidget {
   final RecurrencePattern pattern;
   final VoidCallback? onEdit;
 
-  const RecurrenceDisplay({Key? key, required this.pattern, this.onEdit})
-    : super(key: key);
+  const RecurrenceDisplay({super.key, required this.pattern, this.onEdit});
 
   @override
   Widget build(BuildContext context) {

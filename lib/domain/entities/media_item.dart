@@ -1,7 +1,11 @@
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'media_item.g.dart';
 
 enum MediaType { image, audio, video, document }
 
+@JsonSerializable()
 class MediaItem extends Equatable {
   final String id;
   final MediaType type;
@@ -38,61 +42,10 @@ class MediaItem extends Equatable {
     createdAt,
   ];
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'type': _typeToString(type),
-    'filePath': filePath,
-    'name': name,
-    'size': size,
-    'durationMs': durationMs,
-    'thumbnailPath': thumbnailPath,
-    'metadata': metadata,
-    'createdAt': createdAt.toIso8601String(),
-  };
+  factory MediaItem.fromJson(Map<String, dynamic> json) =>
+      _$MediaItemFromJson(json);
 
-  static String _typeToString(MediaType t) {
-    switch (t) {
-      case MediaType.image:
-        return 'image';
-      case MediaType.audio:
-        return 'audio';
-      case MediaType.video:
-        return 'video';
-      case MediaType.document:
-        return 'document';
-    }
-  }
-
-  static MediaType _stringToType(String s) {
-    switch (s) {
-      case 'image':
-        return MediaType.image;
-      case 'audio':
-        return MediaType.audio;
-      case 'video':
-        return MediaType.video;
-      case 'document':
-        return MediaType.document;
-      default:
-        return MediaType.image;
-    }
-  }
-
-  factory MediaItem.fromJson(Map<String, dynamic> json) {
-    return MediaItem(
-      id: json['id'] as String,
-      type: _stringToType(json['type'] as String),
-      filePath: json['filePath'] as String,
-      name: (json['name'] as String?) ?? '',
-      size: (json['size'] as int?) ?? 0,
-      durationMs: (json['durationMs'] as int?) ?? 0,
-      thumbnailPath: (json['thumbnailPath'] as String?) ?? '',
-      metadata: (json['metadata'] as Map<String, dynamic>?) ?? const {},
-      createdAt: json['createdAt'] != null
-          ? DateTime.parse(json['createdAt'] as String)
-          : DateTime.now(),
-    );
-  }
+  Map<String, dynamic> toJson() => _$MediaItemToJson(this);
 
   /// Copy with method for creating modified copies
   MediaItem copyWith({

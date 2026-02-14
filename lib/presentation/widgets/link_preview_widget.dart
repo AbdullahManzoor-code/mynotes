@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../design_system/app_colors.dart';
 
 /// Link preview metadata (from OpenGraph)
 class LinkPreview {
@@ -72,11 +75,11 @@ class LinkPreviewWidget extends StatelessWidget {
   final VoidCallback? onDelete;
 
   const LinkPreviewWidget({
-    Key? key,
+    super.key,
     required this.link,
     this.onTap,
     this.onDelete,
-  }) : super(key: key);
+  });
 
   void _openLink() async {
     if (await canLaunchUrl(Uri.parse(link.url))) {
@@ -89,30 +92,54 @@ class LinkPreviewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap ?? _openLink,
-      child: Card(
-        elevation: 1,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8.h),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCardBackground : Colors.white,
+        borderRadius: BorderRadius.circular(12.r),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap ?? _openLink,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Image preview
-            if (link.imageUrl != null)
-              Container(
+            // Preview Image
+            if (link.imageUrl != null && link.imageUrl!.isNotEmpty)
+              CachedNetworkImage(
+                imageUrl: link.imageUrl!,
+                height: 160.h,
                 width: double.infinity,
-                height: 160,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  image: DecorationImage(
-                    image: NetworkImage(link.imageUrl!),
-                    fit: BoxFit.cover,
-                    onError: (_, __) => Text('Error loading image'),
+                fit: BoxFit.cover,
+                placeholder: (context, url) => Container(
+                  height: 160.h,
+                  color: isDark
+                      ? Colors.white10
+                      : Colors.black.withOpacity(0.05),
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
                   ),
+                ),
+                errorWidget: (context, url, error) => Container(
+                  height: 160.h,
+                  color: isDark
+                      ? Colors.white10
+                      : Colors.black.withOpacity(0.05),
+                  child: const Center(child: Icon(Icons.link_off)),
                 ),
               ),
 
             Padding(
-              padding: EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -120,67 +147,67 @@ class LinkPreviewWidget extends StatelessWidget {
                   Row(
                     children: [
                       if (link.faviconUrl != null)
-                        Image.network(
-                          link.faviconUrl!,
-                          width: 16,
-                          height: 16,
-                          errorBuilder: (_, __, ___) =>
-                              Icon(Icons.language, size: 16),
+                        CachedNetworkImage(
+                          imageUrl: link.faviconUrl!,
+                          width: 16.w,
+                          height: 16.w,
+                          placeholder: (context, url) =>
+                              Icon(Icons.language, size: 16.sp),
+                          errorWidget: (context, url, error) =>
+                              Icon(Icons.language, size: 16.sp),
                         )
                       else
-                        Icon(Icons.language, size: 16),
-                      SizedBox(width: 8),
+                        Icon(
+                          Icons.language,
+                          size: 16.sp,
+                          color: AppColors.textMuted,
+                        ),
+                      SizedBox(width: 8.w),
                       Text(
                         link.domain,
-                        style: Theme.of(context).textTheme.labelSmall,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.textMuted,
+                        ),
                       ),
+                      const Spacer(),
+                      if (onDelete != null)
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.close,
+                            size: 16.sp,
+                            color: AppColors.textMuted,
+                          ),
+                          onPressed: onDelete,
+                        ),
                     ],
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 8.h),
 
                   // Title
                   Text(
                     link.title,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.bold,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
 
                   // Description
-                  if (link.description != null) ...[
-                    SizedBox(height: 6),
+                  if (link.description != null &&
+                      link.description!.isNotEmpty) ...[
+                    SizedBox(height: 4.h),
                     Text(
                       link.description!,
-                      style: Theme.of(context).textTheme.bodySmall,
-                      maxLines: 2,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.textMuted,
+                      ),
+                      maxLines: 3,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
-
-                  // URL and delete button
-                  SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          link.url,
-                          style: Theme.of(context).textTheme.labelSmall,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (onDelete != null)
-                        IconButton(
-                          icon: Icon(Icons.close, size: 18),
-                          onPressed: onDelete,
-                          padding: EdgeInsets.zero,
-                          constraints: BoxConstraints(minWidth: 32),
-                        ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -196,8 +223,7 @@ class LinkInputField extends StatefulWidget {
   final Function(LinkPreview) onLinkAdded;
   final VoidCallback? onCancel;
 
-  const LinkInputField({Key? key, required this.onLinkAdded, this.onCancel})
-    : super(key: key);
+  const LinkInputField({super.key, required this.onLinkAdded, this.onCancel});
 
   @override
   State<LinkInputField> createState() => _LinkInputFieldState();
@@ -242,7 +268,8 @@ class _LinkInputFieldState extends State<LinkInputField> {
     try {
       final normalizedUrl = UrlValidator.normalizeUrl(url);
 
-      // Mock OpenGraph fetch (in real app, use http package to fetch metadata)
+      // In a real app, we would use AnyLinkPreview to fetch metadata
+
       final preview = LinkPreview(
         url: normalizedUrl,
         title: UrlValidator.getDisplayUrl(normalizedUrl),
@@ -273,11 +300,12 @@ class _LinkInputFieldState extends State<LinkInputField> {
       children: [
         TextField(
           controller: _controller,
+          style: Theme.of(context).textTheme.bodyMedium,
           decoration: InputDecoration(
             hintText: 'Paste link URL',
-            prefixIcon: Icon(Icons.link),
+            prefixIcon: const Icon(Icons.link),
             suffixIcon: _isLoading
-                ? SizedBox(
+                ? const SizedBox(
                     width: 20,
                     height: 20,
                     child: Center(
@@ -285,23 +313,25 @@ class _LinkInputFieldState extends State<LinkInputField> {
                     ),
                   )
                 : null,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12.r),
+            ),
             errorText: _urlError,
           ),
           onSubmitted: (_) => _validateAndAdd(),
           enabled: !_isLoading,
         ),
-        SizedBox(height: 12),
+        SizedBox(height: 12.h),
         Row(
           mainAxisAlignment: MainAxisAlignment.end,
           children: [
             if (widget.onCancel != null)
               TextButton(onPressed: widget.onCancel, child: Text('Cancel')),
-            SizedBox(width: 8),
+            SizedBox(width: 8.w),
             FilledButton.icon(
               onPressed: _isLoading ? null : _validateAndAdd,
-              icon: Icon(Icons.add),
-              label: Text('Add Link'),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Link'),
             ),
           ],
         ),
@@ -317,28 +347,33 @@ class LinkAttachmentsList extends StatelessWidget {
   final Function(int)? onLinkTap;
 
   const LinkAttachmentsList({
-    Key? key,
+    super.key,
     required this.links,
     required this.onLinkDelete,
     this.onLinkTap,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     if (links.isEmpty) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Links', style: Theme.of(context).textTheme.titleSmall),
-        SizedBox(height: 12),
+        Text(
+          'Links',
+          style: Theme.of(
+            context,
+          ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        SizedBox(height: 12.h),
         ListView.separated(
           shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
+          physics: const NeverScrollableScrollPhysics(),
           itemCount: links.length,
-          separatorBuilder: (_, __) => SizedBox(height: 8),
+          separatorBuilder: (_, __) => SizedBox(height: 8.h),
           itemBuilder: (context, index) {
             return LinkPreviewWidget(
               link: links[index],

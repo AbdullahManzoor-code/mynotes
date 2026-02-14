@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/design_system/design_system.dart';
-import 'package:mynotes/presentation/bloc/smart_reminders_bloc.dart';
-import 'package:mynotes/presentation/bloc/params/smart_reminders_params.dart';
+import 'package:mynotes/presentation/bloc/smart_reminders/smart_reminders_bloc.dart';
 
 class SmartRemindersScreen extends StatelessWidget {
   const SmartRemindersScreen({super.key});
@@ -525,3 +523,4 @@ class SmartRemindersScreen extends StatelessWidget {
     );
   }
 }
+

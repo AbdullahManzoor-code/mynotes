@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/smart_reminders_bloc.dart';
+import 'package:mynotes/presentation/bloc/smart_reminders/smart_reminders_bloc.dart';
 import 'package:mynotes/domain/services/ai_suggestion_engine.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
@@ -11,7 +11,7 @@ import '../../core/services/global_ui_service.dart';
 /// Engagement Metrics - Batch 6, Screen 4
 /// Refactored to use Design System and Stateless BLoC pattern
 class EngagementMetricsScreen extends StatelessWidget {
-  const EngagementMetricsScreen({Key? key}) : super(key: key);
+  const EngagementMetricsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -364,41 +364,39 @@ class EngagementMetricsScreen extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text('AI Insights', style: AppTypography.heading3(context)),
         ),
-        ...recommendations
-            .map(
-              (rec) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Container(
-                  padding: AppSpacing.paddingAllM,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary10.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.primary10),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.auto_awesome_rounded,
-                        color: AppColors.primaryColor,
-                        size: 20,
-                      ),
-                      AppSpacing.gapM,
-                      Expanded(
-                        child: Text(
-                          rec,
-                          style: AppTypography.bodySmall(
-                            context,
-                            AppColors.darkText,
-                          ).copyWith(height: 1.4),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+        ...recommendations.map(
+          (rec) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Container(
+              padding: AppSpacing.paddingAllM,
+              decoration: BoxDecoration(
+                color: AppColors.primary10.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.primary10),
               ),
-            )
-            .toList(),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.auto_awesome_rounded,
+                    color: AppColors.primaryColor,
+                    size: 20,
+                  ),
+                  AppSpacing.gapM,
+                  Expanded(
+                    child: Text(
+                      rec,
+                      style: AppTypography.bodySmall(
+                        context,
+                        AppColors.darkText,
+                      ).copyWith(height: 1.4),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -433,11 +431,14 @@ class EngagementMetricsScreen extends StatelessWidget {
   }
 
   String _getEngagementMessage(int score) {
-    if (score >= 80)
+    if (score >= 80) {
       return 'Peak productivity! You are mastering your schedule.';
+    }
     if (score >= 60) return 'Solid consistency. You are on the right path.';
-    if (score >= 40)
+    if (score >= 40) {
       return 'Moderate engagement. Small habit tweaks will help.';
+    }
     return 'Low activity. We recommend setting simpler goals.';
   }
 }
+

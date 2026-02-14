@@ -3,9 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/constants/app_colors.dart';
 import '../../domain/entities/reflection_question.dart';
-import '../bloc/reflection_bloc.dart';
-import '../bloc/reflection_event.dart';
-import '../bloc/reflection_state.dart';
+import '../bloc/reflection/reflection_bloc.dart';
+import '../bloc/reflection/reflection_event.dart';
+import '../bloc/reflection/reflection_state.dart';
 import 'answer_screen.dart';
 
 class QuestionListScreen extends StatefulWidget {
@@ -113,6 +113,74 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
 
           return const SizedBox.shrink();
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showAddDialog(context),
+        backgroundColor: AppColors.primaryColor,
+        child: const Icon(Icons.add_comment_outlined, color: Colors.white),
+      ),
+    );
+  }
+
+  void _showAddDialog(BuildContext context) {
+    final textController = TextEditingController();
+    String selectedFrequency = 'daily';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Reflection Question'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: textController,
+                maxLines: 3,
+                decoration: const InputDecoration(
+                  hintText: 'e.g., What did I enjoy most today?',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+              StatefulBuilder(
+                builder: (context, setState) => DropdownButton<String>(
+                  value: selectedFrequency,
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(value: 'daily', child: Text('Daily')),
+                    DropdownMenuItem(value: 'weekly', child: Text('Weekly')),
+                    DropdownMenuItem(value: 'monthly', child: Text('Monthly')),
+                  ],
+                  onChanged: (value) {
+                    setState(() => selectedFrequency = value ?? 'daily');
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              if (textController.text.isNotEmpty) {
+                context.read<ReflectionBloc>().add(
+                  AddQuestionEvent(
+                    questionText: textController.text,
+                    category: widget.category,
+                    frequency: selectedFrequency,
+                  ),
+                );
+                Navigator.pop(dialogContext);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
       ),
     );
   }
@@ -392,3 +460,4 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
     );
   }
 }
+

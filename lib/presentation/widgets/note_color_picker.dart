@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/note_bloc.dart';
-import '../bloc/note_event.dart';
 
 /// Color palette for notes
 class NoteColorPalette {
@@ -12,7 +9,7 @@ class NoteColorPalette {
     'pink': Color(0xFFF8BBD0),
     'purple': Color(0xFFE1BEE7),
     'blue': Color(0xFFC5CAE9),
-    'cyan': Color(0xB3E5FC),
+    'cyan': Color(0x00b3e5fc),
     'green': Color(0xFFC8E6C9),
   };
 
@@ -51,11 +48,11 @@ class NoteColorPicker extends StatelessWidget {
   final String? noteId; // For batch updates
 
   const NoteColorPicker({
-    Key? key,
+    super.key,
     this.currentColor,
     required this.onColorSelected,
     this.noteId,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -127,10 +124,10 @@ class NoteColorBottomSheet extends StatelessWidget {
   final Function(String) onColorSelected;
 
   const NoteColorBottomSheet({
-    Key? key,
+    super.key,
     this.currentColor,
     required this.onColorSelected,
-  }) : super(key: key);
+  });
 
   static void show(
     BuildContext context,

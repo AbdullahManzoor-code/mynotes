@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/presentation/bloc/media/media_organization/media_organization_bloc.dart';
 import '../../injection_container.dart';
-import '../bloc/media_organization_bloc.dart';
 import '../../domain/repositories/media_repository.dart';
 import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
@@ -12,7 +12,7 @@ import '../../core/services/global_ui_service.dart';
 /// Media Organization View - Batch 4, Screen 3
 /// Refactored to StatelessWidget with BLoC and Design System
 class MediaOrganizationView extends StatelessWidget {
-  const MediaOrganizationView({Key? key}) : super(key: key);
+  const MediaOrganizationView({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -26,7 +26,7 @@ class MediaOrganizationView extends StatelessWidget {
 }
 
 class _MediaOrganizationViewContent extends StatelessWidget {
-  const _MediaOrganizationViewContent({Key? key}) : super(key: key);
+  const _MediaOrganizationViewContent({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -477,8 +477,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
   String _formatBytes(int bytes) {
     if (bytes < 1024) return '$bytes B';
     if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(1)} KB';
-    if (bytes < 1024 * 1024 * 1024)
+    if (bytes < 1024 * 1024 * 1024) {
       return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
     return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
   }
 }

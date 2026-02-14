@@ -3,7 +3,6 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart' show FlutterTimezone;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
-import 'dart:typed_data';
 import '../../domain/entities/alarm.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/routes/app_routes.dart';

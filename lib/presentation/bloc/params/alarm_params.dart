@@ -1,6 +1,7 @@
 // lib/presentation/bloc/params/alarm_params.dart
 
 import 'package:equatable/equatable.dart';
+import '../../../domain/entities/alarm.dart';
 
 /// Complete Param Model for Alarm Operations
 /// 📦 Container for all alarm-related data
@@ -21,6 +22,9 @@ class AlarmParams extends Equatable {
   final List<String> tags;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final DateTime? snoozedUntil;
+  final DateTime? completedAt;
+  final AlarmStatus status; // Add AlarmStatus
 
   const AlarmParams({
     this.alarmId,
@@ -38,6 +42,9 @@ class AlarmParams extends Equatable {
     this.tags = const [],
     this.createdAt,
     this.updatedAt,
+    this.snoozedUntil,
+    this.completedAt,
+    this.status = AlarmStatus.scheduled,
   });
 
   /// ✨ Create a copy with modified fields
@@ -57,6 +64,9 @@ class AlarmParams extends Equatable {
     List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DateTime? snoozedUntil,
+    DateTime? completedAt,
+    AlarmStatus? status,
   }) {
     return AlarmParams(
       alarmId: alarmId ?? this.alarmId,
@@ -75,6 +85,9 @@ class AlarmParams extends Equatable {
       tags: tags ?? List<String>.from(this.tags),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      snoozedUntil: snoozedUntil ?? this.snoozedUntil,
+      completedAt: completedAt ?? this.completedAt,
+      status: status ?? this.status,
     );
   }
 
@@ -161,6 +174,65 @@ class AlarmParams extends Equatable {
     return !isPast;
   }
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ALIAS GETTERS FOR COMPATIBILITY WITH ALARM ENTITY
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Alias for alarmId to match Alarm entity
+  String? get id => alarmId;
+
+  /// Alias for title to match Alarm entity
+  String get message => title;
+
+  /// Alias for alarmTime to match Alarm entity
+  DateTime get scheduledTime => alarmTime;
+
+  /// Alias for linkedNoteId
+  String? get linkedNoteId => noteId;
+
+  /// Check if alarm is overdue
+  bool get isOverdue {
+    if (!isEnabled || status == AlarmStatus.completed) return false;
+    final now = DateTime.now();
+    if (snoozedUntil != null && snoozedUntil!.isAfter(now)) return false;
+    return now.isAfter(alarmTime);
+  }
+
+  /// Check if alarm is due within 1 hour
+  bool get isDueSoon {
+    if (!isEnabled || status == AlarmStatus.completed) return false;
+    final now = DateTime.now();
+    final effectiveTime = snoozedUntil ?? alarmTime;
+    final oneHourFromNow = now.add(const Duration(hours: 1));
+    return effectiveTime.isAfter(now) && effectiveTime.isBefore(oneHourFromNow);
+  }
+
+  /// Get formatted time remaining (Copied from Alarm entity)
+  String get timeRemaining {
+    final now = DateTime.now();
+    final effectiveTime = snoozedUntil ?? alarmTime;
+    final difference = effectiveTime.difference(now);
+
+    if (difference.isNegative) {
+      final absDiff = difference.abs();
+      if (absDiff.inHours > 24) {
+        return '${absDiff.inDays}d ago';
+      } else if (absDiff.inMinutes > 60) {
+        return '${absDiff.inHours}h ago';
+      } else {
+        return '${absDiff.inMinutes}m ago';
+      }
+    }
+
+    if (difference.inDays > 0) {
+      return 'in ${difference.inDays}d';
+    } else if (difference.inHours > 0) {
+      return 'in ${difference.inHours}h';
+    } else {
+      return 'in ${difference.inMinutes}m';
+    }
+  }
+
   /// 📅 Get repeat days as readable string
   String getRepeatString() {
     if (repeatDays.isEmpty) return 'Once';
@@ -229,27 +301,45 @@ class AlarmParams extends Equatable {
   }
 
   /// 🏭 Create AlarmParams from Alarm entity
-  factory AlarmParams.fromAlarm(dynamic alarm) {
+  factory AlarmParams.fromAlarm(Alarm alarm) {
     return AlarmParams(
-      alarmId: alarm.id as String?,
-      alarmTime: alarm.alarmTime as DateTime,
-      title: alarm.title as String? ?? 'Alarm',
-      description: alarm.description as String? ?? '',
-      isEnabled: alarm.isEnabled as bool? ?? true,
-      repeatDays: alarm.repeatDays != null
-          ? List<int>.from(alarm.repeatDays as List)
-          : const [],
-      sound: alarm.sound as String?,
-      vibrate: alarm.vibrate as bool? ?? true,
-      noteId: alarm.noteId as String?,
-      reminderId: alarm.reminderId as String?,
-      hasSnooze: alarm.hasSnooze as bool? ?? true,
-      snoozeIntervalMinutes: alarm.snoozeIntervalMinutes as int? ?? 5,
-      tags: alarm.tags != null
-          ? List<String>.from(alarm.tags as List)
-          : const [],
-      createdAt: alarm.createdAt as DateTime?,
-      updatedAt: alarm.updatedAt as DateTime?,
+      alarmId: alarm.id,
+      alarmTime: alarm.scheduledTime,
+      title: alarm.message,
+      description: '', // Description helper not present in Alarm?
+      isEnabled: alarm.isEnabled,
+      repeatDays: alarm.weekDays ?? const [],
+      sound: alarm.soundPath,
+      vibrate: alarm.vibrate,
+      noteId: alarm.linkedNoteId,
+      reminderId: null, // No reminderId in Alarm?
+      hasSnooze: true,
+      snoozeIntervalMinutes: 5,
+      tags: const [],
+      createdAt: alarm.createdAt,
+      updatedAt: alarm.updatedAt,
+      snoozedUntil: alarm.snoozedUntil,
+      completedAt: alarm.completedAt,
+      status: alarm.status,
+    );
+  }
+
+  /// 🔄 Convert back to Alarm entity
+  Alarm toAlarm() {
+    return Alarm(
+      id: alarmId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      message: title,
+      scheduledTime: alarmTime,
+      isEnabled: isEnabled,
+      weekDays: repeatDays,
+      soundPath: sound,
+      vibrate: vibrate,
+      linkedNoteId: noteId,
+      createdAt: createdAt ?? DateTime.now(),
+      updatedAt: DateTime.now(),
+      snoozedUntil: snoozedUntil,
+      completedAt: completedAt,
+      status: status,
     );
   }
 
@@ -285,6 +375,22 @@ class AlarmParams extends Equatable {
                 ? map['updatedAt'] as DateTime
                 : DateTime.parse(map['updatedAt'] as String))
           : null,
+      snoozedUntil: map['snoozedUntil'] != null
+          ? (map['snoozedUntil'] is DateTime
+                ? map['snoozedUntil'] as DateTime
+                : DateTime.parse(map['snoozedUntil'] as String))
+          : null,
+      completedAt: map['completedAt'] != null
+          ? (map['completedAt'] is DateTime
+                ? map['completedAt'] as DateTime
+                : DateTime.parse(map['completedAt'] as String))
+          : null,
+      status: map['status'] != null
+          ? AlarmStatus.values.firstWhere(
+              (e) => e.toString() == map['status'],
+              orElse: () => AlarmStatus.scheduled,
+            )
+          : AlarmStatus.scheduled,
     );
   }
 
@@ -306,6 +412,9 @@ class AlarmParams extends Equatable {
       'tags': tags,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'snoozedUntil': snoozedUntil?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+      'status': status.toString(),
     };
   }
 
@@ -326,11 +435,14 @@ class AlarmParams extends Equatable {
     tags,
     createdAt,
     updatedAt,
+    snoozedUntil,
+    completedAt,
+    status,
   ];
 
   @override
   String toString() {
     return 'AlarmParams(id: $alarmId, time: ${getTimeString()}, '
-        'repeat: ${getRepeatString()}, enabled: $isEnabled)';
+        'repeat: ${getRepeatString()}, enabled: $isEnabled, status: $status)';
   }
 }

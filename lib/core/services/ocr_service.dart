@@ -1,6 +1,5 @@
 import 'dart:io';
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
-import 'package:pdf/pdf.dart' hide PdfDocument;
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 
 /// OCR Service for extracting text from images and PDFs

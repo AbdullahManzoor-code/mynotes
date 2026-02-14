@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
 import 'package:crypto/crypto.dart';
 import 'dart:convert';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../design_system/design_system.dart';
+import '../bloc/pin_setup/pin_setup_bloc.dart';
 
 /// PIN Setup Screen
 /// Allows users to create, change, or reset their PIN for fallback authentication
@@ -24,12 +27,8 @@ class PinSetupScreen extends StatefulWidget {
 
 class _PinSetupScreenState extends State<PinSetupScreen>
     with TickerProviderStateMixin {
-  String _pin = '';
-  String _confirmPin = '';
-  String _currentPin = '';
-  bool _isConfirming = false;
-  bool _isVerifyingCurrent = false;
-  String _errorMessage = '';
+  final TextEditingController _pinController = TextEditingController();
+  late PinSetupBloc _bloc;
 
   late AnimationController _shakeController;
   late Animation<double> _shakeAnimation;
@@ -42,6 +41,11 @@ class _PinSetupScreenState extends State<PinSetupScreen>
   @override
   void initState() {
     super.initState();
+    _bloc = PinSetupBloc(
+      isFirstSetup: widget.isFirstSetup,
+      isChanging: widget.isChanging,
+    );
+
     _shakeController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -50,390 +54,207 @@ class _PinSetupScreenState extends State<PinSetupScreen>
       begin: 0,
       end: 10,
     ).chain(CurveTween(curve: Curves.bounceInOut)).animate(_shakeController);
-
-    if (widget.isChanging) {
-      _isVerifyingCurrent = true;
-    }
   }
 
   @override
   void dispose() {
     _shakeController.dispose();
+    _pinController.dispose();
+    _bloc.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.surface(context),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: Text(
-          _getTitle(),
-          style: AppTypography.heading2(
-            context,
-            AppColors.textPrimary(context),
-          ),
-        ),
-      ),
-      body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24.w),
-          child: Column(
-            children: [
-              SizedBox(height: 40.h),
+    return BlocProvider.value(
+      value: _bloc,
+      child: BlocConsumer<PinSetupBloc, PinSetupState>(
+        listener: (context, state) {
+          if (state.errorMessage.isNotEmpty) {
+            _shakeController.reset();
+            _shakeController.forward();
+            HapticFeedback.mediumImpact();
+            _pinController.clear();
+          }
 
-              // Icon and description
-              Container(
-                padding: EdgeInsets.all(20.w),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(20.r),
+          if (state.isSuccess) {
+            HapticFeedback.heavyImpact();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  state.isChanging
+                      ? 'PIN changed successfully!'
+                      : 'PIN created successfully!',
+                  style: AppTypography.bodyMedium(context, Colors.white),
                 ),
-                child: Icon(Icons.pin, size: 48.w, color: AppColors.primary),
+                backgroundColor: Colors.green,
               ),
+            );
+            Navigator.pop(context, true);
+          }
 
-              SizedBox(height: 24.h),
-
-              Text(
-                _getSubtitle(),
-                style: AppTypography.bodyLarge(
+          if (state.isConfirming &&
+              _pinController.text.length == 4 &&
+              state.errorMessage.isEmpty) {
+            _pinController.clear();
+          }
+        },
+        builder: (context, state) {
+          return Scaffold(
+            backgroundColor: AppColors.surface(context),
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
+                onPressed: () => Navigator.pop(context),
+              ),
+              title: Text(
+                _getTitle(state),
+                style: AppTypography.heading2(
                   context,
                   AppColors.textPrimary(context),
                 ),
-                textAlign: TextAlign.center,
               ),
+            ),
+            body: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 24.w),
+                child: Column(
+                  children: [
+                    SizedBox(height: 40.h),
 
-              if (_errorMessage.isNotEmpty) ...[
-                SizedBox(height: 16.h),
-                AnimatedBuilder(
-                  animation: _shakeAnimation,
-                  builder: (context, child) {
-                    return Transform.translate(
-                      offset: Offset(_shakeAnimation.value, 0),
-                      child: Container(
-                        padding: EdgeInsets.all(12.w),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8.r),
-                        ),
-                        child: Text(
-                          _errorMessage,
-                          style: AppTypography.bodyMedium(context, Colors.red),
-                          textAlign: TextAlign.center,
-                        ),
+                    // Icon and description
+                    Container(
+                      padding: EdgeInsets.all(20.w),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20.r),
                       ),
-                    );
-                  },
+                      child: Icon(
+                        Icons.pin,
+                        size: 48.w,
+                        color: AppColors.primary,
+                      ),
+                    ),
+
+                    SizedBox(height: 24.h),
+
+                    Text(
+                      _getSubtitle(state),
+                      style: AppTypography.bodyLarge(
+                        context,
+                        AppColors.textPrimary(context),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    if (state.errorMessage.isNotEmpty) ...[
+                      SizedBox(height: 16.h),
+                      AnimatedBuilder(
+                        animation: _shakeAnimation,
+                        builder: (context, child) {
+                          return Transform.translate(
+                            offset: Offset(_shakeAnimation.value, 0),
+                            child: Container(
+                              padding: EdgeInsets.all(12.w),
+                              decoration: BoxDecoration(
+                                color: Colors.red.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8.r),
+                              ),
+                              child: Text(
+                                state.errorMessage,
+                                style: AppTypography.bodyMedium(
+                                  context,
+                                  Colors.red,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+
+                    SizedBox(height: 40.h),
+
+                    // PIN Input using pin_code_fields
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
+                      child: PinCodeTextField(
+                        appContext: context,
+                        controller: _pinController,
+                        length: 4,
+                        obscureText: true,
+                        obscuringCharacter: '●',
+                        animationType: AnimationType.fade,
+                        pinTheme: PinTheme(
+                          shape: PinCodeFieldShape.box,
+                          borderRadius: BorderRadius.circular(12.r),
+                          fieldHeight: 60.h,
+                          fieldWidth: 50.w,
+                          activeFillColor: AppColors.primary.withOpacity(0.1),
+                          inactiveFillColor: AppColors.surface(context),
+                          selectedFillColor: AppColors.primary.withOpacity(
+                            0.05,
+                          ),
+                          activeColor: AppColors.primary,
+                          inactiveColor: AppColors.border(context),
+                          selectedColor: AppColors.primary,
+                        ),
+                        animationDuration: const Duration(milliseconds: 300),
+                        backgroundColor: Colors.transparent,
+                        enableActiveFill: true,
+                        keyboardType: TextInputType.number,
+                        onCompleted: (v) {
+                          _onPinEntered(v);
+                        },
+                        onChanged: (value) {
+                          _bloc.add(const PinChanged());
+                        },
+                        beforeTextPaste: (text) => false,
+                      ),
+                    ),
+
+                    const Spacer(),
+
+                    // Helper text
+                    Text(
+                      'PIN should be $minPinLength-$maxPinLength digits',
+                      style: AppTypography.captionLarge(
+                        context,
+                        AppColors.textSecondary(context),
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+
+                    SizedBox(height: 20.h),
+                  ],
                 ),
-              ],
-
-              SizedBox(height: 40.h),
-
-              // PIN dots display
-              _buildPinDisplay(),
-
-              SizedBox(height: 40.h),
-
-              // Number pad
-              _buildNumberPad(),
-
-              const Spacer(),
-
-              // Helper text
-              Text(
-                'PIN should be ${minPinLength}-${maxPinLength} digits',
-                style: AppTypography.captionLarge(
-                  context,
-                  AppColors.textSecondary(context),
-                ),
-                textAlign: TextAlign.center,
               ),
-
-              SizedBox(height: 20.h),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }
 
-  String _getTitle() {
-    if (_isVerifyingCurrent) return 'Enter Current PIN';
-    if (widget.isChanging) return 'Change PIN';
-    if (_isConfirming) return 'Confirm PIN';
-    return widget.isFirstSetup ? 'Set Up PIN' : 'Create PIN';
+  String _getTitle(PinSetupState state) {
+    if (state.isVerifyingCurrent) return 'Enter Current PIN';
+    if (state.isChanging) return 'Change PIN';
+    if (state.isConfirming) return 'Confirm PIN';
+    return state.isFirstSetup ? 'Set Up PIN' : 'Create PIN';
   }
 
-  String _getSubtitle() {
-    if (_isVerifyingCurrent) return 'Enter your current PIN to continue';
-    if (_isConfirming) return 'Enter your PIN again to confirm';
-    return 'Create a ${minPinLength}-${maxPinLength} digit PIN for secure access';
+  String _getSubtitle(PinSetupState state) {
+    if (state.isVerifyingCurrent) return 'Enter your current PIN to continue';
+    if (state.isConfirming) return 'Enter your PIN again to confirm';
+    return 'Create a $minPinLength-$maxPinLength digit PIN for secure access';
   }
 
-  Widget _buildPinDisplay() {
-    String currentInput;
-    if (_isVerifyingCurrent) {
-      currentInput = _currentPin;
-    } else if (_isConfirming) {
-      currentInput = _confirmPin;
-    } else {
-      currentInput = _pin;
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(maxPinLength, (index) {
-        bool isFilled = index < currentInput.length;
-        bool isActive = index == currentInput.length;
-
-        return Container(
-          margin: EdgeInsets.symmetric(horizontal: 8.w),
-          width: 16.w,
-          height: 16.w,
-          decoration: BoxDecoration(
-            color: isFilled
-                ? AppColors.primary
-                : (isActive
-                      ? AppColors.primary.withOpacity(0.3)
-                      : Colors.transparent),
-            border: Border.all(
-              color: isFilled
-                  ? AppColors.primary
-                  : AppColors.primary.withOpacity(0.3),
-              width: 2,
-            ),
-            borderRadius: BorderRadius.circular(8.w),
-          ),
-        );
-      }),
-    );
-  }
-
-  Widget _buildNumberPad() {
-    return Column(
-      children: [
-        // Rows 1-3
-        for (int row = 0; row < 3; row++)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              for (int col = 1; col <= 3; col++)
-                _buildNumberButton((row * 3) + col),
-            ],
-          ),
-        // Bottom row: 0 and backspace
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            const SizedBox(width: 80), // Empty space
-            _buildNumberButton(0),
-            _buildBackspaceButton(),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNumberButton(int number) {
-    return GestureDetector(
-      onTap: () => _onNumberPressed(number),
-      child: Container(
-        margin: EdgeInsets.all(8.w),
-        width: 80.w,
-        height: 80.w,
-        decoration: BoxDecoration(
-          color: AppColors.surface(context),
-          borderRadius: BorderRadius.circular(40.w),
-          border: Border.all(color: AppColors.border(context)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.1),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Center(
-          child: Text(
-            number.toString(),
-            style: AppTypography.heading1(
-              context,
-              AppColors.textPrimary(context),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBackspaceButton() {
-    return GestureDetector(
-      onTap: _onBackspacePressed,
-      child: Container(
-        margin: EdgeInsets.all(8.w),
-        width: 80.w,
-        height: 80.w,
-        decoration: BoxDecoration(
-          color: AppColors.surface(context),
-          borderRadius: BorderRadius.circular(40.w),
-          border: Border.all(color: AppColors.border(context)),
-        ),
-        child: Center(
-          child: Icon(
-            Icons.backspace_outlined,
-            color: AppColors.textPrimary(context),
-            size: 24.w,
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _onNumberPressed(int number) {
+  void _onPinEntered(String value) {
     HapticFeedback.lightImpact();
-    setState(() {
-      _errorMessage = '';
-
-      if (_isVerifyingCurrent) {
-        if (_currentPin.length < maxPinLength) {
-          _currentPin += number.toString();
-          if (_currentPin.length >= minPinLength) {
-            _verifyCurrentPin();
-          }
-        }
-      } else if (_isConfirming) {
-        if (_confirmPin.length < maxPinLength) {
-          _confirmPin += number.toString();
-          if (_confirmPin.length >= minPinLength &&
-              _confirmPin.length == _pin.length) {
-            _confirmPinSetup();
-          }
-        }
-      } else {
-        if (_pin.length < maxPinLength) {
-          _pin += number.toString();
-          if (_pin.length >= minPinLength) {
-            // Auto-proceed to confirmation after minimum length
-            Future.delayed(const Duration(milliseconds: 300), () {
-              if (_pin.length >= minPinLength) {
-                setState(() {
-                  _isConfirming = true;
-                });
-              }
-            });
-          }
-        }
-      }
-    });
-  }
-
-  void _onBackspacePressed() {
-    HapticFeedback.lightImpact();
-    setState(() {
-      _errorMessage = '';
-
-      if (_isVerifyingCurrent && _currentPin.isNotEmpty) {
-        _currentPin = _currentPin.substring(0, _currentPin.length - 1);
-      } else if (_isConfirming && _confirmPin.isNotEmpty) {
-        _confirmPin = _confirmPin.substring(0, _confirmPin.length - 1);
-      } else if (!_isConfirming && _pin.isNotEmpty) {
-        _pin = _pin.substring(0, _pin.length - 1);
-      }
-    });
-  }
-
-  Future<void> _verifyCurrentPin() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final storedHash = prefs.getString(_pinHashKey);
-
-      if (storedHash == null) {
-        setState(() {
-          _errorMessage = 'No PIN found. Please contact support.';
-        });
-        return;
-      }
-
-      final inputHash = _hashPin(_currentPin);
-      if (inputHash == storedHash) {
-        setState(() {
-          _isVerifyingCurrent = false;
-          _currentPin = '';
-        });
-      } else {
-        _showError('Incorrect PIN. Please try again.');
-        setState(() {
-          _currentPin = '';
-        });
-      }
-    } catch (e) {
-      _showError('Verification failed. Please try again.');
-    }
-  }
-
-  Future<void> _confirmPinSetup() async {
-    if (_pin != _confirmPin) {
-      _showError('PINs do not match. Please try again.');
-      setState(() {
-        _isConfirming = false;
-        _pin = '';
-        _confirmPin = '';
-      });
-      return;
-    }
-
-    try {
-      await _savePinHash(_pin);
-
-      if (mounted) {
-        HapticFeedback.heavyImpact();
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              widget.isChanging
-                  ? 'PIN changed successfully!'
-                  : 'PIN created successfully!',
-              style: AppTypography.bodyMedium(context, Colors.white),
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-
-        Navigator.pop(context, true);
-      }
-    } catch (e) {
-      _showError('Failed to save PIN. Please try again.');
-    }
-  }
-
-  void _showError(String message) {
-    HapticFeedback.mediumImpact();
-    setState(() {
-      _errorMessage = message;
-    });
-    _shakeController.reset();
-    _shakeController.forward();
-  }
-
-  String _hashPin(String pin) {
-    final bytes = utf8.encode(pin);
-    final digest = sha256.convert(bytes);
-    return digest.toString();
-  }
-
-  Future<void> _savePinHash(String pin) async {
-    final prefs = await SharedPreferences.getInstance();
-    final hash = _hashPin(pin);
-    await prefs.setString(_pinHashKey, hash);
-    await prefs.setBool(_pinEnabledKey, true);
+    _bloc.add(EnteredPin(value));
   }
 
   static Future<bool> isPinEnabled() async {

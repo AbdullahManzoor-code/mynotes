@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
-import '../design_system/design_system.dart';
-import '../../domain/entities/alarm.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/domain/entities/alarm.dart';
+import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
 
 class AlarmCardWidget extends StatelessWidget {
-  final Alarm alarm;
+  final dynamic alarm; // Can be Alarm or AlarmParams
   final VoidCallback onTap;
   final VoidCallback onToggle;
   final Function(SnoozePreset) onSnooze;
@@ -21,19 +22,86 @@ class AlarmCardWidget extends StatelessWidget {
     required this.onDelete,
   });
 
+  // Getters to handle both Alarm and AlarmParams
+  String get _id => alarm is Alarm
+      ? (alarm as Alarm).id
+      : (alarm as AlarmParams).alarmId ?? '';
+  String get _message =>
+      alarm is Alarm ? (alarm as Alarm).message : (alarm as AlarmParams).title;
+  DateTime get _scheduledTime => alarm is Alarm
+      ? (alarm as Alarm).scheduledTime
+      : (alarm as AlarmParams).alarmTime;
+  bool get _isEnabled => alarm is Alarm
+      ? (alarm as Alarm).isEnabled
+      : (alarm as AlarmParams).isEnabled;
+  AlarmStatus get _status =>
+      alarm is Alarm ? (alarm as Alarm).status : (alarm as AlarmParams).status;
+  DateTime? get _snoozedUntil => alarm is Alarm
+      ? (alarm as Alarm).snoozedUntil
+      : (alarm as AlarmParams).snoozedUntil;
+  bool get _isOverdue => alarm is Alarm
+      ? (alarm as Alarm).isOverdue
+      : (alarm as AlarmParams).isOverdue;
+  String get _timeRemaining => alarm is Alarm
+      ? (alarm as Alarm).timeRemaining
+      : _calculateTimeRemaining();
+  AlarmIndicator get _indicator =>
+      alarm is Alarm ? (alarm as Alarm).indicator : _calculateIndicator();
+  AlarmRecurrence get _recurrence => alarm is Alarm
+      ? (alarm as Alarm).recurrence
+      : (alarm as AlarmParams).isRecurring
+      ? AlarmRecurrence.daily
+      : AlarmRecurrence.none;
+  List<int> get _weekDays => alarm is Alarm
+      ? (alarm as Alarm).weekDays ?? []
+      : (alarm as AlarmParams).repeatDays;
+
+  String _calculateTimeRemaining() {
+    final params = alarm as AlarmParams;
+    final now = DateTime.now();
+    final effectiveTime = params.snoozedUntil ?? params.alarmTime;
+    final difference = effectiveTime.difference(now);
+
+    if (difference.isNegative) {
+      final absDiff = difference.abs();
+      if (absDiff.inHours > 24) return '${absDiff.inDays}d ago';
+      if (absDiff.inMinutes > 60) return '${absDiff.inHours}h ago';
+      return '${absDiff.inMinutes}m ago';
+    }
+
+    if (difference.inDays > 0) return 'in ${difference.inDays}d';
+    if (difference.inHours > 0) return 'in ${difference.inHours}h';
+    return 'in ${difference.inMinutes}m';
+  }
+
+  AlarmIndicator _calculateIndicator() {
+    final params = alarm as AlarmParams;
+    if (!params.isEnabled || params.status == AlarmStatus.completed) {
+      return AlarmIndicator.inactive;
+    }
+    if (params.isOverdue) return AlarmIndicator.overdue;
+    final now = DateTime.now();
+    final effectiveTime = params.snoozedUntil ?? params.alarmTime;
+    final oneHourFromNow = now.add(const Duration(hours: 1));
+    if (effectiveTime.isAfter(now) && effectiveTime.isBefore(oneHourFromNow)) {
+      return AlarmIndicator.soon;
+    }
+    return AlarmIndicator.future;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final indicator = alarm.indicator;
+    final indicator = _indicator;
     final statusColor = _getIndicatorColor(indicator);
     final statusIcon = _getIndicatorIcon(indicator);
 
     return Slidable(
-      key: ValueKey(alarm.id),
+      key: ValueKey(_id),
       endActionPane: ActionPane(
         motion: const ScrollMotion(),
         children: [
-          if (alarm.status == AlarmStatus.triggered ||
-              alarm.status == AlarmStatus.snoozed)
+          if (_status == AlarmStatus.triggered ||
+              _status == AlarmStatus.snoozed)
             ..._buildSnoozeActions(),
           SlidableAction(
             onPressed: (_) => onReschedule(),
@@ -100,10 +168,10 @@ class AlarmCardWidget extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            alarm.message,
+                            _message,
                             style: AppTypography.heading3(context).copyWith(
                               fontWeight: FontWeight.w600,
-                              decoration: alarm.status == AlarmStatus.completed
+                              decoration: _status == AlarmStatus.completed
                                   ? TextDecoration.lineThrough
                                   : null,
                             ),
@@ -120,13 +188,13 @@ class AlarmCardWidget extends StatelessWidget {
                               ),
                               SizedBox(width: 4.w),
                               Text(
-                                _formatDateTime(alarm.scheduledTime),
+                                _formatDateTime(_scheduledTime),
                                 style: AppTypography.body2(context).copyWith(
                                   color: Colors.grey.shade700,
                                   fontSize: 13.sp,
                                 ),
                               ),
-                              if (alarm.recurrence != AlarmRecurrence.none) ...[
+                              if (_recurrence != AlarmRecurrence.none) ...[
                                 SizedBox(width: 8.w),
                                 Icon(
                                   Icons.repeat,
@@ -135,7 +203,7 @@ class AlarmCardWidget extends StatelessWidget {
                                 ),
                                 SizedBox(width: 4.w),
                                 Text(
-                                  alarm.recurrence.displayName,
+                                  _recurrence.displayName,
                                   style: AppTypography.caption(context)
                                       .copyWith(
                                         color: Colors.grey.shade600,
@@ -145,10 +213,10 @@ class AlarmCardWidget extends StatelessWidget {
                               ],
                             ],
                           ),
-                          if (alarm.message.isNotEmpty) ...[
+                          if (_message.isNotEmpty) ...[
                             SizedBox(height: 4.h),
                             Text(
-                              alarm.message,
+                              _message,
                               style: AppTypography.caption(
                                 context,
                               ).copyWith(color: Colors.grey.shade600),
@@ -156,7 +224,7 @@ class AlarmCardWidget extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                          if (alarm.status == AlarmStatus.snoozed) ...[
+                          if (_status == AlarmStatus.snoozed) ...[
                             SizedBox(height: 6.h),
                             Container(
                               padding: EdgeInsets.symmetric(
@@ -180,7 +248,7 @@ class AlarmCardWidget extends StatelessWidget {
                                   ),
                                   SizedBox(width: 4.w),
                                   Text(
-                                    'Snoozed until ${_formatDateTime(alarm.snoozedUntil!)}',
+                                    'Snoozed until ${_formatDateTime(_snoozedUntil!)}',
                                     style: AppTypography.caption(context)
                                         .copyWith(
                                           color: Colors.orange.shade700,
@@ -195,7 +263,7 @@ class AlarmCardWidget extends StatelessWidget {
                               indicator == AlarmIndicator.soon) ...[
                             SizedBox(height: 6.h),
                             Text(
-                              alarm.timeRemaining,
+                              _timeRemaining,
                               style: AppTypography.caption(context).copyWith(
                                 color: statusColor,
                                 fontWeight: FontWeight.w600,
@@ -210,7 +278,7 @@ class AlarmCardWidget extends StatelessWidget {
                     Transform.scale(
                       scale: 0.9,
                       child: Switch(
-                        value: alarm.status != AlarmStatus.completed,
+                        value: _status != AlarmStatus.completed,
                         onChanged: (_) => onToggle(),
                         activeColor: AppColors.primaryColor,
                         inactiveThumbColor: Colors.grey.shade400,

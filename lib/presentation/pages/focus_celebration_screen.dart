@@ -1,8 +1,10 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:confetti/confetti.dart';
 import '../design_system/design_system.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/focus_bloc.dart';
+import '../bloc/focus/focus_bloc.dart';
 import 'focus_session_screen.dart';
 
 /// Focus Session Celebration Screen
@@ -23,15 +25,15 @@ class FocusCelebrationScreen extends StatefulWidget {
 
 class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _confettiController;
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
     super.initState();
-    _confettiController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 3000),
-    )..repeat();
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 10),
+    );
+    _confettiController.play();
   }
 
   @override
@@ -45,9 +47,22 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
     return Scaffold(
       backgroundColor: AppColors.focusMidnightBlue,
       body: Stack(
+        alignment: Alignment.center,
         children: [
           // Confetti particles
-          _buildConfettiParticles(),
+          ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            shouldLoop: true,
+            colors: const [
+              Colors.green,
+              Colors.blue,
+              Colors.pink,
+              Colors.orange,
+              Colors.purple,
+            ],
+            createParticlePath: _drawStar,
+          ),
 
           // Bottom gradient glow
           Positioned(
@@ -89,81 +104,33 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
     );
   }
 
-  Widget _buildConfettiParticles() {
-    final confetti = [
-      _ConfettiParticle(
-        top: 0.15,
-        left: 0.10,
-        color: Colors.pink.shade300,
-        size: 8,
-      ),
-      _ConfettiParticle(
-        top: 0.45,
-        left: 0.85,
-        color: Colors.pink.shade200,
-        size: 6,
-      ),
-      _ConfettiParticle(
-        top: 0.25,
-        left: 0.75,
-        color: Colors.blue.shade300,
-        size: 8,
-      ),
-      _ConfettiParticle(
-        top: 0.70,
-        left: 0.15,
-        color: Colors.blue.shade200,
-        size: 6,
-      ),
-      _ConfettiParticle(
-        top: 0.55,
-        left: 0.40,
-        color: Colors.green.shade200,
-        size: 8,
-      ),
-      _ConfettiParticle(
-        top: 0.10,
-        left: 0.60,
-        color: Colors.green.shade300,
-        size: 10,
-      ),
-      _ConfettiParticle(
-        top: 0.35,
-        left: 0.25,
-        color: Colors.purple.shade300,
-        size: 8,
-      ),
-      _ConfettiParticle(
-        top: 0.80,
-        left: 0.65,
-        color: Colors.purple.shade200,
-        size: 6,
-      ),
-      _ConfettiParticle(
-        top: 0.05,
-        left: 0.35,
-        color: Colors.yellow.shade100,
-        size: 8,
-      ),
-    ];
+  /// A custom Path to paint stars.
+  Path _drawStar(Size size) {
+    // Method to convert degree to radians
+    double degToRad(double deg) => deg * (math.pi / 180.0);
 
-    return Stack(
-      children: confetti.map((particle) {
-        return Positioned(
-          top: MediaQuery.of(context).size.height * particle.top,
-          left: MediaQuery.of(context).size.width * particle.left,
-          child: Container(
-            width: particle.size.w,
-            height: particle.size.w,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: particle.color.withOpacity(0.6),
-              boxShadow: [BoxShadow(color: particle.color, blurRadius: 8)],
-            ),
-          ),
-        );
-      }).toList(),
-    );
+    const numberOfPoints = 5;
+    final halfWidth = size.width / 2;
+    final externalRadius = halfWidth;
+    final internalRadius = halfWidth / 2.5;
+    final degreesPerStep = degToRad(360 / numberOfPoints);
+    final halfDegreesPerStep = degreesPerStep / 2;
+    final path = Path();
+    final fullAngle = degToRad(360);
+    path.moveTo(size.width, halfWidth);
+
+    for (double step = 0; step < fullAngle; step += degreesPerStep) {
+      path.lineTo(
+        halfWidth + externalRadius * math.cos(step),
+        halfWidth + externalRadius * math.sin(step),
+      );
+      path.lineTo(
+        halfWidth + internalRadius * math.cos(step + halfDegreesPerStep),
+        halfWidth + internalRadius * math.sin(step + halfDegreesPerStep),
+      );
+    }
+    path.close();
+    return path;
   }
 
   Widget _buildHeader() {
@@ -463,16 +430,3 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
   }
 }
 
-class _ConfettiParticle {
-  final double top;
-  final double left;
-  final Color color;
-  final double size;
-
-  _ConfettiParticle({
-    required this.top,
-    required this.left,
-    required this.color,
-    required this.size,
-  });
-}

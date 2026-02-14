@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../bloc/todos_bloc.dart';
-import '../bloc/todo_event.dart';
 
 /// Quick reschedule options
 enum QuickRescheduleOption {
@@ -64,10 +61,10 @@ class QuickRescheduleSheet extends StatelessWidget {
   final DateTime currentScheduleTime;
 
   const QuickRescheduleSheet({
-    Key? key,
+    super.key,
     required this.onReschedule,
     required this.currentScheduleTime,
-  }) : super(key: key);
+  });
 
   static void show(
     BuildContext context,
@@ -108,7 +105,7 @@ class QuickRescheduleSheet extends StatelessWidget {
                 Navigator.pop(context);
               },
             );
-          }).toList(),
+          }),
           SizedBox(height: 12),
           Divider(),
           SizedBox(height: 12),
@@ -155,8 +152,7 @@ class SmartSnoozeWidget extends StatelessWidget {
   final Function(Duration) onSnooze;
   final Function()? onDismiss;
 
-  const SmartSnoozeWidget({Key? key, required this.onSnooze, this.onDismiss})
-    : super(key: key);
+  const SmartSnoozeWidget({super.key, required this.onSnooze, this.onDismiss});
 
   static void show(
     BuildContext context,
@@ -323,10 +319,10 @@ class DoNotDisturbPanel extends StatefulWidget {
   final Function(DoNotDisturbSettings) onSettingsChanged;
 
   const DoNotDisturbPanel({
-    Key? key,
+    super.key,
     required this.settings,
     required this.onSettingsChanged,
-  }) : super(key: key);
+  });
 
   @override
   State<DoNotDisturbPanel> createState() => _DoNotDisturbPanelState();
@@ -466,14 +462,14 @@ class ReminderActionSheet extends StatelessWidget {
   final bool isUrgent;
 
   const ReminderActionSheet({
-    Key? key,
+    super.key,
     required this.reminderTitle,
     required this.scheduledTime,
     required this.onDismiss,
     required this.onReschedule,
     required this.onSnooze,
     this.isUrgent = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

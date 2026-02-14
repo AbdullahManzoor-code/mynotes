@@ -1,12 +1,12 @@
 import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:mynotes/domain/entities/alarm.dart';
+// import 'package:mynotes/domain/entities/alarm.dart';
 import 'package:mynotes/domain/repositories/alarm_repository.dart';
-import 'package:mynotes/presentation/bloc/reflection_event.dart';
+import 'package:mynotes/presentation/bloc/reflection/reflection_event.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'core/routes/app_routes.dart';
@@ -28,22 +28,26 @@ import 'data/repositories/reflection_repository_impl.dart';
 import 'data/repositories/stats_repository_impl.dart';
 
 import 'presentation/bloc/params/note_params.dart';
-import 'presentation/bloc/theme_bloc.dart';
-import 'presentation/bloc/theme_event.dart';
-import 'presentation/bloc/theme_state.dart';
-import 'presentation/bloc/note_bloc.dart';
-import 'presentation/bloc/media_bloc.dart';
-import 'presentation/bloc/reflection_bloc.dart';
-import 'presentation/bloc/alarm_bloc.dart';
-import 'presentation/bloc/alarms_bloc.dart';
-import 'presentation/bloc/todo_bloc.dart';
-import 'presentation/bloc/note_event.dart';
-import 'presentation/bloc/todos_bloc.dart';
-import 'presentation/bloc/analytics_bloc.dart';
-import 'presentation/bloc/smart_collections_bloc.dart';
-import 'presentation/bloc/reminder_templates_bloc.dart';
-import 'presentation/bloc/smart_reminders_bloc.dart';
-import 'presentation/bloc/focus_bloc.dart';
+import 'presentation/bloc/theme/theme_bloc.dart';
+import 'presentation/bloc/theme/theme_event.dart';
+import 'presentation/bloc/theme/theme_state.dart';
+import 'presentation/bloc/note/note_bloc.dart';
+import 'presentation/bloc/media/media_bloc.dart';
+import 'presentation/bloc/reflection/reflection_bloc.dart';
+import 'presentation/bloc/alarm/alarm_bloc.dart';
+import 'presentation/bloc/alarm/alarms_bloc.dart';
+import 'presentation/bloc/todo/todo_bloc.dart';
+import 'presentation/bloc/note/note_event.dart';
+import 'presentation/bloc/todos/todos_bloc.dart';
+import 'presentation/bloc/analytics/analytics_bloc.dart';
+import 'presentation/bloc/smart_collections/smart_collections_bloc.dart';
+import 'presentation/bloc/reminder_templates/reminder_templates_bloc.dart';
+import 'presentation/bloc/smart_reminders/smart_reminders_bloc.dart';
+import 'presentation/bloc/focus/focus_bloc.dart';
+import 'presentation/bloc/navigation/navigation_bloc.dart';
+import 'presentation/bloc/drawing_canvas/drawing_canvas_bloc.dart';
+import 'presentation/bloc/search/search_bloc.dart';
+import 'presentation/bloc/audio_recorder/audio_recorder_bloc.dart';
 import 'core/notifications/alarm_service.dart' as notifications;
 import 'presentation/widgets/global_error_handler_listener.dart';
 import 'presentation/widgets/global_overlay.dart';
@@ -98,7 +102,7 @@ void main() async {
           } else if (actionId == 'snooze') {
             // Default snooze 10 mins
             getIt<AlarmsBloc>().add(
-              SnoozeAlarm(alarmId, SnoozePreset.tenMinutes),
+              SnoozeAlarm(alarmId: alarmId, snoozeMinutes: 10),
             );
           }
         } catch (e) {
@@ -108,13 +112,8 @@ void main() async {
     },
   );
 
-  // Create AlarmsBloc singleton with dependencies
-  final alarmsBloc = AlarmsBloc(
-    alarmRepository: getIt<AlarmRepository>(),
-    notificationService: alarmNotificationService,
-  );
-  getIt.registerSingleton<AlarmsBloc>(alarmsBloc);
-  alarmsBloc.add(LoadAlarms());
+  // AlarmsBloc is now registered via injection_container
+  getIt<AlarmsBloc>().add(const LoadAlarms());
 
   runApp(
     MyNotesApp(
@@ -184,12 +183,6 @@ class MyNotesApp extends StatelessWidget {
             notificationService: context.read<NotificationService>(),
           )..add(const InitializeReflectionEvent()),
         ),
-        BlocProvider<AlarmBloc>(
-          create: (context) => AlarmBloc(
-            noteRepository: context.read<NoteRepository>(),
-            notificationService: context.read<NotificationService>(),
-          ),
-        ),
         BlocProvider<AlarmsBloc>(create: (context) => getIt<AlarmsBloc>()),
         BlocProvider<TodoBloc>(
           create: (context) =>
@@ -218,6 +211,16 @@ class MyNotesApp extends StatelessWidget {
           create: (context) =>
               FocusBloc(repository: context.read<StatsRepository>())
                 ..add(const LoadFocusHistoryEvent()),
+        ),
+        BlocProvider<NavigationBloc>(
+          create: (context) => getIt<NavigationBloc>(),
+        ),
+        BlocProvider<DrawingCanvasBloc>(
+          create: (context) => getIt<DrawingCanvasBloc>(),
+        ),
+        BlocProvider<SearchBloc>(create: (context) => getIt<SearchBloc>()),
+        BlocProvider<AudioRecorderBloc>(
+          create: (context) => AudioRecorderBloc(),
         ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(

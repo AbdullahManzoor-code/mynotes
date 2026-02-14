@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/routes/app_routes.dart';
 import '../design_system/design_system.dart';
 

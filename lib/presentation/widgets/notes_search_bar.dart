@@ -1,37 +1,22 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/note.dart';
 import '../design_system/design_system.dart';
+import '../bloc/note/note_bloc.dart';
+import '../bloc/note/note_event.dart';
+import '../bloc/note/note_state.dart';
 
 /// Enhanced Search Bar for Notes with advanced filtering (ORG-003)
 /// Provides real-time search with tag, color, and content filtering
+/// Updated to use NotesBloc for state management
 class NotesSearchBar extends StatefulWidget {
-  final String? initialSearchQuery;
-  final List<String>? initialSelectedTags;
-  final List<NoteColor>? initialSelectedColors;
-  final bool initialFilterPinned;
-  final bool initialFilterWithMedia;
-  final Function(String) onSearchChanged;
-  final Function(List<String>)? onTagsSelected;
-  final Function(List<NoteColor>)? onColorsSelected;
-  final Function(bool)? onPinnedFilterChanged;
-  final Function(bool)? onMediaFilterChanged;
   final VoidCallback? onAdvancedSearch;
   final bool showAdvancedOptions;
 
   const NotesSearchBar({
     super.key,
-    this.initialSearchQuery,
-    this.initialSelectedTags,
-    this.initialSelectedColors,
-    this.initialFilterPinned = false,
-    this.initialFilterWithMedia = false,
-    required this.onSearchChanged,
-    this.onTagsSelected,
-    this.onColorsSelected,
-    this.onPinnedFilterChanged,
-    this.onMediaFilterChanged,
     this.onAdvancedSearch,
     this.showAdvancedOptions = true,
   });
@@ -47,15 +32,10 @@ class _NotesSearchBarState extends State<NotesSearchBar>
   late AnimationController _animationController;
   late Animation<double> _expandAnimation;
 
-  bool _isExpanded = false;
   bool _showClearButton = false;
   Timer? _debounceTimer;
-  List<String> _selectedTags = [];
-  List<NoteColor> _selectedColors = [];
-  bool _filterPinned = false;
-  bool _filterWithMedia = false;
 
-  // Sample tags (in real app, these would come from notes data)
+  // Sample tags (in real app, these would come from notes data or settings)
   final List<String> _availableTags = [
     'work',
     'personal',
@@ -82,14 +62,17 @@ class _NotesSearchBarState extends State<NotesSearchBar>
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController(text: widget.initialSearchQuery);
+    final notesBloc = context.read<NotesBloc>();
+    final currentState = notesBloc.state;
+    String initialQuery = '';
+
+    if (currentState is NotesLoaded) {
+      initialQuery = currentState.searchQuery;
+    }
+
+    _controller = TextEditingController(text: initialQuery);
     _focusNode = FocusNode();
     _showClearButton = _controller.text.isNotEmpty;
-
-    _selectedTags = List.from(widget.initialSelectedTags ?? []);
-    _selectedColors = List.from(widget.initialSelectedColors ?? []);
-    _filterPinned = widget.initialFilterPinned;
-    _filterWithMedia = widget.initialFilterWithMedia;
 
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 200),
@@ -99,29 +82,13 @@ class _NotesSearchBarState extends State<NotesSearchBar>
       CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
     );
 
+    // Initial animation state based on BLoC
+    if (currentState is NotesLoaded && currentState.isSearchExpanded) {
+      _animationController.value = 1.0;
+    }
+
     _controller.addListener(_onSearchTextChanged);
     _focusNode.addListener(_onFocusChanged);
-  }
-
-  @override
-  void didUpdateWidget(NotesSearchBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.initialSearchQuery != oldWidget.initialSearchQuery &&
-        widget.initialSearchQuery != _controller.text) {
-      _controller.text = widget.initialSearchQuery ?? '';
-    }
-    if (widget.initialSelectedTags != oldWidget.initialSelectedTags) {
-      _selectedTags = List.from(widget.initialSelectedTags ?? []);
-    }
-    if (widget.initialSelectedColors != oldWidget.initialSelectedColors) {
-      _selectedColors = List.from(widget.initialSelectedColors ?? []);
-    }
-    if (widget.initialFilterPinned != oldWidget.initialFilterPinned) {
-      _filterPinned = widget.initialFilterPinned;
-    }
-    if (widget.initialFilterWithMedia != oldWidget.initialFilterWithMedia) {
-      _filterWithMedia = widget.initialFilterWithMedia;
-    }
   }
 
   @override
@@ -135,13 +102,12 @@ class _NotesSearchBarState extends State<NotesSearchBar>
 
   void _onSearchTextChanged() {
     final query = _controller.text;
-    setState(() {
-      _showClearButton = query.isNotEmpty;
-    });
 
     if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
     _debounceTimer = Timer(const Duration(milliseconds: 300), () {
-      widget.onSearchChanged(query);
+      context.read<NotesBloc>().add(
+        UpdateNoteViewConfigEvent(searchQuery: query),
+      );
     });
   }
 
@@ -152,19 +118,21 @@ class _NotesSearchBarState extends State<NotesSearchBar>
   }
 
   void _expandSearchOptions() {
-    if (!_isExpanded) {
-      setState(() {
-        _isExpanded = true;
-      });
+    final state = context.read<NotesBloc>().state;
+    if (state is NotesLoaded && !state.isSearchExpanded) {
+      context.read<NotesBloc>().add(
+        const ToggleSearchExpandedEvent(isExpanded: true),
+      );
       _animationController.forward();
     }
   }
 
   void _collapseSearchOptions() {
-    if (_isExpanded) {
-      setState(() {
-        _isExpanded = false;
-      });
+    final state = context.read<NotesBloc>().state;
+    if (state is NotesLoaded && state.isSearchExpanded) {
+      context.read<NotesBloc>().add(
+        const ToggleSearchExpandedEvent(isExpanded: false),
+      );
       _animationController.reverse();
       _focusNode.unfocus();
     }
@@ -172,94 +140,121 @@ class _NotesSearchBarState extends State<NotesSearchBar>
 
   void _clearSearch() {
     _controller.clear();
-    setState(() {
-      _selectedTags.clear();
-      _selectedColors.clear();
-      _filterPinned = false;
-      _filterWithMedia = false;
-    });
-    widget.onSearchChanged('');
-    widget.onTagsSelected?.call([]);
-    widget.onColorsSelected?.call([]);
+    context.read<NotesBloc>().add(
+      const UpdateNoteViewConfigEvent(
+        searchQuery: '',
+        selectedTags: [],
+        selectedColors: [],
+        filterPinned: false,
+        filterWithMedia: false,
+      ),
+    );
     HapticFeedback.lightImpact();
   }
 
-  void _toggleTag(String tag) {
-    setState(() {
-      if (_selectedTags.contains(tag)) {
-        _selectedTags.remove(tag);
-      } else {
-        _selectedTags.add(tag);
-      }
-    });
-    widget.onTagsSelected?.call(_selectedTags);
+  void _toggleTag(String tag, List<String> currentTags) {
+    final newTags = List<String>.from(currentTags);
+    if (newTags.contains(tag)) {
+      newTags.remove(tag);
+    } else {
+      newTags.add(tag);
+    }
+    context.read<NotesBloc>().add(
+      UpdateNoteViewConfigEvent(selectedTags: newTags),
+    );
     HapticFeedback.lightImpact();
   }
 
-  void _toggleColor(NoteColor color) {
-    setState(() {
-      if (_selectedColors.contains(color)) {
-        _selectedColors.remove(color);
-      } else {
-        _selectedColors.add(color);
-      }
-    });
-    widget.onColorsSelected?.call(_selectedColors);
+  void _toggleColor(NoteColor color, List<NoteColor> currentColors) {
+    final newColors = List<NoteColor>.from(currentColors);
+    if (newColors.contains(color)) {
+      newColors.remove(color);
+    } else {
+      newColors.add(color);
+    }
+    context.read<NotesBloc>().add(
+      UpdateNoteViewConfigEvent(selectedColors: newColors),
+    );
     HapticFeedback.lightImpact();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        if (!_focusNode.hasFocus && _isExpanded) {
-          _collapseSearchOptions();
+    return BlocConsumer<NotesBloc, NoteState>(
+      listener: (context, state) {
+        if (state is NotesLoaded) {
+          // Sync animation with BLoC state if it changed externally
+          if (state.isSearchExpanded &&
+              _animationController.status == AnimationStatus.dismissed) {
+            _animationController.forward();
+          } else if (!state.isSearchExpanded &&
+              _animationController.status == AnimationStatus.completed) {
+            _animationController.reverse();
+          }
+
+          // Sync text controller if query changed from BLoC (e.g. clear search)
+          if (state.searchQuery != _controller.text) {
+            _controller.text = state.searchQuery;
+          }
         }
       },
-      child: Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface(context),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: _focusNode.hasFocus
-                ? AppColors.primary.withOpacity(0.5)
-                : AppColors.border(context),
-          ),
-          boxShadow: _focusNode.hasFocus
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(0.1),
-                    blurRadius: 8,
-                    spreadRadius: 0,
-                    offset: const Offset(0, 2),
-                  ),
-                ]
-              : null,
-        ),
-        child: Column(
-          children: [
-            // Main search input
-            _buildSearchInput(),
+      builder: (context, state) {
+        final bool isExpanded = state is NotesLoaded
+            ? state.isSearchExpanded
+            : false;
 
-            // Advanced options (animated)
-            if (widget.showAdvancedOptions)
-              AnimatedBuilder(
-                animation: _expandAnimation,
-                builder: (context, child) {
-                  return SizeTransition(
-                    sizeFactor: _expandAnimation,
-                    child: child,
-                  );
-                },
-                child: _buildAdvancedOptions(),
+        return GestureDetector(
+          onTap: () {
+            if (!_focusNode.hasFocus && isExpanded) {
+              _collapseSearchOptions();
+            }
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface(context),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: _focusNode.hasFocus
+                    ? AppColors.primary.withOpacity(0.5)
+                    : AppColors.border(context),
               ),
-          ],
-        ),
-      ),
+              boxShadow: _focusNode.hasFocus
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.1),
+                        blurRadius: 8,
+                        spreadRadius: 0,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Column(
+              children: [
+                // Main search input
+                _buildSearchInput(isExpanded),
+
+                // Advanced options (animated)
+                if (widget.showAdvancedOptions)
+                  AnimatedBuilder(
+                    animation: _expandAnimation,
+                    builder: (context, child) {
+                      return SizeTransition(
+                        sizeFactor: _expandAnimation,
+                        child: child,
+                      );
+                    },
+                    child: _buildAdvancedOptions(state),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildSearchInput() {
+  Widget _buildSearchInput(bool isExpanded) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       child: Row(
@@ -293,7 +288,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
               textInputAction: TextInputAction.search,
               onSubmitted: (_) {
                 _focusNode.unfocus();
-                if (_isExpanded && widget.showAdvancedOptions) {
+                if (isExpanded && widget.showAdvancedOptions) {
                   _collapseSearchOptions();
                 }
               },
@@ -310,7 +305,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
               ),
             ),
           ],
-          if (widget.showAdvancedOptions && _isExpanded) ...[
+          if (widget.showAdvancedOptions && isExpanded) ...[
             const SizedBox(width: 8),
             GestureDetector(
               onTap: _collapseSearchOptions,
@@ -326,14 +321,16 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     );
   }
 
-  Widget _buildAdvancedOptions() {
+  Widget _buildAdvancedOptions(NoteState state) {
+    if (state is! NotesLoaded) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // General Filters (Pinned, Media)
-          _buildGeneralFilters(),
+          _buildGeneralFilters(state),
 
           const SizedBox(height: 16),
 
@@ -345,12 +342,12 @@ class _NotesSearchBarState extends State<NotesSearchBar>
           ),
 
           // Filter by Tags
-          _buildTagFilters(),
+          _buildTagFilters(state),
 
           const SizedBox(height: 16),
 
           // Filter by Colors
-          _buildColorFilters(),
+          _buildColorFilters(state),
 
           const SizedBox(height: 16),
 
@@ -361,7 +358,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     );
   }
 
-  Widget _buildTagFilters() {
+  Widget _buildTagFilters(NotesLoaded state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -377,9 +374,9 @@ class _NotesSearchBarState extends State<NotesSearchBar>
           spacing: 8,
           runSpacing: 8,
           children: _availableTags.map((tag) {
-            final isSelected = _selectedTags.contains(tag);
+            final isSelected = state.selectedTags.contains(tag);
             return GestureDetector(
-              onTap: () => _toggleTag(tag),
+              onTap: () => _toggleTag(tag, state.selectedTags),
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -413,7 +410,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     );
   }
 
-  Widget _buildColorFilters() {
+  Widget _buildColorFilters(NotesLoaded state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -429,14 +426,14 @@ class _NotesSearchBarState extends State<NotesSearchBar>
           spacing: 8,
           runSpacing: 8,
           children: _availableColors.map((noteColor) {
-            final isSelected = _selectedColors.contains(noteColor);
+            final isSelected = state.selectedColors.contains(noteColor);
             final colorValue = Color(
               noteColor.getColorValue(
                 Theme.of(context).brightness == Brightness.dark,
               ),
             );
             return GestureDetector(
-              onTap: () => _toggleColor(noteColor),
+              onTap: () => _toggleColor(noteColor, state.selectedColors),
               child: Container(
                 width: 32,
                 height: 32,
@@ -461,25 +458,42 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     );
   }
 
-  Widget _buildGeneralFilters() {
+  Widget _buildGeneralFilters(NotesLoaded state) {
     return Row(
       children: [
         _buildFilterChip(
           label: 'Pinned Only',
-          isSelected: _filterPinned,
+          isSelected: state.filterPinned,
           onTap: () {
-            setState(() => _filterPinned = !_filterPinned);
-            widget.onPinnedFilterChanged?.call(_filterPinned);
+            context.read<NotesBloc>().add(
+              UpdateNoteViewConfigEvent(filterPinned: !state.filterPinned),
+            );
             HapticFeedback.lightImpact();
           },
         ),
-        SizedBox(width: 8.w),
+        const SizedBox(width: 8),
         _buildFilterChip(
           label: 'With Media',
-          isSelected: _filterWithMedia,
+          isSelected: state.filterWithMedia,
           onTap: () {
-            setState(() => _filterWithMedia = !_filterWithMedia);
-            widget.onMediaFilterChanged?.call(_filterWithMedia);
+            context.read<NotesBloc>().add(
+              UpdateNoteViewConfigEvent(
+                filterWithMedia: !state.filterWithMedia,
+              ),
+            );
+            HapticFeedback.lightImpact();
+          },
+        ),
+        const SizedBox(width: 8),
+        _buildFilterChip(
+          label: 'With Reminders',
+          isSelected: state.filterWithReminders,
+          onTap: () {
+            context.read<NotesBloc>().add(
+              UpdateNoteViewConfigEvent(
+                filterWithReminders: !state.filterWithReminders,
+              ),
+            );
             HapticFeedback.lightImpact();
           },
         ),
@@ -495,12 +509,12 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withOpacity(0.1)
               : AppColors.background(context),
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected ? AppColors.primary : AppColors.border(context),
           ),
@@ -519,17 +533,17 @@ class _NotesSearchBarState extends State<NotesSearchBar>
   Widget _buildAdvancedSearchButton() {
     return SizedBox(
       width: double.infinity,
-      child: TextButton.icon(
+      child: OutlinedButton.icon(
         onPressed: widget.onAdvancedSearch,
-        icon: Icon(Icons.tune, size: 16, color: AppColors.primary),
-        label: Text(
-          'Advanced Search Options',
-          style: AppTypography.labelMedium(context, AppColors.primary),
-        ),
-        style: TextButton.styleFrom(
-          backgroundColor: AppColors.primary.withOpacity(0.05),
+        icon: const Icon(Icons.auto_awesome, size: 18),
+        label: const Text('Advanced Search Ranking'),
+        style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          side: BorderSide(color: AppColors.primary),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(vertical: 12),
         ),
       ),
     );

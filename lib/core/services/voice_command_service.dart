@@ -1,8 +1,18 @@
+import 'package:speech_to_text/speech_to_text.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:async';
+
 /// Voice command callback type
 typedef CommandCallback = void Function();
 
-/// Service for recognizing and executing voice commands
+/// Service for recognizing and executing voice commands using SpeechToText
 class VoiceCommandService {
+  final SpeechToText _speech = SpeechToText();
+  bool _isListening = false;
+
+  /// Get listening status
+  bool get isListening => _isListening;
+
   /// Registered commands map
   final Map<String, CommandCallback> _commands = {};
 
@@ -39,6 +49,48 @@ class VoiceCommandService {
   /// Clear all commands
   void clearAllCommands() {
     _commands.clear();
+  }
+
+  /// Initialize speech recognition
+  Future<bool> initialize() async {
+    final status = await Permission.microphone.request();
+    if (!status.isGranted) return false;
+
+    return await _speech.initialize(
+      onError: (error) => print('Speech Error: $error'),
+      onStatus: (status) => print('Speech Status: $status'),
+    );
+  }
+
+  /// Start listening and automatically detect commands
+  Future<void> startListening({
+    required Function(String) onResult,
+    required Function(bool) onCommandMatched,
+  }) async {
+    if (!_speech.isAvailable) {
+      final init = await initialize();
+      if (!init) return;
+    }
+
+    _isListening = true;
+    await _speech.listen(
+      onResult: (result) {
+        final text = result.recognizedWords;
+        onResult(text);
+
+        if (result.finalResult) {
+          final matched = detectAndExecute(text);
+          onCommandMatched(matched);
+          _isListening = false;
+        }
+      },
+    );
+  }
+
+  /// Stop listening
+  Future<void> stopListening() async {
+    await _speech.stop();
+    _isListening = false;
   }
 
   /// Detect and execute command from speech text
@@ -128,4 +180,3 @@ class VoiceCommandService {
     };
   }
 }
-

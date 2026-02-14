@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:audioplayers/audioplayers.dart';
+import '../../core/services/audio_recorder_service.dart';
 import 'dart:async';
-import 'dart:io';
 
 /// Audio recording metadata
 class AudioMetadata {
@@ -20,8 +22,9 @@ class AudioMetadata {
 
   String get formattedSize {
     if (fileSize < 1024) return '$fileSize B';
-    if (fileSize < 1024 * 1024)
+    if (fileSize < 1024 * 1024) {
       return '${(fileSize / 1024).toStringAsFixed(1)} KB';
+    }
     return '${(fileSize / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
@@ -38,41 +41,46 @@ class AudioRecorderWidget extends StatefulWidget {
   final VoidCallback? onCancel;
 
   const AudioRecorderWidget({
-    Key? key,
+    super.key,
     required this.onRecordingComplete,
     this.onCancel,
-  }) : super(key: key);
+  });
 
   @override
   State<AudioRecorderWidget> createState() => _AudioRecorderWidgetState();
 }
 
 class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
+  final AudioRecorderService _recorderService = GetIt.I<AudioRecorderService>();
   bool _isRecording = false;
-  bool _isPaused = false;
   Duration _recordingDuration = Duration.zero;
-  late Timer _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer(Duration.zero, () {});
-  }
+  Timer? _timer;
 
   @override
   void dispose() {
-    _timer.cancel();
+    _timer?.cancel();
     super.dispose();
   }
 
-  void _startRecording() {
+  Future<void> _startRecording() async {
+    final hasPermission = await _recorderService.checkPermission();
+    if (!hasPermission) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission denied')),
+        );
+      }
+      return;
+    }
+
+    await _recorderService.startRecording();
+
     setState(() {
       _isRecording = true;
-      _isPaused = false;
       _recordingDuration = Duration.zero;
     });
 
-    _timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+    _timer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
       setState(() {
         _recordingDuration = Duration(
           milliseconds: _recordingDuration.inMilliseconds + 100,
@@ -81,225 +89,153 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
     });
   }
 
-  void _pauseRecording() {
-    setState(() {
-      _isPaused = true;
-    });
-    _timer.cancel();
-  }
+  Future<void> _stopRecording() async {
+    final path = await _recorderService.stopRecording();
+    _timer?.cancel();
 
-  void _resumeRecording() {
-    setState(() {
-      _isPaused = false;
-    });
-
-    _timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-      setState(() {
-        _recordingDuration = Duration(
-          milliseconds: _recordingDuration.inMilliseconds + 100,
-        );
-      });
-    });
-  }
-
-  void _stopRecording() {
-    _timer.cancel();
-
-    // Generate a mock file path (in real implementation, this would be the actual recording file)
-    final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final filePath = '/tmp/audio_$timestamp.m4a';
-
-    widget.onRecordingComplete(filePath, _recordingDuration);
+    if (path != null) {
+      widget.onRecordingComplete(path, _recordingDuration);
+    }
 
     setState(() {
       _isRecording = false;
-      _isPaused = false;
-      _recordingDuration = Duration.zero;
     });
-  }
-
-  void _cancel() {
-    _timer.cancel();
-    setState(() {
-      _isRecording = false;
-      _isPaused = false;
-      _recordingDuration = Duration.zero;
-    });
-    widget.onCancel?.call();
   }
 
   String _formatDuration(Duration duration) {
-    final minutes = duration.inMinutes;
-    final seconds = duration.inSeconds % 60;
-    return '$minutes:${seconds.toString().padLeft(2, '0')}';
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Recording indicator
-            if (_isRecording)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  Text('Recording...', style: TextStyle(color: Colors.red)),
-                ],
-              )
-            else
-              Text(
-                'Audio Recording',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-
-            SizedBox(height: 24),
-
-            // Duration display
-            Text(
-              _formatDuration(_recordingDuration),
-              style: Theme.of(context).textTheme.headlineMedium,
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            _isRecording ? 'Recording Audio...' : 'Voice Recorder',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 24),
+          Text(
+            _formatDuration(_recordingDuration),
+            style: const TextStyle(
+              fontSize: 48,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Courier',
             ),
-
-            SizedBox(height: 24),
-
-            // Waveform visualization (simplified)
-            if (_isRecording)
-              Container(
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: List.generate(
-                    20,
-                    (index) => Container(
-                      width: 2,
-                      height: 20 + (index % 5) * 8,
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.7),
-                        borderRadius: BorderRadius.circular(1),
+          ),
+          const SizedBox(height: 32),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: _isRecording
+                    ? () async {
+                        await _recorderService.stopRecording();
+                        widget.onCancel?.call();
+                      }
+                    : widget.onCancel,
+              ),
+              GestureDetector(
+                onTap: _isRecording ? _stopRecording : _startRecording,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: _isRecording ? Colors.red : Colors.blue,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_isRecording ? Colors.red : Colors.blue)
+                            .withOpacity(0.3),
+                        blurRadius: 15,
+                        spreadRadius: 5,
                       ),
-                    ),
+                    ],
+                  ),
+                  child: Icon(
+                    _isRecording ? Icons.stop : Icons.mic,
+                    color: Colors.white,
+                    size: 40,
                   ),
                 ),
               ),
-
-            SizedBox(height: 24),
-
-            // Controls
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                // Cancel button
-                if (_isRecording)
-                  FloatingActionButton.small(
-                    onPressed: _cancel,
-                    backgroundColor: Colors.grey,
-                    child: Icon(Icons.close),
-                  ),
-
-                // Record/Pause button
-                if (!_isRecording)
-                  FloatingActionButton(
-                    onPressed: _startRecording,
-                    child: Icon(Icons.mic),
-                  )
-                else if (!_isPaused)
-                  FloatingActionButton.small(
-                    onPressed: _pauseRecording,
-                    child: Icon(Icons.pause),
-                  )
-                else
-                  FloatingActionButton.small(
-                    onPressed: _resumeRecording,
-                    child: Icon(Icons.play_arrow),
-                  ),
-
-                // Stop button
-                if (_isRecording)
-                  FloatingActionButton.small(
-                    onPressed: _stopRecording,
-                    backgroundColor: Colors.green,
-                    child: Icon(Icons.check),
-                  ),
-              ],
-            ),
-          ],
-        ),
+              IconButton(
+                icon: const Icon(Icons.check),
+                onPressed: _isRecording ? _stopRecording : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }
 }
 
-/// Audio playback widget
+/// Audio playback widget using audioplayers
 class AudioPlayerWidget extends StatefulWidget {
   final AudioMetadata audio;
   final VoidCallback? onDelete;
 
-  const AudioPlayerWidget({Key? key, required this.audio, this.onDelete})
-    : super(key: key);
+  const AudioPlayerWidget({super.key, required this.audio, this.onDelete});
 
   @override
   State<AudioPlayerWidget> createState() => _AudioPlayerWidgetState();
 }
 
 class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
+  final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
-  late Duration _currentPosition;
-  late Timer _timer;
+  Duration _currentPosition = Duration.zero;
+  Duration _totalDuration = Duration.zero;
 
   @override
   void initState() {
     super.initState();
-    _currentPosition = Duration.zero;
-    _timer = Timer(Duration.zero, () {});
+    _totalDuration = widget.audio.duration;
+
+    _audioPlayer.onPositionChanged.listen((p) {
+      if (mounted) setState(() => _currentPosition = p);
+    });
+
+    _audioPlayer.onDurationChanged.listen((d) {
+      if (mounted) setState(() => _totalDuration = d);
+    });
+
+    _audioPlayer.onPlayerComplete.listen((_) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = false;
+          _currentPosition = Duration.zero;
+        });
+      }
+    });
   }
 
   @override
   void dispose() {
-    _timer.cancel();
+    _audioPlayer.dispose();
     super.dispose();
   }
 
-  void _togglePlayPause() {
-    setState(() {
-      _isPlaying = !_isPlaying;
-    });
-
+  void _togglePlayPause() async {
     if (_isPlaying) {
-      _timer = Timer.periodic(Duration(milliseconds: 100), (timer) {
-        setState(() {
-          final newPosition = Duration(
-            milliseconds: _currentPosition.inMilliseconds + 100,
-          );
-          if (newPosition <= widget.audio.duration) {
-            _currentPosition = newPosition;
-          } else {
-            _timer.cancel();
-            _isPlaying = false;
-            _currentPosition = Duration.zero;
-          }
-        });
-      });
+      await _audioPlayer.pause();
     } else {
-      _timer.cancel();
+      await _audioPlayer.play(DeviceFileSource(widget.audio.filePath));
     }
+    setState(() => _isPlaying = !_isPlaying);
   }
 
   String _formatDuration(Duration duration) {
@@ -311,12 +247,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   Widget build(BuildContext context) {
     return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
-        padding: EdgeInsets.all(12),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header with filename and delete
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -326,14 +262,12 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                     children: [
                       Text(
                         widget.audio.fileName,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       Text(
-                        widget.audio.formattedSize,
+                        '${widget.audio.formattedSize} • ${_formatDuration(_totalDuration)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
@@ -341,55 +275,32 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                 ),
                 if (widget.onDelete != null)
                   IconButton(
-                    icon: Icon(Icons.delete_outline),
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
                     onPressed: widget.onDelete,
                   ),
               ],
             ),
-
-            SizedBox(height: 12),
-
-            // Play controls and progress
             Row(
               children: [
                 IconButton(
-                  icon: Icon(_isPlaying ? Icons.pause : Icons.play_arrow),
+                  icon: Icon(
+                    _isPlaying ? Icons.pause_circle : Icons.play_circle,
+                  ),
+                  iconSize: 36,
+                  color: Theme.of(context).primaryColor,
                   onPressed: _togglePlayPause,
                 ),
                 Expanded(
-                  child: Column(
-                    children: [
-                      SliderTheme(
-                        data: SliderThemeData(trackHeight: 4),
-                        child: Slider(
-                          value: _currentPosition.inMilliseconds.toDouble(),
-                          max: widget.audio.duration.inMilliseconds.toDouble(),
-                          onChanged: (value) {
-                            setState(() {
-                              _currentPosition = Duration(
-                                milliseconds: value.toInt(),
-                              );
-                            });
-                          },
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              _formatDuration(_currentPosition),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            Text(
-                              _formatDuration(widget.audio.duration),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                  child: Slider(
+                    value: _currentPosition.inMilliseconds.toDouble(),
+                    max: _totalDuration.inMilliseconds.toDouble() > 0
+                        ? _totalDuration.inMilliseconds.toDouble()
+                        : 1.0,
+                    onChanged: (value) async {
+                      await _audioPlayer.seek(
+                        Duration(milliseconds: value.toInt()),
+                      );
+                    },
                   ),
                 ),
               ],
@@ -407,10 +318,10 @@ class AudioAttachmentsList extends StatelessWidget {
   final Function(int) onAudioDelete;
 
   const AudioAttachmentsList({
-    Key? key,
+    super.key,
     required this.audios,
     required this.onAudioDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

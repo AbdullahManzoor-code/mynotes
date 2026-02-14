@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
-import '../bloc/note_bloc.dart';
-import '../bloc/note_state.dart';
-import '../bloc/todos_bloc.dart';
-import '../bloc/alarms_bloc.dart';
+import '../bloc/note/note_bloc.dart';
+import '../bloc/note/note_state.dart';
+import '../bloc/todos/todos_bloc.dart';
+import '../bloc/alarm/alarms_bloc.dart';
 import '../../domain/entities/note.dart';
+import '../../domain/entities/todo_item.dart';
+import '../bloc/params/alarm_params.dart';
 import '../../core/routes/app_routes.dart';
 import '../bloc/params/todo_params.dart';
-import '../bloc/unified_items_bloc.dart';
+import '../bloc/unified_items/unified_items_bloc.dart';
 import '../bloc/params/unified_items_params.dart';
 
 /// Unified Items Screen - Displays notes, todos, and reminders in one place
@@ -26,22 +27,44 @@ class UnifiedItemsScreen extends StatelessWidget {
   }
 }
 
-class _UnifiedItemsView extends StatelessWidget {
+class _UnifiedItemsView extends StatefulWidget {
   const _UnifiedItemsView();
 
   @override
+  State<_UnifiedItemsView> createState() => _UnifiedItemsViewState();
+}
+
+class _UnifiedItemsViewState extends State<_UnifiedItemsView> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background(context),
-      appBar: _buildAppBar(context),
-      body: Column(
-        children: [
-          _buildSearchAndFilterBar(context),
-          _buildFilterChips(context),
-          Expanded(child: _buildUnifiedItemsList(context)),
-        ],
+    return BlocListener<UnifiedItemsBloc, UnifiedItemsState>(
+      listenWhen: (p, c) => p.params.searchQuery != c.params.searchQuery,
+      listener: (context, state) {
+        // Only update controller if external change (like clear button or filter)
+        if (state.params.searchQuery != _searchController.text) {
+          _searchController.text = state.params.searchQuery;
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background(context),
+        appBar: _buildAppBar(context),
+        body: Column(
+          children: [
+            _buildSearchAndFilterBar(context),
+            _buildFilterChips(context),
+            Expanded(child: _buildUnifiedItemsList(context)),
+          ],
+        ),
+        floatingActionButton: _buildFAB(context),
       ),
-      floatingActionButton: _buildFAB(context),
     );
   }
 
@@ -72,31 +95,16 @@ class _UnifiedItemsView extends StatelessWidget {
   }
 
   Widget _buildSearchAndFilterBar(BuildContext context) {
-    // We use a local controller to manage the text but sync it with BLoC
-    final TextEditingController searchController = TextEditingController();
-
     return BlocBuilder<UnifiedItemsBloc, UnifiedItemsState>(
       buildWhen: (p, c) => p.params.searchQuery != c.params.searchQuery,
       builder: (context, state) {
-        // Synchronize controller text with state
-        if (state.params.searchQuery != searchController.text) {
-          searchController.text = state.params.searchQuery;
-          // Set selection to end to avoid cursor jumping
-          searchController.selection = TextSelection.fromPosition(
-            TextPosition(offset: searchController.text.length),
-          );
-        }
-
         return Padding(
           padding: EdgeInsets.all(16.w),
           child: Column(
             children: [
               TextField(
-                controller: searchController,
-                style: AppTypography.bodyMedium(
-                  context,
-                  AppColors.textPrimary(context),
-                ),
+                controller: _searchController,
+
                 decoration: InputDecoration(
                   hintText: 'Search notes, todos, reminders...',
                   hintStyle: AppTypography.bodyMedium(
@@ -296,19 +304,23 @@ class _UnifiedItemsView extends StatelessWidget {
                   if (state is NotesLoaded) {
                     var notes = state.notes;
 
-                    // Apply search filter
+                    // Apply smart filter if present, otherwise fallback to basic search
                     if (params.searchQuery.isNotEmpty) {
-                      notes = notes
-                          .where(
-                            (note) =>
-                                note.title.toLowerCase().contains(
-                                  params.searchQuery.toLowerCase(),
-                                ) ||
-                                note.content.toLowerCase().contains(
-                                  params.searchQuery.toLowerCase(),
-                                ),
-                          )
-                          .toList();
+                      if (params.smartFilter != null) {
+                        notes = _applySmartFilters<Note>(notes, params);
+                      } else {
+                        notes = notes
+                            .where(
+                              (note) =>
+                                  note.title.toLowerCase().contains(
+                                    params.searchQuery.toLowerCase(),
+                                  ) ||
+                                  note.content.toLowerCase().contains(
+                                    params.searchQuery.toLowerCase(),
+                                  ),
+                            )
+                            .toList();
+                      }
                     }
 
                     // Apply pinned filter
@@ -370,15 +382,19 @@ class _UnifiedItemsView extends StatelessWidget {
                   if (state is TodosLoaded) {
                     var todos = state.filteredTodos;
 
-                    // Apply search filter
+                    // Apply smart filter if present, otherwise fallback to basic search
                     if (params.searchQuery.isNotEmpty) {
-                      todos = todos
-                          .where(
-                            (todo) => todo.text.toLowerCase().contains(
-                              params.searchQuery.toLowerCase(),
-                            ),
-                          )
-                          .toList();
+                      if (params.smartFilter != null) {
+                        todos = _applySmartFilters<TodoItem>(todos, params);
+                      } else {
+                        todos = todos
+                            .where(
+                              (todo) => todo.text.toLowerCase().contains(
+                                params.searchQuery.toLowerCase(),
+                              ),
+                            )
+                            .toList();
+                      }
                     }
 
                     if (todos.isEmpty && params.selectedFilter == 'todos') {
@@ -429,15 +445,22 @@ class _UnifiedItemsView extends StatelessWidget {
                   if (state is AlarmsLoaded) {
                     var alarms = state.filteredAlarms;
 
-                    // Apply search filter
+                    // Apply smart filter if present, otherwise fallback to basic search
                     if (params.searchQuery.isNotEmpty) {
-                      alarms = alarms
-                          .where(
-                            (alarm) => alarm.message.toLowerCase().contains(
-                              params.searchQuery.toLowerCase(),
-                            ),
-                          )
-                          .toList();
+                      if (params.smartFilter != null) {
+                        alarms = _applySmartFilters<AlarmParams>(
+                          alarms,
+                          params,
+                        );
+                      } else {
+                        alarms = alarms
+                            .where(
+                              (alarm) => alarm.message.toLowerCase().contains(
+                                params.searchQuery.toLowerCase(),
+                              ),
+                            )
+                            .toList();
+                      }
                     }
 
                     if (alarms.isEmpty &&
@@ -748,5 +771,64 @@ class _UnifiedItemsView extends StatelessWidget {
       },
       child: Icon(Icons.add, color: Colors.white, size: 24.sp),
     );
+  }
+
+  List<T> _applySmartFilters<T>(List<T> items, UnifiedItemsParams params) {
+    if (params.searchQuery.isEmpty || params.smartFilter == null) return items;
+
+    final sf = params.smartFilter!;
+
+    return items.where((item) {
+      // 1. Text Search (Check remaining text after parsing tokens)
+      final searchText = sf.remainingText.toLowerCase();
+      if (searchText.isNotEmpty) {
+        String content = '';
+        if (item is Note) content = '${item.title} ${item.content}';
+        if (item is TodoItem) content = item.text;
+        if (item is AlarmParams) content = item.message;
+
+        if (!content.toLowerCase().contains(searchText)) return false;
+      }
+
+      // 2. Priority
+      if (sf.priority != null) {
+        int? itemPriority;
+        if (item is Note) itemPriority = (item as Note).priority;
+        if (item is TodoItem) itemPriority = (item as TodoItem).priority.level;
+        if (itemPriority != null && itemPriority < sf.priority!) return false;
+      }
+
+      // 3. Date Range
+      if (sf.dateRange != null) {
+        DateTime? itemDate;
+        if (item is Note) itemDate = (item as Note).createdAt;
+        if (item is TodoItem) itemDate = (item as TodoItem).dueDate;
+        if (item is AlarmParams) itemDate = (item as AlarmParams).scheduledTime;
+
+        if (itemDate != null) {
+          if (itemDate.isBefore(sf.dateRange!.start) ||
+              itemDate.isAfter(sf.dateRange!.end)) {
+            return false;
+          }
+        } else {
+          return false;
+        }
+      }
+
+      // 4. Tags
+      if (sf.tags.isNotEmpty) {
+        String content = '';
+        if (item is Note) content = '${item.title} ${item.content}';
+        if (item is TodoItem) content = item.text;
+        if (item is AlarmParams) content = item.message;
+
+        final hasAnyTag = sf.tags.any(
+          (tag) => content.toLowerCase().contains(tag.toLowerCase()),
+        );
+        if (!hasAnyTag) return false;
+      }
+
+      return true;
+    }).toList();
   }
 }

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../bloc/media_filters/media_filters_bloc.dart';
+import '../bloc/media_filters/media_filters_event.dart';
+import '../bloc/media_filters/media_filters_state.dart';
 import '../design_system/design_system.dart';
 
 /// Media Filters & Effects Screen
 /// Apply filters to images: Grayscale, Sepia, Blur, Brightness, etc.
-class MediaFiltersScreen extends StatefulWidget {
+/// Refactored to use MediaFiltersBloc for state management
+class MediaFiltersScreen extends StatelessWidget {
   final String imagePath;
   final String imageTitle;
 
@@ -16,40 +19,25 @@ class MediaFiltersScreen extends StatefulWidget {
   });
 
   @override
-  State<MediaFiltersScreen> createState() => _MediaFiltersScreenState();
-}
-
-class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
-  late FilterController _filterController;
-  FilterType _selectedFilter = FilterType.none;
-  double _filterIntensity = 50;
-  bool _showPreview = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _filterController = FilterController();
-  }
-
-  @override
-  void dispose() {
-    _filterController.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildFilterAppBar(context),
-      body: Column(
-        children: [
-          // Image Preview
-          Expanded(child: _buildImagePreview(context)),
-          // Filter Controls
-          _buildFilterControls(context),
-          // Filter Grid
-          _buildFilterGrid(context),
-        ],
+    return BlocProvider(
+      create: (context) => MediaFiltersBloc(),
+      child: BlocBuilder<MediaFiltersBloc, MediaFiltersState>(
+        builder: (context, state) {
+          return Scaffold(
+            appBar: _buildFilterAppBar(context),
+            body: Column(
+              children: [
+                // Image Preview
+                Expanded(child: _buildImagePreview(context, state)),
+                // Filter Controls
+                _buildFilterControls(context, state),
+                // Filter Grid
+                _buildFilterGrid(context, state),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -69,14 +57,14 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
       ),
       actions: [
         TextButton(
-          onPressed: () => _saveFilteredImage(),
+          onPressed: () => _saveFilteredImage(context),
           child: const Text('Save'),
         ),
       ],
     );
   }
 
-  Widget _buildImagePreview(BuildContext context) {
+  Widget _buildImagePreview(BuildContext context, MediaFiltersState state) {
     return Container(
       color: Colors.grey[200],
       child: Stack(
@@ -95,7 +83,7 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
                     'Image Preview',
                     style: TextStyle(fontSize: 14.sp, color: Colors.grey[600]),
                   ),
-                  if (_selectedFilter != FilterType.none)
+                  if (state.selectedFilter != FilterType.none)
                     Column(
                       children: [
                         SizedBox(height: 12.h),
@@ -109,7 +97,7 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
                             borderRadius: BorderRadius.circular(4.r),
                           ),
                           child: Text(
-                            '${_selectedFilter.name.toUpperCase()}: ${_filterIntensity.toInt()}%',
+                            '${state.selectedFilter.name.toUpperCase()}: ${state.intensity.toInt()}%',
                             style: TextStyle(
                               fontSize: 12.sp,
                               color: Colors.white,
@@ -123,7 +111,7 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
             ),
           ),
           // Before/After Toggle
-          if (_showPreview)
+          if (state.showPreview)
             Positioned(
               top: 12.h,
               right: 12.w,
@@ -144,9 +132,9 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
     );
   }
 
-  Widget _buildFilterControls(BuildContext context) {
-    if (_selectedFilter == FilterType.none) {
-      return SizedBox.shrink();
+  Widget _buildFilterControls(BuildContext context, MediaFiltersState state) {
+    if (state.selectedFilter == FilterType.none) {
+      return const SizedBox.shrink();
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -168,7 +156,7 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
                 style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.w600),
               ),
               Text(
-                '${_filterIntensity.toInt()}%',
+                '${state.intensity.toInt()}%',
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
@@ -179,10 +167,9 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
           ),
           SizedBox(height: 12.h),
           Slider(
-            value: _filterIntensity,
+            value: state.intensity,
             onChanged: (value) {
-              setState(() => _filterIntensity = value);
-              _filterController.setIntensity(value);
+              context.read<MediaFiltersBloc>().add(UpdateIntensityEvent(value));
             },
             min: 0,
             max: 100,
@@ -192,8 +179,9 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
             children: [
               TextButton.icon(
                 onPressed: () {
-                  setState(() => _filterIntensity = 0);
-                  _filterController.reset();
+                  context.read<MediaFiltersBloc>().add(
+                    const ResetFilterEvent(),
+                  );
                 },
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reset'),
@@ -202,7 +190,9 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
               TextButton.icon(
                 onPressed: () {
                   // Compare before/after
-                  setState(() => _showPreview = !_showPreview);
+                  context.read<MediaFiltersBloc>().add(
+                    const TogglePreviewEvent(),
+                  );
                 },
                 icon: const Icon(Icons.compare),
                 label: const Text('Compare'),
@@ -214,7 +204,7 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
     );
   }
 
-  Widget _buildFilterGrid(BuildContext context) {
+  Widget _buildFilterGrid(BuildContext context, MediaFiltersState state) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final filters = [
       FilterOption(FilterType.none, 'None', Icons.image),
@@ -241,17 +231,15 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
           itemCount: filters.length,
           itemBuilder: (context, index) {
             final filter = filters[index];
-            final isSelected = _selectedFilter == filter.type;
+            final isSelected = state.selectedFilter == filter.type;
 
             return Padding(
               padding: EdgeInsets.only(right: 12.w),
               child: GestureDetector(
                 onTap: () {
-                  setState(() {
-                    _selectedFilter = filter.type;
-                    _filterIntensity = 50;
-                  });
-                  _filterController.applyFilter(filter.type);
+                  context.read<MediaFiltersBloc>().add(
+                    ApplyFilterEvent(filter.type),
+                  );
                 },
                 child: Column(
                   children: [
@@ -301,8 +289,21 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
       ),
     );
   }
+  //                         ),
+  //                       ],
+  //                     ),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           );
+  //         },
+  //       ),
+  //     ),
+  //   );
+  // }
 
-  void _saveFilteredImage() {
+  void _saveFilteredImage(BuildContext context) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -316,11 +317,6 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Filtered image saved successfully'),
-                ),
-              );
               Navigator.pop(context);
             },
             child: const Text('Save'),
@@ -331,19 +327,6 @@ class _MediaFiltersScreenState extends State<MediaFiltersScreen> {
   }
 }
 
-// Filter Types
-enum FilterType {
-  none,
-  grayscale,
-  sepia,
-  blur,
-  brightness,
-  contrast,
-  saturation,
-  invert,
-  vintage,
-}
-
 // Filter Option Model
 class FilterOption {
   final FilterType type;
@@ -352,27 +335,3 @@ class FilterOption {
 
   FilterOption(this.type, this.name, this.icon);
 }
-
-// Filter Controller
-class FilterController {
-  FilterType _currentFilter = FilterType.none;
-  double _currentIntensity = 50;
-
-  void applyFilter(FilterType type) {
-    _currentFilter = type;
-  }
-
-  void setIntensity(double intensity) {
-    _currentIntensity = intensity;
-  }
-
-  void reset() {
-    _currentFilter = FilterType.none;
-    _currentIntensity = 0;
-  }
-
-  void dispose() {
-    // Cleanup
-  }
-}
-

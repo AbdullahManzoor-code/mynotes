@@ -1,4 +1,7 @@
 import 'package:equatable/equatable.dart';
+import 'package:json_annotation/json_annotation.dart';
+
+part 'todo_item.g.dart';
 
 /// Todo filtering options
 enum TodoFilter { all, active, completed, overdue, today, thisWeek }
@@ -59,6 +62,7 @@ enum TodoCategory {
 }
 
 /// Subtask for a Todo (TD-007)
+@JsonSerializable()
 class SubTask extends Equatable {
   final String id;
   final String text;
@@ -83,21 +87,13 @@ class SubTask extends Equatable {
   @override
   List<Object?> get props => [id, text, isCompleted];
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'text': text,
-    'isCompleted': isCompleted,
-  };
+  factory SubTask.fromJson(Map<String, dynamic> json) =>
+      _$SubTaskFromJson(json);
 
-  factory SubTask.fromJson(Map<String, dynamic> json) {
-    return SubTask(
-      id: json['id'] as String,
-      text: json['text'] as String,
-      isCompleted: json['isCompleted'] as bool? ?? false,
-    );
-  }
+  Map<String, dynamic> toJson() => _$SubTaskToJson(this);
 }
 
+@JsonSerializable()
 class TodoItem extends Equatable {
   final String id;
   final String text;
@@ -206,61 +202,10 @@ class TodoItem extends Equatable {
     updatedAt,
   ];
 
-  Map<String, dynamic> toJson() => {
-    'id': id,
-    'text': text,
-    'isCompleted': isCompleted,
-    'isImportant': isImportant,
-    'dueDate': dueDate?.toIso8601String(),
-    'completedAt': completedAt?.toIso8601String(),
-    'priority': priority.name,
-    'category': category.name,
-    'notes': notes,
-    'noteId': noteId,
-    'subtasks': subtasks.map((s) => s.toJson()).toList(),
-    'attachmentPaths': attachmentPaths,
-    'hasReminder': hasReminder,
-    'reminderId': reminderId,
-    'createdAt': createdAt.toIso8601String(),
-    'updatedAt': updatedAt.toIso8601String(),
-  };
+  factory TodoItem.fromJson(Map<String, dynamic> json) =>
+      _$TodoItemFromJson(json);
 
-  factory TodoItem.fromJson(Map<String, dynamic> json) {
-    return TodoItem(
-      id: json['id'] as String,
-      text: json['text'] as String,
-      isCompleted: (json['isCompleted'] as bool?) ?? false,
-      isImportant: (json['isImportant'] as bool?) ?? false,
-      dueDate: json['dueDate'] != null
-          ? DateTime.parse(json['dueDate'] as String)
-          : null,
-      completedAt: json['completedAt'] != null
-          ? DateTime.parse(json['completedAt'] as String)
-          : null,
-      priority: TodoPriority.values.firstWhere(
-        (p) => p.name == (json['priority'] as String?),
-        orElse: () => TodoPriority.medium,
-      ),
-      category: TodoCategory.values.firstWhere(
-        (c) => c.name == (json['category'] as String?),
-        orElse: () => TodoCategory.personal,
-      ),
-      notes: json['notes'] as String?,
-      noteId: json['noteId'] as String?,
-      subtasks: json['subtasks'] != null
-          ? (json['subtasks'] as List)
-                .map((s) => SubTask.fromJson(s as Map<String, dynamic>))
-                .toList()
-          : const [],
-      attachmentPaths: json['attachmentPaths'] != null
-          ? List<String>.from(json['attachmentPaths'] as List)
-          : const [],
-      hasReminder: (json['hasReminder'] as bool?) ?? false,
-      reminderId: json['reminderId'] as String?,
-      createdAt: DateTime.parse(json['createdAt'] as String),
-      updatedAt: DateTime.parse(json['updatedAt'] as String),
-    );
-  }
+  Map<String, dynamic> toJson() => _$TodoItemToJson(this);
 
   double get completionPercentage {
     if (subtasks.isEmpty) return isCompleted ? 1.0 : 0.0;

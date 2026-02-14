@@ -21,6 +21,7 @@
 /// }
 /// ```
 /// ============================================================================
+library;
 
 import 'package:flutter/foundation.dart';
 
@@ -69,11 +70,11 @@ abstract class AppException implements Exception {
 
   /// Log the exception
   void log() {
-    debugPrint('🚨 ${runtimeType}: $debugInfo');
+    debugPrint('🚨 $runtimeType: $debugInfo');
   }
 
   @override
-  String toString() => '${runtimeType}: $message (code: $code)';
+  String toString() => '$runtimeType: $message (code: $code)';
 
   /// Convert to Map for serialization/logging
   Map<String, dynamic> toMap() {
@@ -95,16 +96,11 @@ abstract class AppException implements Exception {
 /// Exception during app initialization
 class AppInitializationException extends AppException {
   AppInitializationException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'INIT_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'INIT_ERROR');
 
   @override
   bool get isRecoverable => false;
@@ -116,16 +112,11 @@ class AppInitializationException extends AppException {
 /// Exception during database initialization
 class DatabaseInitializationException extends AppException {
   DatabaseInitializationException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'DB_INIT_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'DB_INIT_ERROR');
 
   @override
   bool get isRecoverable => false;
@@ -138,16 +129,11 @@ class DatabaseInitializationException extends AppException {
 /// Exception when loading preferences
 class PreferencesLoadException extends AppException {
   PreferencesLoadException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'PREF_LOAD_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'PREF_LOAD_ERROR');
 
   @override
   String get userMessage => 'Failed to load settings. Using defaults.';
@@ -163,18 +149,13 @@ class DatabaseException extends AppException {
   final String? table;
 
   DatabaseException({
-    required String message,
+    required super.message,
     this.operation,
     this.table,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'DATABASE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'DATABASE_ERROR');
 
   @override
   String get userMessage => 'Database operation failed. Please try again.';
@@ -186,17 +167,12 @@ class DatabaseMigrationException extends DatabaseException {
   final int? toVersion;
 
   DatabaseMigrationException({
-    required String message,
+    required super.message,
     this.fromVersion,
     this.toVersion,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'DB_MIGRATION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'DB_MIGRATION_ERROR');
 
   @override
   bool get isRecoverable => false;
@@ -209,30 +185,20 @@ class DatabaseMigrationException extends DatabaseException {
 /// Base biometric exception
 class BiometricException extends AppException {
   BiometricException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'BIOMETRIC_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'BIOMETRIC_ERROR');
 }
 
 /// Biometric not available on device
 class BiometricNotAvailableException extends BiometricException {
   BiometricNotAvailableException({
-    String message = 'Biometric authentication is not available on this device',
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'BIOMETRIC_NOT_AVAILABLE',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'Biometric authentication is not available on this device',
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'BIOMETRIC_NOT_AVAILABLE');
 
   @override
   String get userMessage =>
@@ -245,17 +211,12 @@ class BiometricFailedException extends BiometricException {
   final bool isLocked;
 
   BiometricFailedException({
-    required String message,
+    required super.message,
     this.attemptsRemaining,
     this.isLocked = false,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: isLocked ? 'BIOMETRIC_LOCKED' : 'BIOMETRIC_FAILED',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: isLocked ? 'BIOMETRIC_LOCKED' : 'BIOMETRIC_FAILED');
 
   @override
   String get userMessage {
@@ -276,19 +237,14 @@ class PINException extends AppException {
   final Duration? lockDuration;
 
   PINException({
-    required String message,
+    required super.message,
     this.attemptsRemaining,
     this.isLocked = false,
     this.lockDuration,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? (isLocked ? 'PIN_LOCKED' : 'PIN_ERROR'),
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? (isLocked ? 'PIN_LOCKED' : 'PIN_ERROR'));
 
   @override
   String get userMessage {
@@ -306,15 +262,10 @@ class PINException extends AppException {
 /// PIN mismatch exception
 class PINMismatchException extends PINException {
   PINMismatchException({
-    String message = 'PINs do not match',
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'PIN_MISMATCH',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'PINs do not match',
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'PIN_MISMATCH');
 
   @override
   String get userMessage => 'PINs do not match. Please try again.';
@@ -329,32 +280,24 @@ class NoteException extends AppException {
   final String? noteId;
 
   NoteException({
-    required String message,
+    required super.message,
     this.noteId,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'NOTE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'NOTE_ERROR');
 }
 
 /// Note not found
 class NoteNotFoundException extends NoteException {
   NoteNotFoundException({
-    required String noteId,
+    required String super.noteId,
     String? message,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
          message: message ?? 'Note not found: $noteId',
-         noteId: noteId,
          code: 'NOTE_NOT_FOUND',
-         originalError: originalError,
-         stackTrace: stackTrace,
        );
 
   @override
@@ -364,17 +307,11 @@ class NoteNotFoundException extends NoteException {
 /// Note creation failed
 class NoteCreationException extends NoteException {
   NoteCreationException({
-    required String message,
-    String? noteId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         noteId: noteId,
-         code: 'NOTE_CREATE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.noteId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'NOTE_CREATE_ERROR');
 
   @override
   String get userMessage => 'Failed to create note. Please try again.';
@@ -383,17 +320,11 @@ class NoteCreationException extends NoteException {
 /// Note auto-save failed
 class NoteAutoSaveException extends NoteException {
   NoteAutoSaveException({
-    required String message,
-    String? noteId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         noteId: noteId,
-         code: 'NOTE_AUTOSAVE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.noteId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'NOTE_AUTOSAVE_ERROR');
 
   @override
   String get userMessage => 'Auto-save failed. Your changes may not be saved.';
@@ -402,17 +333,11 @@ class NoteAutoSaveException extends NoteException {
 /// Note update failed
 class NoteUpdateException extends NoteException {
   NoteUpdateException({
-    required String message,
-    String? noteId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         noteId: noteId,
-         code: 'NOTE_UPDATE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.noteId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'NOTE_UPDATE_ERROR');
 
   @override
   String get userMessage => 'Failed to save note. Please try again.';
@@ -421,17 +346,11 @@ class NoteUpdateException extends NoteException {
 /// Note deletion failed
 class NoteDeletionException extends NoteException {
   NoteDeletionException({
-    required String message,
-    String? noteId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         noteId: noteId,
-         code: 'NOTE_DELETE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.noteId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'NOTE_DELETE_ERROR');
 
   @override
   String get userMessage => 'Failed to delete note. Please try again.';
@@ -458,17 +377,11 @@ class MaxPinnedNotesExceededException extends NoteException {
 /// Note archive exception
 class NoteArchiveException extends NoteException {
   NoteArchiveException({
-    required String message,
-    String? noteId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         noteId: noteId,
-         code: 'NOTE_ARCHIVE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.noteId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'NOTE_ARCHIVE_ERROR');
 }
 
 /// ============================================================================
@@ -481,36 +394,24 @@ class MediaException extends AppException {
   final String? filePath;
 
   MediaException({
-    required String message,
+    required super.message,
     this.mediaType,
     this.filePath,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'MEDIA_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'MEDIA_ERROR');
 }
 
 /// Media compression failed
 class MediaCompressionException extends MediaException {
   MediaCompressionException({
-    required String message,
-    String? mediaType,
-    String? filePath,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         mediaType: mediaType,
-         filePath: filePath,
-         code: 'MEDIA_COMPRESS_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.mediaType,
+    super.filePath,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'MEDIA_COMPRESS_ERROR');
 
   @override
   String get userMessage =>
@@ -520,16 +421,10 @@ class MediaCompressionException extends MediaException {
 /// Image pick/capture failed
 class ImagePickException extends MediaException {
   ImagePickException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         mediaType: 'image',
-         code: 'IMAGE_PICK_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(mediaType: 'image', code: 'IMAGE_PICK_ERROR');
 
   @override
   String get userMessage => 'Failed to get image. Please try again.';
@@ -540,17 +435,11 @@ class VideoPickException extends MediaException {
   final Duration? maxDuration;
 
   VideoPickException({
-    required String message,
+    required super.message,
     this.maxDuration,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         mediaType: 'video',
-         code: 'VIDEO_PICK_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(mediaType: 'video', code: 'VIDEO_PICK_ERROR');
 
   @override
   String get userMessage {
@@ -564,18 +453,11 @@ class VideoPickException extends MediaException {
 /// Audio recording failed
 class AudioRecordingException extends MediaException {
   AudioRecordingException({
-    required String message,
-    String? filePath,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         mediaType: 'audio',
-         filePath: filePath,
-         code: 'AUDIO_RECORD_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.filePath,
+    super.originalError,
+    super.stackTrace,
+  }) : super(mediaType: 'audio', code: 'AUDIO_RECORD_ERROR');
 
   @override
   String get userMessage =>
@@ -585,18 +467,11 @@ class AudioRecordingException extends MediaException {
 /// Audio playback failed
 class AudioPlaybackException extends MediaException {
   AudioPlaybackException({
-    required String message,
-    String? filePath,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         mediaType: 'audio',
-         filePath: filePath,
-         code: 'AUDIO_PLAYBACK_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.filePath,
+    super.originalError,
+    super.stackTrace,
+  }) : super(mediaType: 'audio', code: 'AUDIO_PLAYBACK_ERROR');
 
   @override
   String get userMessage => 'Cannot play audio. File may be corrupted.';
@@ -605,16 +480,10 @@ class AudioPlaybackException extends MediaException {
 /// Document scan failed
 class DocumentScanException extends MediaException {
   DocumentScanException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         mediaType: 'document',
-         code: 'DOC_SCAN_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(mediaType: 'document', code: 'DOC_SCAN_ERROR');
 
   @override
   String get userMessage =>
@@ -624,18 +493,11 @@ class DocumentScanException extends MediaException {
 /// OCR extraction failed
 class OCRException extends MediaException {
   OCRException({
-    required String message,
-    String? filePath,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         mediaType: 'document',
-         filePath: filePath,
-         code: 'OCR_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.filePath,
+    super.originalError,
+    super.stackTrace,
+  }) : super(mediaType: 'document', code: 'OCR_ERROR');
 
   @override
   String get userMessage => 'Text extraction failed. Image may be unclear.';
@@ -644,18 +506,11 @@ class OCRException extends MediaException {
 /// Media not found
 class MediaNotFoundException extends MediaException {
   MediaNotFoundException({
-    required String filePath,
-    String? mediaType,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: 'Media not found: $filePath',
-         mediaType: mediaType,
-         filePath: filePath,
-         code: 'MEDIA_NOT_FOUND',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required String super.filePath,
+    super.mediaType,
+    super.originalError,
+    super.stackTrace,
+  }) : super(message: 'Media not found: $filePath', code: 'MEDIA_NOT_FOUND');
 
   @override
   String get userMessage => 'Media file not found. It may have been deleted.';
@@ -670,32 +525,24 @@ class ReminderException extends AppException {
   final String? reminderId;
 
   ReminderException({
-    required String message,
+    required super.message,
     this.reminderId,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'REMINDER_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'REMINDER_ERROR');
 }
 
 /// Reminder not found
 class ReminderNotFoundException extends ReminderException {
   ReminderNotFoundException({
-    required String reminderId,
+    required String super.reminderId,
     String? message,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
          message: message ?? 'Reminder not found: $reminderId',
-         reminderId: reminderId,
          code: 'REMINDER_NOT_FOUND',
-         originalError: originalError,
-         stackTrace: stackTrace,
        );
 
   @override
@@ -707,18 +554,12 @@ class InvalidReminderDateException extends ReminderException {
   final DateTime? invalidDate;
 
   InvalidReminderDateException({
-    required String message,
+    required super.message,
     this.invalidDate,
-    String? reminderId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         reminderId: reminderId,
-         code: 'INVALID_REMINDER_DATE',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.reminderId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'INVALID_REMINDER_DATE');
 
   @override
   String get userMessage => 'Please select a future date and time.';
@@ -727,17 +568,11 @@ class InvalidReminderDateException extends ReminderException {
 /// Reminder scheduling failed
 class ReminderSchedulingException extends ReminderException {
   ReminderSchedulingException({
-    required String message,
-    String? reminderId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         reminderId: reminderId,
-         code: 'REMINDER_SCHEDULE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.reminderId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'REMINDER_SCHEDULE_ERROR');
 
   @override
   String get userMessage => 'Failed to schedule reminder. Please try again.';
@@ -746,29 +581,19 @@ class ReminderSchedulingException extends ReminderException {
 /// Reminder creation failed
 class ReminderCreationException extends ReminderException {
   ReminderCreationException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'REMINDER_CREATE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'REMINDER_CREATE_ERROR');
 }
 
 /// Notification permission denied
 class NotificationPermissionException extends AppException {
   NotificationPermissionException({
-    String message = 'Notification permission denied',
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'NOTIF_PERMISSION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'Notification permission denied',
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'NOTIF_PERMISSION_ERROR');
 
   @override
   String get userMessage => 'Please enable notifications to receive reminders.';
@@ -783,32 +608,24 @@ class TodoException extends AppException {
   final String? todoId;
 
   TodoException({
-    required String message,
+    required super.message,
     this.todoId,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'TODO_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'TODO_ERROR');
 }
 
 /// Todo not found
 class TodoNotFoundException extends TodoException {
   TodoNotFoundException({
-    required String todoId,
+    required String super.todoId,
     String? message,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
          message: message ?? 'Task not found: $todoId',
-         todoId: todoId,
          code: 'TODO_NOT_FOUND',
-         originalError: originalError,
-         stackTrace: stackTrace,
        );
 
   @override
@@ -818,15 +635,10 @@ class TodoNotFoundException extends TodoException {
 /// Todo creation failed
 class TodoCreationException extends TodoException {
   TodoCreationException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'TODO_CREATE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'TODO_CREATE_ERROR');
 
   @override
   String get userMessage => 'Failed to create task. Please try again.';
@@ -837,18 +649,12 @@ class SubtaskException extends TodoException {
   final String? parentId;
 
   SubtaskException({
-    required String message,
+    required super.message,
     this.parentId,
-    String? todoId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         todoId: todoId,
-         code: 'SUBTASK_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.todoId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'SUBTASK_ERROR');
 
   @override
   String get userMessage => 'Subtask operation failed. Please try again.';
@@ -857,17 +663,11 @@ class SubtaskException extends TodoException {
 /// Recurring task exception
 class RecurringTaskException extends TodoException {
   RecurringTaskException({
-    required String message,
-    String? todoId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         todoId: todoId,
-         code: 'RECURRING_TASK_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.todoId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'RECURRING_TASK_ERROR');
 
   @override
   String get userMessage => 'Failed to set up recurring task.';
@@ -882,31 +682,21 @@ class FocusSessionException extends AppException {
   final String? sessionId;
 
   FocusSessionException({
-    required String message,
+    required super.message,
     this.sessionId,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'FOCUS_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'FOCUS_ERROR');
 }
 
 /// Timer configuration invalid
 class TimerConfigurationException extends FocusSessionException {
   TimerConfigurationException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'TIMER_CONFIG_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'TIMER_CONFIG_ERROR');
 
   @override
   String get userMessage =>
@@ -916,17 +706,11 @@ class TimerConfigurationException extends FocusSessionException {
 /// Background service failed
 class BackgroundServiceException extends FocusSessionException {
   BackgroundServiceException({
-    required String message,
-    String? sessionId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         sessionId: sessionId,
-         code: 'BG_SERVICE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.sessionId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'BG_SERVICE_ERROR');
 
   @override
   String get userMessage => 'Timer may not work in background. Keep app open.';
@@ -934,10 +718,9 @@ class BackgroundServiceException extends FocusSessionException {
 
 /// Session already active
 class SessionAlreadyActiveException extends FocusSessionException {
-  SessionAlreadyActiveException({String? sessionId})
+  SessionAlreadyActiveException({super.sessionId})
     : super(
         message: 'A focus session is already active',
-        sessionId: sessionId,
         code: 'SESSION_ALREADY_ACTIVE',
       );
 
@@ -954,17 +737,12 @@ class ReflectionException extends AppException {
   final String? reflectionId;
 
   ReflectionException({
-    required String message,
+    required super.message,
     this.reflectionId,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'REFLECTION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'REFLECTION_ERROR');
 }
 
 /// Question not found
@@ -973,13 +751,11 @@ class QuestionNotFoundException extends ReflectionException {
 
   QuestionNotFoundException({
     required this.questionId,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
          message: 'Question not found: $questionId',
          code: 'QUESTION_NOT_FOUND',
-         originalError: originalError,
-         stackTrace: stackTrace,
        );
 
   @override
@@ -989,17 +765,11 @@ class QuestionNotFoundException extends ReflectionException {
 /// Reflection save failed
 class ReflectionSaveException extends ReflectionException {
   ReflectionSaveException({
-    required String message,
-    String? reflectionId,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         reflectionId: reflectionId,
-         code: 'REFLECTION_SAVE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.reflectionId,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'REFLECTION_SAVE_ERROR');
 
   @override
   String get userMessage => 'Failed to save reflection. Please try again.';
@@ -1008,15 +778,10 @@ class ReflectionSaveException extends ReflectionException {
 /// Streak calculation failed
 class StreakCalculationException extends ReflectionException {
   StreakCalculationException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'STREAK_CALC_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'STREAK_CALC_ERROR');
 }
 
 /// ============================================================================
@@ -1026,16 +791,11 @@ class StreakCalculationException extends ReflectionException {
 /// Base voice exception
 class VoiceException extends AppException {
   VoiceException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'VOICE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'VOICE_ERROR');
 }
 
 /// Speech recognition failed
@@ -1043,16 +803,11 @@ class SpeechRecognitionException extends VoiceException {
   final String? language;
 
   SpeechRecognitionException({
-    required String message,
+    required super.message,
     this.language,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'SPEECH_RECOGNITION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'SPEECH_RECOGNITION_ERROR');
 
   @override
   String get userMessage => 'Voice recognition failed. Please try again.';
@@ -1061,15 +816,10 @@ class SpeechRecognitionException extends VoiceException {
 /// Microphone permission denied
 class MicrophonePermissionException extends VoiceException {
   MicrophonePermissionException({
-    String message = 'Microphone permission denied',
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'MIC_PERMISSION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'Microphone permission denied',
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'MIC_PERMISSION_ERROR');
 
   @override
   String get userMessage => 'Please enable microphone access in settings.';
@@ -1078,15 +828,10 @@ class MicrophonePermissionException extends VoiceException {
 /// Speech recognition not available
 class SpeechRecognitionNotAvailableException extends VoiceException {
   SpeechRecognitionNotAvailableException({
-    String message = 'Speech recognition is not available',
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'SPEECH_NOT_AVAILABLE',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'Speech recognition is not available',
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'SPEECH_NOT_AVAILABLE');
 
   @override
   String get userMessage => 'Voice input is not available on this device.';
@@ -1101,33 +846,22 @@ class SearchException extends AppException {
   final String? query;
 
   SearchException({
-    required String message,
+    required super.message,
     this.query,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'SEARCH_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'SEARCH_ERROR');
 }
 
 /// Full-text search failed
 class FullTextSearchException extends SearchException {
   FullTextSearchException({
-    required String message,
-    String? query,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         query: query,
-         code: 'FTS_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.query,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'FTS_ERROR');
 
   @override
   String get userMessage => 'Search failed. Please try again.';
@@ -1136,15 +870,10 @@ class FullTextSearchException extends SearchException {
 /// Search index exception
 class SearchIndexException extends SearchException {
   SearchIndexException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'SEARCH_INDEX_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'SEARCH_INDEX_ERROR');
 }
 
 /// ============================================================================
@@ -1157,18 +886,13 @@ class ExportException extends AppException {
   final String? filePath;
 
   ExportException({
-    required String message,
+    required super.message,
     this.format,
     this.filePath,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'EXPORT_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'EXPORT_ERROR');
 
   @override
   String get userMessage => 'Export failed. Please try again.';
@@ -1179,17 +903,12 @@ class BackupException extends AppException {
   final String? backupPath;
 
   BackupException({
-    required String message,
+    required super.message,
     this.backupPath,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'BACKUP_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'BACKUP_ERROR');
 
   @override
   String get userMessage => 'Backup failed. Please check storage space.';
@@ -1201,18 +920,13 @@ class RestoreException extends AppException {
   final bool isCorrupted;
 
   RestoreException({
-    required String message,
+    required super.message,
     this.backupPath,
     this.isCorrupted = false,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'RESTORE_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'RESTORE_ERROR');
 
   @override
   String get userMessage {
@@ -1230,30 +944,20 @@ class RestoreException extends AppException {
 /// Base calendar exception
 class CalendarException extends AppException {
   CalendarException({
-    required String message,
+    required super.message,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'CALENDAR_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'CALENDAR_ERROR');
 }
 
 /// Calendar sync failed
 class CalendarSyncException extends CalendarException {
   CalendarSyncException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'CALENDAR_SYNC_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'CALENDAR_SYNC_ERROR');
 
   @override
   String get userMessage => 'Calendar sync failed. Please try again.';
@@ -1262,15 +966,10 @@ class CalendarSyncException extends CalendarException {
 /// Calendar permission denied
 class CalendarPermissionException extends CalendarException {
   CalendarPermissionException({
-    String message = 'Calendar permission denied',
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'CALENDAR_PERMISSION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'Calendar permission denied',
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'CALENDAR_PERMISSION_ERROR');
 
   @override
   String get userMessage => 'Please enable calendar access in settings.';
@@ -1285,17 +984,12 @@ class SettingsException extends AppException {
   final String? settingKey;
 
   SettingsException({
-    required String message,
+    required super.message,
     this.settingKey,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'SETTINGS_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'SETTINGS_ERROR');
 }
 
 /// Theme application failed
@@ -1303,17 +997,11 @@ class ThemeApplicationException extends SettingsException {
   final String? themeName;
 
   ThemeApplicationException({
-    required String message,
+    required super.message,
     this.themeName,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         settingKey: 'theme',
-         code: 'THEME_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(settingKey: 'theme', code: 'THEME_ERROR');
 
   @override
   String get userMessage => 'Failed to apply theme. Using default.';
@@ -1324,17 +1012,11 @@ class FontApplicationException extends SettingsException {
   final String? fontFamily;
 
   FontApplicationException({
-    required String message,
+    required super.message,
     this.fontFamily,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         settingKey: 'font',
-         code: 'FONT_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(settingKey: 'font', code: 'FONT_ERROR');
 
   @override
   String get userMessage => 'Failed to apply font. Using default.';
@@ -1350,18 +1032,13 @@ class PermissionException extends AppException {
   final bool isPermanentlyDenied;
 
   PermissionException({
-    required String message,
+    required super.message,
     required this.permissionType,
     this.isPermanentlyDenied = false,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'PERMISSION_${permissionType.toUpperCase()}_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'PERMISSION_${permissionType.toUpperCase()}_ERROR');
 
   @override
   String get userMessage {
@@ -1375,18 +1052,11 @@ class PermissionException extends AppException {
 /// Camera permission denied
 class CameraPermissionException extends PermissionException {
   CameraPermissionException({
-    String message = 'Camera permission denied',
-    bool isPermanentlyDenied = false,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         permissionType: 'camera',
-         isPermanentlyDenied: isPermanentlyDenied,
-         code: 'CAMERA_PERMISSION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'Camera permission denied',
+    super.isPermanentlyDenied,
+    super.originalError,
+    super.stackTrace,
+  }) : super(permissionType: 'camera', code: 'CAMERA_PERMISSION_ERROR');
 
   @override
   String get userMessage =>
@@ -1396,18 +1066,11 @@ class CameraPermissionException extends PermissionException {
 /// Storage permission denied
 class StoragePermissionException extends PermissionException {
   StoragePermissionException({
-    String message = 'Storage permission denied',
-    bool isPermanentlyDenied = false,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         permissionType: 'storage',
-         isPermanentlyDenied: isPermanentlyDenied,
-         code: 'STORAGE_PERMISSION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'Storage permission denied',
+    super.isPermanentlyDenied,
+    super.originalError,
+    super.stackTrace,
+  }) : super(permissionType: 'storage', code: 'STORAGE_PERMISSION_ERROR');
 
   @override
   String get userMessage =>
@@ -1419,22 +1082,18 @@ class LocationPermissionException extends PermissionException {
   final bool isBackgroundPermission;
 
   LocationPermissionException({
-    String message = 'Location permission denied',
+    super.message = 'Location permission denied',
     this.isBackgroundPermission = false,
-    bool isPermanentlyDenied = false,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.isPermanentlyDenied,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-         message: message,
          permissionType: isBackgroundPermission
              ? 'background_location'
              : 'location',
-         isPermanentlyDenied: isPermanentlyDenied,
          code: isBackgroundPermission
              ? 'BG_LOCATION_PERMISSION_ERROR'
              : 'LOCATION_PERMISSION_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
        );
 
   @override
@@ -1456,18 +1115,13 @@ class NetworkException extends AppException {
   final String? url;
 
   NetworkException({
-    required String message,
+    required super.message,
     this.statusCode,
     this.url,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'NETWORK_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'NETWORK_ERROR');
 
   @override
   String get userMessage => 'Network error. Please check your connection.';
@@ -1476,15 +1130,10 @@ class NetworkException extends AppException {
 /// No internet connection
 class NoInternetException extends NetworkException {
   NoInternetException({
-    String message = 'No internet connection',
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'NO_INTERNET',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.message = 'No internet connection',
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'NO_INTERNET');
 
   @override
   String get userMessage =>
@@ -1496,17 +1145,12 @@ class TimeoutException extends AppException {
   final Duration? timeout;
 
   TimeoutException({
-    required String message,
+    required super.message,
     this.timeout,
     String? code,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: code ?? 'TIMEOUT_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: code ?? 'TIMEOUT_ERROR');
 
   @override
   String get userMessage => 'Request timed out. Please try again.';
@@ -1523,12 +1167,12 @@ class ValidationException extends AppException {
   final String? validationRule;
 
   ValidationException({
-    required String message,
+    required super.message,
     this.field,
     this.invalidValue,
     this.validationRule,
     String? code,
-  }) : super(message: message, code: code ?? 'VALIDATION_ERROR');
+  }) : super(code: code ?? 'VALIDATION_ERROR');
 
   @override
   String get userMessage {
@@ -1560,15 +1204,10 @@ class RequiredFieldException extends ValidationException {
 /// Unknown/unexpected exception
 class UnknownException extends AppException {
   UnknownException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-         message: message,
-         code: 'UNKNOWN_ERROR',
-         originalError: originalError,
-         stackTrace: stackTrace,
-       );
+    required super.message,
+    super.originalError,
+    super.stackTrace,
+  }) : super(code: 'UNKNOWN_ERROR');
 
   @override
   String get userMessage => 'An unexpected error occurred. Please try again.';
