@@ -219,25 +219,25 @@ class MyNotesApp extends StatelessWidget {
             minTextAdapt: true,
             splitScreenMode: true,
             builder: (context, child) {
-              return _TextScalingWrapper(
-                child: GlobalErrorHandlerListener(
-                  child: GlobalOverlay(
-                    child: MaterialApp(
-                      title: AppConstants.appName,
-                      debugShowCheckedModeBanner: false,
-                      theme: AppTheme.lightTheme,
-                      darkTheme: AppTheme.darkTheme,
-                      themeMode: _parseThemeMode(themeState.themeMode),
-                      navigatorKey: AppRouter.navigatorKey,
-                      scaffoldMessengerKey:
-                          getIt<GlobalUiService>().messengerKey,
-                      initialRoute: AppRoutes.splash,
-                      onGenerateRoute: AppRouter.onGenerateRoute,
-                      // Accessibility features
-                      showSemanticsDebugger: false,
+              return MaterialApp(
+                title: AppConstants.appName,
+                debugShowCheckedModeBanner: false,
+                theme: AppTheme.lightTheme,
+                darkTheme: AppTheme.darkTheme,
+                themeMode: _parseThemeMode(themeState.themeMode),
+                navigatorKey: AppRouter.navigatorKey,
+                scaffoldMessengerKey: getIt<GlobalUiService>().messengerKey,
+                initialRoute: AppRoutes.splash,
+                onGenerateRoute: AppRouter.onGenerateRoute,
+                // Accessibility features
+                showSemanticsDebugger: false,
+                builder: (context, materialAppChild) {
+                  return _TextScalingWrapper(
+                    child: GlobalErrorHandlerListener(
+                      child: GlobalOverlay(child: materialAppChild!),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
           );
