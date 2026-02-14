@@ -33,6 +33,7 @@ import 'presentation/bloc/theme/theme_event.dart';
 import 'presentation/bloc/theme/theme_state.dart';
 import 'presentation/bloc/note/note_bloc.dart';
 import 'presentation/bloc/media/media_bloc.dart';
+import 'presentation/bloc/media/media_event.dart';
 import 'presentation/bloc/reflection/reflection_bloc.dart';
 import 'presentation/bloc/alarm/alarm_bloc.dart';
 import 'presentation/bloc/alarm/alarms_bloc.dart';
@@ -70,9 +71,8 @@ void main() async {
   // Initialize database
   final database = NotesDatabase();
 
-  // Initialize notification service
-  final notificationService = LocalNotificationService();
-  await notificationService.init();
+  // Get notification service from locator
+  final notificationService = getIt<NotificationService>();
 
   // Initialize alarm notification service (for specific alarm handling)
   final alarmNotificationService = notifications.AlarmService();
@@ -128,7 +128,6 @@ class MyNotesApp extends StatelessWidget {
   final NotesDatabase database;
   final NotificationService notificationService;
   final notifications.AlarmService alarmNotificationService;
-  final ClipboardService _clipboardService = ClipboardService();
 
   MyNotesApp({
     super.key,
@@ -143,19 +142,19 @@ class MyNotesApp extends StatelessWidget {
       providers: [
         // Provide repositories and services
         RepositoryProvider<NoteRepository>(
-          create: (context) => NoteRepositoryImpl(database: database),
+          create: (context) => getIt<NoteRepository>(),
         ),
         RepositoryProvider<MediaRepository>(
-          create: (context) => MediaRepositoryImpl(database: database),
+          create: (context) => getIt<MediaRepository>(),
         ),
         RepositoryProvider<ReflectionRepository>(
-          create: (context) => ReflectionRepositoryImpl(database),
+          create: (context) => getIt<ReflectionRepository>(),
         ),
         RepositoryProvider<ClipboardService>(
-          create: (context) => _clipboardService,
+          create: (context) => getIt<ClipboardService>(),
         ),
         RepositoryProvider<StatsRepository>(
-          create: (context) => StatsRepositoryImpl(database),
+          create: (context) => getIt<StatsRepository>(),
         ),
         RepositoryProvider<NotificationService>(
           create: (context) => notificationService,
@@ -166,35 +165,26 @@ class MyNotesApp extends StatelessWidget {
 
         // Provide BLoCs
         BlocProvider<ThemeBloc>(
-          create: (context) => ThemeBloc()..add(const LoadThemeEvent()),
+          create: (context) => getIt<ThemeBloc>()..add(const LoadThemeEvent()),
         ),
         BlocProvider<NotesBloc>(
-          create: (context) =>
-              NotesBloc(noteRepository: context.read<NoteRepository>())
-                ..add(const LoadNotesEvent()),
+          create: (context) => getIt<NotesBloc>()..add(const LoadNotesEvent()),
         ),
         BlocProvider<MediaBloc>(
-          create: (context) =>
-              MediaBloc(repository: context.read<MediaRepository>()),
+          create: (context) => getIt<MediaBloc>()..add(const LoadMediaEvent()),
         ),
         BlocProvider<ReflectionBloc>(
-          create: (context) => ReflectionBloc(
-            repository: context.read<ReflectionRepository>(),
-            notificationService: context.read<NotificationService>(),
-          )..add(const InitializeReflectionEvent()),
+          create: (context) =>
+              getIt<ReflectionBloc>()..add(const InitializeReflectionEvent()),
         ),
         BlocProvider<AlarmsBloc>(create: (context) => getIt<AlarmsBloc>()),
-        BlocProvider<TodoBloc>(
-          create: (context) =>
-              TodoBloc(noteRepository: context.read<NoteRepository>()),
-        ),
+        BlocProvider<TodoBloc>(create: (context) => getIt<TodoBloc>()),
         BlocProvider<TodosBloc>(
-          create: (context) => TodosBloc()..add(LoadTodos()),
+          create: (context) => getIt<TodosBloc>()..add(LoadTodos()),
         ),
         BlocProvider<AnalyticsBloc>(
           create: (context) =>
-              AnalyticsBloc(repository: context.read<StatsRepository>())
-                ..add(const LoadAnalyticsEvent()),
+              getIt<AnalyticsBloc>()..add(const LoadAnalyticsEvent()),
         ),
         BlocProvider<SmartCollectionsBloc>(
           create: (context) =>
@@ -209,8 +199,7 @@ class MyNotesApp extends StatelessWidget {
         ),
         BlocProvider<FocusBloc>(
           create: (context) =>
-              FocusBloc(repository: context.read<StatsRepository>())
-                ..add(const LoadFocusHistoryEvent()),
+              getIt<FocusBloc>()..add(const LoadFocusHistoryEvent()),
         ),
         BlocProvider<NavigationBloc>(
           create: (context) => getIt<NavigationBloc>(),
@@ -220,7 +209,7 @@ class MyNotesApp extends StatelessWidget {
         ),
         BlocProvider<SearchBloc>(create: (context) => getIt<SearchBloc>()),
         BlocProvider<AudioRecorderBloc>(
-          create: (context) => AudioRecorderBloc(),
+          create: (context) => getIt<AudioRecorderBloc>(),
         ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(

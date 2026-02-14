@@ -277,7 +277,6 @@ flutter:
 
   assets:
     - assets/svg/icons/
-    - assets/svg/illustrations/
     - assets/animations/
 
   # fonts:

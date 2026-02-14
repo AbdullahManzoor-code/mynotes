@@ -52,11 +52,15 @@ import 'package:mynotes/presentation/bloc/rule_builder/rule_builder_bloc.dart';
 import 'package:mynotes/presentation/bloc/graph/graph_bloc.dart';
 import 'package:mynotes/presentation/bloc/pdf_annotation/pdf_annotation_bloc.dart';
 import 'package:mynotes/domain/repositories/note_repository.dart';
+import 'package:mynotes/domain/repositories/reflection_repository.dart';
+import 'package:mynotes/domain/repositories/stats_repository.dart';
 import 'package:mynotes/domain/services/ai_suggestion_engine.dart';
 import 'package:mynotes/domain/services/rule_evaluation_engine.dart';
 import 'package:mynotes/domain/repositories/todo_repository.dart';
 import 'package:mynotes/domain/repositories/alarm_repository.dart';
 import 'package:mynotes/data/repositories/note_repository_impl.dart';
+import 'package:mynotes/data/repositories/reflection_repository_impl.dart';
+import 'package:mynotes/data/repositories/stats_repository_impl.dart';
 import 'package:mynotes/data/repositories/todo_repository_impl.dart';
 import 'package:mynotes/data/repositories/alarm_repository_impl.dart';
 import 'package:mynotes/data/datasources/local_database.dart';
@@ -65,6 +69,15 @@ import 'package:mynotes/core/services/connectivity_service.dart';
 
 /// GetIt service locator instance
 import 'package:mynotes/presentation/bloc/alarm/alarm_bloc.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
+import 'package:mynotes/presentation/bloc/media/media_bloc.dart';
+import 'package:mynotes/presentation/bloc/todo/todo_bloc.dart';
+import 'package:mynotes/presentation/bloc/todos/todos_bloc.dart';
+import 'package:mynotes/presentation/bloc/analytics/analytics_bloc.dart';
+import 'package:mynotes/presentation/bloc/reflection/reflection_bloc.dart';
+import 'package:mynotes/presentation/bloc/focus/focus_bloc.dart';
+import 'package:mynotes/presentation/bloc/theme/theme_bloc.dart';
+import 'package:mynotes/presentation/bloc/audio_recorder/audio_recorder_bloc.dart';
 
 import 'package:mynotes/core/notifications/notification_service.dart';
 
@@ -74,6 +87,11 @@ final getIt = GetIt.instance;
 Future<void> setupServiceLocator() async {
   // ==================== Global Services ====================
   getIt.registerSingleton<GlobalUiService>(GlobalUiService());
+
+  // ==================== Notifications ====================
+  final notificationService = LocalNotificationService();
+  await notificationService.init();
+  getIt.registerSingleton<NotificationService>(notificationService);
 
   final connectivityService = ConnectivityService();
   connectivityService.initialize();
@@ -193,7 +211,33 @@ Future<void> setupServiceLocator() async {
     AlarmRepositoryImpl(database: getIt<NotesDatabase>()),
   );
 
+  /// Reflection Repository
+  getIt.registerSingleton<ReflectionRepository>(
+    ReflectionRepositoryImpl(getIt<NotesDatabase>()),
+  );
+
+  /// Stats Repository
+  getIt.registerSingleton<StatsRepository>(
+    StatsRepositoryImpl(getIt<NotesDatabase>()),
+  );
+
   // ==================== BLoCs ====================
+
+  /// Theme BLoC
+  getIt.registerSingleton<ThemeBloc>(ThemeBloc());
+
+  /// Audio Recorder BLoC
+  getIt.registerFactory<AudioRecorderBloc>(() => AudioRecorderBloc());
+
+  /// Media BLoC
+  getIt.registerSingleton<MediaBloc>(
+    MediaBloc(repository: getIt<MediaRepository>()),
+  );
+
+  /// Focus BLoC
+  getIt.registerSingleton<FocusBloc>(
+    FocusBloc(repository: getIt<StatsRepository>()),
+  );
 
   /// Media Gallery BLoC
   getIt.registerSingleton<MediaGalleryBloc>(
@@ -223,6 +267,37 @@ Future<void> setupServiceLocator() async {
   /// Search BLoC
   getIt.registerFactory<SearchBloc>(
     () => SearchBloc(noteRepository: getIt<NoteRepository>()),
+  );
+
+  /// Notes BLoC
+  getIt.registerSingleton<NotesBloc>(
+    NotesBloc(noteRepository: getIt<NoteRepository>()),
+  );
+
+  /// Todo BLoC
+  getIt.registerSingleton<TodoBloc>(
+    TodoBloc(noteRepository: getIt<NoteRepository>()),
+  );
+
+  /// Todos BLoC
+  getIt.registerSingleton<TodosBloc>(
+    TodosBloc(
+      todoRepository: getIt<TodoRepository>(),
+      alarmRepository: getIt<AlarmRepository>(),
+    ),
+  );
+
+  /// Analytics BLoC
+  getIt.registerSingleton<AnalyticsBloc>(
+    AnalyticsBloc(repository: getIt<StatsRepository>()),
+  );
+
+  /// Reflection BLoC
+  getIt.registerSingleton<ReflectionBloc>(
+    ReflectionBloc(
+      repository: getIt<ReflectionRepository>(),
+      notificationService: getIt<NotificationService>(),
+    ),
   );
 
   /// Smart Collections BLoC
