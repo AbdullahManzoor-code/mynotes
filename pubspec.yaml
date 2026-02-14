@@ -230,8 +230,6 @@ dependency_overrides:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  integration_test:
-    sdk: flutter
 
   # ══════════════════════════════════════
   # Code Generation
@@ -253,7 +251,6 @@ dev_dependencies:
   fake_async: ^1.3.1
   golden_toolkit: ^0.15.0
   network_image_mock: ^2.1.1
-  patrol: ^4.1.1
 
   # ══════════════════════════════════════
   # Linting
@@ -264,7 +261,6 @@ dev_dependencies:
   # Build & Deploy
   # ══════════════════════════════════════
   flutter_launcher_icons: ^0.14.1
-  flutter_native_splash: ^2.4.2
   flutter_flavorizr: ^2.2.3
   envied: ^1.3.3
 
@@ -279,13 +275,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  # assets:
-  #   - assets/images/
-  #   - assets/icons/
-  #   - assets/animations/
-  #   - assets/sounds/
-  #   - assets/translations/
-  #   - assets/templates/
+  assets:
+    - assets/svg/icons/
+    - assets/svg/illustrations/
+    - assets/animations/
 
   # fonts:
   #   - family: CustomIcons
