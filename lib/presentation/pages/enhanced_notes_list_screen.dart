@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/widgets/notes_search_bar.dart'
     show NotesSearchBar;
@@ -17,6 +18,8 @@ import 'package:mynotes/core/routes/app_routes.dart';
 import 'package:mynotes/presentation/bloc/params/note_params.dart';
 import '../bloc/note/note_event.dart';
 import '../widgets/quick_add_bottom_sheet.dart';
+import '../widgets/animated_list_grid_view.dart';
+import '../widgets/svg_image_widget.dart';
 
 /// Simple template data class for note templates
 class SimpleNoteTemplate {
@@ -199,331 +202,300 @@ class EnhancedNotesListScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.getBackgroundColor(
-        Theme.of(context).brightness,
+      backgroundColor: AppColors.background(context),
+      extendBodyBehindAppBar: true,
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => Navigator.pushNamed(context, '/notes/editor'),
+        backgroundColor: AppColors.primary,
+        elevation: 8,
+        highlightElevation: 0,
+        label: Text(
+          'New Note',
+          style: AppTypography.buttonMedium(
+            context,
+            Colors.white,
+          ).copyWith(fontWeight: FontWeight.w700),
+        ),
+        icon: const Icon(Icons.add_rounded, color: Colors.white),
       ),
-      body: BlocBuilder<NotesBloc, NoteState>(
-        builder: (context, state) {
-          // Prepare data from BLoC state
-          final bool isLoading = state is NoteLoading;
-          final bool isError = state is NoteError;
-          final bool isLoaded = state is NotesLoaded;
-
-          final List<Note> pinnedNotes = isLoaded
-              ? state.displayedNotes.where((n) => n.isPinned).toList()
-              : [];
-          final List<Note> unpinnedNotes = isLoaded
-              ? state.displayedNotes.where((n) => !n.isPinned).toList()
-              : [];
-
-          final bool showSections =
-              isLoaded &&
-              pinnedNotes.isNotEmpty &&
-              state.searchQuery.isEmpty &&
-              state.selectedTags.isEmpty &&
-              state.selectedColors.isEmpty &&
-              !state.filterPinned &&
-              !state.filterWithMedia;
-
-          final viewMode = isLoaded ? state.viewMode : NoteViewMode.list;
-          final sortOption = isLoaded
-              ? state.sortBy
-              : NoteSortOption.dateModified;
-          final sortDescending = isLoaded ? state.sortDescending : true;
-
-          return CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // App Bar
-              SliverAppBar(
-                floating: true,
-                snap: true,
-                backgroundColor: AppColors.getBackgroundColor(
-                  Theme.of(context).brightness,
-                ).withOpacity(0.8),
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                flexibleSpace: ClipRect(
-                  child: BackdropFilter(
-                    filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      color: AppColors.getBackgroundColor(
-                        Theme.of(context).brightness,
-                      ).withOpacity(0.8),
-                    ),
-                  ),
-                ),
-                title: Text(
-                  'My Notes',
-                  style: TextStyle(
-                    fontSize: 24.sp,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: -0.3,
-                    color: AppColors.getTextColor(Theme.of(context).brightness),
-                  ),
-                ),
-                actions: [
-                  IconButton(
-                    onPressed: () {
-                      if (isLoaded) {
-                        context.read<NotesBloc>().add(
-                          UpdateNoteViewConfigEvent(
-                            viewMode: state.viewMode == NoteViewMode.list
-                                ? NoteViewMode.grid
-                                : NoteViewMode.list,
-                          ),
-                        );
-                      }
-                    },
-                    icon: Icon(
-                      viewMode == NoteViewMode.list
-                          ? Icons.grid_view
-                          : Icons.view_list,
-                      color: AppColors.textPrimary(context),
-                      size: 24.sp,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _showViewOptionsSheet(context, state),
-                    icon: Icon(
-                      Icons.sort,
-                      color: AppColors.textPrimary(context),
-                      size: 24.sp,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => _showMoreOptions(context),
-                    icon: Icon(
-                      Icons.more_vert,
-                      color: AppColors.textPrimary(context),
-                      size: 24.sp,
-                    ),
-                  ),
-                  SizedBox(width: 8.w),
-                ],
+      body: Stack(
+        children: [
+          // Background Glow
+          Positioned(
+            top: -100.h,
+            right: -100.w,
+            child: Container(
+              width: 300.w,
+              height: 300.h,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.primary.withOpacity(0.08),
               ),
-
-              // Template Picker Section
-              SliverToBoxAdapter(child: _buildTemplateSection(context)),
-
-              // Search Bar Section (ORG-003)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 16.h,
-                  ),
-                  child: const NotesSearchBar(),
-                ),
-              ),
-
-              // Filter Chips Section
-              SliverToBoxAdapter(child: _buildFilterChips(context, state)),
-
-              // Notes Section Header
-              if (!showSections &&
-                  (pinnedNotes.isNotEmpty || unpinnedNotes.isNotEmpty))
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 16.h),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'RECENT NOTES',
-                              style: TextStyle(
-                                fontSize: 12.sp,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 1.2,
-                                color: AppColors.getSecondaryTextColor(
-                                  Theme.of(context).brightness,
-                                ),
-                              ),
-                            ),
-                            SizedBox(height: 2.h),
-                            Text(
-                              'Sorted by ${sortOption.displayName} ${sortDescending ? '(newest first)' : '(oldest first)'}',
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w400,
-                                color: AppColors.getSecondaryTextColor(
-                                  Theme.of(context).brightness,
-                                ).withOpacity(0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              viewMode.displayName,
-                              style: TextStyle(
-                                fontSize: 10.sp,
-                                fontWeight: FontWeight.w500,
-                                color: AppColors.getSecondaryTextColor(
-                                  Theme.of(context).brightness,
-                                ).withOpacity(0.7),
-                              ),
-                            ),
-                            SizedBox(width: 8.w),
-                            Icon(
-                              viewMode.icon,
-                              size: 16.sp,
-                              color: AppColors.getSecondaryTextColor(
-                                Theme.of(context).brightness,
-                              ).withOpacity(0.7),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-
-              if (isLoading)
-                SliverToBoxAdapter(child: _buildLoadingState(context)),
-
-              if (isError) SliverToBoxAdapter(child: _buildErrorState(context)),
-
-              if (isLoaded) ...[
-                // Empty State
-                if (pinnedNotes.isEmpty && unpinnedNotes.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child:
-                        state.searchQuery.isNotEmpty ||
-                            state.selectedTags.isNotEmpty ||
-                            state.selectedColors.isNotEmpty ||
-                            state.filterPinned ||
-                            state.filterWithMedia
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.search_off,
-                                  size: 64.sp,
-                                  color: AppColors.getSecondaryTextColor(
-                                    Theme.of(context).brightness,
-                                  ),
-                                ),
-                                SizedBox(height: 16.h),
-                                Text(
-                                  'No matching notes',
-                                  style: AppTypography.heading3(context),
-                                ),
-                                SizedBox(height: 8.h),
-                                Text(
-                                  'Try adjusting your search or filters',
-                                  style: AppTypography.bodyMedium(context),
-                                ),
-                              ],
-                            ),
-                          )
-                        : const EmptyStateNotesHelpScreen(),
-                  ),
-
-                // Pinned Section
-                if (showSections) ...[
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.push_pin,
-                            size: 14.sp,
-                            color: AppColors.primary,
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            'PINNED',
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.0,
-                              color: AppColors.getSecondaryTextColor(
-                                Theme.of(context).brightness,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  _buildNoteGridOrList(pinnedNotes, viewMode),
-                  if (unpinnedNotes.isNotEmpty)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 16.w,
-                          vertical: 8.h,
-                        ),
-                        child: Divider(
-                          color: AppColors.getSecondaryTextColor(
-                            Theme.of(context).brightness,
-                          ).withOpacity(0.2),
-                          thickness: 1,
-                        ),
-                      ),
-                    ),
-                ],
-
-                // All Notes Section
-                if (unpinnedNotes.isNotEmpty) ...[
-                  if (showSections)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 12.h),
-                        child: Text(
-                          'ALL NOTES',
-                          style: TextStyle(
-                            fontSize: 12.sp,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.0,
-                            color: AppColors.getSecondaryTextColor(
-                              Theme.of(context).brightness,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  _buildNoteGridOrList(unpinnedNotes, viewMode),
-                ],
-              ],
-
-              // Bottom padding
-              SliverToBoxAdapter(child: SizedBox(height: 100.h)),
-            ],
-          );
-        },
-      ),
-
-      floatingActionButton: GestureDetector(
-        onLongPress: () => QuickAddBottomSheet.show(context),
-        child: Semantics(
-          button: true,
-          enabled: true,
-          label: 'Create new note',
-          onTap: () => Navigator.pushNamed(context, '/notes/editor'),
-          child: FloatingActionButton.extended(
-            onPressed: () => Navigator.pushNamed(context, '/notes/editor'),
-            backgroundColor: AppColors.primary,
-            elevation: 8,
-            icon: Icon(Icons.add, color: Colors.white, size: 24.sp),
-            label: Text(
-              'New Note',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16.sp,
-                fontWeight: FontWeight.w600,
+              child: BackdropFilter(
+                filter: ui.ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                child: Container(color: Colors.transparent),
               ),
             ),
           ),
-        ),
+
+          BlocBuilder<NotesBloc, NoteState>(
+            builder: (context, state) {
+              final bool isLoading = state is NoteLoading;
+              final bool isError = state is NoteError;
+              final bool isLoaded = state is NotesLoaded;
+
+              final List<Note> pinnedNotes = isLoaded
+                  ? state.displayedNotes.where((n) => n.isPinned).toList()
+                  : [];
+              final List<Note> unpinnedNotes = isLoaded
+                  ? state.displayedNotes.where((n) => !n.isPinned).toList()
+                  : [];
+
+              final bool showSections =
+                  isLoaded &&
+                  pinnedNotes.isNotEmpty &&
+                  state.searchQuery.isEmpty &&
+                  state.selectedTags.isEmpty &&
+                  state.selectedColors.isEmpty;
+
+              final viewMode = isLoaded ? state.viewMode : NoteViewMode.list;
+
+              return CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // Premium Glass AppBar
+                  SliverAppBar(
+                    floating: true,
+                    snap: true,
+                    pinned: true,
+                    expandedHeight: 120.h,
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    flexibleSpace: FlexibleSpaceBar(
+                      background: GlassContainer(
+                        blur: 20,
+                        color: AppColors.surface(context).withOpacity(0.4),
+                        borderRadius: 0,
+                        border: Border(
+                          bottom: BorderSide(
+                            color: AppColors.primary.withOpacity(0.1),
+                            width: 1.h,
+                          ),
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
+                      titlePadding: EdgeInsets.only(left: 20.w, bottom: 16.h),
+                      title: Text(
+                        'Think Tank',
+                        style: AppTypography.heading1(context).copyWith(
+                          fontSize: 22.sp,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1,
+                        ),
+                      ),
+                    ),
+                    actions: [
+                      IconButton(
+                        onPressed: () {
+                          if (isLoaded) {
+                            HapticFeedback.lightImpact();
+                            context.read<NotesBloc>().add(
+                              UpdateNoteViewConfigEvent(
+                                viewMode: state.viewMode == NoteViewMode.list
+                                    ? NoteViewMode.grid
+                                    : NoteViewMode.list,
+                              ),
+                            );
+                          }
+                        },
+                        icon: Container(
+                          padding: EdgeInsets.all(8.r),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12.r),
+                          ),
+                          child: Icon(
+                            viewMode == NoteViewMode.list
+                                ? Icons.grid_view_rounded
+                                : Icons.view_list_rounded,
+                            color: AppColors.primary,
+                            size: 20.sp,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => _showViewOptionsSheet(context, state),
+                        icon: Icon(
+                          Icons.tune_rounded,
+                          color: AppColors.textPrimary(context),
+                          size: 22.sp,
+                        ),
+                      ),
+                      SizedBox(width: 8.w),
+                    ],
+                  ),
+
+                  // Template Picker Section
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: 16.h),
+                      child: _buildTemplateSection(context),
+                    ),
+                  ),
+
+                  // Search Bar Section
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 16.w,
+                        vertical: 16.h,
+                      ),
+                      child: const NotesSearchBar(),
+                    ),
+                  ),
+
+                  // Filter Chips Section
+                  SliverToBoxAdapter(child: _buildFilterChips(context, state)),
+
+                  // Status Info
+                  if (isLoaded && !isLoading)
+                    SliverToBoxAdapter(
+                      child: _buildCollectionStats(context, state),
+                    ),
+
+                  if (isLoading)
+                    SliverToBoxAdapter(child: _buildLoadingState(context)),
+
+                  if (isError)
+                    SliverToBoxAdapter(child: _buildErrorState(context)),
+
+                  if (isLoaded) ...[
+                    if (pinnedNotes.isEmpty && unpinnedNotes.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: EmptyStateNotes(),
+                      )
+                    else
+                      _buildNotesGridSection(
+                        context,
+                        state,
+                        pinnedNotes,
+                        unpinnedNotes,
+                        showSections,
+                        viewMode,
+                      ),
+                  ],
+
+                  // Padding at the bottom for FAB
+                  SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+                ],
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotesGridSection(
+    BuildContext context,
+    NotesLoaded state,
+    List<Note> pinnedNotes,
+    List<Note> unpinnedNotes,
+    bool showSections,
+    NoteViewMode viewMode,
+  ) {
+    return SliverMainAxisGroup(
+      slivers: [
+        if (showSections && pinnedNotes.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(20.w, 16.h, 16.w, 12.h),
+              child: Row(
+                children: [
+                  Icon(Icons.push_pin, size: 14.sp, color: AppColors.primary),
+                  SizedBox(width: 8.w),
+                  Text(
+                    'PINNED',
+                    style: AppTypography.caption(context).copyWith(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          _buildNoteGridOrList(pinnedNotes, viewMode),
+          if (unpinnedNotes.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
+                child: Divider(
+                  color: AppColors.primary.withOpacity(0.1),
+                  thickness: 1,
+                ),
+              ),
+            ),
+        ],
+
+        if (unpinnedNotes.isNotEmpty) ...[
+          if (showSections)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(20.w, 16.h, 16.w, 12.h),
+                child: Text(
+                  'ALL NOTES',
+                  style: AppTypography.caption(context).copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.5,
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
+              ),
+            ),
+          _buildNoteGridOrList(unpinnedNotes, viewMode),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildCollectionStats(BuildContext context, NotesLoaded state) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 4.h),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8.r),
+            ),
+            child: Text(
+              '${state.displayedNotes.length} Thoughts',
+              style: AppTypography.captionSmall(
+                context,
+              ).copyWith(color: AppColors.primary, fontWeight: FontWeight.w800),
+            ),
+          ),
+          const Spacer(),
+          Text(
+            state.sortBy.displayName,
+            style: AppTypography.captionSmall(context).copyWith(
+              color: AppColors.textSecondary(context),
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Icon(
+            state.sortDescending
+                ? Icons.arrow_downward_rounded
+                : Icons.arrow_upward_rounded,
+            size: 14.sp,
+            color: AppColors.textSecondary(context),
+          ),
+        ],
       ),
     );
   }
@@ -533,22 +505,36 @@ class EnhancedNotesListScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: EdgeInsets.fromLTRB(16.w, 8.h, 16.w, 12.h),
-          child: Text(
-            'TEMPLATES',
-            style: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.2,
-              color: AppColors.getSecondaryTextColor(
-                Theme.of(context).brightness,
+          padding: EdgeInsets.fromLTRB(20.w, 8.h, 16.w, 12.h),
+          child: Row(
+            children: [
+              Text(
+                'BRAINSTORMING KITS',
+                style: AppTypography.caption(context).copyWith(
+                  color: AppColors.textSecondary(context),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5,
+                ),
               ),
-            ),
+              const Spacer(),
+              Text(
+                'Explore All',
+                style: AppTypography.captionSmall(context).copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 14.sp,
+                color: AppColors.primary,
+              ),
+            ],
           ),
         ),
 
         SizedBox(
-          height: 160.h,
+          height: 110.h,
           child: ListView.builder(
             physics: const BouncingScrollPhysics(),
             scrollDirection: Axis.horizontal,
@@ -569,42 +555,53 @@ class EnhancedNotesListScreen extends StatelessWidget {
 
   Widget _buildTemplateCard(BuildContext context, SimpleNoteTemplate template) {
     return GestureDetector(
-      onTap: () => _createFromTemplate(context, template),
-      child: AnimatedScale(
-        scale: 1.0,
-        duration: const Duration(milliseconds: 100),
-        child: SizedBox(
-          width: 120.w,
-          child: Column(
+      onTap: () {
+        HapticFeedback.mediumImpact();
+        _createFromTemplate(context, template);
+      },
+      child: SizedBox(
+        width: 140.w,
+        child: GlassContainer(
+          borderRadius: 24.r,
+          blur: 10,
+          color: template.color.withOpacity(0.08),
+          border: Border.all(color: template.color.withOpacity(0.2)),
+          padding: EdgeInsets.all(12.r),
+          child: Row(
             children: [
-              // Icon container
               Container(
-                width: 120.w,
-                height: 120.w,
+                padding: EdgeInsets.all(8.r),
                 decoration: BoxDecoration(
-                  color: template.color.withOpacity(0.1),
+                  color: template.color.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12.r),
-                  border: Border.all(
-                    color: template.color.withOpacity(0.2),
-                    width: 1,
-                  ),
                 ),
-                child: Icon(template.icon, color: template.color, size: 32.sp),
+                child: Icon(template.icon, color: template.color, size: 20.sp),
               ),
-
-              SizedBox(height: 8.h),
-
-              // Label
-              Text(
-                template.title,
-                style: TextStyle(
-                  fontSize: 12.sp,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.getTextColor(Theme.of(context).brightness),
+              SizedBox(width: 10.w),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      template.title.split(' ')[0],
+                      style: AppTypography.bodySmall(context).copyWith(
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.textPrimary(context),
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      template.title.contains(' ')
+                          ? template.title.split(' ')[1]
+                          : 'Kit',
+                      style: AppTypography.captionSmall(
+                        context,
+                      ).copyWith(color: AppColors.textSecondary(context)),
+                    ),
+                  ],
                 ),
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -833,10 +830,13 @@ class EnhancedNotesListScreen extends StatelessWidget {
       );
     }
 
-    return SliverPadding(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      sliver: SliverList(
-        delegate: SliverChildBuilderDelegate((context, index) {
+    return SliverToBoxAdapter(
+      child: AnimatedListView(
+        items: notes,
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemBuilder: (context, index) {
           final note = notes[index];
           return Padding(
             padding: EdgeInsets.only(bottom: 12.h),
@@ -878,7 +878,7 @@ class EnhancedNotesListScreen extends StatelessWidget {
               ),
             ),
           );
-        }, childCount: notes.length),
+        },
       ),
     );
   }
@@ -943,55 +943,6 @@ class EnhancedNotesListScreen extends StatelessWidget {
                 onTap: () {
                   Navigator.pop(context);
                   context.read<NotesBloc>().add(DeleteNoteEvent(note.id));
-                },
-              ),
-              SizedBox(height: 16.h),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showMoreOptions(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: AppColors.surface(context),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20.r)),
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(
-                  Icons.archive_outlined,
-                  color: AppColors.textPrimary(context),
-                ),
-                title: Text(
-                  'Archived Notes',
-                  style: AppTypography.bodyLarge(context),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushNamed(context, AppRoutes.archivedNotes);
-                },
-              ),
-              ListTile(
-                leading: Icon(
-                  Icons.settings_outlined,
-                  color: AppColors.textPrimary(context),
-                ),
-                title: Text(
-                  'Notes Settings',
-                  style: AppTypography.bodyLarge(context),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  // TODO: Navigate to notes settings
                 },
               ),
               SizedBox(height: 16.h),

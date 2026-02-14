@@ -59,6 +59,52 @@ class AppAnimations {
   /// Pop scale (1.05) - Pop-in effect
   static const double popScale = 1.05;
 
+  // ==================== Widget Animations ====================
+
+  /// Simple fade-in animation for widgets
+  static Widget fadeIn({
+    required Widget child,
+    Duration duration = medium,
+    double delay = 0,
+  }) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: duration,
+      curve: Curves.easeOut,
+      builder: (context, value, child) {
+        return Opacity(opacity: value, child: child);
+      },
+      child: child,
+    );
+  }
+
+  /// Simple slide-in animation for widgets
+  static Widget slideIn({
+    required Widget child,
+    Offset begin = const Offset(0, 0.1),
+    Duration duration = medium,
+    double delay = 0,
+  }) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween(begin: 0.0, end: 1.0),
+      duration: duration,
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.translate(
+            offset: Offset(
+              begin.dx * (1 - value) * 100,
+              begin.dy * (1 - value) * 100,
+            ),
+            child: child,
+          ),
+        );
+      },
+      child: child,
+    );
+  }
+
   // ==================== Opacity Values ====================
 
   /// Disabled opacity (0.5)

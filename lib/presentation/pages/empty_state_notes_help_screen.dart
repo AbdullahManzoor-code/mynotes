@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import '../../core/routes/app_routes.dart';
 import '../design_system/design_system.dart';
+import '../widgets/lottie_animation_widget.dart';
 
 /// Empty State Notes Help Screen
 /// Provides guidance when user has no notes created yet
@@ -94,81 +94,15 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(120.w),
             ),
           ),
-          // Main paper sheet
-          Transform.rotate(
-            angle: -2 * math.pi / 180,
-            child: Container(
-              width: 192.w,
-              height: 256.h,
-              decoration: BoxDecoration(
-                color: AppColors.surface(context),
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(color: AppColors.border(context), width: 1),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Header line
-                    Container(
-                      width: 120.w,
-                      height: 8.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.border(context).withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    // Second line
-                    Container(
-                      width: 80.w,
-                      height: 8.h,
-                      decoration: BoxDecoration(
-                        color: AppColors.border(context).withOpacity(0.5),
-                        borderRadius: BorderRadius.circular(4.r),
-                      ),
-                    ),
-                    const Spacer(),
-                    // Edit icon
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: Icon(
-                        Icons.edit_note_outlined,
-                        size: 32.sp,
-                        color: AppColors.primaryColor.withOpacity(0.4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // Background paper sheet
-          Positioned(
-            right: 50.w,
-            bottom: 30.h,
-            child: Transform.rotate(
-              angle: 3 * math.pi / 180,
-              child: Container(
-                width: 176.w,
-                height: 240.h,
-                decoration: BoxDecoration(
-                  color: AppColors.surface(context).withOpacity(0.6),
-                  borderRadius: BorderRadius.circular(8.r),
-                  border: Border.all(
-                    color: AppColors.border(context).withOpacity(0.5),
-                    width: 1,
-                  ),
-                ),
-              ),
+          // Lottie Animation
+          SizedBox(
+            width: 200.w,
+            height: 200.h,
+            child: LottieAnimationWidget(
+              'empty_state',
+              width: 200.w,
+              height: 200.h,
+              repeat: true,
             ),
           ),
         ],

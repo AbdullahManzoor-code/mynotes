@@ -36,7 +36,6 @@ import '../../presentation/pages/edit_daily_highlight_screen_new.dart';
 
 import '../../presentation/pages/empty_state_notes_help_screen.dart';
 import '../../presentation/pages/empty_state_todos_help_screen.dart';
-import '../../presentation/pages/location_reminder_coming_soon_screen.dart';
 import '../../presentation/pages/recurring_todo_schedule_screen.dart';
 import '../../presentation/pages/ocr_text_extraction_screen.dart';
 import '../../presentation/screens/reflection_home_screen.dart';
@@ -321,7 +320,7 @@ class AppRouter {
 
       case AppRoutes.locationReminderComingSoon:
         return MaterialPageRoute(
-          builder: (_) => const LocationReminderComingSoonScreen(),
+          builder: (_) => const LocationReminderScreen(),
         );
 
       // ==================== Todos Module ====================

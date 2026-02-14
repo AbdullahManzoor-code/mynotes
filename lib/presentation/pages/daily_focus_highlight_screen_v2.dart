@@ -44,8 +44,10 @@ class DailyFocusHighlightScreen extends StatelessWidget {
       backgroundColor: Colors.transparent,
       title: Text(
         'Daily Highlight',
-        style: AppTypography.heading3(context, AppColors.textPrimary(context))
-            .copyWith(fontWeight: FontWeight.w600),
+        style: AppTypography.heading3(
+          context,
+          AppColors.textPrimary(context),
+        ).copyWith(fontWeight: FontWeight.w600),
       ),
       centerTitle: false,
       leading: Container(
@@ -123,7 +125,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               SizedBox(
                 height: 180.h,
                 child: LottieAnimationWidget(
-                  'empty',
+                  'empty_state',
                   width: 160.w,
                   height: 160.h,
                 ),
@@ -132,8 +134,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
 
               Text(
                 'No Daily Highlight',
-                style: AppTypography.heading2(context)
-                    .copyWith(fontWeight: FontWeight.bold),
+                style: AppTypography.heading2(
+                  context,
+                ).copyWith(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: 12.h),
@@ -172,8 +175,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
                         SizedBox(width: 8.w),
                         Text(
                           'Quick tips',
-                          style: AppTypography.bodyMedium(context)
-                              .copyWith(fontWeight: FontWeight.w600),
+                          style: AppTypography.bodyMedium(
+                            context,
+                          ).copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -204,10 +208,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPremiumHighlightContent(
-    BuildContext context,
-    TodoItem task,
-  ) {
+  Widget _buildPremiumHighlightContent(BuildContext context, TodoItem task) {
     return BlocBuilder<FocusBloc, FocusState>(
       builder: (context, focusState) {
         final completion = task.completionPercentage;
@@ -228,7 +229,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               SizedBox(height: 32.h),
 
               // Subtasks
-              if (task.subtasks.isNotEmpty) 
+              if (task.subtasks.isNotEmpty)
                 _buildSubtasksSection(context, task),
 
               SizedBox(height: 24.h),
@@ -284,18 +285,12 @@ class DailyFocusHighlightScreen extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20.r),
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.5),
-                  ),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.5)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.star,
-                      size: 16.sp,
-                      color: AppColors.primary,
-                    ),
+                    Icon(Icons.star, size: 16.sp, color: AppColors.primary),
                     SizedBox(width: 6.w),
                     Text(
                       'TODAY\'S FOCUS',
@@ -315,8 +310,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               Text(
                 task.text.replaceAll('#highlight', '').trim(),
                 textAlign: TextAlign.center,
-                style: AppTypography.heading1(context)
-                    .copyWith(fontWeight: FontWeight.w700, height: 1.3),
+                style: AppTypography.heading1(
+                  context,
+                ).copyWith(fontWeight: FontWeight.w700, height: 1.3),
               ),
 
               SizedBox(height: 28.h),
@@ -347,8 +343,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
                         SizedBox(height: 4.h),
                         Text(
                           'Complete',
-                          style: AppTypography.caption(context)
-                              .copyWith(color: AppColors.secondaryText),
+                          style: AppTypography.caption(
+                            context,
+                          ).copyWith(color: AppColors.secondaryText),
                         ),
                       ],
                     ),
@@ -420,8 +417,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
                   SizedBox(height: 8.h),
                   Text(
                     stat['value'] as String,
-                    style: AppTypography.bodySmall(context)
-                        .copyWith(fontWeight: FontWeight.w600),
+                    style: AppTypography.bodySmall(
+                      context,
+                    ).copyWith(fontWeight: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -442,8 +440,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 20.w),
           child: Text(
             'Subtasks',
-            style: AppTypography.heading3(context)
-                .copyWith(fontWeight: FontWeight.w600),
+            style: AppTypography.heading3(
+              context,
+            ).copyWith(fontWeight: FontWeight.w600),
           ),
         ),
         SizedBox(height: 16.h),
@@ -528,10 +527,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
             height: 56.h,
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [
-                  AppColors.primary,
-                  AppColors.primary.withOpacity(0.8),
-                ],
+                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
               ),
               borderRadius: BorderRadius.circular(16.r),
               boxShadow: [
@@ -550,10 +546,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
                   Navigator.pushNamed(
                     context,
                     AppRoutes.focusSession,
-                    arguments: {
-                      'todoTitle': task.text,
-                      'todoId': task.id,
-                    },
+                    arguments: {'todoTitle': task.text, 'todoId': task.id},
                   );
                 },
                 borderRadius: BorderRadius.circular(16.r),

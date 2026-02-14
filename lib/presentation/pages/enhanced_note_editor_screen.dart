@@ -7,9 +7,12 @@ import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/core/services/media_processing_service.dart';
 import 'package:mynotes/core/services/ocr_service.dart';
 import 'package:mynotes/core/utils/context_scanner.dart';
+import 'package:mynotes/presentation/pages/graph_view_page.dart'
+    show GraphViewPage;
 import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -264,6 +267,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                             context,
                             state,
                             editorBloc,
+                            quillController,
                           ),
                           floatingActionButton: _buildFAB(
                             context,
@@ -466,56 +470,230 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
 
     showModalBottomSheet(
       context: context,
-      builder: (sheetContext) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.share),
-            title: const Text('Share Note'),
-            onTap: () async {
-              Navigator.pop(sheetContext);
-              final state = editorBloc.state;
-              if (state is NoteEditorLoaded) {
-                final text = "${state.params.title}\n\n${state.params.content}";
-                await Share.share(
-                  text,
-                  subject: state.params.title.isNotEmpty
-                      ? state.params.title
-                      : 'MyNotes Attachment',
-                );
-              }
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.check_box_outlined, color: Colors.green),
-            title: const Text('Convert to Task'),
-            subtitle: const Text('Promote this note to a todo item'),
-            onTap: () {
-              Navigator.pop(sheetContext);
-              editorBloc.add(const PromoteToTodoRequested());
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Note promoted to task!'),
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.delete, color: Colors.red),
-            title: const Text(
-              'Delete Note',
-              style: TextStyle(color: Colors.red),
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => GlassContainer(
+        borderRadius: 24.r,
+        blur: 20,
+        color: AppColors.surface(context).withOpacity(0.9),
+        padding: EdgeInsets.symmetric(vertical: 20.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              // margin: EdgeInsets.bottom(20.h),
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary(context).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
-            onTap: () {
-              if (currentNote != null) {
-                context.read<NotesBloc>().add(DeleteNoteEvent(currentNote.id));
-              }
-              Navigator.pop(sheetContext);
-              Navigator.pop(context);
-            },
-          ),
-        ],
+            _buildPremiumMenuOption(
+              icon: Icons.summarize_outlined,
+              title: 'AI Smart Summary',
+              subtitle: 'Generate a concise overview of this note',
+              color: AppColors.primary,
+              onTap: () {
+                Navigator.pop(sheetContext);
+                editorBloc.add(const GenerateSummaryRequested());
+              },
+            ),
+            _buildPremiumMenuOption(
+              icon: Icons.document_scanner_outlined,
+              title: 'Extract Text (OCR)',
+              subtitle: 'Scan images and documents for text',
+              color: Colors.orange.shade400,
+              onTap: () {
+                Navigator.pop(sheetContext);
+                // Trigger OCR for existing media if needed
+                _showOCRSourcePicker(context, editorBloc);
+              },
+            ),
+            _buildPremiumMenuOption(
+              icon: Icons.check_box_outlined,
+              title: 'Convert to Task',
+              subtitle: 'Promote this note to a todo item',
+              color: Colors.green.shade400,
+              onTap: () {
+                Navigator.pop(sheetContext);
+                editorBloc.add(const PromoteToTodoRequested());
+              },
+            ),
+            _buildPremiumMenuOption(
+              icon: Icons.share_outlined,
+              title: 'Share & Export',
+              subtitle: 'Send as text, PDF or Markdown',
+              color: Colors.blue.shade400,
+              onTap: () {
+                Navigator.pop(sheetContext);
+                _handleShare(editorBloc);
+              },
+            ),
+            const Divider(height: 32),
+            _buildPremiumMenuOption(
+              icon: Icons.delete_outline,
+              title: 'Delete Note',
+              subtitle: 'Move to trash',
+              color: Colors.red.shade400,
+              onTap: () {
+                if (currentNote != null) {
+                  context.read<NotesBloc>().add(
+                    DeleteNoteEvent(currentNote.id),
+                  );
+                }
+                Navigator.pop(sheetContext);
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumMenuOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return ListTile(
+      leading: Container(
+        padding: EdgeInsets.all(8.w),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(10.r),
+        ),
+        child: Icon(icon, color: color, size: 20.sp),
+      ),
+      title: Text(title, style: AppTypography.labelLarge()),
+      subtitle: Text(subtitle, style: AppTypography.caption()),
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+    );
+  }
+
+  void _handleShare(NoteEditorBloc editorBloc) {
+    final state = editorBloc.state;
+    if (state is NoteEditorLoaded) {
+      final text = "${state.params.title}\n\n${state.params.content}";
+      Share.share(
+        text,
+        subject: state.params.title.isNotEmpty
+            ? state.params.title
+            : 'MyNotes Content',
+      );
+    }
+  }
+
+  void _showOCRSourcePicker(BuildContext context, NoteEditorBloc editorBloc) {
+    HapticFeedback.mediumImpact();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => GlassContainer(
+        // borderRadius:  BorderRadius.vertical(top: Radius.circular(24)),
+        blur: 20,
+        color: AppColors.surface(context).withOpacity(0.9),
+        padding: EdgeInsets.fromLTRB(20.w, 12.h, 20.w, 40.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              margin: EdgeInsets.only(bottom: 24.h),
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary(context).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(2.r),
+              ),
+            ),
+            Text(
+              'Extract Text (OCR)',
+              style: AppTypography.heading3(
+                context,
+              ).copyWith(fontWeight: FontWeight.w700),
+            ),
+            SizedBox(height: 8.h),
+            Text(
+              'Select an image to scan for text',
+              style: AppTypography.bodySmall(context),
+            ),
+            SizedBox(height: 32.h),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildSourceOption(
+                  context: context,
+                  icon: Icons.camera_alt_rounded,
+                  label: 'Camera',
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final picker = ImagePicker();
+                    final image = await picker.pickImage(
+                      source: ImageSource.camera,
+                    );
+                    if (image != null) {
+                      editorBloc.add(TextExtractionRequested(image.path));
+                    }
+                  },
+                ),
+                _buildSourceOption(
+                  context: context,
+                  icon: Icons.photo_library_rounded,
+                  label: 'Gallery',
+                  onTap: () async {
+                    Navigator.pop(context);
+                    final picker = ImagePicker();
+                    final image = await picker.pickImage(
+                      source: ImageSource.gallery,
+                    );
+                    if (image != null) {
+                      editorBloc.add(TextExtractionRequested(image.path));
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourceOption({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        onTap();
+      },
+      borderRadius: BorderRadius.circular(20.r),
+      child: Container(
+        width: 120.w,
+        padding: EdgeInsets.symmetric(vertical: 20.h),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.05),
+          borderRadius: BorderRadius.circular(20.r),
+          border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 32.sp, color: AppColors.primary),
+            SizedBox(height: 12.h),
+            Text(
+              label,
+              style: AppTypography.heading4(context).copyWith(fontSize: 14.sp),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -529,17 +707,33 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     quill.QuillController quillController,
     TextEditingController titleController,
   ) {
-    return AppBar(
-      title: const Text('Edit Note'),
+    final bool isDirty = state.isDirty;
+
+    return GlassAppBar(
+      title: 'Edit Note',
       actions: [
+        if (isDirty)
+          AppAnimations.tapScale(
+            child: IconButton(
+              icon: Icon(Icons.cloud_upload_outlined, color: AppColors.primary),
+              tooltip: 'Save Note',
+              onPressed: () => editorBloc.add(const SaveNoteRequested()),
+            ),
+          ),
         IconButton(
-          icon: const Icon(Icons.label_outline),
-          tooltip: 'Tags',
-          onPressed: () => _showTagPicker(context, editorBloc),
+          icon: Icon(
+            state.params.isPinned ? Icons.push_pin : Icons.push_pin_outlined,
+            color: state.params.isPinned ? AppColors.primary : null,
+          ),
+          tooltip: 'Pin Note',
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            editorBloc.add(const PinToggled());
+          },
         ),
         IconButton(
-          icon: const Icon(Icons.more_vert),
-          tooltip: 'More',
+          icon: const Icon(Icons.more_horiz),
+          tooltip: 'More Options',
           onPressed: () => _showMoreOptions(context, editorBloc),
         ),
       ],
@@ -547,29 +741,55 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   }
 
   Widget _buildSummaryCard(BuildContext context, String summary) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'AI Summary',
-            style: TextStyle(
-              fontSize: 12.sp,
-              fontWeight: FontWeight.w600,
-              color: Colors.amber.shade800,
+    return AppAnimations.tapScale(
+      child: GlassContainer(
+        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        borderRadius: 16.r,
+        blur: 10,
+        color: AppColors.primary.withOpacity(0.05),
+        padding: EdgeInsets.all(16.w),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.summarize_outlined,
+                  color: AppColors.primary,
+                  size: 18.sp,
+                ),
+                SizedBox(width: 8.w),
+                Text(
+                  'AI SUMMARY',
+                  style: AppTypography.caption(context).copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                const Spacer(),
+                InkWell(
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    // Optional: Copy summary or expand
+                  },
+                  child: Icon(
+                    Icons.copy_rounded,
+                    size: 14.sp,
+                    color: AppColors.textSecondary(context),
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 4),
-          Text(summary, style: TextStyle(fontSize: 14.sp)),
-        ],
+            SizedBox(height: 10.h),
+            Text(
+              summary,
+              style: AppTypography.body1(
+                context,
+              ).copyWith(fontSize: 14.sp, height: 1.5),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -579,17 +799,36 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     TextEditingController titleController,
     FocusNode titleFocusNode,
   ) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: AppColors.borderLight.withOpacity(0.1)),
+        ),
+      ),
       child: TextField(
         controller: titleController,
         focusNode: titleFocusNode,
-        style: TextStyle(fontSize: 22.sp, fontWeight: FontWeight.bold),
-        decoration: const InputDecoration(
-          hintText: 'Title',
+        style: AppTypography.heading1(context).copyWith(
+          fontSize: 24.sp,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary(context),
+        ),
+        decoration: InputDecoration(
+          hintText: 'Note Title',
+          hintStyle: AppTypography.heading1(context).copyWith(
+            fontSize: 24.sp,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textSecondary(context).withOpacity(0.3),
+          ),
           border: InputBorder.none,
+          isDense: true,
+          contentPadding: EdgeInsets.zero,
         ),
         maxLines: 1,
+        onChanged: (val) {
+          context.read<NoteEditorBloc>().add(TitleChanged(val));
+        },
       ),
     );
   }
@@ -603,10 +842,13 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   ) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: quill.QuillEditor(
+      child: quill.QuillEditor.basic(
         controller: quillController,
-        scrollController: quillScrollController,
-        focusNode: contentFocusNode,
+        config: const quill.QuillEditorConfig(
+          autoFocus: false,
+          expands: false,
+          padding: EdgeInsets.zero,
+        ),
       ),
     );
   }
@@ -615,15 +857,119 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     BuildContext context,
     quill.QuillController quillController,
   ) {
-    return const SizedBox.shrink();
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        border: Border(
+          top: BorderSide(color: AppColors.borderLight.withOpacity(0.5)),
+        ),
+      ),
+      child: quill.QuillSimpleToolbar(
+        controller: quillController,
+        config: quill.QuillSimpleToolbarConfig(
+          showAlignmentButtons: false,
+          showCenterAlignment: false,
+          showJustifyAlignment: false,
+          showLeftAlignment: false,
+          showRightAlignment: false,
+          showDirection: false,
+          showUndo: true,
+          showRedo: true,
+          showFontFamily: false,
+          showFontSize: false,
+          showSubscript: false,
+          showSuperscript: false,
+          showSmallButton: true,
+          multiRowsDisplay: false,
+          // padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+        ),
+      ),
+    );
   }
 
   Widget _buildBottomActionButtons(
     BuildContext context,
     NoteEditorState state,
     NoteEditorBloc editorBloc,
+    quill.QuillController quillController,
   ) {
-    return const SizedBox.shrink();
+    return GlassContainer(
+      borderRadius: 0,
+      blur: 20,
+      color: AppColors.surface(context).withOpacity(0.8),
+      padding: EdgeInsets.zero,
+      child: Container(
+        height: 65.h,
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(color: AppColors.borderLight.withOpacity(0.3)),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildPremiumIconButton(
+              icon: Icons.add_circle_outline,
+              color: AppColors.primary,
+              tooltip: 'Add Attachment',
+              onPressed: () =>
+                  _showUnifiedMediaSheet(context, editorBloc, quillController),
+            ),
+            _buildPremiumIconButton(
+              icon: Icons.mic_none,
+              color: Colors.red.shade400,
+              tooltip: 'Record Audio',
+              onPressed: () => _openAudioRecorder(context, editorBloc),
+            ),
+            _buildPremiumIconButton(
+              icon: Icons.brush_outlined,
+              color: Colors.green.shade400,
+              tooltip: 'Sketch',
+              onPressed: () =>
+                  _openDrawingCanvas(context, editorBloc, quillController),
+            ),
+            _buildPremiumIconButton(
+              icon: Icons.sell_outlined,
+              color: Colors.orange.shade400,
+              tooltip: 'Tags',
+              onPressed: () => _showTagPicker(context, editorBloc),
+            ),
+            _buildPremiumIconButton(
+              icon: Icons.notifications_active_outlined,
+              color: Colors.blue.shade400,
+              tooltip: 'Reminder',
+              onPressed: () => _openReminderPicker(context, editorBloc),
+            ),
+            _buildPremiumIconButton(
+              icon: Icons.hub_outlined,
+              color: Colors.indigo.shade400,
+              tooltip: 'Graph View',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const GraphViewPage()),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumIconButton({
+    required IconData icon,
+    required Color color,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return IconButton(
+      icon: Icon(icon, color: color, size: 24.sp),
+      tooltip: tooltip,
+      onPressed: () {
+        HapticFeedback.lightImpact();
+        onPressed();
+      },
+    );
   }
 
   Widget _buildFAB(
@@ -653,8 +999,11 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
       builder: (sheetContext) => UniversalMediaSheet(
         onOptionSelected: (option) {
           switch (option) {
-            case MediaOption.photoVideo:
+            case MediaOption.photo:
               _pickImage(context, editorBloc, quillController);
+              break;
+            case MediaOption.video:
+              _pickVideo(editorBloc);
               break;
             case MediaOption.camera:
               _takePhoto(context, editorBloc, quillController);
@@ -662,11 +1011,23 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
             case MediaOption.audio:
               _openAudioRecorder(context, editorBloc);
               break;
+            case MediaOption.dictate:
+              _startDictation(context, quillController);
+              break;
             case MediaOption.scan:
               _openDocumentScanner(context, editorBloc, quillController);
               break;
             case MediaOption.sketch:
               _openDrawingCanvas(context, editorBloc, quillController);
+              break;
+            case MediaOption.document:
+              _pickDocument(context, editorBloc);
+              break;
+            case MediaOption.graph:
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const GraphViewPage()),
+              );
               break;
             case MediaOption.link:
               _showAddLinkDialog(context, quillController);
@@ -674,6 +1035,72 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
           }
         },
       ),
+    );
+  }
+
+  Future<void> _startDictation(
+    BuildContext context,
+    quill.QuillController quillController,
+  ) async {
+    final speechService = SpeechService();
+    final isAvailable = await speechService.initialize();
+
+    if (!isAvailable) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Speech recognition not available')),
+        );
+      }
+      return;
+    }
+
+    if (context.mounted) {
+      showModalBottomSheet(
+        context: context,
+        builder: (context) => StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: EdgeInsets.all(24.w),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Listening...',
+                    style: AppTypography.titleMedium(
+                      context,
+                      AppColors.primary,
+                    ),
+                  ),
+                  SizedBox(height: 24.h),
+                  const CircularProgressIndicator(),
+                  SizedBox(height: 24.h),
+                  ElevatedButton(
+                    onPressed: () {
+                      speechService.stopListening();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Stop'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    await speechService.startListening(
+      onResult: (text) {
+        if (text.isNotEmpty) {
+          final index = quillController.selection.baseOffset;
+          quillController.document.insert(index, text);
+          // Update selection
+          quillController.updateSelection(
+            TextSelection.collapsed(offset: index + text.length),
+            quill.ChangeSource.local,
+          );
+        }
+      },
     );
   }
 
@@ -906,7 +1333,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     try {
       final result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'txt'],
+        allowedExtensions: ['pdf', 'doc', 'docx', 'ppt', 'pptx', 'ptx', 'txt'],
       );
 
       if (result != null) {

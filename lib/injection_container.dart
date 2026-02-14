@@ -65,9 +65,7 @@ import 'package:mynotes/core/services/connectivity_service.dart';
 
 /// GetIt service locator instance
 import 'package:mynotes/presentation/bloc/alarm/alarm_bloc.dart';
-import 'package:mynotes/presentation/bloc/alarm/alarm_event.dart';
-import 'package:mynotes/presentation/bloc/alarm/alarm_state.dart';
-import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
+
 import 'package:mynotes/core/notifications/notification_service.dart';
 
 final getIt = GetIt.instance;

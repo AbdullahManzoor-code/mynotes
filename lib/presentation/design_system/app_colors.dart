@@ -100,6 +100,9 @@ class AppColors {
   /// Emerald accent
   static const Color accentEmerald = Color(0xFF10B981);
 
+  /// Red accent (Alias for error)
+  static const Color accentRed = errorColor;
+
   /// Pink accent
   static const Color accentPink = Color(0xFFEC4899);
 

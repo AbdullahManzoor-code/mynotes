@@ -54,7 +54,7 @@ import 'biometric_lock_screen.dart';
 import 'empty_state_notes_help_screen.dart';
 import 'empty_state_todos_help_screen.dart';
 import 'daily_highlight_summary_screen.dart';
-import 'location_reminder_coming_soon_screen.dart';
+import 'location_reminder_screen.dart';
 
 /// Advanced Settings Screen
 /// Master navigation hub with developer/debug section
@@ -690,10 +690,7 @@ class AdvancedSettingsScreen extends StatelessWidget {
           _buildDevTile(
             'Location Reminder',
             'Location-based reminders',
-            () => _navigateToScreen(
-              context,
-              const LocationReminderComingSoonScreen(),
-            ),
+            () => _navigateToScreen(context, const LocationReminderScreen()),
           ),
         ]),
 

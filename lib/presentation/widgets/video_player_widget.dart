@@ -1,7 +1,11 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'dart:io';
+import '../design_system/design_system.dart';
+import '../design_system/components/layouts/glass_container.dart';
 
 /// Video metadata
 class VideoMetadata {
@@ -36,7 +40,7 @@ class VideoMetadata {
   }
 }
 
-/// Widget for playing video attachments using Chewie for professional controls
+/// Widget for playing video attachments with a premium feel
 class VideoPlayerWidget extends StatefulWidget {
   final VideoMetadata video;
   final VoidCallback? onDelete;
@@ -51,6 +55,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
   late VideoPlayerController _videoPlayerController;
   ChewieController? _chewieController;
   bool _hasError = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -63,6 +68,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
       _videoPlayerController = VideoPlayerController.file(
         File(widget.video.filePath),
       );
+
       await _videoPlayerController.initialize();
 
       _chewieController = ChewieController(
@@ -73,9 +79,26 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         allowFullScreen: true,
         allowMuting: true,
         showControls: true,
+        materialProgressColors: ChewieProgressColors(
+          playedColor: AppColors.primary,
+          handleColor: AppColors.primary,
+          backgroundColor: Colors.white.withOpacity(0.2),
+          bufferedColor: Colors.white.withOpacity(0.5),
+        ),
         placeholder: widget.video.thumbnailPath != null
-            ? Image.file(File(widget.video.thumbnailPath!), fit: BoxFit.cover)
-            : Container(color: Colors.black),
+            ? ClipRRect(
+                borderRadius: BorderRadius.circular(16.r),
+                child: Image.file(
+                  File(widget.video.thumbnailPath!),
+                  fit: BoxFit.cover,
+                ),
+              )
+            : Container(
+                color: Colors.black,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(16.r),
+                ),
+              ),
         errorBuilder: (context, errorMessage) {
           return Center(
             child: Text(
@@ -85,14 +108,19 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           );
         },
       );
-      if (mounted) setState(() {});
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
     } catch (e) {
       if (mounted) {
         setState(() {
           _hasError = true;
         });
       }
-      print('Error initializing video player: $e');
+      debugPrint('Error initializing video player: $e');
     }
   }
 
@@ -105,93 +133,119 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    if (_hasError) {
-      return Container(
-        height: 200,
-        decoration: BoxDecoration(
-          color: Colors.grey[900],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+    return GlassContainer(
+      margin: EdgeInsets.symmetric(vertical: 8.h),
+      padding: EdgeInsets.all(12.w),
+      borderRadius: 20.r,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Icon(
-                Icons.video_camera_back_outlined,
-                color: Colors.white54,
-                size: 48,
+              Container(
+                width: 40.w,
+                height: 40.w,
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10.r),
+                ),
+                child: Icon(
+                  Icons.videocam_rounded,
+                  color: AppColors.primary,
+                  size: 22.sp,
+                ),
               ),
-              SizedBox(height: 8),
-              Text(
-                'Failed to load video',
-                style: TextStyle(color: Colors.white54),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: Container(
-            height: _chewieController != null ? null : 250,
-            constraints: _chewieController != null
-                ? BoxConstraints(
-                    maxHeight: MediaQuery.of(context).size.height * 0.6,
-                  )
-                : null,
-            width: double.infinity,
-            color: Colors.black,
-            child:
-                _chewieController != null &&
-                    _chewieController!.videoPlayerController.value.isInitialized
-                ? AspectRatio(
-                    aspectRatio: _videoPlayerController.value.aspectRatio,
-                    child: Chewie(controller: _chewieController!),
-                  )
-                : const Center(child: CircularProgressIndicator()),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
+              SizedBox(width: 12.w),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       widget.video.fileName,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: AppTypography.heading4(
+                        context,
+                      ).copyWith(fontSize: 14.sp),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                     Text(
                       '${widget.video.formattedSize} • ${widget.video.formattedDuration}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      style: AppTypography.bodySmall(context),
                     ),
                   ],
                 ),
               ),
               if (widget.onDelete != null)
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: widget.onDelete,
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    color: Colors.red.shade400,
+                    size: 22.sp,
+                  ),
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    widget.onDelete!();
+                  },
                 ),
             ],
           ),
-        ),
-      ],
+          SizedBox(height: 12.h),
+          if (_hasError)
+            _buildErrorState()
+          else if (_isInitialized && _chewieController != null)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16.r),
+              child: AspectRatio(
+                aspectRatio: _videoPlayerController.value.aspectRatio,
+                child: Chewie(controller: _chewieController!),
+              ),
+            )
+          else
+            Container(
+              height: 200.h,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16.r),
+              ),
+              child: const Center(child: CircularProgressIndicator()),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Container(
+      height: 150.h,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: Colors.red.withOpacity(0.1)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.video_camera_back_rounded,
+            color: Colors.red.shade300,
+            size: 32.sp,
+          ),
+          SizedBox(height: 8.h),
+          Text('Video unavailable', style: AppTypography.bodyMedium(context)),
+          SizedBox(height: 4.h),
+          TextButton(
+            onPressed: _initializePlayer,
+            child: Text('Retry', style: TextStyle(color: AppColors.primary)),
+          ),
+        ],
+      ),
     );
   }
 }
 
-/// Video thumbnail preview
+/// Video thumbnail preview for collection lists
 class VideoThumbnailPreview extends StatelessWidget {
   final String filePath;
   final String fileName;
@@ -212,64 +266,91 @@ class VideoThumbnailPreview extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        Container(
-          width: 120,
-          height: 120,
-          decoration: BoxDecoration(
-            color: Colors.grey.shade300,
-            borderRadius: BorderRadius.circular(8),
-            image: thumbnailPath != null
-                ? DecorationImage(
-                    image: thumbnailPath!.startsWith('assets/')
-                        ? AssetImage(thumbnailPath!) as ImageProvider
-                        : FileImage(File(thumbnailPath!)),
-                    fit: BoxFit.cover,
-                  )
-                : null,
+        GlassContainer(
+          padding: EdgeInsets.zero,
+          borderRadius: 16.r,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16.r),
+            child: Container(
+              width: 140.w,
+              height: 140.h,
+              color: Colors.black.withOpacity(0.05),
+              child: thumbnailPath != null
+                  ? Image.file(
+                      File(thumbnailPath!),
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey.shade200,
+                          child: Center(
+                            child: Icon(
+                              Icons.movie_rounded,
+                              color: AppColors.primary.withOpacity(0.2),
+                              size: 40.sp,
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                  : Center(
+                      child: Icon(
+                        Icons.movie_rounded,
+                        color: AppColors.primary.withOpacity(0.2),
+                        size: 40.sp,
+                      ),
+                    ),
+            ),
           ),
+        ),
+        Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.3),
-              borderRadius: BorderRadius.circular(8),
+              color: Colors.black.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(16.r),
             ),
-            child: const Center(
+            child: Center(
               child: Icon(
-                Icons.play_circle_fill,
-                color: Colors.white,
-                size: 32,
+                Icons.play_circle_fill_rounded,
+                color: Colors.white.withOpacity(0.9),
+                size: 44.sp,
               ),
             ),
           ),
         ),
         Positioned(
-          bottom: 4,
-          right: 4,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(4),
-            ),
+          bottom: 10.h,
+          right: 10.w,
+          child: GlassContainer(
+            padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+            borderRadius: 8.r,
+            blur: 10,
+            color: Colors.black.withOpacity(0.4),
             child: Text(
               _formatDuration(duration),
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+                fontSize: 10.sp,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ),
         ),
         if (onDelete != null)
           Positioned(
-            top: -4,
-            right: -4,
+            top: 6.h,
+            right: 6.w,
             child: GestureDetector(
-              onTap: onDelete,
-              child: const CircleAvatar(
-                backgroundColor: Colors.red,
-                radius: 12,
-                child: Icon(Icons.close, color: Colors.white, size: 14),
+              onTap: () {
+                HapticFeedback.mediumImpact();
+                onDelete!();
+              },
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Colors.red,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.close, color: Colors.white, size: 14.sp),
               ),
             ),
           ),
@@ -306,19 +387,25 @@ class VideoAttachmentsList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Video Attachments',
-          style: Theme.of(context).textTheme.titleSmall,
+        Padding(
+          padding: EdgeInsets.only(left: 4.w, bottom: 8.h, top: 16.h),
+          child: Text(
+            'Video Clips',
+            style: AppTypography.heading4(context).copyWith(
+              color: AppColors.textSecondary(context),
+              letterSpacing: 0.5,
+            ),
+          ),
         ),
-        const SizedBox(height: 12),
         SizedBox(
-          height: 130,
+          height: 150.h,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.zero,
             itemCount: videos.length,
             itemBuilder: (context, index) {
               return Padding(
-                padding: const EdgeInsets.only(right: 12),
+                padding: EdgeInsets.only(right: 12.w),
                 child: GestureDetector(
                   onTap: () => onVideoTap(index),
                   child: VideoThumbnailPreview(

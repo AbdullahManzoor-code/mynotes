@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
 import '../design_system/design_system.dart';
+import '../widgets/lottie_animation_widget.dart';
 
 /// Empty State Todos Help Screen
 /// Provides guidance when user has no todos created yet
@@ -97,90 +97,15 @@ class EmptyStateTodosHelpScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(120.w),
             ),
           ),
-          // Checklist clipboard
-          Transform.rotate(
-            angle: -2 * math.pi / 180,
-            child: Container(
-              width: 192.w,
-              height: 256.h,
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(8.r),
-                border: Border.all(
-                  color: Theme.of(context).dividerColor,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: Padding(
-                padding: EdgeInsets.all(16.w),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Clipboard header
-                    Text(
-                      'Today\'s Tasks',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(
-                          context,
-                        ).textTheme.bodyMedium?.color?.withOpacity(0.6),
-                      ),
-                    ),
-                    SizedBox(height: 16.h),
-                    // Empty checklist items
-                    ...List.generate(
-                      4,
-                      (index) => Padding(
-                        padding: EdgeInsets.only(bottom: 12.h),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 16.w,
-                              height: 16.h,
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Theme.of(context).dividerColor,
-                                  width: 1.5,
-                                ),
-                                borderRadius: BorderRadius.circular(3.r),
-                              ),
-                            ),
-                            SizedBox(width: 12.w),
-                            Container(
-                              width: (120 - index * 15).w,
-                              height: 6.h,
-                              decoration: BoxDecoration(
-                                color: Theme.of(
-                                  context,
-                                ).dividerColor.withOpacity(0.3),
-                                borderRadius: BorderRadius.circular(3.r),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    // Checkmark icon
-                    Align(
-                      alignment: Alignment.bottomRight,
-                      child: Icon(
-                        Icons.check_circle_outline,
-                        size: 32.sp,
-                        color: AppColors.primary.withOpacity(0.4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+          // Lottie Animation
+          SizedBox(
+            width: 200.w,
+            height: 200.h,
+            child: LottieAnimationWidget(
+              'loading',
+              width: 200.w,
+              height: 200.h,
+              repeat: true,
             ),
           ),
         ],

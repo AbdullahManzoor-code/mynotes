@@ -11,6 +11,8 @@ import '../bloc/todos/todos_bloc.dart';
 import '../bloc/params/todo_params.dart';
 import '../design_system/design_system.dart';
 import '../widgets/empty_state_todos.dart' as widgets;
+import '../widgets/animated_list_grid_view.dart';
+import '../widgets/svg_image_widget.dart';
 
 /// Todos List Screen - Display all todos using TodosBloc
 class TodosListScreen extends StatelessWidget {
@@ -88,13 +90,13 @@ class TodosListScreen extends StatelessWidget {
       title: Text('My Todos', style: AppTypography.heading2(context)),
       actions: [
         IconButton(
-          icon: const Icon(Icons.analytics_outlined),
+          icon: context.icon('info', size: 24),
           onPressed: () {
             // Stats logic
           },
         ),
         IconButton(
-          icon: const Icon(Icons.more_vert),
+          icon: context.icon('more_options', size: 24),
           onPressed: () {
             // Settings logic
           },
@@ -219,11 +221,17 @@ class TodosListScreen extends StatelessWidget {
       return const SliverFillRemaining(child: widgets.EmptyStateTodos());
     }
 
-    return SliverList(
-      delegate: SliverChildBuilderDelegate((context, index) {
-        final todo = todos[index];
-        return _buildTodoItem(context, todo);
-      }, childCount: todos.length),
+    return SliverToBoxAdapter(
+      child: AnimatedListView(
+        items: todos,
+        padding: EdgeInsets.symmetric(horizontal: 8.w),
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemBuilder: (context, index) {
+          final todo = todos[index];
+          return _buildTodoItem(context, todo);
+        },
+      ),
     );
   }
 
@@ -289,7 +297,7 @@ class TodosListScreen extends StatelessWidget {
               ),
               if (todo.priority == TodoPriority.high ||
                   todo.priority == TodoPriority.urgent)
-                const Icon(Icons.priority_high, color: Colors.orange, size: 20),
+                context.icon('checkmark', size: 20, color: Colors.orange),
             ],
           ),
         ),

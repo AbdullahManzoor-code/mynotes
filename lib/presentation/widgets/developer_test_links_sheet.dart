@@ -471,8 +471,8 @@ class DeveloperTestLinksSheet extends StatelessWidget {
       // • Search Place (Input -> Find Location)
       // • Radius Slider (Slide -> Adjust Geofence)
       _TestRoute(
-        '🗺️ Location Reminder (Coming Soon)',
-        AppRoutes.locationReminderComingSoon,
+        '🗺️ Location Reminder',
+        AppRoutes.locationReminder,
       ),
 
       // Purpose: Placeholder for upcoming location-based features.

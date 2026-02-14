@@ -7,6 +7,8 @@ import 'package:mynotes/core/services/location_reminders_manager.dart';
 import 'package:mynotes/domain/entities/location_reminder_model.dart';
 import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bloc.dart';
 import 'package:mynotes/presentation/bloc/location_picker/location_picker_bloc.dart';
+import '../design_system/design_system.dart';
+import 'dart:ui' as ui;
 
 // Type alias for PlacePrediction from PlacesService
 typedef PlacePredictionLocal = PlacePrediction;
@@ -238,19 +240,77 @@ class _LocationPickerLifecycleWrapperState
               : <Circle>{};
 
           return Scaffold(
+            backgroundColor: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.darkBackground
+                : AppColors.lightBackground,
+            extendBodyBehindAppBar: true,
             appBar: AppBar(
+              elevation: 0,
+              backgroundColor: Colors.transparent,
+              flexibleSpace: ClipRect(
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color:
+                          (Theme.of(context).brightness == Brightness.dark
+                                  ? AppColors.darkSurface
+                                  : AppColors.lightSurface)
+                              .withOpacity(0.8),
+                      border: Border(
+                        bottom: BorderSide(
+                          color: AppColors.primary.withOpacity(0.1),
+                          width: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
               title: Text(
                 widget.existingReminder != null
-                    ? 'Edit Location Reminder'
-                    : 'New Location Reminder',
+                    ? 'Edit Location'
+                    : 'New Location',
+                style: AppTypography.heading4(
+                  context,
+                  AppColors.textPrimary(context),
+                ).copyWith(fontWeight: FontWeight.w600),
+              ),
+              leading: Container(
+                margin: EdgeInsets.all(8.w),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary.withOpacity(0.1),
+                ),
+                child: IconButton(
+                  icon: Icon(
+                    Icons.arrow_back,
+                    color: AppColors.textPrimary(context),
+                    size: 20.sp,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  splashRadius: 24.r,
+                ),
               ),
               actions: [
                 if (state.selectedLocation != null &&
                     state.messageText.isNotEmpty)
-                  IconButton(
-                    icon: const Icon(Icons.check),
-                    tooltip: 'Save reminder',
-                    onPressed: _saveReminder,
+                  Container(
+                    margin: EdgeInsets.only(right: 16.w),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.primary.withOpacity(0.1),
+                    ),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.check,
+                        color: AppColors.primary,
+                        size: 22.sp,
+                      ),
+                      tooltip: 'Save reminder',
+                      onPressed: _saveReminder,
+                      splashRadius: 24.r,
+                    ),
                   ),
               ],
             ),
@@ -405,18 +465,11 @@ class _LocationPickerLifecycleWrapperState
 
                           // Radius slider
                           _buildRadiusSlider(state),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 24),
 
                           // Save button
-                          ElevatedButton.icon(
-                            onPressed:
-                                state.selectedLocation != null &&
-                                    state.messageText.isNotEmpty
-                                ? _saveReminder
-                                : null,
-                            icon: const Icon(Icons.check),
-                            label: const Text('Save Reminder'),
-                          ),
+                          _buildPremiumSaveButton(state),
+                          const SizedBox(height: 32),
                         ],
                       ),
                     );
@@ -622,6 +675,67 @@ class _LocationPickerLifecycleWrapperState
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildPremiumSaveButton(LocationPickerState state) {
+    final canSave =
+        state.selectedLocation != null && state.messageText.isNotEmpty;
+
+    return Container(
+      width: double.infinity,
+      height: 56.h,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: canSave
+              ? [AppColors.primary, AppColors.primary.withOpacity(0.8)]
+              : [Colors.grey.withOpacity(0.5), Colors.grey.withOpacity(0.3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: canSave
+            ? [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 5),
+                ),
+              ]
+            : [],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: canSave
+              ? () {
+                  // HapticFeedback.mediumImpact();
+                  _saveReminder();
+                }
+              : null,
+          borderRadius: BorderRadius.circular(16.r),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.check_circle_outline,
+                size: 20.sp,
+                color: Colors.white,
+              ),
+              SizedBox(width: 12.w),
+              Text(
+                widget.existingReminder != null
+                    ? 'Update Reminder'
+                    : 'Set Reminder',
+                style: AppTypography.body1(
+                  context,
+                  Colors.white,
+                ).copyWith(fontWeight: FontWeight.w600, color: Colors.white),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,3 @@
-import 'package:mynotes/domain/repositories/media_repository.dart';
-
 /// Advanced media filtering and ranking service
 class MediaFilteringService {
   static final MediaFilteringService _instance =

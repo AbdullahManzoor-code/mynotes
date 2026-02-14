@@ -1,130 +1,201 @@
+// lib/presentation/pages/location_reminder_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bloc.dart';
-import 'package:mynotes/presentation/pages/location_picker_screen.dart';
-import 'package:mynotes/presentation/pages/saved_locations_screen.dart';
+import 'package:mynotes/presentation/widgets/lottie_animation_widget.dart';
 import 'package:mynotes/presentation/widgets/location/location_reminder_card.dart';
 import 'package:mynotes/presentation/widgets/location/location_permission_dialog.dart';
 import 'package:mynotes/domain/entities/location_reminder_model.dart';
+import 'package:mynotes/presentation/pages/location_picker_screen.dart';
+import 'package:mynotes/presentation/pages/saved_locations_screen.dart';
 import 'package:mynotes/core/services/location_reminders_manager.dart';
+import '../design_system/design_system.dart';
+import 'dart:ui' as ui;
 
+/// Location Reminder Screen - Polished & Functional
+/// Merged premium design with real location intelligence logic
 class LocationReminderScreen extends StatelessWidget {
   const LocationReminderScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return _LocationLifecycleWrapper(
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Location Reminders'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.bookmark),
-              tooltip: 'Saved locations',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const SavedLocationsScreen(),
-                  ),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.help_outline),
-              tooltip: 'How it works',
-              onPressed: () => _showHelpDialog(context),
-            ),
-          ],
-        ),
-        body: Column(
-          children: [
-            // Permission banner
-            LocationPermissionBanner(
-              onPermissionGranted: () {
-                LocationRemindersManager().startMonitoring();
-                context.read<LocationReminderBloc>().add(
-                  LoadLocationReminders(),
-                );
-              },
-            ),
-            // Reminders list
-            Expanded(
-              child: BlocBuilder<LocationReminderBloc, LocationReminderState>(
-                builder: (context, state) {
-                  if (state is LocationReminderInitial) {
-                    context.read<LocationReminderBloc>().add(
-                      LoadLocationReminders(),
-                    );
-                    return const Center(child: CircularProgressIndicator());
-                  }
+      child: BlocBuilder<LocationReminderBloc, LocationReminderState>(
+        builder: (context, state) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
 
-                  if (state is LocationReminderLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (state is LocationReminderError) {
-                    return _buildErrorState(context, state.message);
-                  }
-
-                  if (state is LocationReminderLoaded) {
-                    if (state.reminders.isEmpty) {
-                      return _buildEmptyState(context);
-                    }
-                    return _buildReminderList(context, state);
-                  }
-
-                  return const Center(child: CircularProgressIndicator());
-                },
-              ),
-            ),
-          ],
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _createNewReminder(context),
-          icon: const Icon(Icons.add_location_alt),
-          label: const Text('New Location Reminder'),
-        ),
+          return Scaffold(
+            backgroundColor: isDark
+                ? AppColors.darkBackground
+                : AppColors.lightBackground,
+            extendBodyBehindAppBar: true,
+            appBar: _buildPremiumAppBar(context),
+            body: _buildBody(context, state),
+            floatingActionButton: _buildSmartFAB(context),
+          );
+        },
       ),
     );
+  }
+
+  PreferredSizeWidget _buildPremiumAppBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark
+        ? AppColors.darkSurface
+        : AppColors.lightSurface;
+
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  surfaceColor.withOpacity(0.8),
+                  surfaceColor.withOpacity(0.6),
+                ],
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.primary.withOpacity(0.1),
+                  width: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      title: Text(
+        'Location Reminders',
+        style: AppTypography.heading3(
+          context,
+          AppColors.textPrimary(context),
+        ).copyWith(fontWeight: FontWeight.w600),
+      ),
+      centerTitle: false,
+      leading: Container(
+        margin: EdgeInsets.all(8.w),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.primary.withOpacity(0.1),
+        ),
+        child: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.textPrimary(context),
+            size: 20.sp,
+          ),
+          onPressed: () => Navigator.pop(context),
+          splashRadius: 24.r,
+        ),
+      ),
+      actions: [
+        Container(
+          margin: EdgeInsets.only(right: 8.w),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary.withOpacity(0.1),
+          ),
+          child: IconButton(
+            icon: Icon(
+              Icons.bookmark_outline,
+              color: AppColors.textPrimary(context),
+              size: 20.sp,
+            ),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SavedLocationsScreen()),
+              );
+            },
+            splashRadius: 24.r,
+          ),
+        ),
+        Container(
+          margin: EdgeInsets.only(right: 16.w),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary.withOpacity(0.1),
+          ),
+          child: IconButton(
+            icon: Icon(
+              Icons.help_outline,
+              color: AppColors.textPrimary(context),
+              size: 20.sp,
+            ),
+            onPressed: () => _showHelpDialog(context),
+            splashRadius: 24.r,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBody(BuildContext context, LocationReminderState state) {
+    if (state is LocationReminderInitial) {
+      context.read<LocationReminderBloc>().add(LoadLocationReminders());
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state is LocationReminderLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (state is LocationReminderError) {
+      return _buildErrorState(context, state.message);
+    }
+
+    if (state is LocationReminderLoaded) {
+      if (state.reminders.isEmpty) {
+        return _buildEmptyState(context);
+      }
+      return _buildReminderList(context, state);
+    }
+
+    return const Center(child: CircularProgressIndicator());
   }
 
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(32.0),
+        padding: EdgeInsets.all(32.w),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.location_on_outlined,
-              size: 80,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.5),
+            LottieAnimationWidget(
+              'location_empty',
+              height: 200.h,
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
             Text(
               'No Location Reminders',
-              style: Theme.of(context).textTheme.headlineSmall,
+              style: AppTypography.heading3(
+                context,
+                AppColors.textPrimary(context),
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12.h),
             Text(
               'Create reminders that trigger when you arrive at or leave a specific place.',
-              style: Theme.of(
+              style: AppTypography.body1(
                 context,
-              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                AppColors.textSecondary(context),
+              ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
-            ElevatedButton.icon(
-              onPressed: () => _createNewReminder(context),
-              icon: const Icon(Icons.add),
-              label: const Text('Create First Reminder'),
-            ),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => _showHelpDialog(context),
-              child: const Text('Learn how it works'),
+            SizedBox(height: 32.h),
+            _buildSmartActionButton(
+              context,
+              'Create First Reminder',
+              Icons.add_location_alt_outlined,
+              () => _createNewReminder(context),
             ),
           ],
         ),
@@ -142,41 +213,50 @@ class LocationReminderScreen extends StatelessWidget {
         .toList();
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(16.w, 100.h, 16.w, 100.h),
       children: [
-        // Permission status banner
-        if (!state.hasLocationPermission) _buildPermissionBanner(context),
+        if (!state.hasLocationPermission)
+          LocationPermissionBanner(
+            onPermissionGranted: () {
+              LocationRemindersManager().startMonitoring();
+              context.read<LocationReminderBloc>().add(LoadLocationReminders());
+            },
+          ),
 
-        // Active reminders
         if (activeReminders.isNotEmpty) ...[
           _buildSectionHeader(context, 'Active', activeReminders.length),
-          const SizedBox(height: 8),
+          SizedBox(height: 12.h),
           ...activeReminders.map(
-            (reminder) => LocationReminderCard(
-              reminder: reminder,
-              onTap: () => _editReminder(context, reminder),
-              onToggle: (active) => _toggleReminder(context, reminder, active),
-              onDelete: () => _deleteReminder(context, reminder),
+            (reminder) => Padding(
+              padding: EdgeInsets.only(bottom: 12.h),
+              child: LocationReminderCard(
+                reminder: reminder,
+                onTap: () => _editReminder(context, reminder),
+                onToggle: (active) =>
+                    _toggleReminder(context, reminder, active),
+                onDelete: () => _deleteReminder(context, reminder),
+              ),
             ),
           ),
         ],
 
-        // Inactive reminders
         if (inactiveReminders.isNotEmpty) ...[
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
           _buildSectionHeader(context, 'Inactive', inactiveReminders.length),
-          const SizedBox(height: 8),
+          SizedBox(height: 12.h),
           ...inactiveReminders.map(
-            (reminder) => LocationReminderCard(
-              reminder: reminder,
-              onTap: () => _editReminder(context, reminder),
-              onToggle: (active) => _toggleReminder(context, reminder, active),
-              onDelete: () => _deleteReminder(context, reminder),
+            (reminder) => Padding(
+              padding: EdgeInsets.only(bottom: 12.h),
+              child: LocationReminderCard(
+                reminder: reminder,
+                onTap: () => _editReminder(context, reminder),
+                onToggle: (active) =>
+                    _toggleReminder(context, reminder, active),
+                onDelete: () => _deleteReminder(context, reminder),
+              ),
             ),
           ),
         ],
-
-        const SizedBox(height: 80), // Space for FAB
       ],
     );
   }
@@ -186,88 +266,125 @@ class LocationReminderScreen extends StatelessWidget {
       children: [
         Text(
           title,
-          style: Theme.of(
+          style: AppTypography.heading4(
             context,
-          ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            AppColors.textPrimary(context),
+          ).copyWith(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8.w),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+          padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 2.h),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
+            color: AppColors.primary.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(20.r),
           ),
           child: Text(
             count.toString(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.bold,
-            ),
+            style: AppTypography.caption(
+              context,
+              AppColors.primary,
+            ).copyWith(fontWeight: FontWeight.bold),
           ),
         ),
       ],
     );
   }
 
-  // Widget _buildPermissionBanner(BuildContext context) {
-  //   return Card(
-  //     color: Colors.orange.shade100,
-  //     margin: const EdgeInsets.only(bottom: 16),
-  //     child: Padding(
-  //       padding: const EdgeInsets.all(16),
-  //       child: Row(
-  //         children: [
-  //           const Icon(Icons.warning_amber, color: Colors.orange),
-  //           const SizedBox(width: 12),
-  //           Expanded(
-  //             child: Column(
-  //               crossAxisAlignment: CrossAxisAlignment.start,
-  //               children: [
-  //                 const Text(
-  //                   'Background location needed',
-  //                   style: TextStyle(fontWeight: FontWeight.bold),
-  //                 ),
-  //                 const SizedBox(height: 4),
-  //                 Text(
-  //                   'Enable "Always" location access for reminders to work when app is closed.',
-  //                   style: Theme.of(context).textTheme.bodySmall,
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //           TextButton(
-  //             onPressed: () {
-  //               context.read<LocationReminderBloc>().add(
-  //                 RequestLocationPermission(),
-  //               );
-  //             },
-  //             child: const Text('Enable'),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  // }
+  Widget _buildSmartFAB(BuildContext context) {
+    return Container(
+      height: 56.h,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(28.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            HapticFeedback.mediumImpact();
+            _createNewReminder(context);
+          },
+          borderRadius: BorderRadius.circular(28.r),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add_location_alt, color: Colors.white, size: 24.sp),
+                SizedBox(width: 12.w),
+                Text(
+                  'New Reminder',
+                  style: AppTypography.body1(
+                    context,
+                    Colors.white,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
-  // Widget _buildErrorState(BuildContext context, String message) {
-  //   return Center(
-  //     child: Column(
-  //       mainAxisAlignment: MainAxisAlignment.center,
-  //       children: [
-  //         const Icon(Icons.error_outline, size: 64, color: Colors.red),
-  //         const SizedBox(height: 16),
-  //         Text(message),
-  //         const SizedBox(height: 16),
-  //         ElevatedButton(
-  //           onPressed: () {
-  //             context.read<LocationReminderBloc>().add(LoadLocationReminders());
-  //           },
-  //           child: const Text('Retry'),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
+  Widget _buildSmartActionButton(
+    BuildContext context,
+    String label,
+    IconData icon,
+    VoidCallback onTap,
+  ) {
+    return Container(
+      height: 52.h,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppColors.primary, AppColors.primary.withOpacity(0.9)],
+        ),
+        borderRadius: BorderRadius.circular(16.r),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16.r),
+          child: Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.w),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: Colors.white, size: 20.sp),
+                SizedBox(width: 12.w),
+                Text(
+                  label,
+                  style: AppTypography.body1(
+                    context,
+                    Colors.white,
+                  ).copyWith(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   void _createNewReminder(BuildContext context) {
     Navigator.push(
@@ -299,8 +416,11 @@ class LocationReminderScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20.r),
+        ),
         title: const Text('Delete Reminder?'),
-        content: Text('Delete reminder "${reminder.message}"?'),
+        content: Text('Remove "${reminder.message}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -324,53 +444,40 @@ class LocationReminderScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('How Location Reminders Work'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24.r),
+        ),
+        title: Row(
+          children: [
+            Icon(Icons.help_outline, color: AppColors.primary, size: 28.sp),
+            SizedBox(width: 12.w),
+            const Expanded(child: Text('How it Works')),
+          ],
+        ),
         content: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
-            children: const [
-              Text(
-                '📍 Choose a Location',
-                style: TextStyle(fontWeight: FontWeight.bold),
+            children: [
+              _buildHelpItem(
+                Icons.map_outlined,
+                'Choose Location',
+                'Search or drop a pin on the map.',
               ),
-              SizedBox(height: 4),
-              Text('Search for a place or drop a pin on the map.'),
-              SizedBox(height: 16),
-              Text(
-                '⚡ Set a Trigger',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              _buildHelpItem(
+                Icons.notifications_active_outlined,
+                'Set Trigger',
+                'Get notified when you arrive or leave.',
               ),
-              SizedBox(height: 4),
-              Text(
-                'Choose "When I arrive" or "When I leave" to control when the reminder fires.',
+              _buildHelpItem(
+                Icons.radar_outlined,
+                'Adjust Radius',
+                'Set proximity distance from 50m to 500m.',
               ),
-              SizedBox(height: 16),
-              Text(
-                '📏 Adjust Radius',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Set how close you need to be for the reminder to trigger (50m - 500m).',
-              ),
-              SizedBox(height: 16),
-              Text(
-                '🔔 Get Notified',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'When you enter or exit the area, you\'ll receive a notification.',
-              ),
-              SizedBox(height: 16),
-              Text(
-                '⚠️ Background Location',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'For reminders to work when the app is closed, you must allow "Always" location access.',
+              _buildHelpItem(
+                Icons.settings_input_antenna_outlined,
+                'Always Allow',
+                'Reminders work best with "Always" location access.',
               ),
             ],
           ),
@@ -378,49 +485,40 @@ class LocationReminderScreen extends StatelessWidget {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Got it'),
+            child: const Text(
+              'Got it',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildPermissionBanner(BuildContext context) {
-    return Card(
-      color: Colors.orange.shade100,
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Icon(Icons.warning_amber, color: Colors.orange),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Background location needed',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Enable "Always" location access for reminders to work when app is closed.',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
-              ),
+  Widget _buildHelpItem(IconData icon, String title, String subtitle) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 16.h),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: AppColors.primary, size: 20.sp),
+          SizedBox(width: 12.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(fontSize: 13.sp, color: Colors.grey),
+                ),
+              ],
             ),
-            TextButton(
-              onPressed: () {
-                context.read<LocationReminderBloc>().add(
-                  RequestLocationPermission(),
-                );
-              },
-              child: const Text('Enable'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -430,10 +528,10 @@ class LocationReminderScreen extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
+          Icon(Icons.error_outline, size: 64.sp, color: Colors.red),
+          SizedBox(height: 16.h),
           Text(message),
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
           ElevatedButton(
             onPressed: () {
               context.read<LocationReminderBloc>().add(LoadLocationReminders());

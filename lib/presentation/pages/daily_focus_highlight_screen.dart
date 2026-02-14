@@ -174,7 +174,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
           // Animation placeholder
           SizedBox(
             height: 200.h,
-            child: LottieAnimationWidget('empty', width: 180.w, height: 180.h),
+            child: LottieAnimationWidget('empty_state', width: 180.w, height: 180.h),
           ),
           SizedBox(height: 32.h),
 

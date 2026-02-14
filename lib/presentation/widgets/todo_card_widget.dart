@@ -146,12 +146,6 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
           // Show 3-second undo snackbar (TD-004)
           getIt<GlobalUiService>().showInfo(
             'Todo deleted: ${widget.todo.text}',
-            // action: SnackBarAction(
-            //   label: 'Undo',
-            //   onPressed: () {
-            //     // Undo deletion - handled by parent
-            //   },
-            // ),
           );
           return true;
         },
@@ -160,57 +154,70 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
         },
         child: GestureDetector(
           onTap: _onTap,
-          child: Container(
-            margin: EdgeInsets.only(bottom: widget.isCompact ? 8 : 12),
-            padding: EdgeInsets.all(widget.isCompact ? 12 : 16),
-            decoration: BoxDecoration(
-              color: AppColors.surface(context),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.border(context).withOpacity(0.5),
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+          child: GlassContainer(
+            borderRadius: 20.r,
+            blur: 10,
+            color: (widget.todo.isCompleted
+                ? AppColors.surface(context).withOpacity(0.3)
+                : AppColors.surface(context).withOpacity(0.7)),
+            border: Border.all(
+              color: widget.todo.isCompleted
+                  ? Colors.transparent
+                  : AppColors.primary.withOpacity(0.1),
             ),
+            padding: EdgeInsets.all(widget.isCompact ? 12.r : 16.r),
+            margin: EdgeInsets.only(bottom: 12.h),
             child: Row(
               children: [
-                // Checkbox with animation
+                // Priority Indicator
+                _buildPriorityIndicator(),
+                SizedBox(width: 12.w),
+
+                // Animated Checkbox
                 _buildAnimatedCheckbox(),
-                const SizedBox(width: 12),
+                SizedBox(width: 14.w),
 
                 // Content
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Todo text with strikethrough animation
                       _buildAnimatedText(),
-
                       if (!widget.isCompact) ...[
-                        const SizedBox(height: 8),
+                        SizedBox(height: 8.h),
                         _buildMetadata(),
                       ],
                     ],
                   ),
                 ),
 
-                // Priority indicator
-                _buildPriorityIndicator(),
-
                 // Focus button (only for incomplete tasks)
                 if (widget.showFocusButton && !widget.todo.isCompleted) ...[
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8.w),
                   _buildFocusButton(),
                 ],
               ],
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildFocusButton() {
+    return IconButton(
+      icon: Icon(
+        Icons.center_focus_strong_rounded,
+        color: AppColors.primary.withOpacity(0.6),
+        size: 20.sp,
+      ),
+      onPressed: () {
+        HapticFeedback.lightImpact();
+        widget.onStartFocus?.call(widget.todo);
+      },
+      style: IconButton.styleFrom(
+        backgroundColor: AppColors.primary.withOpacity(0.05),
+        padding: EdgeInsets.all(8.r),
       ),
     );
   }
@@ -222,22 +229,31 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
         animation: _checkboxAnimation,
         builder: (context, child) {
           return Container(
-            width: 24,
-            height: 24,
+            width: 24.w,
+            height: 24.h,
             decoration: BoxDecoration(
               color: _checkboxAnimation.value > 0.5
                   ? AppColors.primary
                   : Colors.transparent,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(8.r),
               border: Border.all(
                 color: _checkboxAnimation.value > 0.5
                     ? AppColors.primary
-                    : AppColors.border(context),
-                width: 2,
+                    : AppColors.textSecondary(context).withOpacity(0.3),
+                width: 2.w,
               ),
+              boxShadow: _checkboxAnimation.value > 0.5
+                  ? [
+                      BoxShadow(
+                        color: AppColors.primary.withOpacity(0.4),
+                        blurRadius: 8.r,
+                        spreadRadius: 1.r,
+                      ),
+                    ]
+                  : [],
             ),
             child: _checkboxAnimation.value > 0.5
-                ? Icon(Icons.check, size: 16, color: Colors.white)
+                ? Icon(Icons.check_rounded, size: 16.sp, color: Colors.white)
                 : null,
           );
         },
@@ -250,32 +266,32 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
       animation: _strikethroughAnimation,
       builder: (context, child) {
         return Stack(
+          alignment: Alignment.centerLeft,
           children: [
             Text(
               widget.todo.text,
-              style: AppTypography.bodyMedium(
-                context,
-                widget.todo.isCompleted
-                    ? AppColors.textSecondary(context).withOpacity(0.6)
+              style: AppTypography.bodyMedium(context).copyWith(
+                color: widget.todo.isCompleted
+                    ? AppColors.textSecondary(context).withOpacity(0.5)
                     : AppColors.textPrimary(context),
-                FontWeight.w500,
+                fontWeight: widget.todo.isCompleted
+                    ? FontWeight.w500
+                    : FontWeight.w700,
+                decoration: TextDecoration.none, // Custom strikethrough
               ),
               maxLines: widget.isCompact ? 1 : 3,
               overflow: TextOverflow.ellipsis,
             ),
-            // Strikethrough line
             if (_strikethroughAnimation.value > 0)
-              Positioned.fill(
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    height: 1,
-                    width:
-                        MediaQuery.of(context).size.width *
-                        0.6 *
-                        _strikethroughAnimation.value,
-                    color: AppColors.textSecondary(context),
-                  ),
+              Container(
+                height: 1.5.h,
+                width:
+                    MediaQuery.of(context).size.width *
+                    0.5 *
+                    _strikethroughAnimation.value,
+                decoration: BoxDecoration(
+                  color: AppColors.textSecondary(context).withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(1.r),
                 ),
               ),
           ],
@@ -285,47 +301,72 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
   }
 
   Widget _buildMetadata() {
-    return Row(
+    return Wrap(
+      spacing: 12.w,
+      runSpacing: 4.h,
       children: [
         // Category
-        if (widget.showCategory) ...[
-          Icon(
-            _getCategoryIcon(),
-            size: 14,
-            color: AppColors.textSecondary(context),
+        if (widget.showCategory)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _getCategoryIcon(),
+                size: 14.sp,
+                color: AppColors.primary.withOpacity(0.7),
+              ),
+              SizedBox(width: 4.w),
+              Text(
+                widget.todo.category.displayName,
+                style: AppTypography.caption(context).copyWith(
+                  color: AppColors.textSecondary(context),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 4),
-          Text(
-            widget.todo.category.displayName,
-            style: AppTypography.caption(
-              context,
-              AppColors.textSecondary(context),
-            ),
-          ),
-          const SizedBox(width: 12),
-        ],
 
         // Due date
-        if (widget.todo.dueDate != null) ...[
-          Icon(Icons.schedule, size: 14, color: _getDueDateColor()),
-          const SizedBox(width: 4),
-          Text(
-            _formatDueDate(widget.todo.dueDate!),
-            style: AppTypography.caption(context, _getDueDateColor()),
+        if (widget.todo.dueDate != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.calendar_today_rounded,
+                size: 14.sp,
+                color: _getDueDateColor(),
+              ),
+              SizedBox(width: 4.w),
+              Text(
+                _formatDueDate(widget.todo.dueDate!),
+                style: AppTypography.caption(context).copyWith(
+                  color: _getDueDateColor(),
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-        ],
-
-        const Spacer(),
 
         // Completion timestamp
-        if (widget.todo.isCompleted && widget.todo.completedAt != null) ...[
-          Icon(Icons.check_circle_outline, size: 14, color: Colors.green),
-          const SizedBox(width: 4),
-          Text(
-            _formatCompletionTime(widget.todo.completedAt!),
-            style: AppTypography.caption(context, Colors.green),
+        if (widget.todo.isCompleted && widget.todo.completedAt != null)
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.task_alt_rounded,
+                size: 14.sp,
+                color: AppColors.accentGreen,
+              ),
+              SizedBox(width: 4.w),
+              Text(
+                _formatCompletionTime(widget.todo.completedAt!),
+                style: AppTypography.caption(context).copyWith(
+                  color: AppColors.accentGreen,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
-        ],
       ],
     );
   }
@@ -333,44 +374,18 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
   Widget _buildPriorityIndicator() {
     final color = _getPriorityColor(widget.todo.priority);
     return Container(
-      width: 4,
-      height: widget.isCompact ? 32 : 40,
+      width: 4.w,
+      height: widget.isCompact ? 32.h : 44.h,
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(2),
-      ),
-    );
-  }
-
-  Widget _buildFocusButton() {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.lightImpact();
-        if (widget.onStartFocus != null) {
-          widget.onStartFocus!(widget.todo);
-        } else {
-          // Navigate to focus session with todo context
-          Navigator.pushNamed(
-            context,
-            AppRoutes.focusSession,
-            arguments: {
-              'todoId': widget.todo.id,
-              'todoTitle': widget.todo.text,
-            },
-          );
-        }
-      },
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: AppColors.primaryColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          Icons.timer_outlined,
-          size: 18,
-          color: AppColors.primaryColor,
-        ),
+        borderRadius: BorderRadius.circular(4.r),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.3),
+            blurRadius: 4.r,
+            spreadRadius: 1.r,
+          ),
+        ],
       ),
     );
   }

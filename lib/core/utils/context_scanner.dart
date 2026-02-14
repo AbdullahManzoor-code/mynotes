@@ -60,6 +60,21 @@ class ContextScanner {
       }
     }
 
+    // 4. PREMIUM: Detect mentions of other potential note titles (e.g. [[Project]])
+    // or recurring keywords that might be related to other notes.
+    final potentialLinks = extractPotentialKeywords(text);
+    for (var link in potentialLinks) {
+      if (link.length > 3) {
+        suggestions.add(
+          ContextSuggestion(
+            title: 'Link to "$link"',
+            content: link,
+            type: SuggestionType.linkedNote,
+          ),
+        );
+      }
+    }
+
     return suggestions;
   }
 

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get_it/get_it.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/services.dart';
 import '../../core/services/audio_recorder_service.dart';
+import '../design_system/design_system.dart';
+import '../design_system/components/layouts/glass_container.dart';
+// import '../design_system/components/animations/app_animations.dart';
 import 'dart:async';
+import 'dart:ui' as ui;
 
 /// Audio recording metadata
 class AudioMetadata {
@@ -50,15 +56,27 @@ class AudioRecorderWidget extends StatefulWidget {
   State<AudioRecorderWidget> createState() => _AudioRecorderWidgetState();
 }
 
-class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
+class _AudioRecorderWidgetState extends State<AudioRecorderWidget>
+    with SingleTickerProviderStateMixin {
   final AudioRecorderService _recorderService = GetIt.I<AudioRecorderService>();
   bool _isRecording = false;
   Duration _recordingDuration = Duration.zero;
   Timer? _timer;
+  late AnimationController _animationController;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..repeat(reverse: true);
+  }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -74,6 +92,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
     }
 
     await _recorderService.startRecording();
+    HapticFeedback.mediumImpact();
 
     setState(() {
       _isRecording = true;
@@ -92,6 +111,7 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
   Future<void> _stopRecording() async {
     final path = await _recorderService.stopRecording();
     _timer?.cancel();
+    HapticFeedback.lightImpact();
 
     if (path != null) {
       widget.onRecordingComplete(path, _recordingDuration);
@@ -103,81 +123,144 @@ class _AudioRecorderWidgetState extends State<AudioRecorderWidget> {
   }
 
   String _formatDuration(Duration duration) {
-    String twoDigits(int n) => n.toString().padLeft(2, '0');
-    final minutes = twoDigits(duration.inMinutes.remainder(60));
-    final seconds = twoDigits(duration.inSeconds.remainder(60));
-    return '$minutes:$seconds';
+    String twoDigits(int n) => n.toString().padLeft(2, "0");
+    String twoDigitMinutes = twoDigits(duration.inMinutes.remainder(60));
+    String twoDigitSeconds = twoDigits(duration.inSeconds.remainder(60));
+    return "$twoDigitMinutes:$twoDigitSeconds";
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+    return GlassContainer(
+      borderRadius: 24.r,
+      blur: 20,
+      color: AppColors.surface(context).withOpacity(0.95),
+      padding: EdgeInsets.fromLTRB(24.w, 20.h, 24.w, 40.h),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            _isRecording ? 'Recording Audio...' : 'Voice Recorder',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 24),
-          Text(
-            _formatDuration(_recordingDuration),
-            style: const TextStyle(
-              fontSize: 48,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'Courier',
+          Container(
+            width: 40.w,
+            height: 4.h,
+            margin: EdgeInsets.only(bottom: 24.h),
+            decoration: BoxDecoration(
+              color: AppColors.textSecondary(context).withOpacity(0.2),
+              borderRadius: BorderRadius.circular(2.r),
             ),
           ),
-          const SizedBox(height: 32),
+          Text(
+            _isRecording ? 'Recording...' : 'Audio Recorder',
+            style: AppTypography.heading3(context).copyWith(
+              color: _isRecording
+                  ? Colors.red.shade400
+                  : AppColors.textPrimary(context),
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          SizedBox(height: 32.h),
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              if (_isRecording)
+                AnimatedBuilder(
+                  animation: _animationController,
+                  builder: (context, child) {
+                    return Container(
+                      width: 140.w + (20 * _animationController.value),
+                      height: 140.w + (20 * _animationController.value),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.red.withOpacity(
+                          0.1 * (1 - _animationController.value),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              Text(
+                _formatDuration(_recordingDuration),
+                style: AppTypography.heading1(context).copyWith(
+                  fontSize: 56.sp,
+                  fontWeight: FontWeight.w300,
+                  letterSpacing: -1,
+                  fontFeatures: [const ui.FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 48.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: _isRecording
-                    ? () async {
-                        await _recorderService.stopRecording();
-                        widget.onCancel?.call();
-                      }
-                    : widget.onCancel,
+              _buildControlCircle(
+                icon: Icons.close_rounded,
+                color: AppColors.textSecondary(context).withOpacity(0.1),
+                iconColor: AppColors.textPrimary(context),
+                onTap: () {
+                  if (_isRecording) _recorderService.stopRecording();
+                  widget.onCancel?.call();
+                },
               ),
               GestureDetector(
                 onTap: _isRecording ? _stopRecording : _startRecording,
                 child: Container(
-                  width: 80,
-                  height: 80,
+                  width: 84.w,
+                  height: 84.w,
                   decoration: BoxDecoration(
-                    color: _isRecording ? Colors.red : Colors.blue,
+                    color: _isRecording ? Colors.red : AppColors.primary,
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: (_isRecording ? Colors.red : Colors.blue)
+                        color: (_isRecording ? Colors.red : AppColors.primary)
                             .withOpacity(0.3),
-                        blurRadius: 15,
-                        spreadRadius: 5,
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
-                  child: Icon(
-                    _isRecording ? Icons.stop : Icons.mic,
-                    color: Colors.white,
-                    size: 40,
+                  child: Center(
+                    child: Icon(
+                      _isRecording ? Icons.stop_rounded : Icons.mic_rounded,
+                      color: Colors.white,
+                      size: 36.sp,
+                    ),
                   ),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.check),
-                onPressed: _isRecording ? _stopRecording : null,
+              _buildControlCircle(
+                icon: Icons.check_rounded,
+                color: _isRecording
+                    ? Colors.green.withOpacity(0.1)
+                    : Colors.grey.withOpacity(0.1),
+                iconColor: _isRecording ? Colors.green : Colors.grey,
+                onTap: _isRecording ? _stopRecording : null,
               ),
             ],
           ),
-          const SizedBox(height: 16),
         ],
+      ),
+    );
+  }
+
+  Widget _buildControlCircle({
+    required IconData icon,
+    required Color color,
+    required Color iconColor,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: () {
+        if (onTap != null) {
+          HapticFeedback.lightImpact();
+          onTap();
+        }
+      },
+      borderRadius: BorderRadius.circular(30.r),
+      child: Container(
+        width: 52.w,
+        height: 52.w,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        child: Icon(icon, color: iconColor, size: 24.sp),
       ),
     );
   }
@@ -230,6 +313,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   }
 
   void _togglePlayPause() async {
+    HapticFeedback.lightImpact();
     if (_isPlaying) {
       await _audioPlayer.pause();
     } else {
@@ -246,66 +330,113 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.audio.fileName,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '${widget.audio.formattedSize} • ${_formatDuration(_totalDuration)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
+    return GlassContainer(
+      margin: EdgeInsets.symmetric(vertical: 8.h),
+      padding: EdgeInsets.all(16.w),
+      borderRadius: 16.r,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _buildPlayButton(),
+              SizedBox(width: 16.w),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.audio.fileName,
+                      style: AppTypography.heading4(
+                        context,
+                      ).copyWith(fontSize: 14.sp, fontWeight: FontWeight.w600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      '${widget.audio.formattedSize} • ${_formatDuration(_totalDuration)}',
+                      style: AppTypography.bodySmall(context),
+                    ),
+                  ],
                 ),
-                if (widget.onDelete != null)
-                  IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: widget.onDelete,
-                  ),
-              ],
-            ),
-            Row(
-              children: [
+              ),
+              if (widget.onDelete != null)
                 IconButton(
                   icon: Icon(
-                    _isPlaying ? Icons.pause_circle : Icons.play_circle,
+                    Icons.delete_outline_rounded,
+                    color: Colors.red.withOpacity(0.7),
+                    size: 22.sp,
                   ),
-                  iconSize: 36,
-                  color: Theme.of(context).primaryColor,
-                  onPressed: _togglePlayPause,
+                  onPressed: () {
+                    HapticFeedback.mediumImpact();
+                    widget.onDelete!();
+                  },
                 ),
-                Expanded(
-                  child: Slider(
-                    value: _currentPosition.inMilliseconds.toDouble(),
-                    max: _totalDuration.inMilliseconds.toDouble() > 0
-                        ? _totalDuration.inMilliseconds.toDouble()
-                        : 1.0,
-                    onChanged: (value) async {
-                      await _audioPlayer.seek(
-                        Duration(milliseconds: value.toInt()),
-                      );
-                    },
-                  ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Theme(
+            data: Theme.of(context).copyWith(
+              sliderTheme: SliderThemeData(
+                trackHeight: 2.h,
+                thumbShape: RoundSliderThumbShape(enabledThumbRadius: 6.r),
+                overlayShape: RoundSliderOverlayShape(overlayRadius: 14.r),
+                activeTrackColor: AppColors.primary,
+                inactiveTrackColor: AppColors.textSecondary(
+                  context,
+                ).withOpacity(0.1),
+                thumbColor: AppColors.primary,
+              ),
+            ),
+            child: Slider(
+              value: _currentPosition.inMilliseconds.toDouble(),
+              max: _totalDuration.inMilliseconds.toDouble() > 0
+                  ? _totalDuration.inMilliseconds.toDouble()
+                  : 1.0,
+              onChanged: (value) async {
+                await _audioPlayer.seek(Duration(milliseconds: value.toInt()));
+              },
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 4.w),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  _formatDuration(_currentPosition),
+                  style: AppTypography.bodySmall(
+                    context,
+                  ).copyWith(fontSize: 10.sp),
+                ),
+                Text(
+                  _formatDuration(_totalDuration),
+                  style: AppTypography.bodySmall(
+                    context,
+                  ).copyWith(fontSize: 10.sp),
                 ),
               ],
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPlayButton() {
+    return GestureDetector(
+      onTap: _togglePlayPause,
+      child: Container(
+        width: 44.w,
+        height: 44.w,
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.1),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+          color: AppColors.primary,
+          size: 28.sp,
         ),
       ),
     );
@@ -326,30 +457,37 @@ class AudioAttachmentsList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (audios.isEmpty) {
-      return SizedBox.shrink();
+      return const SizedBox.shrink();
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Audio Attachments',
-          style: Theme.of(context).textTheme.titleSmall,
-        ),
-        SizedBox(height: 12),
-        ListView.separated(
-          shrinkWrap: true,
-          physics: NeverScrollableScrollPhysics(),
-          itemCount: audios.length,
-          separatorBuilder: (_, __) => SizedBox(height: 8),
-          itemBuilder: (context, index) {
-            return AudioPlayerWidget(
-              audio: audios[index],
-              onDelete: () => onAudioDelete(index),
-            );
-          },
-        ),
-      ],
+    return AppAnimations.tapScale(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(left: 4.w, bottom: 8.h, top: 16.h),
+            child: Text(
+              'Audio Notes',
+              style: AppTypography.heading4(context).copyWith(
+                color: AppColors.textSecondary(context),
+                letterSpacing: 0.5,
+              ),
+            ),
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            padding: EdgeInsets.zero,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: audios.length,
+            itemBuilder: (context, index) {
+              return AudioPlayerWidget(
+                audio: audios[index],
+                onDelete: () => onAudioDelete(index),
+              );
+            },
+          ),
+        ],
+      ),
     );
   }
 }
