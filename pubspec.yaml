@@ -275,10 +275,10 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  assets:
-    - assets/svg/icons/
-    - assets/svg/illustrations/
-    - assets/animations/
+  # assets:
+  #   - assets/svg/icons/
+  #   - assets/svg/illustrations/
+  #   - assets/animations/
 
   # fonts:
   #   - family: CustomIcons

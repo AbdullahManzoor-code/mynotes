@@ -6,6 +6,7 @@ import '../design_system/design_system.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/focus/focus_bloc.dart';
 import 'focus_session_screen.dart';
+import '../widgets/lottie_animation_widget.dart';
 
 /// Focus Session Celebration Screen
 /// Shown after completing a focus session to celebrate achievement
@@ -168,41 +169,14 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Icon with glow
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              Container(
-                width: 112.w,
-                height: 112.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      AppColors.focusIndigoLight.withOpacity(0.1),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-              Container(
-                width: 112.w,
-                height: 112.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.1),
-                    width: 1,
-                  ),
-                ),
-                child: Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 56.sp,
-                  color: AppColors.focusIndigoLight,
-                ),
-              ),
-            ],
+          // Lottie celebration animation
+          SizedBox(
+            height: 120.h,
+            child: LottieAnimationWidget(
+              'celebration',
+              width: 120.w,
+              height: 120.h,
+            ),
           ),
 
           SizedBox(height: 48.h),

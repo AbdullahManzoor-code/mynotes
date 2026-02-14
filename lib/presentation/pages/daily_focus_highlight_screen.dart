@@ -1,13 +1,17 @@
+// lib/presentation/pages/daily_focus_highlight_screen.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/domain/entities/todo_item.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_state.dart';
 import 'package:mynotes/presentation/bloc/focus/focus_bloc.dart';
-import 'package:mynotes/presentation/design_system/app_typography.dart';
-import 'package:mynotes/core/constants/app_colors.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
+import 'package:mynotes/presentation/widgets/lottie_animation_widget.dart';
+import 'dart:ui' as ui;
 
 /// Screen: Daily Highlight Summary - G4
 /// Displays today's highlight task, progress, and time spent.
@@ -16,187 +20,742 @@ class DailyFocusHighlightScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        title: Text('Daily Highlight', style: AppTypography.heading3(context)),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Theme.of(context).iconTheme.color),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
+      backgroundColor: isDark
+          ? AppColors.darkBackground
+          : AppColors.lightBackground,
+      extendBodyBehindAppBar: true,
+      appBar: _buildPremiumAppBar(context),
       body: BlocBuilder<NotesBloc, NoteState>(
         builder: (context, noteState) {
           if (noteState is NotesLoaded) {
-            // Logic to find "Highlight": 
-            // 1. Tagged with #highlight
-            // 2. OR Priority = Urgent
-            // 3. OR First High priority
-            final highlightTask = _findHighlightTask(noteState.notes.whereType<TodoItem>().toList());
+            final highlightTask = _findHighlightTask(
+              noteState.notes.whereType<TodoItem>().toList(),
+            );
 
             if (highlightTask == null) {
-              return _buildEmptyState(context);
+              return _buildPremiumEmptyState(context);
             }
 
-            return _buildHighlightContent(context, highlightTask);
+            return _buildPremiumHighlightContent(context, highlightTask);
           }
-           return const Center(child: CircularProgressIndicator());
+          return const Center(child: CircularProgressIndicator());
         },
       ),
+    );
+  }
+
+  PreferredSizeWidget _buildPremiumAppBar(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark
+        ? AppColors.darkSurface
+        : AppColors.lightSurface;
+
+    return AppBar(
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      flexibleSpace: ClipRect(
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  surfaceColor.withOpacity(
+                    0.8,
+                  ), // ✅ Fixed: added comma + opacity
+                  surfaceColor.withOpacity(0.6), // ✅ Fixed: was missing comma
+                ],
+              ),
+              border: Border(
+                bottom: BorderSide(
+                  color: AppColors.primary.withOpacity(0.1),
+                  width: 0.5,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+      title: Text(
+        'Daily Highlight',
+        style: AppTypography.heading3(
+          context,
+          AppColors.textPrimary(context),
+        ).copyWith(fontWeight: FontWeight.w600),
+      ),
+      centerTitle: false,
+      leading: Container(
+        margin: EdgeInsets.all(8.w),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: AppColors.primary.withOpacity(0.1),
+        ),
+        child: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: AppColors.textPrimary(context),
+            size: 20.sp,
+          ),
+          onPressed: () => Navigator.pop(context),
+          splashRadius: 24.r,
+        ),
+      ),
+      actions: [
+        Container(
+          margin: EdgeInsets.only(right: 16.w),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.primary.withOpacity(0.1),
+          ),
+          child: IconButton(
+            icon: Icon(
+              Icons.info_outline,
+              color: AppColors.textPrimary(context),
+              size: 20.sp,
+            ),
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Mark a task as "Urgent" or add #highlight to set your daily focus.',
+                    style: AppTypography.caption(
+                      context,
+                      AppColors.textPrimary(context),
+                    ),
+                  ),
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.all(16.w),
+                  backgroundColor: AppColors.primary,
+                ),
+              );
+            },
+            splashRadius: 24.r,
+          ),
+        ),
+      ],
     );
   }
 
   TodoItem? _findHighlightTask(List<TodoItem> todos) {
     // Try finding one with explicit tag in text
     try {
-      return todos.firstWhere((t) => t.text.toLowerCase().contains('#highlight') && !t.isCompleted);
+      return todos.firstWhere(
+        (t) => t.text.toLowerCase().contains('#highlight') && !t.isCompleted,
+      );
     } catch (_) {}
 
     // Try finding first urgent
     try {
-       return todos.firstWhere((t) => t.priority == TodoPriority.urgent && !t.isCompleted);
+      return todos.firstWhere(
+        (t) => t.priority == TodoPriority.urgent && !t.isCompleted,
+      );
     } catch (_) {
       return null;
     }
   }
 
-  Widget _buildEmptyState(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark ? Colors.white70 : Colors.black54;
+  /// Calculate completion percentage from subtasks
+  double _getCompletionPercentage(TodoItem task) {
+    if (task.subtasks.isEmpty) {
+      return task.isCompleted ? 1.0 : 0.0;
+    }
+    final completed = task.subtasks.where((s) => s.isCompleted).length;
+    return completed / task.subtasks.length;
+  }
 
+  Widget _buildPremiumEmptyState(BuildContext context) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.star_border, size: 64.sp, color: color),
-          SizedBox(height: 16.h),
-          Text(
-            'No Daily Highlight Set',
-            style: AppTypography.heading3(context).copyWith(color: color),
+          // Animation placeholder
+          SizedBox(
+            height: 200.h,
+            child: LottieAnimationWidget('empty', width: 180.w, height: 180.h),
           ),
-          SizedBox(height: 8.h),
+          SizedBox(height: 32.h),
+
           Text(
-            'Mark a task as "Urgent" or add #highlight to set it.',
-            style: AppTypography.bodyMedium(context).copyWith(color: color),
+            'No Daily Highlight',
+            style: AppTypography.heading2(
+              context,
+              AppColors.textPrimary(context),
+            ).copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          SizedBox(height: 12.h),
+
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 32.w),
+            child: Text(
+              'Create inspiration for today by marking an important task or adding #highlight',
+              style: AppTypography.body1(
+                context,
+                AppColors.textSecondary(context),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+          SizedBox(height: 32.h),
+
+          // Suggestion card
+          Container(
+            margin: EdgeInsets.symmetric(horizontal: 24.w),
+            padding: EdgeInsets.all(20.w),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  AppColors.primary.withOpacity(0.1),
+                  AppColors.primary.withOpacity(0.05),
+                ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(20.r),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.lightbulb,
+                      color: AppColors.primary,
+                      size: 20.sp,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'How to set your highlight',
+                      style: AppTypography.body1(
+                        context,
+                        AppColors.textPrimary(context),
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                ...[
+                  '• Mark a task as "Urgent" priority',
+                  '• Add #highlight to task title',
+                  '• Set it as your focus goal',
+                ].map(
+                  (tip) => Padding(
+                    padding: EdgeInsets.only(bottom: 8.h),
+                    child: Text(
+                      tip,
+                      style: AppTypography.caption(
+                        context,
+                        AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildHighlightContent(BuildContext context, TodoItem task) {
+  Widget _buildPremiumHighlightContent(BuildContext context, TodoItem task) {
+    final completion = _getCompletionPercentage(task);
+
     return BlocBuilder<FocusBloc, FocusState>(
       builder: (context, focusState) {
-        final completion = task.completionPercentage;
-        final cardColor = Theme.of(context).cardColor;
-
-        return Padding(
-          padding: EdgeInsets.all(24.w),
+        return SingleChildScrollView(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(24.w),
-                decoration: BoxDecoration(
-                  color: cardColor,
-                  borderRadius: BorderRadius.circular(24.r),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.5), width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.primary.withOpacity(0.1),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
-                    )
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'TODAY\'S HIGHLIGHT',
-                      style: AppTypography.caption(context, AppColors.primary).copyWith(letterSpacing: 2, fontWeight: FontWeight.bold),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      task.text.replaceAll('#highlight', '').trim(),
-                      textAlign: TextAlign.center,
-                      style: AppTypography.heading2(context),
-                    ),
-                    SizedBox(height: 24.h),
-                    LinearProgressIndicator(
-                      value: completion,
-                      backgroundColor: Colors.grey.withOpacity(0.2),
-                      valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                      minHeight: 8.h,
-                      borderRadius: BorderRadius.circular(4.r),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      '${(completion * 100).toInt()}% Complete',
-                      style: AppTypography.bodySmall(context, Colors.grey),
-                    ),
-                  ],
-                ),
-              ),
+              SizedBox(height: 80.h), // AppBar space
+              // Premium gradient card with highlight
+              _buildPremiumHighlightCard(context, task, completion),
+
               SizedBox(height: 32.h),
-              Text('Related Subtasks', style: AppTypography.heading3(context)),
-              SizedBox(height: 16.h),
-              Expanded(
-                child: task.subtasks.isEmpty 
-                  ? const Center(child: Text('No subtasks', style: TextStyle(color: Colors.grey)))
-                  : ListView.builder(
-                      itemCount: task.subtasks.length,
-                      itemBuilder: (context, index) {
-                        final sub = task.subtasks[index];
-                        final textColor = Theme.of(context).textTheme.bodyMedium?.color ?? Colors.black;
-                        return ListTile(
-                          leading: Icon(
-                            sub.isCompleted ? Icons.check_circle : Icons.circle_outlined,
-                            color: sub.isCompleted ? AppColors.accentGreen : Colors.grey,
-                          ),
-                          title: Text(
-                            sub.text,
-                            style: TextStyle(
-                              decoration: sub.isCompleted ? TextDecoration.lineThrough : null,
-                              color: sub.isCompleted ? Colors.grey : textColor,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-              ),
-              SizedBox(height: 16.h),
-              SizedBox(
-                width: double.infinity,
-                height: 56.h,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    // Navigate to Focus Session with this task
-                    Navigator.pushNamed(
-                      context, 
-                      AppRoutes.focusSession,
-                      arguments: {
-                        'todoTitle': task.text,
-                        'todoId': task.id,
-                      }
-                    );
-                  },
-                  icon: const Icon(Icons.timer),
-                  label: const Text('Focus on Highlight'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.r)),
-                  ),
-                ),
-              ),
+
+              // Stats row
+              _buildStatsRow(context, task, focusState),
+
+              SizedBox(height: 32.h),
+
+              // Subtasks section
+              if (task.subtasks.isNotEmpty)
+                _buildSubtasksSection(context, task),
+
+              SizedBox(height: 24.h),
+
+              // Action buttons
+              _buildActionButtons(context, task),
+
+              SizedBox(height: 32.h),
             ],
           ),
         );
       },
     );
   }
+
+  Widget _buildPremiumHighlightCard(
+    BuildContext context,
+    TodoItem task,
+    double completion,
+  ) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              AppColors.primary.withOpacity(0.15),
+              AppColors.primary.withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(28.r),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.4),
+            width: 1.5,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withOpacity(0.15),
+              blurRadius: 25,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(28.r),
+          child: BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+            child: Padding(
+              padding: EdgeInsets.all(32.w),
+              child: Column(
+                children: [
+                  // Badge
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 16.w,
+                      vertical: 8.h,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20.r),
+                      border: Border.all(
+                        color: AppColors.primary.withOpacity(0.5),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.star, size: 16.sp, color: AppColors.primary),
+                        SizedBox(width: 6.w),
+                        Text(
+                          'TODAY\'S FOCUS',
+                          style:
+                              AppTypography.caption(
+                                context,
+                                AppColors.primary,
+                              ).copyWith(
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 1.5,
+                              ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  SizedBox(height: 24.h),
+
+                  // Task title
+                  Text(
+                    task.text.replaceAll('#highlight', '').trim(),
+                    textAlign: TextAlign.center,
+                    style: AppTypography.heading1(
+                      context,
+                      AppColors.textPrimary(context),
+                    ).copyWith(fontWeight: FontWeight.w700, height: 1.3),
+                  ),
+
+                  SizedBox(height: 28.h),
+
+                  // Progress section
+                  SizedBox(
+                    width: 160.w,
+                    height: 160.w,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Background circle
+                        Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.primary.withOpacity(0.05),
+                          ),
+                        ),
+                        // Progress circle
+                        SizedBox(
+                          width: 140.w,
+                          height: 140.w,
+                          child: CircularProgressIndicator(
+                            value: completion,
+                            strokeWidth: 10.w,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              AppColors.primary,
+                            ),
+                            backgroundColor: AppColors.background(
+                              context,
+                            ).withOpacity(0.3),
+                            semanticsLabel: 'Task progress',
+                          ),
+                        ),
+                        // Center text
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '${(completion * 100).toInt()}%',
+                              style: AppTypography.heading2(
+                                context,
+                                AppColors.primary,
+                              ).copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            SizedBox(height: 4.h),
+                            Text(
+                              'Complete',
+                              style: AppTypography.caption(
+                                context,
+                                AppColors.textSecondary(context),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(
+    BuildContext context,
+    TodoItem task,
+    FocusState focusState,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark
+        ? AppColors.darkSurface
+        : AppColors.lightSurface;
+
+    List<Map<String, dynamic>> stats = [
+      {
+        'label': 'Priority',
+        'value': task.priority.toString().split('.').last.toUpperCase(),
+        'icon': Icons.flag,
+      },
+      {
+        'label': 'Created',
+        'value': _formatDate(task.createdAt),
+        'icon': Icons.calendar_today,
+      },
+      {
+        'label': 'Status',
+        'value': task.isCompleted ? 'Done' : 'In Progress',
+        'icon': task.isCompleted ? Icons.check_circle : Icons.pending,
+      },
+    ];
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: Row(
+        children: stats.map((stat) {
+          return Expanded(
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: 4.w),
+              padding: EdgeInsets.all(16.w),
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                borderRadius: BorderRadius.circular(16.r),
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        stat['icon'] as IconData,
+                        size: 16.sp,
+                        color: AppColors.primary,
+                      ),
+                      SizedBox(width: 6.w),
+                      Expanded(
+                        child: Text(
+                          stat['label'] as String,
+                          style: AppTypography.caption(
+                            context,
+                            AppColors.textSecondary(context),
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    stat['value'] as String,
+                    style: AppTypography.caption(
+                      context,
+                      AppColors.textPrimary(context),
+                    ).copyWith(fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildSubtasksSection(BuildContext context, TodoItem task) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark
+        ? AppColors.darkSurface
+        : AppColors.lightSurface;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: Text(
+            'Subtasks',
+            style: AppTypography.heading3(
+              context,
+              AppColors.textPrimary(context),
+            ).copyWith(fontWeight: FontWeight.w600),
+          ),
+        ),
+        SizedBox(height: 16.h),
+
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 20.w),
+          child: Column(
+            children: task.subtasks.asMap().entries.map((entry) {
+              final sub = entry.value;
+
+              return Padding(
+                padding: EdgeInsets.only(bottom: 12.h),
+                child: Container(
+                  padding: EdgeInsets.all(16.w),
+                  decoration: BoxDecoration(
+                    color: sub.isCompleted
+                        ? AppColors.primary.withOpacity(0.08)
+                        : surfaceColor,
+                    borderRadius: BorderRadius.circular(14.r),
+                    border: Border.all(
+                      color: sub.isCompleted
+                          ? AppColors.primary.withOpacity(0.3)
+                          : AppColors.primary.withOpacity(0.1),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24.w,
+                        height: 24.w,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: sub.isCompleted
+                              ? LinearGradient(
+                                  colors: [
+                                    AppColors.primary,
+                                    AppColors.primary.withOpacity(0.7),
+                                  ],
+                                )
+                              : null,
+                          color: sub.isCompleted ? null : Colors.transparent,
+                          border: sub.isCompleted
+                              ? null
+                              : Border.all(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                  width: 2,
+                                ),
+                        ),
+                        child: sub.isCompleted
+                            ? Icon(
+                                Icons.check,
+                                size: 14.sp,
+                                color: Colors.white,
+                              )
+                            : null,
+                      ),
+                      SizedBox(width: 12.w),
+                      Expanded(
+                        child: Text(
+                          sub.text,
+                          style:
+                              AppTypography.body1(
+                                context,
+                                sub.isCompleted
+                                    ? AppColors.textSecondary(context)
+                                    : AppColors.textPrimary(context),
+                              ).copyWith(
+                                decoration: sub.isCompleted
+                                    ? TextDecoration.lineThrough
+                                    : null,
+                              ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(BuildContext context, TodoItem task) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
+      child: Column(
+        children: [
+          // Focus button
+          Container(
+            width: double.infinity,
+            height: 56.h,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primary, AppColors.primary.withOpacity(0.8)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16.r),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withOpacity(0.3),
+                  blurRadius: 15,
+                  offset: const Offset(0, 5),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  HapticFeedback.mediumImpact();
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.focusSession,
+                    arguments: {'todoTitle': task.text, 'todoId': task.id},
+                  );
+                },
+                borderRadius: BorderRadius.circular(16.r),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.timer_outlined,
+                      size: 20.sp,
+                      color: Colors.white,
+                    ),
+                    SizedBox(width: 12.w),
+                    Text(
+                      'Start Focus Session',
+                      style: AppTypography.body1(
+                        context,
+                        AppColors.textPrimary(context),
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          SizedBox(height: 12.h),
+
+          // Secondary action
+          Container(
+            width: double.infinity,
+            height: 48.h,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(14.r),
+              border: Border.all(
+                color: AppColors.primary.withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        'Share added to clipboard',
+                        style: AppTypography.caption(context, Colors.white),
+                      ),
+                      behavior: SnackBarBehavior.floating,
+                      margin: EdgeInsets.all(16.w),
+                      backgroundColor: AppColors.primary,
+                      duration: const Duration(seconds: 2),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(14.r),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.share_outlined,
+                      size: 18.sp,
+                      color: AppColors.primary,
+                    ),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Share Highlight',
+                      style: AppTypography.body1(
+                        context,
+                        AppColors.primary,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
 }
-
-

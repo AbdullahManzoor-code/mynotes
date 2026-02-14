@@ -40,6 +40,7 @@ import 'package:mynotes/presentation/widgets/create_todo_bottom_sheet.dart';
 import 'package:mynotes/presentation/widgets/media_player_widget.dart';
 import 'package:mynotes/presentation/pages/media_viewer_screen.dart';
 import 'package:mynotes/presentation/widgets/note_suggestion_bar.dart';
+import 'package:mynotes/presentation/widgets/note_tags_input.dart';
 
 class EnhancedNoteEditorScreen extends StatelessWidget {
   final Note? note;
@@ -416,47 +417,44 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   void _showTagPicker(BuildContext context, NoteEditorBloc editorBloc) {
     showModalBottomSheet(
       context: context,
-      builder: (sheetContext) => BlocProvider.value(
-        value: editorBloc,
-        child: BlocBuilder<NoteEditorBloc, NoteEditorState>(
-          builder: (blocContext, state) {
-            return Container(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Manage Tags',
-                    style: AppTypography.heading3(
-                      blocContext,
-                      AppColors.textPrimary(blocContext),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Wrap(
-                    spacing: 8,
-                    children: state.params.tags
-                        .map(
-                          (tag) => Chip(
-                            label: Text(tag),
-                            onDeleted: () => editorBloc.add(TagRemoved(tag)),
-                          ),
-                        )
-                        .toList(),
-                  ),
-                  TextField(
-                    decoration: const InputDecoration(hintText: 'Add tag...'),
-                    onSubmitted: (value) {
-                      if (value.isNotEmpty) {
-                        editorBloc.add(TagAdded(value));
-                      }
-                      Navigator.pop(blocContext);
-                    },
-                  ),
-                ],
+      isScrollControlled: true,
+      builder: (sheetContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(sheetContext).viewInsets.bottom,
+        ),
+        child: BlocProvider.value(
+          value: editorBloc,
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: NoteTagsInput(
+                initialTags: editorBloc.state.params.tags,
+                maxTags: 10,
+                onTagsChanged: (updatedTags) {
+                  // Update all tags in the editor
+                  final currentTags = Set<String>.from(
+                    editorBloc.state.params.tags,
+                  );
+
+                  // Remove tags that are no longer in the list
+                  for (final tag in currentTags) {
+                    if (!updatedTags.contains(tag)) {
+                      editorBloc.add(TagRemoved(tag));
+                    }
+                  }
+
+                  // Add new tags
+                  for (final tag in updatedTags) {
+                    if (!currentTags.contains(tag)) {
+                      editorBloc.add(TagAdded(tag));
+                    }
+                  }
+
+                  Navigator.pop(sheetContext);
+                },
               ),
-            );
-          },
+            ),
+          ),
         ),
       ),
     );

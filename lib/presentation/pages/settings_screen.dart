@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:flex_color_picker/flex_color_picker.dart';
+
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../core/services/global_ui_service.dart';
 import '../bloc/theme/theme_bloc.dart';
@@ -14,10 +14,10 @@ import 'font_settings_screen.dart';
 import 'voice_settings_screen.dart';
 import 'backup_export_screen.dart';
 import 'biometric_lock_screen.dart';
-import '../../core/themes/theme.dart';
 import '../../core/services/backup_service.dart';
 import '../../injection_container.dart' show getIt;
 import '../widgets/developer_test_links_sheet.dart';
+import '../widgets/theme_color_picker_bottomsheet.dart';
 
 /// Settings Screen (ORG-006)
 /// Optimized settings management with BLoC and Design System
@@ -943,54 +943,15 @@ class _SettingsScreenContent extends StatelessWidget {
     final themeBloc = context.read<ThemeBloc>();
     final themeParams = themeBloc.state.params;
 
-    Color screenPickerColor = themeParams.primaryColor;
-
-    final bool colorChanged =
-        await ColorPicker(
-          color: screenPickerColor,
-          onColorChanged: (Color color) {
-            screenPickerColor = color;
-            themeBloc.add(UpdateThemeEvent.changeColor(themeParams, color));
-          },
-          width: 44,
-          height: 44,
-          borderRadius: 22,
-          spacing: 10,
-          runSpacing: 10,
-          wheelDiameter: 165,
-          heading: Text(
-            'Select Primary Color',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          subheading: Text(
-            'Select color shade',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          wheelSubheading: Text(
-            'Selected color and its shades',
-            style: Theme.of(context).textTheme.titleSmall,
-          ),
-          showColorName: true,
-          showColorCode: true,
-          copyPasteBehavior: const ColorPickerCopyPasteBehavior(
-            longPressMenu: true,
-          ),
-          materialNameTextStyle: Theme.of(context).textTheme.bodySmall,
-          colorNameTextStyle: Theme.of(context).textTheme.bodySmall,
-          colorCodeTextStyle: Theme.of(context).textTheme.bodySmall,
-          pickerTypeLabels: const <ColorPickerType, String>{
-            ColorPickerType.both: 'Custom',
-            ColorPickerType.primary: 'Material',
-            ColorPickerType.accent: 'Accent',
-          },
-        ).showPickerDialog(
-          context,
-          constraints: const BoxConstraints(
-            minHeight: 460,
-            minWidth: 300,
-            maxWidth: 320,
-          ),
-        );
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) => ThemeColorPickerBottomSheet(
+        initialColor: themeParams.primaryColor,
+        onColorSelected: (Color p1) {
+          themeBloc.add(UpdateThemeEvent.changeColor(themeParams, p1));
+        },
+      ),
+    );
   }
 
   void _clearCache(BuildContext context) {
@@ -1023,4 +984,3 @@ class _SettingsScreenContent extends StatelessWidget {
     );
   }
 }
-

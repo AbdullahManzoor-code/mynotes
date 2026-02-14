@@ -64,4 +64,11 @@
 -optimizations !code/simplification/arithmetic,!field/*,!class/merging/*
 -keepattributes Signature,Annotation,Exceptions
 
+# Apache Tika / javax.xml.stream
+-dontwarn javax.xml.stream.**
+-dontwarn javax.xml.namespace.QName
+-dontwarn org.apache.tika.**
+-dontwarn org.apache.pdfbox.**
+-dontwarn org.apache.poi.**
+
 
