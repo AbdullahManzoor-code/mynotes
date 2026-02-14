@@ -234,6 +234,10 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
 
       // Refresh notes list with current configuration
       await _onLoadNotes(const LoadNotesEvent(), emit);
+
+      // Also refresh archived list just in case we were there
+      final archivedNotes = await _noteRepository.getArchivedNotes();
+      emit(ArchivedNotesLoaded(archivedNotes));
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
@@ -453,10 +457,8 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
   ) async {
     try {
       emit(const NoteLoading());
-      final notes = await _noteRepository.getAllNotes();
-      final archivedNotes = notes.where((note) => note.isArchived).toList();
-
-      emit(ArchivedNotesLoaded(archivedNotes));
+      final notes = await _noteRepository.getArchivedNotes();
+      emit(ArchivedNotesLoaded(notes));
     } catch (e) {
       emit(
         NoteError(
@@ -654,6 +656,13 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
         final restoredNote = note.toggleArchive();
         await _noteRepository.updateNote(restoredNote);
         emit(NoteRestored(restoredNote));
+
+        // Refresh lists - both active and archived
+        await _onLoadNotes(const LoadNotesEvent(), emit);
+
+        // Also refresh archived list to ensure UI is in sync
+        final archivedNotes = await _noteRepository.getArchivedNotes();
+        emit(ArchivedNotesLoaded(archivedNotes));
       }
     } catch (e) {
       emit(

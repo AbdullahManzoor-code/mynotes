@@ -1,3 +1,5 @@
+import 'dart:io' show File;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get_it/get_it.dart';
@@ -314,12 +316,30 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   void _togglePlayPause() async {
     HapticFeedback.lightImpact();
-    if (_isPlaying) {
-      await _audioPlayer.pause();
-    } else {
-      await _audioPlayer.play(DeviceFileSource(widget.audio.filePath));
+    try {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+      } else {
+        final file = File(widget.audio.filePath);
+        if (!await file.exists()) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Audio file not found')),
+            );
+          }
+          return;
+        }
+        await _audioPlayer.play(DeviceFileSource(widget.audio.filePath));
+      }
+      if (mounted) setState(() => _isPlaying = !_isPlaying);
+    } catch (e) {
+      debugPrint('Error playing audio: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Playback failed: $e')));
+      }
     }
-    setState(() => _isPlaying = !_isPlaying);
   }
 
   String _formatDuration(Duration duration) {

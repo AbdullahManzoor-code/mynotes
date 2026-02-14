@@ -437,7 +437,8 @@ class _DrawingCanvasWidgetState extends State<DrawingCanvasWidget> {
 
     final ui.Image image = await recorder.endRecording().toImage(1000, 1000);
     widget.onDrawingComplete(image);
-    if (mounted) Navigator.pop(context);
+    // Don't pop here - let the parent handle navigation
+    // if (mounted) Navigator.pop(context);
   }
 }
 

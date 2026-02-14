@@ -2,6 +2,7 @@ import '../entities/note.dart';
 
 abstract class NoteRepository {
   Future<List<Note>> getNotes();
+  Future<List<Note>> getArchivedNotes();
   Future<Note?> getNoteById(String noteId);
   Future<void> createNote(Note note);
   Future<void> updateNote(Note note);

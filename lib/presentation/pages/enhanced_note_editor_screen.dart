@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/core/services/media_processing_service.dart';
 import 'package:mynotes/core/services/ocr_service.dart';
@@ -844,10 +845,11 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: quill.QuillEditor.basic(
         controller: quillController,
-        config: const quill.QuillEditorConfig(
+        config: quill.QuillEditorConfig(
           autoFocus: false,
           expands: false,
           padding: EdgeInsets.zero,
+          embedBuilders: FlutterQuillEmbeds.editorBuilders(),
         ),
       ),
     );
@@ -979,6 +981,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     quill.QuillController quillController,
   ) {
     return FloatingActionButton(
+      heroTag: 'note_editor_fab',
       onPressed: () =>
           _saveNote(context, state, titleController, quillController),
       child: const Icon(Icons.save),

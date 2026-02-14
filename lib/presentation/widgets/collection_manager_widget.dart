@@ -85,6 +85,7 @@ class _CollectionManagerWidgetState extends State<CollectionManagerWidget> {
       ),
       body: _buildCollectionsList(),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'collection_manager_fab',
         onPressed: _showCreateCollectionDialog,
         child: Icon(Icons.add),
       ),

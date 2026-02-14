@@ -12,10 +12,123 @@ import '../../injection_container.dart' show getIt;
 
 /// Archive notes screen showing all archived notes
 class ArchivedNotesScreen extends StatelessWidget {
-  const ArchivedNotesScreen({super.key});
+  final bool showAppBar;
+
+  const ArchivedNotesScreen({super.key, this.showAppBar = true});
 
   @override
   Widget build(BuildContext context) {
+    final body = BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        if (state is NoteLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        if (state is ArchivedNotesLoaded) {
+          final archivedNotes = state.notes;
+
+          if (archivedNotes.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.archive_outlined,
+                    size: 64.w,
+                    color: AppColors.textSecondary(context).withOpacity(0.3),
+                  ),
+                  SizedBox(height: 16.h),
+                  Text(
+                    'No archived notes',
+                    style: AppTypography.bodyLarge(
+                      context,
+                      AppColors.textPrimary(context),
+                    ),
+                  ),
+                  SizedBox(height: 8.h),
+                  Text(
+                    'Notes you archive will appear here',
+                    style: AppTypography.caption(
+                      context,
+                      AppColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          return ListView.builder(
+            padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+            itemCount: archivedNotes.length,
+            itemBuilder: (context, index) {
+              final note = archivedNotes[index];
+              return Padding(
+                padding: EdgeInsets.only(bottom: 12.h),
+                child: Dismissible(
+                  key: Key('archive_${note.id}'),
+                  direction: DismissDirection.horizontal,
+                  background: _buildDismissBackground(
+                    alignment: Alignment.centerLeft,
+                    color: AppColors.primary,
+                    icon: Icons.unarchive_outlined,
+                  ),
+                  secondaryBackground: _buildDismissBackground(
+                    alignment: Alignment.centerRight,
+                    color: AppColors.errorColor,
+                    icon: Icons.delete_outline,
+                  ),
+                  onDismissed: (direction) {
+                    if (direction == DismissDirection.startToEnd) {
+                      _unarchiveNote(context, note);
+                    } else {
+                      _deleteNoteForever(context, note);
+                    }
+                  },
+                  child: NoteCardWidget(
+                    note: note,
+                    isGridView: false,
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        '/notes/editor',
+                        arguments: {'note': note},
+                      );
+                    },
+                    onLongPress: () {
+                      _showArchiveContextMenu(context, note);
+                    },
+                  ),
+                ),
+              );
+            },
+          );
+        }
+
+        if (state is NoteError) {
+          return Center(
+            child: Padding(
+              padding: EdgeInsets.all(20.r),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, color: AppColors.errorColor),
+                  SizedBox(height: 8.h),
+                  Text(state.message, textAlign: TextAlign.center),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // If we're not in ArchivedNotesLoaded, it might be the first time opening the tab.
+        // We can trigger the load here if we want, but it's better to do it in the parent.
+        return const Center(child: CircularProgressIndicator());
+      },
+    );
+
+    if (!showAppBar) return body;
+
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: AppBar(
@@ -30,102 +143,7 @@ class ArchivedNotesScreen extends StatelessWidget {
         backgroundColor: AppColors.background(context),
         iconTheme: IconThemeData(color: AppColors.textPrimary(context)),
       ),
-      body: BlocBuilder<NotesBloc, NoteState>(
-        builder: (context, state) {
-          if (state is NoteLoading) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (state is NotesLoaded) {
-            final archivedNotes = state.notes
-                .where((note) => note.isArchived)
-                .toList();
-
-            if (archivedNotes.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.archive_outlined,
-                      size: 64.w,
-                      color: AppColors.textSecondary(context).withOpacity(0.3),
-                    ),
-                    SizedBox(height: 16.h),
-                    Text(
-                      'No archived notes',
-                      style: AppTypography.bodyLarge(
-                        context,
-                        AppColors.textPrimary(context),
-                      ),
-                    ),
-                    SizedBox(height: 8.h),
-                    Text(
-                      'Notes you archive will appear here',
-                      style: AppTypography.caption(
-                        context,
-                        AppColors.textSecondary(context),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            return ListView.builder(
-              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
-              itemCount: archivedNotes.length,
-              itemBuilder: (context, index) {
-                final note = archivedNotes[index];
-                return Padding(
-                  padding: EdgeInsets.only(bottom: 12.h),
-                  child: Dismissible(
-                    key: Key('archive_${note.id}'),
-                    direction: DismissDirection.horizontal,
-                    background: _buildDismissBackground(
-                      alignment: Alignment.centerLeft,
-                      color: AppColors.primary,
-                      icon: Icons.unarchive_outlined,
-                    ),
-                    secondaryBackground: _buildDismissBackground(
-                      alignment: Alignment.centerRight,
-                      color: AppColors.errorColor,
-                      icon: Icons.delete_outline,
-                    ),
-                    onDismissed: (direction) {
-                      if (direction == DismissDirection.startToEnd) {
-                        _unarchiveNote(context, note);
-                      } else {
-                        _deleteNoteForever(context, note);
-                      }
-                    },
-                    child: NoteCardWidget(
-                      note: note,
-                      isGridView: false,
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          '/notes/editor',
-                          arguments: {'note': note},
-                        );
-                      },
-                      onLongPress: () {
-                        _showArchiveContextMenu(context, note);
-                      },
-                    ),
-                  ),
-                );
-              },
-            );
-          }
-
-          if (state is NoteError) {
-            return Center(child: Text(state.message));
-          }
-
-          return const SizedBox.shrink();
-        },
-      ),
+      body: body,
     );
   }
 
@@ -146,15 +164,17 @@ class ArchivedNotesScreen extends StatelessWidget {
   }
 
   void _unarchiveNote(BuildContext context, Note note) {
-    final params = NoteParams.fromNote(note).copyWith(isArchived: false);
-    context.read<NotesBloc>().add(UpdateNoteEvent(params));
+    context.read<NotesBloc>().add(RestoreArchivedNoteEvent(note.id));
 
     getIt<GlobalUiService>().showSuccess(
       'Note unarchived',
       actionLabel: 'Undo',
       onActionPressed: () {
-        final params = NoteParams.fromNote(note.copyWith(isArchived: true));
-        context.read<NotesBloc>().add(UpdateNoteEvent(params));
+        context.read<NotesBloc>().add(
+          ToggleArchiveNoteEvent(
+            NoteParams.fromNote(note).copyWith(isArchived: true),
+          ),
+        );
       },
     );
   }

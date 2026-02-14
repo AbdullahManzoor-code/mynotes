@@ -15,6 +15,7 @@ class Reflection {
   final DateTime updatedAt;
   final DateTime reflectionDate;
   final bool isDeleted;
+  final String? draft;
 
   const Reflection({
     required this.id,
@@ -32,6 +33,7 @@ class Reflection {
     required this.updatedAt,
     required this.reflectionDate,
     this.isDeleted = false,
+    this.draft,
   });
 
   /// Create from JSON map (from database)
@@ -57,6 +59,7 @@ class Reflection {
       updatedAt: DateTime.parse(map['updatedAt'] as String),
       reflectionDate: DateTime.parse(map['reflectionDate'] as String),
       isDeleted: (map['isDeleted'] as int?) == 1,
+      draft: map['draft'] as String?,
     );
   }
 
@@ -78,6 +81,7 @@ class Reflection {
       'updatedAt': updatedAt.toIso8601String(),
       'reflectionDate': reflectionDate.toIso8601String().split('T')[0],
       'isDeleted': isDeleted ? 1 : 0,
+      'draft': draft,
     };
   }
 
@@ -98,6 +102,7 @@ class Reflection {
     DateTime? updatedAt,
     DateTime? reflectionDate,
     bool? isDeleted,
+    String? draft,
   }) {
     return Reflection(
       id: id ?? this.id,
@@ -115,6 +120,7 @@ class Reflection {
       updatedAt: updatedAt ?? this.updatedAt,
       reflectionDate: reflectionDate ?? this.reflectionDate,
       isDeleted: isDeleted ?? this.isDeleted,
+      draft: draft ?? this.draft,
     );
   }
 }

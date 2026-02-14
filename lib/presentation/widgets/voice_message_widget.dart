@@ -1,3 +1,5 @@
+import 'dart:io' show File;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -80,12 +82,30 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
   }
 
   Future<void> _togglePlayback() async {
-    if (_isPlaying) {
-      await _audioPlayer.pause();
-      setState(() => _isPlaying = false);
-    } else {
-      await _audioPlayer.play(DeviceFileSource(widget.audioPath));
-      setState(() => _isPlaying = true);
+    try {
+      if (_isPlaying) {
+        await _audioPlayer.pause();
+        if (mounted) setState(() => _isPlaying = false);
+      } else {
+        final file = File(widget.audioPath);
+        if (!await file.exists()) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Audio file not found')),
+            );
+          }
+          return;
+        }
+        await _audioPlayer.play(DeviceFileSource(widget.audioPath));
+        if (mounted) setState(() => _isPlaying = true);
+      }
+    } catch (e) {
+      debugPrint('Error playing voice message: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Playback failed: $e')));
+      }
     }
   }
 

@@ -153,7 +153,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
       'id': question.id,
       'questionText': question.questionText,
       'category': question.category,
-      'isDefault': 0,
+      'isDefault': question.isUserCreated ? 0 : 1,
       'isCustom': question.isUserCreated ? 1 : 0,
       'frequency': question.frequency,
       'createdAt': question.createdAt.toIso8601String(),

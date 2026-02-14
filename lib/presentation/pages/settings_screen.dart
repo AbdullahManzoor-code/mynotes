@@ -232,11 +232,13 @@ class _SettingsScreenContent extends StatelessWidget {
           margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
           decoration: BoxDecoration(
             color:
-                (isDark ? AppColors.darkSurface : AppColors.surface) as Color?,
+                (isDark ? AppColors.darkSurface : AppColors.surface(context))
+                    as Color?,
             borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
             border: Border.all(
               color:
-                  (isDark ? AppColors.dividerDark : AppColors.divider) as Color,
+                  (isDark ? AppColors.dividerDark : AppColors.divider(context))
+                      as Color,
             ),
           ),
           child: Column(
@@ -307,10 +309,14 @@ class _SettingsScreenContent extends StatelessWidget {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        color: (isDark ? AppColors.darkSurface : AppColors.surface) as Color?,
+        color:
+            (isDark ? AppColors.darkSurface : AppColors.surface(context))
+                as Color?,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
         border: Border.all(
-          color: (isDark ? AppColors.dividerDark : AppColors.divider) as Color,
+          color:
+              (isDark ? AppColors.dividerDark : AppColors.divider(context))
+                  as Color,
         ),
       ),
       child: Column(
@@ -375,10 +381,14 @@ class _SettingsScreenContent extends StatelessWidget {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        color: (isDark ? AppColors.darkSurface : AppColors.surface) as Color?,
+        color:
+            (isDark ? AppColors.darkSurface : AppColors.surface(context))
+                as Color?,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
         border: Border.all(
-          color: (isDark ? AppColors.dividerDark : AppColors.divider) as Color,
+          color:
+              (isDark ? AppColors.dividerDark : AppColors.divider(context))
+                  as Color,
         ),
       ),
       child: Column(
@@ -470,10 +480,14 @@ class _SettingsScreenContent extends StatelessWidget {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        color: (isDark ? AppColors.darkSurface : AppColors.surface) as Color?,
+        color:
+            (isDark ? AppColors.darkSurface : AppColors.surface(context))
+                as Color?,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
         border: Border.all(
-          color: (isDark ? AppColors.dividerDark : AppColors.divider) as Color,
+          color:
+              (isDark ? AppColors.dividerDark : AppColors.divider(context))
+                  as Color,
         ),
       ),
       child: Column(
@@ -535,10 +549,14 @@ class _SettingsScreenContent extends StatelessWidget {
       margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       padding: EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: (isDark ? AppColors.darkSurface : AppColors.surface) as Color?,
+        color:
+            (isDark ? AppColors.darkSurface : AppColors.surface(context))
+                as Color?,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
         border: Border.all(
-          color: (isDark ? AppColors.dividerDark : AppColors.divider) as Color,
+          color:
+              (isDark ? AppColors.dividerDark : AppColors.divider(context))
+                  as Color,
         ),
       ),
       child: Column(
@@ -643,10 +661,14 @@ class _SettingsScreenContent extends StatelessWidget {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        color: (isDark ? AppColors.darkSurface : AppColors.surface) as Color?,
+        color:
+            (isDark ? AppColors.darkSurface : AppColors.surface(context))
+                as Color?,
         borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
         border: Border.all(
-          color: (isDark ? AppColors.dividerDark : AppColors.divider) as Color,
+          color:
+              (isDark ? AppColors.dividerDark : AppColors.divider(context))
+                  as Color,
         ),
       ),
       child: _buildSettingTile(
@@ -794,7 +816,8 @@ class _SettingsScreenContent extends StatelessWidget {
             thickness: 1,
             indent: 72.w,
             color:
-                (isDark ? AppColors.dividerDark : AppColors.divider) as Color?,
+                (isDark ? AppColors.dividerDark : AppColors.divider(context))
+                    as Color?,
           ),
       ],
     );

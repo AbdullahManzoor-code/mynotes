@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/presentation/pages/archived_notes_screen.dart'
+    show ArchivedNotesScreen;
 import 'package:mynotes/presentation/widgets/notes_search_bar.dart'
     show NotesSearchBar;
 import 'package:shimmer/shimmer.dart';
@@ -39,8 +41,41 @@ class SimpleNoteTemplate {
 /// Enhanced Notes List with Templates Screen
 /// Modern notes list interface with template picker
 /// Based on notes_list_and_templates_1 template
-class EnhancedNotesListScreen extends StatelessWidget {
+class EnhancedNotesListScreen extends StatefulWidget {
   const EnhancedNotesListScreen({super.key});
+
+  @override
+  State<EnhancedNotesListScreen> createState() =>
+      _EnhancedNotesListScreenState();
+}
+
+class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_handleTabSelection);
+  }
+
+  void _handleTabSelection() {
+    if (_tabController.index == 1) {
+      // Load Archived Notes when switching to second tab
+      context.read<NotesBloc>().add(const LoadArchivedNotesEvent());
+    } else {
+      // Load active notes when switching back to first tab
+      context.read<NotesBloc>().add(const LoadNotesEvent());
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_handleTabSelection);
+    _tabController.dispose();
+    super.dispose();
+  }
 
   static final List<SimpleNoteTemplate> _templates = [
     SimpleNoteTemplate(
@@ -205,6 +240,7 @@ class EnhancedNotesListScreen extends StatelessWidget {
       backgroundColor: AppColors.background(context),
       extendBodyBehindAppBar: true,
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'enhanced_notes_fab',
         onPressed: () => Navigator.pushNamed(context, '/notes/editor'),
         backgroundColor: AppColors.primary,
         elevation: 8,
@@ -243,6 +279,7 @@ class EnhancedNotesListScreen extends StatelessWidget {
               final bool isLoading = state is NoteLoading;
               final bool isError = state is NoteError;
               final bool isLoaded = state is NotesLoaded;
+              final bool isArchived = state is ArchivedNotesLoaded;
 
               final List<Note> pinnedNotes = isLoaded
                   ? state.displayedNotes.where((n) => n.isPinned).toList()
@@ -260,15 +297,14 @@ class EnhancedNotesListScreen extends StatelessWidget {
 
               final viewMode = isLoaded ? state.viewMode : NoteViewMode.list;
 
-              return CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
+              return NestedScrollView(
+                headerSliverBuilder: (context, innerBoxIsScrolled) => [
                   // Premium Glass AppBar
                   SliverAppBar(
                     floating: true,
                     snap: true,
                     pinned: true,
-                    expandedHeight: 120.h,
+                    expandedHeight: 160.h,
                     backgroundColor: Colors.transparent,
                     elevation: 0,
                     scrolledUnderElevation: 0,
@@ -285,13 +321,41 @@ class EnhancedNotesListScreen extends StatelessWidget {
                         ),
                         child: const SizedBox.expand(),
                       ),
-                      titlePadding: EdgeInsets.only(left: 20.w, bottom: 16.h),
+                      titlePadding: EdgeInsets.only(left: 20.w, bottom: 62.h),
                       title: Text(
                         'Think Tank',
                         style: AppTypography.heading1(context).copyWith(
                           fontSize: 22.sp,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -1,
+                        ),
+                      ),
+                    ),
+                    bottom: PreferredSize(
+                      preferredSize: Size.fromHeight(48.h),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: EdgeInsets.only(left: 20.w),
+                          child: TabBar(
+                            controller: _tabController,
+                            isScrollable: true,
+                            indicatorColor: AppColors.primary,
+                            indicatorWeight: 3,
+                            indicatorSize: TabBarIndicatorSize.label,
+                            labelColor: AppColors.primary,
+                            labelStyle: AppTypography.bodyLarge(context),
+                            unselectedLabelColor: AppColors.textSecondary(
+                              context,
+                            ),
+                            unselectedLabelStyle: AppTypography.bodyMedium(
+                              context,
+                            ),
+                            tabs: const [
+                              Tab(text: 'All Notes'),
+                              Tab(text: 'Archive'),
+                            ],
+                          ),
                         ),
                       ),
                     ),
@@ -325,7 +389,14 @@ class EnhancedNotesListScreen extends StatelessWidget {
                         ),
                       ),
                       IconButton(
-                        onPressed: () => _showViewOptionsSheet(context, state),
+                        onPressed: () {
+                          if (isLoaded) {
+                            _showViewOptionsSheet(
+                              context,
+                              state as NotesLoaded,
+                            );
+                          }
+                        },
                         icon: Icon(
                           Icons.tune_rounded,
                           color: AppColors.textPrimary(context),
@@ -335,61 +406,78 @@ class EnhancedNotesListScreen extends StatelessWidget {
                       SizedBox(width: 8.w),
                     ],
                   ),
-
-                  // Template Picker Section
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: 16.h),
-                      child: _buildTemplateSection(context),
-                    ),
-                  ),
-
-                  // Search Bar Section
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 16.w,
-                        vertical: 16.h,
-                      ),
-                      child: const NotesSearchBar(),
-                    ),
-                  ),
-
-                  // Filter Chips Section
-                  SliverToBoxAdapter(child: _buildFilterChips(context, state)),
-
-                  // Status Info
-                  if (isLoaded && !isLoading)
-                    SliverToBoxAdapter(
-                      child: _buildCollectionStats(context, state),
-                    ),
-
-                  if (isLoading)
-                    SliverToBoxAdapter(child: _buildLoadingState(context)),
-
-                  if (isError)
-                    SliverToBoxAdapter(child: _buildErrorState(context)),
-
-                  if (isLoaded) ...[
-                    if (pinnedNotes.isEmpty && unpinnedNotes.isEmpty)
-                      SliverFillRemaining(
-                        hasScrollBody: false,
-                        child: EmptyStateNotes(),
-                      )
-                    else
-                      _buildNotesGridSection(
-                        context,
-                        state,
-                        pinnedNotes,
-                        unpinnedNotes,
-                        showSections,
-                        viewMode,
-                      ),
-                  ],
-
-                  // Padding at the bottom for FAB
-                  SliverToBoxAdapter(child: SizedBox(height: 100.h)),
                 ],
+                body: TabBarView(
+                  controller: _tabController,
+                  children: [
+                    // Tab 1: All Notes
+                    CustomScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      slivers: [
+                        // Template Picker Section
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.only(top: 16.h),
+                            child: _buildTemplateSection(context),
+                          ),
+                        ),
+
+                        // Search Bar Section
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16.w,
+                              vertical: 16.h,
+                            ),
+                            child: const NotesSearchBar(),
+                          ),
+                        ),
+
+                        // Filter Chips Section
+                        SliverToBoxAdapter(
+                          child: _buildFilterChips(context, state),
+                        ),
+
+                        // Status Info
+                        if (isLoaded && !isLoading)
+                          SliverToBoxAdapter(
+                            child: _buildCollectionStats(context, state),
+                          ),
+
+                        if (isLoading)
+                          SliverToBoxAdapter(
+                            child: _buildLoadingState(context),
+                          ),
+
+                        if (isError)
+                          SliverToBoxAdapter(child: _buildErrorState(context)),
+
+                        if (isLoaded) ...[
+                          if (pinnedNotes.isEmpty && unpinnedNotes.isEmpty)
+                            const SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: EmptyStateNotes(),
+                            )
+                          else
+                            _buildNotesGridSection(
+                              context,
+                              state as NotesLoaded,
+                              pinnedNotes,
+                              unpinnedNotes,
+                              showSections,
+                              viewMode,
+                            ),
+                        ],
+
+                        // Padding at the bottom for FAB
+                        SliverToBoxAdapter(child: SizedBox(height: 100.h)),
+                      ],
+                    ),
+
+                    // Tab 2: Archive
+                    const ArchivedNotesScreen(showAppBar: false),
+                  ],
+                ),
               );
             },
           ),

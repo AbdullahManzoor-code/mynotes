@@ -40,6 +40,16 @@ class NoteRepositoryImpl implements NoteRepository {
   }
 
   @override
+  Future<List<Note>> getArchivedNotes() async {
+    try {
+      final notes = await _database.getNotes(archived: true);
+      return await _enrichNotes(notes);
+    } catch (e) {
+      throw Exception('Failed to load archived notes: $e');
+    }
+  }
+
+  @override
   Future<List<Note>> getAllNotes() async {
     try {
       final notes = await _database.getAllNotes();
@@ -101,11 +111,8 @@ class NoteRepositoryImpl implements NoteRepository {
       if (note.alarms != null) {
         await _database.updateAlarms(note.id, note.alarms!);
       }
-      // Simple sync for now (inefficient but works for small number of items)
-      // Actually MediaBloc handles 'AddImageToNoteEvent' which persists to DB immediately.
-      // If we remove media in UI, we should probably call a RemoveMedia event or sync here.
-      // NoteBloc calls UpdateNoteEvent.
-      // Let's rely on NoteBloc logic.
+      // Sync media items
+      await _database.syncMediaForNote(note.id, note.media);
     } on Exception {
       rethrow;
     } catch (e) {

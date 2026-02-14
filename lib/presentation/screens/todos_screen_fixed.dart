@@ -127,6 +127,7 @@ class TodosScreen extends StatelessWidget {
       // direction: Axis.vertical,
       // offset: 40,
       child: FloatingActionButton.extended(
+        heroTag: 'todos_fixed_fab',
         onPressed: () {
           HapticFeedback.mediumImpact();
           _showCreateTodo(context);

@@ -21,7 +21,11 @@ class MainHomeScreen extends StatelessWidget {
 
   const MainHomeScreen({super.key, this.initialIndex = 0});
 
-  void _onTabTapped(BuildContext context, PageController controller, int index) {
+  void _onTabTapped(
+    BuildContext context,
+    PageController controller,
+    int index,
+  ) {
     context.read<NavigationBloc>().add(TabChanged(index));
     controller.animateToPage(
       index,
@@ -46,7 +50,8 @@ class MainHomeScreen extends StatelessWidget {
           onCommandPalette: () => _openCommandPalette(context),
           onNewNote: () => Navigator.pushNamed(context, AppRoutes.noteEditor),
           onNewTodo: () => Navigator.pushNamed(context, AppRoutes.todosList),
-          onNavigateFeatures: (controller) => _onTabTapped(context, controller, 5),
+          onNavigateFeatures: (controller) =>
+              _onTabTapped(context, controller, 5),
           builder: (context, pageController) {
             return AppScaffold(
               body: PageView(
@@ -103,6 +108,7 @@ class MainHomeScreen extends StatelessWidget {
               floatingActionButtonLocation:
                   FloatingActionButtonLocation.centerDocked,
               floatingActionButton: FloatingActionButton(
+                heroTag: 'main_home_fab',
                 onPressed: () => QuickAddBottomSheet.show(context),
                 backgroundColor: AppColors.primaryColor,
                 child: const Icon(Icons.add, color: Colors.white),
@@ -155,7 +161,8 @@ class _HomeLifecycleWrapperState extends State<_HomeLifecycleWrapper> {
 
   bool _handleKeyEvent(KeyEvent event) {
     if (event is KeyDownEvent) {
-      final isControlOrMeta = HardwareKeyboard.instance.isControlPressed ||
+      final isControlOrMeta =
+          HardwareKeyboard.instance.isControlPressed ||
           HardwareKeyboard.instance.isMetaPressed;
 
       if (isControlOrMeta) {
@@ -181,7 +188,8 @@ class _HomeLifecycleWrapperState extends State<_HomeLifecycleWrapper> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.builder(context, _pageController);
+  Widget build(BuildContext context) =>
+      widget.builder(context, _pageController);
 }
 
 //         foregroundColor: Colors.white,

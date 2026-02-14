@@ -11,7 +11,9 @@ import '../../domain/entities/alarm.dart';
 class NotesDatabase {
   static const String _databaseName = 'notes.db';
   // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
-  static const int _databaseVersion = 12;
+  /// Database version for schema migrations
+  /// Current version: 16
+  static const int _databaseVersion = 16;
 
   // P0 Tables
   static const String notesTable = 'notes';
@@ -88,6 +90,7 @@ class NotesDatabase {
         syncStatus TEXT DEFAULT 'pending',
         lastSyncedAt TEXT,
         isDeleted INTEGER NOT NULL DEFAULT 0,
+        priority INTEGER DEFAULT 1,
         FOREIGN KEY (linkedReflectionId) REFERENCES $reflectionsTable(id),
         FOREIGN KEY (linkedTodoId) REFERENCES $todosTable(id)
       )
@@ -103,6 +106,9 @@ class NotesDatabase {
         parentTodoId TEXT,
         category TEXT NOT NULL DEFAULT 'Personal',
         priority INTEGER NOT NULL DEFAULT 2,
+        isImportant INTEGER DEFAULT 0,
+        hasReminder INTEGER DEFAULT 0,
+        reminderId TEXT,
         dueDate TEXT,
         dueTime TEXT,
         completedAt TEXT,
@@ -137,12 +143,14 @@ class NotesDatabase {
         linkedTodoId TEXT,
         scheduledTime TEXT NOT NULL,
         timezone TEXT DEFAULT 'local',
+        recurrence TEXT DEFAULT 'once',
         recurPattern TEXT,
         recurDays TEXT,
         recurEndDate TEXT,
         recurEndType TEXT,
         recurEndValue INTEGER,
         isActive INTEGER NOT NULL DEFAULT 1,
+        isEnabled INTEGER NOT NULL DEFAULT 1,
         isCompleted INTEGER NOT NULL DEFAULT 0,
         status TEXT DEFAULT 'pending',
         snoozedUntil TEXT,
@@ -151,6 +159,7 @@ class NotesDatabase {
         soundUri TEXT,
         hasVibration INTEGER DEFAULT 1,
         hasLED INTEGER DEFAULT 1,
+        lastTriggered TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         isDeleted INTEGER NOT NULL DEFAULT 0,
@@ -208,6 +217,7 @@ class NotesDatabase {
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         reflectionDate TEXT NOT NULL,
+        draft TEXT,
         isDeleted INTEGER NOT NULL DEFAULT 0,
         FOREIGN KEY (questionId) REFERENCES $reflectionQuestionsTable(id),
         FOREIGN KEY (linkedNoteId) REFERENCES $notesTable(id) ON DELETE SET NULL,
@@ -223,6 +233,7 @@ class NotesDatabase {
         category TEXT NOT NULL,
         isDefault INTEGER DEFAULT 1,
         isCustom INTEGER DEFAULT 0,
+        frequency TEXT DEFAULT 'daily',
         usageCount INTEGER DEFAULT 0,
         lastUsedAt TEXT,
         createdAt TEXT NOT NULL,
@@ -544,6 +555,96 @@ class NotesDatabase {
     // SAFETY MIGRATION: Ensure note_links exists if v11 failed
     if (oldVersion < 12) {
       await _migrateToV11(db);
+    }
+
+    // v12 → v13: Add frequency to reflection_questions
+    if (oldVersion < 13) {
+      await _migrateToV13(db);
+    }
+
+    // v13 → v14: Add recurrence to reminders and draft to reflections
+    if (oldVersion < 14) {
+      await _migrateToV14(db);
+    }
+
+    // v14 → v15: Sync entity fields (isImportant, hasReminder, etc)
+    if (oldVersion < 15) {
+      await _migrateToV15(db);
+    }
+
+    // v15 → v16: Align notes priority and todo extra fields
+    if (oldVersion < 16) {
+      await _migrateToV16(db);
+    }
+  }
+
+  Future<void> _migrateToV16(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE $notesTable ADD COLUMN priority INTEGER DEFAULT 1',
+      );
+    } catch (e) {}
+    try {
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN subtasksJson TEXT');
+    } catch (e) {}
+    try {
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN attachmentsJson TEXT',
+      );
+    } catch (e) {}
+    try {
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN lastTriggered TEXT',
+      );
+    } catch (e) {}
+    try {
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN isEnabled INTEGER DEFAULT 1',
+      );
+    } catch (e) {}
+  }
+
+  Future<void> _migrateToV15(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN isImportant INTEGER DEFAULT 0',
+      );
+    } catch (e) {}
+    try {
+      await db.execute(
+        'ALTER TABLE $todosTable ADD COLUMN hasReminder INTEGER DEFAULT 0',
+      );
+    } catch (e) {}
+    try {
+      await db.execute('ALTER TABLE $todosTable ADD COLUMN reminderId TEXT');
+    } catch (e) {}
+  }
+
+  Future<void> _migrateToV13(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE $reflectionQuestionsTable ADD COLUMN frequency TEXT DEFAULT "daily"',
+      );
+    } catch (e) {
+      // Column may already exist
+    }
+  }
+
+  Future<void> _migrateToV14(Database db) async {
+    try {
+      // Add recurrence column to reminders table
+      await db.execute(
+        'ALTER TABLE $remindersTable ADD COLUMN recurrence TEXT DEFAULT "once"',
+      );
+    } catch (e) {
+      // Column may already exist
+    }
+
+    try {
+      // Add draft column to reflections table
+      await db.execute('ALTER TABLE $reflectionsTable ADD COLUMN draft TEXT');
+    } catch (e) {
+      // Column may already exist
     }
   }
 
@@ -1301,7 +1402,7 @@ class NotesDatabase {
     for (final alarm in alarms) {
       await db.insert(
         remindersTable,
-        _alarmToMap(alarm),
+        _alarmToMap(alarm, noteId),
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
     }
@@ -1393,29 +1494,44 @@ class NotesDatabase {
   //   );
   // }
 
-  Map<String, dynamic> _alarmToMap(Alarm alarm) {
+  Map<String, dynamic> _alarmToMap(Alarm alarm, [String? noteId]) {
     return {
       'id': alarm.id,
-      'linkedNoteId': alarm.linkedNoteId,
-      'scheduledTime': alarm.scheduledTime.toIso8601String(),
-      'recurrence': alarm.recurrence.name,
-      'isActive': alarm.isActive ? 1 : 0,
       'message': alarm.message,
+      'title': alarm.message, // Use message as title
+      'linkedNoteId': noteId ?? alarm.linkedNoteId,
+      'linkedTodoId': alarm.linkedTodoId,
+      'scheduledTime': alarm.scheduledTime.toIso8601String(),
+      'timezone': 'local',
+      'recurrence': alarm.recurrence.name,
+      'recurPattern': null,
+      'recurDays': alarm.weekDays?.join(','),
+      'recurEndDate': null,
+      'recurEndType': null,
+      'recurEndValue': null,
+      'isActive': alarm.isActive ? 1 : 0,
+      'isCompleted': alarm.completedAt != null ? 1 : 0,
       'status': alarm.status.name,
-      'vibrate': alarm.vibrate ? 1 : 0,
+      'snoozedUntil': alarm.snoozedUntil?.toIso8601String(),
+      'snoozeCount': alarm.snoozeCount,
+      'notificationId': null,
+      'soundUri': alarm.soundPath,
+      'hasVibration': alarm.vibrate ? 1 : 0,
+      'hasLED': 1,
+      'isEnabled': alarm.isEnabled ? 1 : 0,
+      'lastTriggered': alarm.lastTriggered?.toIso8601String(),
       'createdAt': alarm.createdAt.toIso8601String(),
       'updatedAt': alarm.updatedAt.toIso8601String(),
-      'lastTriggered': alarm.lastTriggered?.toIso8601String(),
-      'snoozedUntil': alarm.snoozedUntil?.toIso8601String(),
-      'soundPath': alarm.soundPath,
-      'weekDays': alarm.weekDays?.join(','),
+      'isDeleted': 0,
     };
   }
 
   Alarm _alarmFromMap(Map<String, dynamic> map) {
     return Alarm(
       id: map['id'],
+      message: map['message'] ?? '',
       linkedNoteId: map['linkedNoteId'],
+      linkedTodoId: map['linkedTodoId'],
       scheduledTime: DateTime.parse(map['scheduledTime']),
       recurrence: AlarmRecurrence.values.firstWhere(
         (e) => e.name == (map['recurrence'] ?? 'none'),
@@ -1426,20 +1542,22 @@ class NotesDatabase {
         orElse: () => AlarmStatus.scheduled,
       ),
       isActive: map['isActive'] == 1,
-      message: map['message'] ?? '',
-      vibrate: (map['vibrate'] ?? 1) == 1,
-      createdAt: DateTime.parse(map['createdAt']),
-      updatedAt: DateTime.parse(map['updatedAt']),
+      vibrate: (map['hasVibration'] ?? 1) == 1,
+      isEnabled: (map['isEnabled'] ?? 1) == 1,
       lastTriggered: map['lastTriggered'] != null
           ? DateTime.parse(map['lastTriggered'])
           : null,
+      snoozeCount: map['snoozeCount'] ?? 0,
+      completedAt: map['isCompleted'] == 1 ? DateTime.now() : null,
+      createdAt: DateTime.parse(map['createdAt']),
+      updatedAt: DateTime.parse(map['updatedAt']),
       snoozedUntil: map['snoozedUntil'] != null
           ? DateTime.parse(map['snoozedUntil'])
           : null,
-      soundPath: map['soundPath'],
+      soundPath: map['soundUri'],
       weekDays:
-          map['weekDays'] != null && (map['weekDays'] as String).isNotEmpty
-          ? (map['weekDays'] as String)
+          map['recurDays'] != null && (map['recurDays'] as String).isNotEmpty
+          ? (map['recurDays'] as String)
                 .split(',')
                 .map((e) => int.parse(e))
                 .toList()
@@ -1468,9 +1586,14 @@ class NotesDatabase {
       'title': note.title,
       'content': note.content,
       'color': note.color.index,
+      'category': note.category,
       'isPinned': note.isPinned ? 1 : 0,
       'isArchived': note.isArchived ? 1 : 0,
+      'isFavorite': note.isFavorite ? 1 : 0,
       'tags': note.tags.join(','),
+      'priority': note.priority,
+      'linkedReflectionId': note.linkedReflectionId,
+      'linkedTodoId': note.linkedTodoId,
       'createdAt': note.createdAt.toIso8601String(),
       'updatedAt': note.updatedAt.toIso8601String(),
     };
@@ -1483,14 +1606,19 @@ class NotesDatabase {
       title: map['title'] ?? '',
       content: map['content'] ?? '',
       color: NoteColor.values[map['color'] ?? 0],
+      category: map['category'] ?? 'General',
       isPinned: map['isPinned'] == 1,
       isArchived: map['isArchived'] == 1,
+      isFavorite: map['isFavorite'] == 1,
+      priority: map['priority'] ?? 1,
       tags:
           (map['tags'] as String?)
               ?.split(',')
               .where((t) => t.isNotEmpty)
               .toList() ??
           [],
+      linkedReflectionId: map['linkedReflectionId'],
+      linkedTodoId: map['linkedTodoId'],
       createdAt: DateTime.parse(map['createdAt']),
       updatedAt: DateTime.parse(map['updatedAt']),
     );
@@ -1504,6 +1632,21 @@ class NotesDatabase {
       mediaToMap(noteId, media),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+  }
+
+  /// Sync all media for a note (batch update)
+  Future<void> syncMediaForNote(String noteId, List<MediaItem> media) async {
+    final db = await database;
+    // For now, clear and re-insert for consistency (small lists only)
+    await db.delete(mediaTable, where: 'noteId = ?', whereArgs: [noteId]);
+
+    for (final item in media) {
+      await db.insert(
+        mediaTable,
+        mediaToMap(noteId, item),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
   }
 
   /// Get all media for a note
@@ -1586,8 +1729,13 @@ class NotesDatabase {
       'category': todo.category.displayName,
       'priority': todo.priority.level,
       'isCompleted': todo.isCompleted ? 1 : 0,
+      'isImportant': todo.isImportant ? 1 : 0,
+      'hasReminder': todo.hasReminder ? 1 : 0,
+      'reminderId': todo.reminderId,
       'dueDate': todo.dueDate?.toIso8601String(),
       'completedAt': todo.completedAt?.toIso8601String(),
+      'subtasksJson': jsonEncode(todo.subtasks.map((s) => s.toJson()).toList()),
+      'attachmentsJson': jsonEncode(todo.attachmentPaths),
       'createdAt': todo.createdAt.toIso8601String(),
       'updatedAt': todo.updatedAt.toIso8601String(),
     };
@@ -1599,6 +1747,9 @@ class NotesDatabase {
       id: map['id'],
       text: map['title'] ?? '',
       isCompleted: (map['isCompleted'] ?? 0) == 1,
+      isImportant: (map['isImportant'] ?? 0) == 1,
+      hasReminder: (map['hasReminder'] ?? 0) == 1,
+      reminderId: map['reminderId'],
       dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate']) : null,
       completedAt: map['completedAt'] != null
           ? DateTime.parse(map['completedAt'])
@@ -1606,6 +1757,16 @@ class NotesDatabase {
       priority: _parseTodoPriority(map['priority'] ?? 2),
       category: _parseTodoCategory(map['category'] ?? 'Personal'),
       notes: map['description'],
+      subtasks: map['subtasksJson'] != null
+          ? (jsonDecode(map['subtasksJson']) as List)
+                .map((s) => SubTask.fromJson(s))
+                .toList()
+          : [],
+      attachmentPaths: map['attachmentsJson'] != null
+          ? (jsonDecode(map['attachmentsJson']) as List)
+                .map((a) => a as String)
+                .toList()
+          : [],
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),

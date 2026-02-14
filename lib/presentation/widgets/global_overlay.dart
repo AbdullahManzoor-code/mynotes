@@ -14,6 +14,7 @@ class GlobalOverlay extends StatelessWidget {
     final uiService = getIt<GlobalUiService>();
 
     return Stack(
+      fit: StackFit.expand,
       children: [
         child,
         ValueListenableBuilder<bool>(

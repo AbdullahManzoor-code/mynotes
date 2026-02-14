@@ -59,6 +59,10 @@ class Note extends Equatable {
   final DateTime createdAt;
   final DateTime updatedAt;
   final int priority;
+  final String category;
+  final bool isFavorite;
+  final String? linkedReflectionId;
+  final String? linkedTodoId;
 
   Note({
     required this.id,
@@ -75,6 +79,10 @@ class Note extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     this.priority = 1,
+    this.category = 'General',
+    this.isFavorite = false,
+    this.linkedReflectionId,
+    this.linkedTodoId,
   }) : createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
@@ -97,6 +105,10 @@ class Note extends Equatable {
     createdAt,
     updatedAt,
     priority,
+    category,
+    isFavorite,
+    linkedReflectionId,
+    linkedTodoId,
   ];
 
   Note copyWith({
@@ -114,6 +126,10 @@ class Note extends Equatable {
     DateTime? createdAt,
     DateTime? updatedAt,
     int? priority,
+    String? category,
+    bool? isFavorite,
+    String? linkedReflectionId,
+    String? linkedTodoId,
   }) {
     return Note(
       id: id ?? this.id,
@@ -130,6 +146,10 @@ class Note extends Equatable {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       priority: priority ?? this.priority,
+      category: category ?? this.category,
+      isFavorite: isFavorite ?? this.isFavorite,
+      linkedReflectionId: linkedReflectionId ?? this.linkedReflectionId,
+      linkedTodoId: linkedTodoId ?? this.linkedTodoId,
     );
   }
 

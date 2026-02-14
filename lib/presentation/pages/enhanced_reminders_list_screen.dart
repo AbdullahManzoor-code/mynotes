@@ -438,6 +438,7 @@ class EnhancedRemindersListScreen extends StatelessWidget {
 
   Widget _buildFloatingActionButton(BuildContext context) {
     return FloatingActionButton(
+      heroTag: 'reminders_enhanced_fab',
       onPressed: () {
         showModalBottomSheet(
           context: context,

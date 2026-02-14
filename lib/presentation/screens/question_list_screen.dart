@@ -115,6 +115,7 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'question_list_fab',
         onPressed: () => _showAddDialog(context),
         backgroundColor: AppColors.primaryColor,
         child: const Icon(Icons.add_comment_outlined, color: Colors.white),
@@ -460,4 +461,3 @@ class _QuestionListScreenState extends State<QuestionListScreen> {
     );
   }
 }
-

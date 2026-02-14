@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/domain/entities/note.dart';
+import 'package:mynotes/presentation/bloc/note/note_bloc.dart' show NotesBloc;
+import 'package:mynotes/presentation/bloc/note/note_event.dart'
+    show LoadArchivedNotesEvent;
 import 'package:mynotes/presentation/pages/search_filter_screen.dart'
     show SearchFilterScreen;
 import 'package:mynotes/presentation/widgets/create_alarm_bottom_sheet.dart';
@@ -144,7 +148,13 @@ class AppRouter {
         );
 
       case AppRoutes.archivedNotes:
-        return MaterialPageRoute(builder: (_) => const ArchivedNotesScreen());
+        return MaterialPageRoute(
+          builder: (context) {
+            // Trigger load when navigating directly to Archive
+            context.read<NotesBloc>().add(const LoadArchivedNotesEvent());
+            return const ArchivedNotesScreen();
+          },
+        );
 
       // ==================== Smart Collections Module ====================
       case AppRoutes.smartCollections:
