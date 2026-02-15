@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/bloc/media/media_organization/media_organization_bloc.dart';
+import 'package:mynotes/core/utils/app_logger.dart';
 import '../../injection_container.dart';
 import '../../domain/repositories/media_repository.dart';
 import '../design_system/app_colors.dart';
@@ -30,6 +31,7 @@ class _MediaOrganizationViewContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('MediaOrganizationViewContent: Building UI');
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
@@ -57,6 +59,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
                 }
 
                 if (state is MediaOrganizationError) {
+                  AppLogger.e(
+                    'MediaOrganizationView: Error state - ${state.message}',
+                  );
                   return Center(
                     child: Padding(
                       padding: AppSpacing.paddingAllL,
@@ -75,12 +80,16 @@ class _MediaOrganizationViewContent extends StatelessWidget {
                           ),
                           AppSpacing.gapM,
                           TextButton(
-                            onPressed: () =>
-                                context.read<MediaOrganizationBloc>().add(
-                                  const LoadMediaOrganizationEvent(
-                                    groupBy: 'type',
-                                  ),
+                            onPressed: () {
+                              AppLogger.i(
+                                'MediaOrganizationView: Retry button pressed',
+                              );
+                              context.read<MediaOrganizationBloc>().add(
+                                const LoadMediaOrganizationEvent(
+                                  groupBy: 'type',
                                 ),
+                              );
+                            },
                             child: const Text('Retry'),
                           ),
                         ],
@@ -91,6 +100,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
 
                 if (state is MediaOrganizationLoaded) {
                   final grouped = state.groupedMedia;
+                  AppLogger.i(
+                    'MediaOrganizationView: Loaded ${grouped.length} groups',
+                  );
                   if (grouped.isEmpty) {
                     return Center(
                       child: Column(
@@ -164,6 +176,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       child: ElevatedButton(
         onPressed: () {
+          AppLogger.i(
+            'MediaOrganizationView: Group by button $label ($value) pressed',
+          );
           context.read<MediaOrganizationBloc>().add(
             LoadMediaOrganizationEvent(groupBy: value),
           );
@@ -209,6 +224,11 @@ class _MediaOrganizationViewContent extends StatelessWidget {
         side: const BorderSide(color: AppColors.borderLight),
       ),
       child: ExpansionTile(
+        onExpansionChanged: (expanded) {
+          AppLogger.i(
+            'MediaOrganizationView: Group $groupKey ${expanded ? 'expanded' : 'collapsed'}',
+          );
+        },
         shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
         collapsedShape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.zero,
@@ -285,6 +305,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
                         ],
                       ),
                       onTap: () {
+                        AppLogger.i(
+                          'MediaOrganizationView: View item - ${item.name}',
+                        );
                         // View action
                       },
                     ),
@@ -300,6 +323,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
                         ],
                       ),
                       onTap: () {
+                        AppLogger.i(
+                          'MediaOrganizationView: Organize button tapped for ${item.name}',
+                        );
                         // Use a post-frame callback to show dialog after menu closes
                         WidgetsBinding.instance.addPostFrameCallback((_) {
                           _showOrganizeDialog(context, item);
@@ -325,6 +351,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
                         ],
                       ),
                       onTap: () {
+                        AppLogger.i(
+                          'MediaOrganizationView: Delete item - ${item.name}',
+                        );
                         // Delete action
                       },
                     ),
@@ -339,6 +368,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
   }
 
   void _showOrganizeDialog(BuildContext context, dynamic item) {
+    AppLogger.i(
+      'MediaOrganizationView: Showing Organize Dialog for ${item.name}',
+    );
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -373,7 +405,10 @@ class _MediaOrganizationViewContent extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('MediaOrganizationView: Organize dialog cancelled');
+              Navigator.pop(context);
+            },
             child: Text(
               'Cancel',
               style: AppTypography.bodyMedium(context, AppColors.secondaryText),
@@ -381,6 +416,9 @@ class _MediaOrganizationViewContent extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
+              AppLogger.i(
+                'MediaOrganizationView: Save button in organize dialog pressed',
+              );
               Navigator.pop(context);
               getIt<GlobalUiService>().showSuccess(
                 'Item organized successfully',

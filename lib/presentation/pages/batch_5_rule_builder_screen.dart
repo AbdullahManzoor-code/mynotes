@@ -8,6 +8,7 @@ import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'package:mynotes/presentation/design_system/app_spacing.dart';
 import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/core/utils/app_logger.dart';
 
 /// Rule Builder Screen - Batch 5, Screen 2
 /// Refactored to use Design System, Global UI Services, and BLoC
@@ -39,12 +40,16 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
   }
 
   void _onFieldChanged() {
+    AppLogger.i(
+      'RuleBuilderScreen: Field name changed to ${_fieldController.text}',
+    );
     context.read<RuleBuilderBloc>().add(
       UpdateRuleFieldEvent(field: _fieldController.text),
     );
   }
 
   void _onValueChanged() {
+    AppLogger.i('RuleBuilderScreen: Value changed');
     context.read<RuleBuilderBloc>().add(
       UpdateRuleValueEvent(value: _valueController.text),
     );
@@ -52,10 +57,14 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('RuleBuilderScreen: Building UI');
     return BlocProvider<RuleBuilderBloc>(
       create: (context) {
         final bloc = getIt<RuleBuilderBloc>();
         if (widget.initialRules != null) {
+          AppLogger.i(
+            'RuleBuilderScreen: Initializing with ${widget.initialRules!.length} rules',
+          );
           bloc.add(
             InitializeRuleBuilderEvent(initialRules: widget.initialRules!),
           );
@@ -202,6 +211,9 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
                 color: AppColors.primaryColor,
               ),
               onSelected: (val) {
+                AppLogger.i(
+                  'RuleBuilderScreen: Selected field from menu: $val',
+                );
                 _fieldController.text = val;
                 bloc.add(UpdateRuleFieldEvent(field: val));
               },
@@ -226,8 +238,10 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
               child: Text(_getOperatorLabel(op)),
             );
           }).toList(),
-          onChanged: (value) =>
-              bloc.add(UpdateRuleOperatorEvent(operator: value ?? '=')),
+          onChanged: (value) {
+            AppLogger.i('RuleBuilderScreen: Operator changed to $value');
+            bloc.add(UpdateRuleOperatorEvent(operator: value ?? '='));
+          },
           decoration: InputDecoration(
             labelText: 'Operator',
             prefixIcon: const Icon(
@@ -284,7 +298,10 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
               ),
               elevation: 0,
             ),
-            onPressed: () => _addRule(context, state),
+            onPressed: () {
+              AppLogger.i('RuleBuilderScreen: Add This Rule button pressed');
+              _addRule(context, state);
+            },
           ),
         ),
       ],
@@ -362,6 +379,9 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
                     color: AppColors.error,
                   ),
                   onPressed: () {
+                    AppLogger.i(
+                      'RuleBuilderScreen: Remove rule at index $index',
+                    );
                     context.read<RuleBuilderBloc>().add(
                       RemoveRuleIndexEvent(index: index),
                     );
@@ -382,6 +402,7 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
         Expanded(
           child: OutlinedButton(
             onPressed: () {
+              AppLogger.i('RuleBuilderScreen: Clear All rules button pressed');
               context.read<RuleBuilderBloc>().add(const ClearAllRulesEvent());
               getIt<GlobalUiService>().hapticFeedback();
             },
@@ -401,6 +422,9 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
           flex: 2,
           child: ElevatedButton(
             onPressed: () {
+              AppLogger.i(
+                'RuleBuilderScreen: Save Rules button pressed - count: ${state.builtRules.length}',
+              );
               getIt<GlobalUiService>().hapticFeedback();
               Navigator.pop(context, state.builtRules);
             },
@@ -428,6 +452,9 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
     final value = state.value.trim();
 
     if (field.isEmpty || value.isEmpty) {
+      AppLogger.w(
+        'RuleBuilderScreen: Validation failed - field or value is empty',
+      );
       getIt<GlobalUiService>().showWarning('Please fill in all rule fields');
       return;
     }
@@ -437,12 +464,14 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
     final isValid = await bloc.ruleEngine.validateRule(rule);
 
     if (isValid) {
+      AppLogger.i('RuleBuilderScreen: Rule validated and added: $rule');
       bloc.add(AddRuleEvent(rule: rule));
       _fieldController.clear();
       _valueController.clear();
       getIt<GlobalUiService>().showSuccess('Rule expression added');
       getIt<GlobalUiService>().hapticFeedback();
     } else {
+      AppLogger.e('RuleBuilderScreen: Rule validation failed for $rule');
       getIt<GlobalUiService>().showError('Invalid rule syntax');
     }
   }
@@ -489,4 +518,3 @@ class _RuleBuilderScreenState extends State<RuleBuilderScreen> {
     }
   }
 }
-

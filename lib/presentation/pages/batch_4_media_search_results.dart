@@ -8,6 +8,7 @@ import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
 import '../design_system/app_spacing.dart';
 import '../../core/services/global_ui_service.dart';
+import '../../core/utils/app_logger.dart';
 
 /// Media Search Results - Batch 4, Screen 4
 /// Refactored to StatelessWidget with BLoC and Design System
@@ -34,6 +35,7 @@ class _MediaSearchResultsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('MediaSearchResultsView: Building for query "$query"');
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
@@ -55,6 +57,9 @@ class _MediaSearchResultsView extends StatelessWidget {
           }
 
           if (state is MediaSearchError) {
+            AppLogger.e(
+              'MediaSearchResultsView: Error loading results: ${state.message}',
+            );
             return Center(
               child: Padding(
                 padding: AppSpacing.paddingAllL,
@@ -79,6 +84,9 @@ class _MediaSearchResultsView extends StatelessWidget {
 
           if (state is MediaSearchLoaded) {
             final results = state.results;
+            AppLogger.i(
+              'MediaSearchResultsView: Loaded ${results.length} results',
+            );
 
             if (results.isEmpty) {
               return Center(
@@ -177,6 +185,7 @@ class _MediaSearchResultsView extends StatelessWidget {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       onSelected: (value) {
+        AppLogger.i('MediaSearchResultsView: Sorting set to $value');
         getIt<GlobalUiService>().hapticFeedback();
       },
       itemBuilder: (context) => [
@@ -213,6 +222,9 @@ class _MediaSearchResultsView extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
+          AppLogger.i(
+            'MediaSearchResultsView: Result card #$rank tapped - ${item.name}',
+          );
           // Action for card tap
         },
         borderRadius: BorderRadius.circular(16.r),
@@ -298,7 +310,12 @@ class _MediaSearchResultsView extends StatelessWidget {
                       color: AppColors.primaryColor,
                       size: 20.sp,
                     ),
-                    onPressed: () => _showItemDetails(context, item),
+                    onPressed: () {
+                      AppLogger.i(
+                        'MediaSearchResultsView: Show item details for ${item.name}',
+                      );
+                      _showItemDetails(context, item);
+                    },
                     visualDensity: VisualDensity.compact,
                   ),
                   IconButton(
@@ -307,7 +324,11 @@ class _MediaSearchResultsView extends StatelessWidget {
                       color: AppColors.primaryColor,
                       size: 20.sp,
                     ),
-                    onPressed: () {},
+                    onPressed: () {
+                      AppLogger.i(
+                        'MediaSearchResultsView: Open item ${item.name}',
+                      );
+                    },
                     visualDensity: VisualDensity.compact,
                   ),
                 ],
@@ -396,6 +417,9 @@ class _MediaSearchResultsView extends StatelessWidget {
   }
 
   void _showItemDetails(BuildContext context, dynamic item) {
+    AppLogger.i(
+      'MediaSearchResultsView: Showing item details sheet for ${item.name}',
+    );
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -417,7 +441,12 @@ class _MediaSearchResultsView extends StatelessWidget {
                   style: AppTypography.heading1(context),
                 ),
                 IconButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    AppLogger.i(
+                      'MediaSearchResultsView: Closing item details sheet via close icon',
+                    );
+                    Navigator.pop(context);
+                  },
                   icon: const Icon(Icons.close_rounded),
                 ),
               ],
@@ -438,7 +467,12 @@ class _MediaSearchResultsView extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  AppLogger.i(
+                    'MediaSearchResultsView: Closing item details sheet via Close button',
+                  );
+                  Navigator.pop(context);
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryColor,
                   padding: EdgeInsets.symmetric(vertical: 16.h),

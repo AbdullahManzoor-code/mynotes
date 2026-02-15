@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:mynotes/core/services/geofence_service.dart';
 import 'package:mynotes/core/services/location_notification_service.dart';
 import 'package:mynotes/core/services/location_background_service.dart';
@@ -66,7 +67,7 @@ class LocationRemindersManager {
     if (_isInitialized) return;
 
     try {
-      debugPrint('[RemindersManager] Initializing...');
+      AppLogger.i('Initializing RemindersManager...');
 
       // Initialize notification channels
       await _notificationService.initializeNotificationChannels();
@@ -90,7 +91,7 @@ class LocationRemindersManager {
         ),
       );
 
-      debugPrint('[RemindersManager] Initialized successfully');
+      AppLogger.i('RemindersManager initialized successfully');
     } on LocationRemindersException {
       rethrow;
     } catch (e, stackTrace) {
@@ -100,14 +101,14 @@ class LocationRemindersManager {
         stackTrace: stackTrace,
       );
       onError?.call(error.message);
-      debugPrint('[RemindersManager] Init error: ${error.message}');
+      AppLogger.e('Init error: ${error.message}', e, stackTrace);
     }
   }
 
   /// Request all necessary permissions
   Future<bool> requestAllPermissions() async {
     try {
-      debugPrint('[RemindersManager] Requesting permissions...');
+      AppLogger.i('Requesting permissions...');
 
       final allPermissionsGranted = await _permissionManager
           .requestLocationPermissions();
@@ -118,7 +119,7 @@ class LocationRemindersManager {
           code: 'LOCATION_PERMISSIONS_DENIED',
         );
         onError?.call(error.message);
-        debugPrint('[RemindersManager] Location permissions denied');
+        AppLogger.w('Location permissions denied');
         return false;
       }
 
@@ -127,10 +128,10 @@ class LocationRemindersManager {
           .requestNotificationPermission();
 
       if (!notificationGranted) {
-        debugPrint('[RemindersManager] Notification permission not granted');
+        AppLogger.w('Notification permission not granted');
       }
 
-      debugPrint('[RemindersManager] All permissions requested');
+      AppLogger.i('All permissions requested');
       return allPermissionsGranted;
     } on LocationRemindersException {
       rethrow;
@@ -141,7 +142,7 @@ class LocationRemindersManager {
         stackTrace: stackTrace,
       );
       onError?.call(error.message);
-      debugPrint('[RemindersManager] Permission error: ${error.message}');
+      AppLogger.e('Permission error: ${error.message}', e, stackTrace);
       return false;
     }
   }
@@ -157,9 +158,7 @@ class LocationRemindersManager {
         stackTrace: stackTrace,
       );
       onError?.call(error.message);
-      debugPrint(
-        '[RemindersManager] Check permissions error: ${error.message}',
-      );
+      AppLogger.e('Check permissions error: ${error.message}', e, stackTrace);
       return false;
     }
   }
@@ -173,7 +172,7 @@ class LocationRemindersManager {
     if (_isMonitoring) return;
 
     try {
-      debugPrint('[RemindersManager] Starting monitoring...');
+      AppLogger.i('Starting monitoring...');
 
       // Check permissions
       final permissionsGranted = await arePermissionsGranted();
@@ -183,7 +182,7 @@ class LocationRemindersManager {
           code: 'PERMISSIONS_REQUIRED',
         );
         onError?.call(error.message);
-        debugPrint('[RemindersManager] ${error.message}');
+        AppLogger.w(error.message);
         return;
       }
 
@@ -198,7 +197,7 @@ class LocationRemindersManager {
         ),
       );
 
-      debugPrint('[RemindersManager] Monitoring started');
+      AppLogger.i('Monitoring started');
     } on LocationRemindersException {
       rethrow;
     } catch (e, stackTrace) {
@@ -208,14 +207,14 @@ class LocationRemindersManager {
         stackTrace: stackTrace,
       );
       onError?.call(error.message);
-      debugPrint('[RemindersManager] Start monitoring error: ${error.message}');
+      AppLogger.e('Start monitoring error: ${error.message}', e, stackTrace);
     }
   }
 
   /// Stop monitoring geofences
   Future<void> stopMonitoring() async {
     try {
-      debugPrint('[RemindersManager] Stopping monitoring...');
+      AppLogger.i('Stopping monitoring...');
       await _geofenceManager.stopMonitoring();
       _isMonitoring = false;
 
@@ -226,7 +225,7 @@ class LocationRemindersManager {
         ),
       );
 
-      debugPrint('[RemindersManager] Monitoring stopped');
+      AppLogger.i('Monitoring stopped');
     } catch (e, stackTrace) {
       final error = LocationServiceException(
         message: 'Error stopping monitoring',
@@ -234,16 +233,16 @@ class LocationRemindersManager {
         stackTrace: stackTrace,
       );
       onError?.call(error.message);
-      debugPrint('[RemindersManager] Stop monitoring error: ${error.message}');
+      AppLogger.e('Stop monitoring error: ${error.message}', e, stackTrace);
     }
   }
 
   /// Refresh geofences (call after adding/updating/deleting reminders)
   Future<void> refreshGeofences() async {
     try {
-      debugPrint('[RemindersManager] Refreshing geofences...');
+      AppLogger.i('Refreshing geofences...');
       await _geofenceManager.refreshGeofences();
-      debugPrint('[RemindersManager] Geofences refreshed');
+      AppLogger.i('Geofences refreshed');
     } catch (e, stackTrace) {
       final error = GeofenceException(
         message: 'Error refreshing geofences',
@@ -251,7 +250,7 @@ class LocationRemindersManager {
         stackTrace: stackTrace,
       );
       onError?.call(error.message);
-      debugPrint('[RemindersManager] Refresh error: ${error.message}');
+      AppLogger.e('Refresh error: ${error.message}', e, stackTrace);
     }
   }
 
@@ -264,12 +263,12 @@ class LocationRemindersManager {
   /// Dispose all resources
   Future<void> dispose() async {
     try {
-      debugPrint('[RemindersManager] Disposing...');
+      AppLogger.i('Disposing RemindersManager...');
       await stopMonitoring();
       await _notificationService.cancelAllNotifications();
       await _backgroundService.stopBackgroundService();
       _permissionManager.dispose();
-      debugPrint('[RemindersManager] Disposed');
+      AppLogger.i('RemindersManager disposed');
     } catch (e, stackTrace) {
       final error = LocationServiceException(
         message: 'Error disposing reminders manager',
@@ -277,7 +276,7 @@ class LocationRemindersManager {
         stackTrace: stackTrace,
       );
       onError?.call(error.message);
-      debugPrint('[RemindersManager] Dispose error: ${error.message}');
+      AppLogger.e('Dispose error: ${error.message}', e, stackTrace);
     }
   }
 }

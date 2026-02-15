@@ -18,6 +18,7 @@ class SearchFilterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('SearchFilterScreen: build');
     return BlocBuilder<NotesBloc, NoteState>(
       builder: (context, state) {
         final query = state is NotesLoaded ? state.searchQuery : '';
@@ -40,7 +41,10 @@ class SearchFilterScreen extends StatelessWidget {
                   elevation: 0,
                   leading: IconButton(
                     icon: Icon(Icons.arrow_back_ios_new, size: 20.sp),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      AppLogger.i('SearchFilterScreen: Back pressed');
+                      Navigator.pop(context);
+                    },
                   ),
                   title: TextField(
                     controller: searchController,
@@ -64,7 +68,10 @@ class SearchFilterScreen extends StatelessWidget {
                         isLabelVisible: _hasActiveFilters(state),
                         child: Icon(Icons.filter_list, size: 22.sp),
                       ),
-                      onPressed: () => _showFilterSheet(context, state),
+                      onPressed: () {
+                        AppLogger.i('SearchFilterScreen: Show filter sheet');
+                        _showFilterSheet(context, state);
+                      },
                     ),
                     SizedBox(width: 4.w),
                   ],
@@ -83,6 +90,7 @@ class SearchFilterScreen extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   void _performSearch(BuildContext context, String query) {
+    AppLogger.i('SearchFilterScreen: Performing search for "$query"');
     context.read<NotesBloc>().add(
       UpdateNoteViewConfigEvent(searchQuery: query),
     );
@@ -102,6 +110,7 @@ class SearchFilterScreen extends StatelessWidget {
   }
 
   void _clearFilters(BuildContext context) {
+    AppLogger.i('SearchFilterScreen: Clearing all filters');
     context.read<NotesBloc>().add(
       const UpdateNoteViewConfigEvent(
         filterWithImages: false,
@@ -165,8 +174,10 @@ class SearchFilterScreen extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () =>
-                context.read<NotesBloc>().add(const LoadNotesEvent()),
+            onPressed: () {
+              AppLogger.i('SearchFilterScreen: Retry loading notes');
+              context.read<NotesBloc>().add(const LoadNotesEvent());
+            },
             child: const Text('Retry'),
           ),
         ],
@@ -558,7 +569,10 @@ class SearchFilterScreen extends StatelessWidget {
           ],
         ),
         selected: isSelected,
-        onSelected: onSelected,
+        onSelected: (val) {
+          AppLogger.i('SearchFilterScreen: Toggle filter $label - $val');
+          onSelected(val);
+        },
         selectedColor: AppColors.primaryColor.withOpacity(0.2),
         checkmarkColor: AppColors.primaryColor,
       ),
@@ -570,6 +584,7 @@ class SearchFilterScreen extends StatelessWidget {
   // ---------------------------------------------------------------------------
 
   void _openNote(BuildContext context, Note note) {
+    AppLogger.i('SearchFilterScreen: Opening note - ${note.id}');
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => EnhancedNoteEditorScreen(note: note)),

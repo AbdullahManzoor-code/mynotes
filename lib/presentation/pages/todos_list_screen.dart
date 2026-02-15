@@ -26,6 +26,7 @@ class TodosListScreen extends StatelessWidget {
     return BlocBuilder<TodosBloc, TodosState>(
       builder: (context, state) {
         if (state is TodosInitial) {
+          AppLogger.i('TodosInitial state, loading todos...');
           context.read<TodosBloc>().add(LoadTodos());
         }
 
@@ -200,6 +201,7 @@ class TodosListScreen extends StatelessWidget {
                 selected: isSelected,
                 onSelected: (selected) {
                   if (selected) {
+                    AppLogger.i('Todo category filter changed to: $category');
                     context.read<TodosBloc>().add(ChangeCategory(category));
                   }
                 },
@@ -243,6 +245,7 @@ class TodosListScreen extends StatelessWidget {
         children: [
           SlidableAction(
             onPressed: (context) {
+              AppLogger.i('Todo item delete swiped: ${todo.id}');
               context.read<TodosBloc>().add(DeleteTodo(todo.id));
             },
             backgroundColor: Colors.red,
@@ -254,6 +257,7 @@ class TodosListScreen extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
+          AppLogger.i('Todo item tapped: ${todo.id}');
           // Open details
         },
         child: Padding(
@@ -263,6 +267,9 @@ class TodosListScreen extends StatelessWidget {
               Checkbox(
                 value: todo.isCompleted,
                 onChanged: (value) {
+                  AppLogger.i(
+                    'Todo item checkbox toggled: ${todo.id} to $value',
+                  );
                   context.read<TodosBloc>().add(
                     ToggleTodo(TodoParams.fromTodoItem(todo)),
                   );
@@ -423,4 +430,3 @@ class TaskItem extends TodoListItem {
 
   TaskItem(this.note);
 }
-

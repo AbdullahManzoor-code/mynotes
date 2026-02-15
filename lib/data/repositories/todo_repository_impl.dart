@@ -1,16 +1,16 @@
 import '../../domain/entities/todo_item.dart';
 import '../../domain/repositories/todo_repository.dart';
-import '../datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 
 class TodoRepositoryImpl implements TodoRepository {
-  final NotesDatabase _database;
+  final CoreDatabase _database;
 
-  TodoRepositoryImpl({required NotesDatabase database}) : _database = database;
+  TodoRepositoryImpl({required CoreDatabase database}) : _database = database;
 
   @override
   Future<List<TodoItem>> getTodos({String? noteId}) async {
     if (noteId != null) {
-      return await _database.getTodos(noteId);
+      return await _database.getTodos(noteId: noteId);
     }
     return await _database.getAllTodos();
   }

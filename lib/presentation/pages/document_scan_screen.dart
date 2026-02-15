@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import '../../presentation/design_system/app_colors.dart';
 import '../../presentation/design_system/app_typography.dart';
 import '../../presentation/design_system/app_spacing.dart';
@@ -29,6 +30,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i('DocumentScanScreen: Initialized');
     _bloc = DocumentScanBloc();
 
     _scanAnimationController = AnimationController(
@@ -55,6 +57,7 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
 
   @override
   void dispose() {
+    AppLogger.i('DocumentScanScreen: Disposed');
     _scanAnimationController.dispose();
     _fadeAnimationController.dispose();
     _bloc.close();
@@ -98,7 +101,10 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
                   Icons.arrow_back_ios,
                   color: AppColors.textPrimary(context),
                 ),
-                onPressed: () => Navigator.of(context).pop(),
+                onPressed: () {
+                  AppLogger.i('DocumentScanScreen: Back button pressed');
+                  Navigator.of(context).pop();
+                },
               ),
               title: Text(
                 'Document Scanner',
@@ -114,14 +120,24 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
                       Icons.save_outlined,
                       color: AppColors.primaryColor,
                     ),
-                    onPressed: () => _saveAsNote(state),
+                    onPressed: () {
+                      AppLogger.i(
+                        'DocumentScanScreen: Save extracted text pressed',
+                      );
+                      _saveAsNote(state);
+                    },
                   ),
               ],
             ),
             body: _buildBody(isDark, state),
             floatingActionButton: state.capturedImage == null
                 ? FloatingActionButton.extended(
-                    onPressed: _showCaptureOptions,
+                    onPressed: () {
+                      AppLogger.i(
+                        'DocumentScanScreen: Scan Document FAB pressed',
+                      );
+                      _showCaptureOptions();
+                    },
                     backgroundColor: AppColors.primaryColor,
                     foregroundColor: Colors.white,
                     icon: const Icon(Icons.camera_alt),
@@ -384,7 +400,10 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: _retakePhoto,
+                  onPressed: () {
+                    AppLogger.i('DocumentScanScreen: Retake photo pressed');
+                    _retakePhoto();
+                  },
                   icon: const Icon(Icons.camera_alt),
                   label: const Text('Retake'),
                   style: OutlinedButton.styleFrom(
@@ -399,7 +418,12 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
               SizedBox(width: AppSpacing.lg),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () => _copyText(state.extractedText),
+                  onPressed: () {
+                    AppLogger.i(
+                      'DocumentScanScreen: Copy extracted text pressed',
+                    );
+                    _copyText(state.extractedText);
+                  },
                   icon: const Icon(Icons.copy),
                   label: const Text('Copy Text'),
                   style: ElevatedButton.styleFrom(
@@ -447,6 +471,11 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
                   )
                 : SelectableText(
                     state.extractedText,
+                    onTap: () {
+                      AppLogger.i(
+                        'DocumentScanScreen: Extracted text tapped/selected',
+                      );
+                    },
                     style: AppTypography.bodyMedium(
                       context,
                       AppColors.textPrimary(context),
@@ -471,7 +500,12 @@ class _DocumentScanScreenState extends State<DocumentScanScreen>
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => _saveAsNote(state),
+                onPressed: () {
+                  AppLogger.i(
+                    'DocumentScanScreen: Save as Note button pressed',
+                  );
+                  _saveAsNote(state);
+                },
                 icon: const Icon(Icons.note_add),
                 label: const Text('Save as Note'),
                 style: ElevatedButton.styleFrom(
@@ -693,4 +727,3 @@ class _CaptureOptionsSheet extends StatelessWidget {
     );
   }
 }
-

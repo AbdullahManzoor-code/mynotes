@@ -6,6 +6,7 @@ import '../../domain/repositories/media_repository.dart';
 import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
 import '../../core/services/global_ui_service.dart';
+import '../../core/services/app_logger.dart';
 
 /// Media Analytics Dashboard - Batch 4, Screen 2
 /// Refactored to StatelessWidget with BLoC and Design System
@@ -43,6 +44,9 @@ class _MediaAnalyticsDashboardView extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.primaryColor),
             onPressed: () {
+              AppLogger.i(
+                'MediaAnalyticsDashboard: Refresh analytics triggered',
+              );
               context.read<MediaAnalyticsBloc>().add(LoadMediaAnalyticsEvent());
               getIt<GlobalUiService>().hapticFeedback();
               getIt<GlobalUiService>().showSuccess('Analytics updated');
@@ -96,9 +100,14 @@ class _MediaAnalyticsDashboardView extends StatelessWidget {
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
-                      onPressed: () => context.read<MediaAnalyticsBloc>().add(
-                        LoadMediaAnalyticsEvent(),
-                      ),
+                      onPressed: () {
+                        AppLogger.i(
+                          'MediaAnalyticsDashboard: Retry analytics load',
+                        );
+                        context.read<MediaAnalyticsBloc>().add(
+                          LoadMediaAnalyticsEvent(),
+                        );
+                      },
                       child: Text(
                         'Retry',
                         style: AppTypography.button(context, Colors.white),

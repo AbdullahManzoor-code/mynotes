@@ -103,8 +103,8 @@ class SavedLocation extends Equatable {
     return SavedLocation(
       id: map['id'] as String,
       name: map['name'] as String,
-      latitude: map['latitude'] as double,
-      longitude: map['longitude'] as double,
+      latitude: (map['latitude'] as num).toDouble(),
+      longitude: (map['longitude'] as num).toDouble(),
       address: map['address'] as String?,
       icon: map['icon'] as String? ?? 'location_on',
       createdAt: DateTime.parse(map['created_at'] as String),

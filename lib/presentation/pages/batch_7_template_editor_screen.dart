@@ -6,6 +6,7 @@ import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/core/utils/app_logger.dart';
 
 /// Template Editor - Batch 7, Screen 2
 /// Modernized to use Design System and Global UI Services
@@ -34,6 +35,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
     // Initialize BLoC state for editing
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      AppLogger.i(
+        'TemplateEditorScreen: Initializing with template ${widget.existingTemplate?.name ?? "new"}',
+      );
       context.read<TemplateManagementBloc>().add(
         StartEditingTemplateEvent(template: widget.existingTemplate),
       );
@@ -42,6 +46,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
   @override
   void dispose() {
+    AppLogger.i('TemplateEditorScreen: Disposed');
     _nameController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -79,7 +84,10 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                     Icons.delete_outline_rounded,
                     color: AppColors.error,
                   ),
-                  onPressed: () => _showDeleteConfirmation(context),
+                  onPressed: () {
+                    AppLogger.i('TemplateEditorScreen: Tapping delete button');
+                    _showDeleteConfirmation(context);
+                  },
                 ),
             ],
           ),
@@ -116,8 +124,12 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: () =>
-                          _showAddFieldDialog(context, state.editingFields),
+                      onPressed: () {
+                        AppLogger.i(
+                          'TemplateEditorScreen: Tapping add field button',
+                        );
+                        _showAddFieldDialog(context, state.editingFields);
+                      },
                       style: OutlinedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         side: const BorderSide(color: AppColors.primaryColor),
@@ -226,6 +238,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
           selected: isSelected,
           onSelected: (selected) {
             if (selected) {
+              AppLogger.i('TemplateEditorScreen: Selecting category $category');
               context.read<TemplateManagementBloc>().add(
                 UpdateEditingTemplateEvent(category: category),
               );
@@ -316,6 +329,10 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                 size: 20,
               ),
               onPressed: () {
+                final fieldName = field['name'] ?? 'unknown';
+                AppLogger.i(
+                  'TemplateEditorScreen: Removing field $fieldName at index $index',
+                );
                 final newFields = List<Map<String, String>>.from(fields);
                 newFields.removeAt(index);
                 context.read<TemplateManagementBloc>().add(
@@ -335,7 +352,10 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
       children: [
         Expanded(
           child: OutlinedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('TemplateEditorScreen: Cancelling edit');
+              Navigator.pop(context);
+            },
             style: OutlinedButton.styleFrom(
               padding: const EdgeInsets.symmetric(vertical: 16),
               side: const BorderSide(color: AppColors.borderLight),
@@ -352,7 +372,10 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         AppSpacing.gapM,
         Expanded(
           child: ElevatedButton(
-            onPressed: () => _saveTemplate(context, state),
+            onPressed: () {
+              AppLogger.i('TemplateEditorScreen: Tapping save button');
+              _saveTemplate(context, state);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryColor,
               padding: const EdgeInsets.symmetric(vertical: 16),
@@ -443,8 +466,12 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                       ),
                     )
                     .toList(),
-                onChanged: (v) =>
-                    setModalState(() => selectedType = v ?? 'text'),
+                onChanged: (v) {
+                  AppLogger.i(
+                    'TemplateEditorScreen: Changing new field format to $v',
+                  );
+                  setModalState(() => selectedType = v ?? 'text');
+                },
               ),
               AppSpacing.gapXL,
               SizedBox(
@@ -452,6 +479,9 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (fieldNameController.text.isNotEmpty) {
+                      AppLogger.i(
+                        'TemplateEditorScreen: Adding field ${fieldNameController.text} to template',
+                      );
                       final newFields = List<Map<String, String>>.from(
                         currentFields,
                       );
@@ -484,6 +514,7 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
   }
 
   void _showDeleteConfirmation(BuildContext context) {
+    AppLogger.i('TemplateEditorScreen: Showing delete confirmation dialog');
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -494,13 +525,20 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () {
+              AppLogger.i('TemplateEditorScreen: Cancelling template deletion');
+              Navigator.pop(dialogContext);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
+              final tid = widget.existingTemplate!.id;
+              AppLogger.i(
+                'TemplateEditorScreen: Confirming deletion for template ID $tid',
+              );
               context.read<TemplateManagementBloc>().add(
-                DeleteTemplateEvent(templateId: widget.existingTemplate!.id),
+                DeleteTemplateEvent(templateId: tid),
               );
               Navigator.pop(dialogContext);
               Navigator.pop(context);
@@ -519,10 +557,14 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
   void _saveTemplate(BuildContext context, TemplatesLoaded state) {
     if (_nameController.text.isEmpty) {
+      AppLogger.w('TemplateEditorScreen: Save failed - template name is empty');
       getIt<GlobalUiService>().showWarning('Please enter a template name');
       return;
     }
 
+    AppLogger.i(
+      'TemplateEditorScreen: Saving template "${_nameController.text}"',
+    );
     context.read<TemplateManagementBloc>().add(
       CreateTemplateEvent(
         name: _nameController.text,
@@ -535,4 +577,3 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
     Navigator.pop(context);
   }
 }
-

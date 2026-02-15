@@ -8,6 +8,8 @@ import '../../presentation/design_system/app_typography.dart';
 import '../../presentation/design_system/app_spacing.dart';
 import '../../domain/entities/alarm.dart';
 import '../../domain/entities/note.dart';
+import 'package:mynotes/core/services/app_logger.dart';
+
 import '../bloc/note/note_bloc.dart';
 import '../bloc/note/note_state.dart';
 import '../bloc/calendar_integration/calendar_integration_bloc.dart';
@@ -27,6 +29,18 @@ class CalendarIntegrationScreen extends StatefulWidget {
 class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
   DateTime _selectedDay = DateTime.now();
   Map<DateTime, List<Note>> _notesMap = {};
+
+  @override
+  void initState() {
+    super.initState();
+    AppLogger.i('CalendarIntegrationScreen: Initialized');
+  }
+
+  @override
+  void dispose() {
+    AppLogger.i('CalendarIntegrationScreen: Disposed');
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +91,12 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
                       Icons.arrow_back_ios,
                       color: AppColors.textPrimary(context),
                     ),
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () {
+                      AppLogger.i(
+                        'CalendarIntegrationScreen: Back button pressed',
+                      );
+                      Navigator.of(context).pop();
+                    },
                   ),
                   title: Text(
                     'Calendar',
@@ -90,6 +109,9 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
                     IconButton(
                       icon: Icon(Icons.today, color: AppColors.primaryColor),
                       onPressed: () {
+                        AppLogger.i(
+                          'CalendarIntegrationScreen: Today button pressed',
+                        );
                         context.read<CalendarIntegrationBloc>().add(
                           const ResetToTodayEvent(),
                         );
@@ -128,11 +150,17 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
                         startingDayOfWeek: StartingDayOfWeek.monday,
                         calendarFormat: calendarFormat,
                         onFormatChanged: (format) {
+                          AppLogger.i(
+                            'CalendarIntegrationScreen: Calendar format changed to $format',
+                          );
                           context.read<CalendarIntegrationBloc>().add(
                             ChangeCalendarFormatEvent(format),
                           );
                         },
                         onDaySelected: (newSelectedDay, newFocusedDay) {
+                          AppLogger.i(
+                            'CalendarIntegrationScreen: Day selected: $newSelectedDay',
+                          );
                           context.read<CalendarIntegrationBloc>().add(
                             SelectDayEvent(newSelectedDay, newFocusedDay),
                           );
@@ -238,6 +266,9 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
                                 const Spacer(),
                                 IconButton(
                                   onPressed: () {
+                                    AppLogger.i(
+                                      'CalendarIntegrationScreen: Add reminder for day $selectedDay pressed',
+                                    );
                                     // Add new reminder for selected day
                                   },
                                   icon: Icon(
@@ -285,6 +316,9 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
                 ),
                 floatingActionButton: FloatingActionButton.extended(
                   onPressed: () {
+                    AppLogger.i(
+                      'CalendarIntegrationScreen: Sync Calendar FAB pressed',
+                    );
                     _showCalendarIntegrationSetup(context);
                   },
                   backgroundColor: AppColors.primaryColor,
@@ -436,7 +470,15 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
             ),
           ),
           PopupMenuButton<String>(
+            onOpened: () {
+              AppLogger.i(
+                'CalendarIntegrationScreen: Event card menu pressed for note: ${note.id}',
+              );
+            },
             onSelected: (value) {
+              AppLogger.i(
+                'CalendarIntegrationScreen: Event card menu action selected: $value for note: ${note.id}',
+              );
               switch (value) {
                 case 'edit':
                   // Edit note
@@ -470,6 +512,9 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
   }
 
   void _showCalendarIntegrationSetup(BuildContext context) {
+    AppLogger.i(
+      'CalendarIntegrationScreen: Showing Calendar Integration setup sheet',
+    );
     final calendarBloc = context.read<CalendarIntegrationBloc>();
     showModalBottomSheet(
       context: context,
@@ -585,6 +630,9 @@ class _CalendarIntegrationSetupSheet extends StatelessWidget {
                             Icons.calendar_today,
                             calendar.isReadOnly ?? false,
                             (value) {
+                              AppLogger.i(
+                                'CalendarIntegrationScreen: Calendar sync toggled: $value for ${calendar.name}',
+                              );
                               // Toggle sync logic
                             },
                           ),
@@ -598,6 +646,9 @@ class _CalendarIntegrationSetupSheet extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
+                      AppLogger.i(
+                        'CalendarIntegrationScreen: Setup Sheet Done button pressed',
+                      );
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
@@ -685,4 +736,3 @@ class _CalendarIntegrationSetupSheet extends StatelessWidget {
     );
   }
 }
-

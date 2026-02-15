@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:share_plus/share_plus.dart';
 import '../../core/constants/app_colors.dart';
 import '../../domain/entities/note.dart';
@@ -23,10 +24,12 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   @override
   void initState() {
     super.initState();
+    AppLogger.i('PdfPreviewScreen: initState for note: ${widget.note.id}');
     _exportedPdfPath = widget.pdfPath;
   }
 
   Future<void> _exportPdf() async {
+    AppLogger.i('PdfPreviewScreen: Starting PDF export');
     setState(() => _isExporting = true);
 
     try {
@@ -36,6 +39,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
       // Mock PDF path
       final pdfPath = '/storage/emulated/0/Download/${widget.note.title}.pdf';
 
+      AppLogger.i('PdfPreviewScreen: PDF exported to $pdfPath');
       setState(() {
         _exportedPdfPath = pdfPath;
         _isExporting = false;
@@ -50,6 +54,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         ),
       );
     } catch (e) {
+      AppLogger.e('PdfPreviewScreen: Export failed', e);
       setState(() => _isExporting = false);
 
       if (!mounted) return;
@@ -61,7 +66,9 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
   }
 
   Future<void> _sharePdf() async {
+    AppLogger.i('PdfPreviewScreen: Sharing PDF');
     if (_exportedPdfPath == null) {
+      AppLogger.i('PdfPreviewScreen: PDF not exported yet, exporting first');
       await _exportPdf();
       return;
     }
@@ -71,6 +78,7 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
         XFile(_exportedPdfPath!),
       ], text: 'Check out my note: ${widget.note.title}');
     } catch (e) {
+      AppLogger.e('PdfPreviewScreen: Share failed', e);
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
@@ -334,4 +342,3 @@ class _PdfPreviewScreenState extends State<PdfPreviewScreen> {
     );
   }
 }
-

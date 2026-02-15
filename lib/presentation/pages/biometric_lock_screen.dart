@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:mynotes/core/utils/app_logger.dart';
 import '../../core/constants/app_colors.dart';
 import '../../injection_container.dart';
 import '../bloc/biometric_auth/biometric_auth_bloc.dart';
@@ -23,6 +24,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i('BiometricLockScreen: Initialized');
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -31,6 +33,7 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
 
   @override
   void dispose() {
+    AppLogger.i('BiometricLockScreen: Disposed');
     _pulseController.dispose();
     super.dispose();
   }
@@ -61,17 +64,29 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
         ..add(const AuthenticateEvent()),
       child: BlocConsumer<BiometricAuthBloc, BiometricAuthState>(
         listener: (context, state) async {
+          AppLogger.i(
+            'BiometricLockScreen: State changed to ${state.runtimeType}',
+          );
           if (state is BiometricAuthenticated) {
+            AppLogger.i('BiometricLockScreen: Authentication successful');
             await Future.delayed(const Duration(milliseconds: 300));
             if (!mounted) return;
 
             if (widget.onAuthenticated != null) {
+              AppLogger.i(
+                'BiometricLockScreen: Executing onAuthenticated callback',
+              );
               widget.onAuthenticated!();
             } else {
+              AppLogger.i('BiometricLockScreen: Navigating to MainHomeScreen');
               Navigator.of(context).pushReplacement(
                 MaterialPageRoute(builder: (_) => const MainHomeScreen()),
               );
             }
+          } else if (state is BiometricAuthFailure) {
+            AppLogger.e(
+              'BiometricLockScreen: Authentication failed: ${state.message}',
+            );
           }
         },
         builder: (context, state) {
@@ -153,9 +168,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
                       GestureDetector(
                         onTap: isAuthenticating
                             ? null
-                            : () => context.read<BiometricAuthBloc>().add(
-                                const AuthenticateEvent(),
-                              ),
+                            : () {
+                                AppLogger.i(
+                                  'BiometricLockScreen: Biometric icon tapped. Triggering AuthenticateEvent.',
+                                );
+                                context.read<BiometricAuthBloc>().add(
+                                  const AuthenticateEvent(),
+                                );
+                              },
                         child: AnimatedBuilder(
                           animation: _pulseController,
                           builder: (context, child) {
@@ -227,9 +247,14 @@ class _BiometricLockScreenState extends State<BiometricLockScreen>
                       // Retry Button
                       if (!isAuthenticating && state is! BiometricAuthenticated)
                         TextButton.icon(
-                          onPressed: () => context
-                              .read<BiometricAuthBloc>()
-                              .add(const AuthenticateEvent()),
+                          onPressed: () {
+                            AppLogger.i(
+                              'BiometricLockScreen: Retry button tapped',
+                            );
+                            context.read<BiometricAuthBloc>().add(
+                              const AuthenticateEvent(),
+                            );
+                          },
                           icon: const Icon(
                             Icons.refresh,
                             color: AppColors.primaryColor,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import '../../core/routes/app_routes.dart';
 import '../design_system/design_system.dart';
 import '../widgets/lottie_animation_widget.dart';
@@ -48,6 +49,7 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
         margin: EdgeInsets.only(left: 16.w),
         child: IconButton(
           onPressed: () {
+            AppLogger.i('EmptyStateNotesHelpScreen: Menu pressed');
             // Handle menu action
           },
           icon: Icon(Icons.menu, color: AppColors.textPrimary(context)),
@@ -59,6 +61,7 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
           margin: EdgeInsets.only(right: 16.w),
           child: IconButton(
             onPressed: () {
+              AppLogger.i('EmptyStateNotesHelpScreen: Settings pressed');
               // Handle settings action
             },
             icon: Icon(
@@ -203,6 +206,7 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
           height: 56.h,
           child: ElevatedButton.icon(
             onPressed: () {
+              AppLogger.i('EmptyStateNotesHelpScreen: Create New Note pressed');
               // Navigate to note editor
               Navigator.pushNamed(context, AppRoutes.noteEditor);
             },
@@ -229,6 +233,9 @@ class EmptyStateNotesHelpScreen extends StatelessWidget {
         // Secondary Import Button
         TextButton(
           onPressed: () {
+            AppLogger.i(
+              'EmptyStateNotesHelpScreen: Import existing notes pressed',
+            );
             // Handle import action
           },
           child: Text(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/presentation/widgets/command_palette_widget.dart';
 import 'package:mynotes/presentation/widgets/universal_item_card.dart';
 import '../bloc/command_palette/command_palette_bloc.dart';
@@ -17,6 +18,7 @@ class GlobalSearchScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('GlobalSearchScreen: Building wrapper');
     return BlocProvider(
       create: (context) =>
           GlobalSearchBloc()..add(const SearchQueryChangedEvent('')),
@@ -38,12 +40,14 @@ class _GlobalSearchViewState extends State<_GlobalSearchView> {
   @override
   void initState() {
     super.initState();
+    AppLogger.i('GlobalSearchScreen: Initialized');
     _searchController = TextEditingController();
     context.read<CommandPaletteBloc>().add(const LoadCommandsEvent());
   }
 
   @override
   void dispose() {
+    AppLogger.i('GlobalSearchScreen: Disposed');
     _searchController.dispose();
     super.dispose();
   }
@@ -52,6 +56,7 @@ class _GlobalSearchViewState extends State<_GlobalSearchView> {
     BuildContext context,
     SearchFilters currentFilters,
   ) async {
+    AppLogger.i('GlobalSearchScreen: Showing filter modal');
     final newFilters = await showModalBottomSheet<SearchFilters>(
       context: context,
       isScrollControlled: true,
@@ -60,6 +65,7 @@ class _GlobalSearchViewState extends State<_GlobalSearchView> {
     );
 
     if (newFilters != null && mounted) {
+      AppLogger.i('GlobalSearchScreen: New filters applied');
       context.read<GlobalSearchBloc>().add(
         SearchFiltersChangedEvent(newFilters),
       );
@@ -67,6 +73,7 @@ class _GlobalSearchViewState extends State<_GlobalSearchView> {
   }
 
   void _handleCommandSelection(BuildContext context, CommandItem command) {
+    AppLogger.i('GlobalSearchScreen: Command selected: ${command.label}');
     switch (command.id) {
       case 'new_note':
         Navigator.pop(context);
@@ -96,6 +103,7 @@ class _GlobalSearchViewState extends State<_GlobalSearchView> {
                 CommandPaletteWidget(
                   controller: _searchController,
                   onQueryChanged: (val) {
+                    AppLogger.i('GlobalSearchScreen: Query changed: $val');
                     context.read<GlobalSearchBloc>().add(
                       SearchQueryChangedEvent(val),
                     );
@@ -106,11 +114,14 @@ class _GlobalSearchViewState extends State<_GlobalSearchView> {
                     }
                   },
                   onClear: () {
+                    AppLogger.i('GlobalSearchScreen: Search cleared');
                     _searchController.clear();
                     context.read<GlobalSearchBloc>().add(ClearSearchEvent());
                   },
-                  onFilterPressed: () =>
-                      _showFilterModal(context, state.params.filters),
+                  onFilterPressed: () {
+                    AppLogger.i('GlobalSearchScreen: Filter button pressed');
+                    _showFilterModal(context, state.params.filters);
+                  },
                 ),
                 Expanded(
                   child: isCommandMode
@@ -330,4 +341,3 @@ class _GlobalSearchViewState extends State<_GlobalSearchView> {
     );
   }
 }
-

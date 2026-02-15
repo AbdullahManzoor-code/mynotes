@@ -1,4 +1,7 @@
 import 'package:image_picker/image_picker.dart';
+import 'package:mynotes/core/database/core_database.dart';
+import 'package:mynotes/core/database/mappers/media_mapper.dart';
+import 'package:mynotes/core/database/dao/tables_reference.dart';
 import 'package:uuid/uuid.dart';
 import 'package:record/record.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -10,11 +13,10 @@ import '../../core/constants/media_constants.dart';
 import '../../core/services/permission_service.dart';
 import '../../domain/repositories/media_repository.dart';
 import '../../domain/entities/media_item.dart';
-import '../datasources/local_database.dart';
 
 /// Real MediaRepository implementation with image/video picker and audio recording
 class MediaRepositoryImpl implements MediaRepository {
-  final NotesDatabase database;
+  final CoreDatabase database;
   final ImagePicker _picker = ImagePicker();
   final AudioRecorder _recorder = AudioRecorder();
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -26,47 +28,47 @@ class MediaRepositoryImpl implements MediaRepository {
   Future<List<MediaItem>> getAllMedia() async {
     final db = await database.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      NotesDatabase.mediaTable,
+      TablesReference.mediaTable,
       orderBy: 'createdAt DESC',
     );
-    return List.generate(maps.length, (i) => database.mediaFromMap(maps[i]));
+    return List.generate(maps.length, (i) => MediaMapper.fromMap(maps[i]));
   }
 
   @override
   Future<List<MediaItem>> filterMediaByType(String type) async {
     final db = await database.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      NotesDatabase.mediaTable,
+      TablesReference.mediaTable,
       where: 'type = ?',
       whereArgs: [type],
       orderBy: 'createdAt DESC',
     );
-    return List.generate(maps.length, (i) => database.mediaFromMap(maps[i]));
+    return List.generate(maps.length, (i) => MediaMapper.fromMap(maps[i]));
   }
 
   @override
   Future<List<MediaItem>> searchMedia(String query) async {
     final db = await database.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      NotesDatabase.mediaTable,
+      TablesReference.mediaTable,
       where: 'caption LIKE ? OR ocrText LIKE ?',
       whereArgs: ['%$query%', '%$query%'],
       orderBy: 'createdAt DESC',
     );
-    return List.generate(maps.length, (i) => database.mediaFromMap(maps[i]));
+    return List.generate(maps.length, (i) => MediaMapper.fromMap(maps[i]));
   }
 
   @override
   Future<MediaItem?> getMediaById(String id) async {
     final db = await database.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      NotesDatabase.mediaTable,
+      TablesReference.mediaTable,
       where: 'id = ?',
       whereArgs: [id],
     );
 
     if (maps.isEmpty) return null;
-    return database.mediaFromMap(maps.first);
+    return MediaMapper.fromMap(maps.first);
   }
 
   @override
@@ -74,7 +76,7 @@ class MediaRepositoryImpl implements MediaRepository {
     try {
       final db = await database.database;
       final count = await db.delete(
-        NotesDatabase.mediaTable,
+        TablesReference.mediaTable,
         where: 'id = ?',
         whereArgs: [id],
       );
@@ -93,7 +95,7 @@ class MediaRepositoryImpl implements MediaRepository {
   @override
   Future<Map<String, int>> getMediaStats() async {
     final db = await database.database;
-    final allMedia = await db.query(NotesDatabase.mediaTable);
+    final allMedia = await db.query(TablesReference.mediaTable);
 
     int images = 0;
     int videos = 0;
@@ -121,11 +123,11 @@ class MediaRepositoryImpl implements MediaRepository {
   Future<List<MediaItem>> getRecentMedia({int limit = 10}) async {
     final db = await database.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      NotesDatabase.mediaTable,
+      TablesReference.mediaTable,
       orderBy: 'createdAt DESC',
       limit: limit,
     );
-    return List.generate(maps.length, (i) => database.mediaFromMap(maps[i]));
+    return List.generate(maps.length, (i) => MediaMapper.fromMap(maps[i]));
   }
 
   @override
@@ -138,7 +140,7 @@ class MediaRepositoryImpl implements MediaRepository {
     try {
       final db = await database.database;
       final existing = await db.query(
-        NotesDatabase.mediaTable,
+        TablesReference.mediaTable,
         columns: ['noteId', 'createdAt'],
         where: 'id = ?',
         whereArgs: [item.id],
@@ -160,7 +162,7 @@ class MediaRepositoryImpl implements MediaRepository {
       };
 
       final count = await db.update(
-        NotesDatabase.mediaTable,
+        TablesReference.mediaTable,
         map,
         where: 'id = ?',
         whereArgs: [item.id],

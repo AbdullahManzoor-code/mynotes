@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
 import '../design_system/app_spacing.dart';
@@ -17,6 +18,7 @@ class AdvancedTodoScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('AdvancedTodoScreen: Building for todo: ${todo.id}');
     return BlocBuilder<TodosBloc, TodosState>(
       builder: (context, state) {
         // Find the current todo in the state to get updated subtasks
@@ -25,9 +27,11 @@ class AdvancedTodoScreen extends StatelessWidget {
           try {
             currentTodo = state.allTodos.firstWhere((t) => t.id == todo.id);
           } catch (_) {
-            // Todo might have been deleted
+            AppLogger.w('AdvancedTodoScreen: Todo not found in current state');
           }
         }
+
+        // ... (rest of the builder)
 
         return Scaffold(
           backgroundColor: AppColors.lightBackground,
@@ -103,9 +107,12 @@ class AdvancedTodoScreen extends StatelessWidget {
                 ? AppColors.accentOrange
                 : Colors.white,
           ),
-          onPressed: () => context.read<TodosBloc>().add(
-            ToggleImportantTodo(currentTodo.id),
-          ),
+          onPressed: () {
+            AppLogger.i(
+              'AdvancedTodoScreen: Important toggle tapped. Current: ${currentTodo.isImportant}',
+            );
+            context.read<TodosBloc>().add(ToggleImportantTodo(currentTodo.id));
+          },
         ),
       ],
       flexibleSpace: FlexibleSpaceBar(
@@ -239,6 +246,9 @@ class _SubtaskItem extends StatelessWidget {
           children: [
             SlidableAction(
               onPressed: (context) {
+                AppLogger.i(
+                  'AdvancedTodoScreen: Deleting subtask at index $index',
+                );
                 final newSubtasks = List<SubTask>.from(allSubtasks)
                   ..removeAt(index);
                 context.read<TodosBloc>().add(
@@ -269,6 +279,9 @@ class _SubtaskItem extends StatelessWidget {
             color: Colors.transparent,
             child: InkWell(
               onTap: () {
+                AppLogger.i(
+                  'AdvancedTodoScreen: Toggling subtask completion at index $index',
+                );
                 final newSubtasks = List<SubTask>.from(allSubtasks);
                 newSubtasks[index] = subtask.toggle();
                 context.read<TodosBloc>().add(
@@ -351,12 +364,17 @@ class _BottomSubtaskInputState extends State<_BottomSubtaskInput> {
 
   @override
   void dispose() {
+    AppLogger.i('AdvancedTodoScreen SubtaskInput: Disposed');
     _controller.dispose();
     super.dispose();
   }
 
   void _submit() {
-    if (_controller.text.trim().isEmpty) return;
+    AppLogger.i('AdvancedTodoScreen: _submit subtask called');
+    if (_controller.text.trim().isEmpty) {
+      AppLogger.w('AdvancedTodoScreen: Empty subtask text submitted');
+      return;
+    }
 
     final newSubtask = SubTask(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -364,6 +382,7 @@ class _BottomSubtaskInputState extends State<_BottomSubtaskInput> {
       isCompleted: false,
     );
 
+    AppLogger.i('AdvancedTodoScreen: Adding subtask: ${newSubtask.text}');
     final newSubtasks = List<SubTask>.from(widget.allSubtasks)..add(newSubtask);
     context.read<TodosBloc>().add(UpdateSubtasks(widget.todoId, newSubtasks));
     _controller.clear();
@@ -420,4 +439,3 @@ class _BottomSubtaskInputState extends State<_BottomSubtaskInput> {
     );
   }
 }
-

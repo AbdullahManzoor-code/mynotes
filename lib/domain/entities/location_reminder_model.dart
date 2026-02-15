@@ -121,9 +121,9 @@ class LocationReminder extends Equatable {
     return LocationReminder(
       id: map['id'] as String,
       message: map['message'] as String,
-      latitude: map['latitude'] as double,
-      longitude: map['longitude'] as double,
-      radius: map['radius'] as double? ?? 100.0,
+      latitude: (map['latitude'] as num).toDouble(),
+      longitude: (map['longitude'] as num).toDouble(),
+      radius: (map['radius'] as num?)?.toDouble() ?? 100.0,
       triggerType: map['trigger_type'] == 'leave'
           ? LocationTriggerType.leave
           : LocationTriggerType.arrive,

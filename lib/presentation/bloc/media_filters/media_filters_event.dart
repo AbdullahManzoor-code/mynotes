@@ -1,7 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:mynotes/presentation/bloc/media_filters/media_filters_state.dart'
     show FilterType;
-import '../../pages/media_filters_screen.dart';
 
 abstract class MediaFiltersEvent extends Equatable {
   const MediaFiltersEvent();

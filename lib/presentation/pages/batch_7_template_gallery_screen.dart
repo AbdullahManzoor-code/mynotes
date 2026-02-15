@@ -6,6 +6,7 @@ import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/core/utils/app_logger.dart';
 
 /// Template Gallery - Batch 7, Screen 1
 /// Refactored to use Design System and optimized UI patterns
@@ -47,6 +48,9 @@ class TemplateGalleryScreen extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
+          AppLogger.i(
+            'TemplateGalleryScreen: Navigating to create new template',
+          );
           // Navigate to editor with new template
           getIt<GlobalUiService>().hapticFeedback();
         },
@@ -63,9 +67,14 @@ class TemplateGalleryScreen extends StatelessWidget {
       child: Column(
         children: [
           TextField(
-            onChanged: (value) => context.read<TemplateManagementBloc>().add(
-              SearchTemplatesEvent(value),
-            ),
+            onChanged: (value) {
+              AppLogger.i(
+                'TemplateGalleryScreen: Searching templates for "$value"',
+              );
+              context.read<TemplateManagementBloc>().add(
+                SearchTemplatesEvent(value),
+              );
+            },
             decoration: InputDecoration(
               hintText: 'Search templates...',
               hintStyle: AppTypography.bodySmall(
@@ -108,6 +117,9 @@ class TemplateGalleryScreen extends StatelessWidget {
               selected: isSelected,
               onSelected: (selected) {
                 if (selected) {
+                  AppLogger.i(
+                    'TemplateGalleryScreen: Filtering templates by category $category',
+                  );
                   context.read<TemplateManagementBloc>().add(
                     FilterTemplatesEvent(category),
                   );
@@ -199,7 +211,12 @@ class TemplateGalleryScreen extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () => _showTemplatePreview(context, template),
+          onTap: () {
+            AppLogger.i(
+              'TemplateGalleryScreen: Tapping template ${template.name}',
+            );
+            _showTemplatePreview(context, template);
+          },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: AppSpacing.paddingAllM,
@@ -249,7 +266,12 @@ class TemplateGalleryScreen extends StatelessWidget {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () => _useTemplate(context, template),
+                    onPressed: () {
+                      AppLogger.i(
+                        'TemplateGalleryScreen: Using template ${template.name} from card button',
+                      );
+                      _useTemplate(context, template);
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryColor,
                       foregroundColor: Colors.white,
@@ -270,6 +292,7 @@ class TemplateGalleryScreen extends StatelessWidget {
   }
 
   void _showTemplatePreview(BuildContext context, dynamic template) {
+    AppLogger.i('TemplateGalleryScreen: Showing preview for ${template.name}');
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -344,7 +367,12 @@ class TemplateGalleryScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      AppLogger.i(
+                        'TemplateGalleryScreen: Closing preview for ${template.name}',
+                      );
+                      Navigator.pop(context);
+                    },
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       side: const BorderSide(color: AppColors.borderLight),
@@ -365,6 +393,9 @@ class TemplateGalleryScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
+                      AppLogger.i(
+                        'TemplateGalleryScreen: Using template ${template.name} from preview',
+                      );
                       _useTemplate(context, template);
                       Navigator.pop(context);
                     },
@@ -391,6 +422,7 @@ class TemplateGalleryScreen extends StatelessWidget {
   }
 
   void _useTemplate(BuildContext context, dynamic template) {
+    AppLogger.i('TemplateGalleryScreen: Applying template "${template.name}"');
     context.read<TemplateManagementBloc>().add(
       CreateTemplateEvent(
         name: template.name,
@@ -433,4 +465,3 @@ class TemplateGalleryScreen extends StatelessWidget {
     }
   }
 }
-

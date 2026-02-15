@@ -6,6 +6,7 @@ import 'package:mynotes/domain/entities/saved_location_model.dart';
 import 'package:mynotes/data/repositories/location_reminder_repository.dart';
 import 'package:mynotes/core/services/location_service.dart';
 import 'package:mynotes/core/services/geofence_service.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 
 // Events
 abstract class LocationReminderEvent extends Equatable {
@@ -169,19 +170,29 @@ class LocationReminderBloc
     LoadLocationReminders event,
     Emitter<LocationReminderState> emit,
   ) async {
+    AppLogger.i('Handling LoadLocationReminders event');
     emit(LocationReminderLoading());
 
     try {
       final reminders = await repository.getAllLocationReminders();
+      AppLogger.i(
+        'Loaded ${reminders.length} location reminders from repository',
+      );
       final savedLocations = await repository.getSavedLocations();
+      AppLogger.i(
+        'Loaded ${savedLocations.length} saved locations from repository',
+      );
       final permissionStatus = await _locationService.requestPermission();
       final hasPermission =
           permissionStatus == LocationPermissionStatus.granted;
+      AppLogger.i('Location permission status: $permissionStatus');
 
       // Initialize geofencing if we have permission and active reminders
       if (hasPermission && reminders.any((r) => r.isActive)) {
+        AppLogger.i('Initializing geofencing monitoring...');
         await _geofenceManager.initialize();
         await _geofenceManager.startMonitoring();
+        AppLogger.i('Geofencing monitoring started.');
       }
 
       emit(
@@ -192,7 +203,8 @@ class LocationReminderBloc
           isMonitoring: hasPermission && reminders.any((r) => r.isActive),
         ),
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('Error loading reminders: $e', e, stack);
       emit(LocationReminderError(message: 'Failed to load reminders: $e'));
     }
   }

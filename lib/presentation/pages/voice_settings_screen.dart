@@ -29,6 +29,9 @@ class _VoiceSettingsView extends StatelessWidget {
     BuildContext context,
     String currentLocale,
   ) async {
+    AppLogger.i(
+      'VoiceSettingsScreen: _changeLanguage triggered. Current: $currentLocale',
+    );
     final feedbackService = AudioFeedbackService();
     await feedbackService.lightHaptic();
 
@@ -38,6 +41,7 @@ class _VoiceSettingsView extends StatelessWidget {
     );
 
     if (selectedLocale != null && selectedLocale != currentLocale) {
+      AppLogger.i('VoiceSettingsScreen: Language selected: $selectedLocale');
       if (context.mounted) {
         context.read<VoiceSettingsBloc>().add(
           UpdateLocaleEvent(selectedLocale),
@@ -54,17 +58,27 @@ class _VoiceSettingsView extends StatelessWidget {
           ),
         );
       }
+    } else {
+      AppLogger.i(
+        'VoiceSettingsScreen: Language change cancelled or no selection',
+      );
     }
   }
 
   Future<void> _showVoiceCommandsHelp(BuildContext context) async {
+    AppLogger.i('VoiceSettingsScreen: _showVoiceCommandsHelp triggered');
     final feedbackService = AudioFeedbackService();
     await feedbackService.lightHaptic();
 
     final commandService = VoiceCommandService();
     final commands = commandService.getCommandDescriptions();
 
-    if (!context.mounted) return;
+    if (!context.mounted) {
+      AppLogger.w(
+        'VoiceSettingsScreen: Context no longer mounted during help sheet trigger',
+      );
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -108,7 +122,10 @@ class _VoiceSettingsView extends StatelessWidget {
                     const Spacer(),
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () {
+                        AppLogger.i('VoiceSettingsScreen: Help sheet closed');
+                        Navigator.pop(context);
+                      },
                     ),
                   ],
                 ),
@@ -146,6 +163,7 @@ class _VoiceSettingsView extends StatelessWidget {
   }
 
   Future<void> _resetSettings(BuildContext context) async {
+    AppLogger.i('VoiceSettingsScreen: _resetSettings dialog triggered');
     final feedbackService = AudioFeedbackService();
     await feedbackService.lightHaptic();
 
@@ -162,14 +180,20 @@ class _VoiceSettingsView extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () {
+              AppLogger.i('VoiceSettingsScreen: Reset cancelled');
+              Navigator.pop(context, false);
+            },
             child: Text(
               'Cancel',
               style: AppTypography.button(context, AppColors.secondaryText),
             ),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () {
+              AppLogger.i('VoiceSettingsScreen: Reset confirmed');
+              Navigator.pop(context, true);
+            },
             child: Text(
               'Reset',
               style: AppTypography.button(context, AppColors.errorColor),
@@ -180,6 +204,7 @@ class _VoiceSettingsView extends StatelessWidget {
     );
 
     if (confirmed == true && context.mounted) {
+      AppLogger.i('VoiceSettingsScreen: Dispatching ResetVoiceSettingsEvent');
       context.read<VoiceSettingsBloc>().add(ResetVoiceSettingsEvent());
       await feedbackService.successHaptic();
 
@@ -231,9 +256,12 @@ class _VoiceSettingsView extends StatelessWidget {
                 params.minConfidence,
                 0.0,
                 1.0,
-                (val) => context.read<VoiceSettingsBloc>().add(
-                  UpdateConfidenceEvent(val),
-                ),
+                (val) {
+                  AppLogger.i('VoiceSettingsScreen: Confidence updated: $val');
+                  context.read<VoiceSettingsBloc>().add(
+                    UpdateConfidenceEvent(val),
+                  );
+                },
                 '${(params.minConfidence * 100).toInt()}%',
                 'Higher values = more accurate but may miss words',
               ),
@@ -244,9 +272,12 @@ class _VoiceSettingsView extends StatelessWidget {
                 params.timeout.toDouble(),
                 5.0,
                 120.0,
-                (val) => context.read<VoiceSettingsBloc>().add(
-                  UpdateTimeoutEvent(val.toInt()),
-                ),
+                (val) {
+                  AppLogger.i('VoiceSettingsScreen: Timeout updated: $val');
+                  context.read<VoiceSettingsBloc>().add(
+                    UpdateTimeoutEvent(val.toInt()),
+                  );
+                },
                 '${params.timeout}s',
                 'Maximum duration for voice input',
               ),
@@ -263,18 +294,28 @@ class _VoiceSettingsView extends StatelessWidget {
                 'Auto-Punctuation',
                 'Automatically add punctuation marks',
                 params.autoPunctuation,
-                (value) => context.read<VoiceSettingsBloc>().add(
-                  ToggleAutoPunctuationEvent(value),
-                ),
+                (value) {
+                  AppLogger.i(
+                    'VoiceSettingsScreen: Auto-Punctuation toggled: $value',
+                  );
+                  context.read<VoiceSettingsBloc>().add(
+                    ToggleAutoPunctuationEvent(value),
+                  );
+                },
               ),
               _buildSwitchTile(
                 context,
                 'Auto-Capitalize',
                 'Capitalize first letter of sentences',
                 params.autoCapitalize,
-                (value) => context.read<VoiceSettingsBloc>().add(
-                  ToggleAutoCapitalizeEvent(value),
-                ),
+                (value) {
+                  AppLogger.i(
+                    'VoiceSettingsScreen: Auto-Capitalize toggled: $value',
+                  );
+                  context.read<VoiceSettingsBloc>().add(
+                    ToggleAutoCapitalizeEvent(value),
+                  );
+                },
               ),
 
               AppSpacing.gapXXXL,
@@ -289,9 +330,14 @@ class _VoiceSettingsView extends StatelessWidget {
                 'Enable Voice Commands',
                 'Recognize formatting and navigation commands',
                 params.commandsEnabled,
-                (value) => context.read<VoiceSettingsBloc>().add(
-                  ToggleCommandsEvent(value),
-                ),
+                (value) {
+                  AppLogger.i(
+                    'VoiceSettingsScreen: Voice Commands toggled: $value',
+                  );
+                  context.read<VoiceSettingsBloc>().add(
+                    ToggleCommandsEvent(value),
+                  );
+                },
               ),
               _buildActionTile(
                 context,
@@ -603,4 +649,3 @@ class _VoiceSettingsView extends StatelessWidget {
     );
   }
 }
-

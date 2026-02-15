@@ -60,17 +60,20 @@ class _AdvancedFiltersScreenContentState
   @override
   void initState() {
     super.initState();
+    AppLogger.i('AdvancedFiltersScreen: Initialized');
     tabController = TabController(length: 3, vsync: this);
   }
 
   @override
   void dispose() {
+    AppLogger.i('AdvancedFiltersScreen: Disposed');
     tabController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('AdvancedFiltersScreen: Building UI');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -100,7 +103,10 @@ class _AdvancedFiltersScreenContentState
           Icons.arrow_back,
           color: isDark ? AppColors.lightText : AppColors.darkText,
         ),
-        onPressed: () => Navigator.pop(context),
+        onPressed: () {
+          AppLogger.i('AdvancedFiltersScreen: Back button pressed');
+          Navigator.pop(context);
+        },
       ),
       title: Text(
         'Advanced Filters',
@@ -115,6 +121,9 @@ class _AdvancedFiltersScreenContentState
             ? AppColors.lightTextSecondary
             : AppColors.darkTextSecondary,
         indicatorColor: AppColors.primaryColor,
+        onTap: (index) {
+          AppLogger.i('AdvancedFiltersScreen: Tab switched to index $index');
+        },
         tabs: [
           Tab(text: 'Builder'),
           Tab(text: 'Presets'),
@@ -169,25 +178,19 @@ class _AdvancedFiltersScreenContentState
               Row(
                 children: [
                   Expanded(
-                    child: _buildLogicButton(
-                      'AND',
-                      state.logic == 'AND',
-                      () => context.read<FiltersBloc>().add(
-                        UpdateLogicEvent('AND'),
-                      ),
-                      context,
-                    ),
+                    child: _buildLogicButton('AND', state.logic == 'AND', () {
+                      AppLogger.i(
+                        'AdvancedFiltersScreen: Logic changed to AND',
+                      );
+                      context.read<FiltersBloc>().add(UpdateLogicEvent('AND'));
+                    }, context),
                   ),
                   SizedBox(width: AppSpacing.md),
                   Expanded(
-                    child: _buildLogicButton(
-                      'OR',
-                      state.logic == 'OR',
-                      () => context.read<FiltersBloc>().add(
-                        UpdateLogicEvent('OR'),
-                      ),
-                      context,
-                    ),
+                    child: _buildLogicButton('OR', state.logic == 'OR', () {
+                      AppLogger.i('AdvancedFiltersScreen: Logic changed to OR');
+                      context.read<FiltersBloc>().add(UpdateLogicEvent('OR'));
+                    }, context),
                   ),
                 ],
               ),
@@ -308,6 +311,9 @@ class _AdvancedFiltersScreenContentState
             SizedBox(height: AppSpacing.md),
             ElevatedButton.icon(
               onPressed: () {
+                AppLogger.i(
+                  'AdvancedFiltersScreen: Add Condition button pressed',
+                );
                 context.read<FiltersBloc>().add(AddConditionEvent());
               },
               icon: const Icon(Icons.add),
@@ -352,6 +358,9 @@ class _AdvancedFiltersScreenContentState
                   condition['type'] as String,
                   ['tag', 'date', 'color', 'status'],
                   (value) {
+                    AppLogger.i(
+                      'AdvancedFiltersScreen: Condition $index Type changed to $value',
+                    );
                     context.read<FiltersBloc>().add(
                       UpdateConditionEvent(index, 'type', value),
                     );
@@ -367,6 +376,9 @@ class _AdvancedFiltersScreenContentState
                   condition['operator'] as String,
                   ['contains', 'equals', 'before', 'after'],
                   (value) {
+                    AppLogger.i(
+                      'AdvancedFiltersScreen: Condition $index Operator changed to $value',
+                    );
                     context.read<FiltersBloc>().add(
                       UpdateConditionEvent(index, 'operator', value),
                     );
@@ -378,6 +390,9 @@ class _AdvancedFiltersScreenContentState
               IconButton(
                 icon: Icon(Icons.delete, size: 20.sp, color: Colors.red),
                 onPressed: () {
+                  AppLogger.i(
+                    'AdvancedFiltersScreen: Remove Condition $index pressed',
+                  );
                   context.read<FiltersBloc>().add(RemoveConditionEvent(index));
                 },
                 padding: EdgeInsets.zero,
@@ -398,6 +413,9 @@ class _AdvancedFiltersScreenContentState
               ),
             ),
             onChanged: (value) {
+              AppLogger.i(
+                'AdvancedFiltersScreen: Condition $index Value changed',
+              );
               context.read<FiltersBloc>().add(
                 UpdateConditionEvent(index, 'value', value),
               );
@@ -458,6 +476,7 @@ class _AdvancedFiltersScreenContentState
         Expanded(
           child: OutlinedButton.icon(
             onPressed: () {
+              AppLogger.i('AdvancedFiltersScreen: Reset button pressed');
               context.read<FiltersBloc>().add(ResetFiltersEvent());
             },
             icon: const Icon(Icons.refresh),
@@ -468,6 +487,7 @@ class _AdvancedFiltersScreenContentState
         Expanded(
           child: ElevatedButton.icon(
             onPressed: () {
+              AppLogger.i('AdvancedFiltersScreen: Apply button pressed');
               getIt<GlobalUiService>().showSuccess('Filter applied');
             },
             icon: const Icon(Icons.check),
@@ -517,6 +537,9 @@ class _AdvancedFiltersScreenContentState
 
               return GestureDetector(
                 onTap: () {
+                  AppLogger.i(
+                    'AdvancedFiltersScreen: Preset ${preset['name']} tapped',
+                  );
                   getIt<GlobalUiService>().showInfo(
                     '${preset['name']} filter has been applied.',
                   );
@@ -583,6 +606,9 @@ class _AdvancedFiltersScreenContentState
                 icon: const Icon(Icons.add_circle),
                 color: AppColors.primaryColor,
                 onPressed: () {
+                  AppLogger.i(
+                    'AdvancedFiltersScreen: Add Saved Filter pressed',
+                  );
                   getIt<GlobalUiService>().showInfo(
                     'Feature coming soon to save current configuration.',
                   );
@@ -654,7 +680,11 @@ class _AdvancedFiltersScreenContentState
                     ),
                     IconButton(
                       icon: const Icon(Icons.more_vert),
-                      onPressed: () {},
+                      onPressed: () {
+                        AppLogger.i(
+                          'AdvancedFiltersScreen: Saved Filter ${filter['name']} menu tapped',
+                        );
+                      },
                       color: isDark
                           ? AppColors.secondaryTextDark
                           : AppColors.secondaryText,
@@ -669,4 +699,3 @@ class _AdvancedFiltersScreenContentState
     );
   }
 }
-

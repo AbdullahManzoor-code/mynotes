@@ -6,6 +6,7 @@ import '../../domain/entities/note.dart';
 import '../../domain/entities/todo_item.dart';
 import '../../domain/entities/media_item.dart';
 import '../../domain/entities/alarm.dart';
+import '../../core/services/app_logger.dart';
 
 /// Local SQLite database for notes storage
 class NotesDatabase {
@@ -49,23 +50,35 @@ class NotesDatabase {
   static Database? _database;
 
   Future<Database> get database async {
-    _database ??= await _initDatabase();
+    if (_database != null) return _database!;
+    AppLogger.i('Database requested, initializing...');
+    _database = await _initDatabase();
     return _database!;
   }
 
   Future<Database> _initDatabase() async {
     final databasesPath = await getDatabasesPath();
     final path = join(databasesPath, _databaseName);
+    AppLogger.i('Initializing database at path: $path');
 
     return await openDatabase(
       path,
       version: _databaseVersion,
-      onCreate: _createTables,
-      onUpgrade: _onUpgrade,
+      onCreate: (db, version) async {
+        AppLogger.i('Creating database version $version...');
+        await _createTables(db, version);
+        AppLogger.i('Database version $version created successfully.');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        AppLogger.i('Upgrading database from $oldVersion to $newVersion...');
+        await _onUpgrade(db, oldVersion, newVersion);
+        AppLogger.i('Database upgrade to $newVersion complete.');
+      },
     );
   }
 
   Future<void> _createTables(Database db, int version) async {
+    AppLogger.i('Adding core tables (Notes, Todos, Reminders)...');
     // Notes table (extended)
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $notesTable (
@@ -120,11 +133,12 @@ class NotesDatabase {
         recurEndType TEXT,
         recurEndValue INTEGER,
         reminderTime TEXT,
-        hasReminder INTEGER DEFAULT 0,
         estimatedMinutes INTEGER,
         actualMinutes INTEGER,
         subtaskCount INTEGER DEFAULT 0,
         completedSubtasks INTEGER DEFAULT 0,
+        subtasksJson TEXT,
+        attachmentsJson TEXT,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         isDeleted INTEGER NOT NULL DEFAULT 0,
@@ -488,8 +502,12 @@ class NotesDatabase {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    AppLogger.i(
+      'Upgrading database from version $oldVersion to $newVersion...',
+    );
     // v1 → v2: Upgrade alarms table
     if (oldVersion < 2) {
+      AppLogger.i('Migration: v1 to v2 (Regenerating reminders table)');
       await db.execute('DROP TABLE IF EXISTS $remindersTable');
       await db.execute('''
         CREATE TABLE IF NOT EXISTS $remindersTable (
@@ -510,72 +528,87 @@ class NotesDatabase {
 
     // v2 → v3: Extend existing tables with new columns
     if (oldVersion < 3) {
+      AppLogger.i('Migration: v2 to v3');
       await _migrateToV3(db);
     }
 
     // v3 → v4: Create new tables for Phase 2A
     if (oldVersion < 4) {
+      AppLogger.i('Migration: v3 to v4');
       await _migrateToV4(db);
     }
 
     // v4 → v5: Create focus_sessions table
     if (oldVersion < 5) {
+      AppLogger.i('Migration: v4 to v5');
       await _migrateToV5(db);
     }
 
     // v5 → v6: Create Batch 5 & 7 tables
     if (oldVersion < 6) {
+      AppLogger.i('Migration: v5 to v6');
       await _migrateToV6(db);
     }
 
     // v6 → v7: Create reflection_answers and reflection_drafts tables
     if (oldVersion < 7) {
+      AppLogger.i('Migration: v6 to v7');
       await _migrateToV7(db);
     }
 
     // v7 → v8: Add isPinned to reflection_questions
     if (oldVersion < 8) {
+      AppLogger.i('Migration: v7 to v8');
       await _migrateToV8(db);
     }
 
     // v8 → v9: Add rating to focus_sessions
     if (oldVersion < 9) {
+      AppLogger.i('Migration: v8 to v9');
       await _migrateToV9(db);
     }
 
     // v9 → v10: Add metadata to media table
     if (oldVersion < 10) {
+      AppLogger.i('Migration: v9 to v10');
       await _migrateToV10(db);
     }
     // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
     if (oldVersion < 11) {
+      AppLogger.i('Migration: v10 to v11');
       await _migrateToV11(db);
     }
 
     // SAFETY MIGRATION: Ensure note_links exists if v11 failed
     if (oldVersion < 12) {
+      AppLogger.i('Migration: v11 to v12 (Safety Check)');
       await _migrateToV11(db);
     }
 
     // v12 → v13: Add frequency to reflection_questions
     if (oldVersion < 13) {
+      AppLogger.i('Migration: v12 to v13');
       await _migrateToV13(db);
     }
 
     // v13 → v14: Add recurrence to reminders and draft to reflections
     if (oldVersion < 14) {
+      AppLogger.i('Migration: v13 to v14');
       await _migrateToV14(db);
     }
 
     // v14 → v15: Sync entity fields (isImportant, hasReminder, etc)
     if (oldVersion < 15) {
+      AppLogger.i('Migration: v14 to v15');
       await _migrateToV15(db);
     }
 
     // v15 → v16: Align notes priority and todo extra fields
     if (oldVersion < 16) {
+      AppLogger.i('Migration: v15 to v16');
       await _migrateToV16(db);
     }
+    AppLogger.i('Migration process completed.');
   }
 
   Future<void> _migrateToV16(Database db) async {
@@ -1187,28 +1220,34 @@ class NotesDatabase {
 
   /// Create a new note
   Future<void> createNote(Note note) async {
+    AppLogger.i('Creating note: ${note.id}');
     final db = await database;
     await db.insert(
       notesTable,
       _noteToMap(note),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    AppLogger.i('Note created successfully: ${note.id}');
   }
 
   /// Get all notes
   Future<List<Note>> getAllNotes() async {
+    AppLogger.i('Fetching all notes...');
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(notesTable);
 
     if (maps.isEmpty) {
+      AppLogger.i('No notes found in database.');
       return [];
     }
 
+    AppLogger.i('Fetched ${maps.length} notes.');
     return List.generate(maps.length, (i) => _noteFromMap(maps[i]));
   }
 
   /// Get note by ID
   Future<Note?> getNoteById(String id) async {
+    AppLogger.i('Fetching note by ID: $id');
     final db = await database;
     final List<Map<String, dynamic>> maps = await db.query(
       notesTable,
@@ -1217,14 +1256,17 @@ class NotesDatabase {
     );
 
     if (maps.isEmpty) {
+      AppLogger.i('Note not found: $id');
       return null;
     }
 
+    AppLogger.i('Note found: $id');
     return _noteFromMap(maps[0]);
   }
 
   /// Update note
   Future<void> updateNote(Note note) async {
+    AppLogger.i('Updating note: ${note.id}');
     final db = await database;
     await db.update(
       notesTable,
@@ -1232,12 +1274,15 @@ class NotesDatabase {
       where: 'id = ?',
       whereArgs: [note.id],
     );
+    AppLogger.i('Note updated successfully: ${note.id}');
   }
 
   /// Delete note
   Future<void> deleteNote(String id) async {
+    AppLogger.i('Deleting note: $id');
     final db = await database;
     await db.delete(notesTable, where: 'id = ?', whereArgs: [id]);
+    AppLogger.i('Note deleted successfully: $id');
   }
 
   /// Get all notes (archived or not)
@@ -1565,9 +1610,345 @@ class NotesDatabase {
     );
   }
 
+  /// Seed dummy data for testing
+  Future<void> seedDummyData() async {
+    final db = await database;
+    final now = DateTime.now();
+    final isoNow = now.toIso8601String();
+
+    // 1. Clear existing data
+    await clearAll();
+
+    // 2. Insert Default Reflection Questions
+    final questions = [
+      {
+        'id': 'q_1',
+        'questionText': 'What are you grateful for today?',
+        'category': 'Gratitude',
+        'createdAt': isoNow,
+      },
+      {
+        'id': 'q_2',
+        'questionText': 'What was the highlight of your day?',
+        'category': 'Daily',
+        'createdAt': isoNow,
+      },
+      {
+        'id': 'q_3',
+        'questionText': 'What is one thing you would change about today?',
+        'category': 'Growth',
+        'createdAt': isoNow,
+      },
+    ];
+    for (var q in questions) {
+      await db.insert(reflectionQuestionsTable, q);
+    }
+
+    // 3. Insert Activity Tags
+    final activityTags = [
+      {
+        'id': 'tag_1',
+        'tagName': 'Work',
+        'color': '#FF5252',
+        'createdAt': isoNow,
+      },
+      {
+        'id': 'tag_2',
+        'tagName': 'Exercise',
+        'color': '#4CAF50',
+        'createdAt': isoNow,
+      },
+      {
+        'id': 'tag_3',
+        'tagName': 'Reading',
+        'color': '#2196F3',
+        'createdAt': isoNow,
+      },
+      {
+        'id': 'tag_4',
+        'tagName': 'Coding',
+        'color': '#9C27B0',
+        'createdAt': isoNow,
+      },
+    ];
+    for (var tag in activityTags) {
+      await db.insert(activityTagsTable, tag);
+    }
+
+    // 4. Insert Dummy Notes
+    final notes = [
+      {
+        'id': 'note_1',
+        'title': '🚀 Welcome to MyNotes',
+        'content':
+            '[{"insert":"Welcome to your next-generation productivity hub!\\n","attributes":{"header":1}},{"insert":"\\nThis app helps you manage:\\n- "},{"insert":"Notes","attributes":{"bold":true}},{"insert":" with rich text\\n- "},{"insert":"Todos","attributes":{"bold":true}},{"insert":" linked to context\\n- "},{"insert":"Reminders","attributes":{"bold":true}},{"insert":" for everything\\n- "},{"insert":"Reflections","attributes":{"bold":true}},{"insert":" to track growth\\n"}]',
+        'color': 0, // Default
+        'category': 'General',
+        'tags': 'welcome,tutorial',
+        'isPinned': 1,
+        'createdAt': isoNow,
+        'updatedAt': isoNow,
+      },
+      {
+        'id': 'note_2',
+        'title': '💡 Future App Features',
+        'content':
+            '[{"insert":"List of features to implement:\\n"},{"insert":"1. Cloud Sync with Firebase\\n2. Desktop version using Flutter\\n3. Advanced AI document parsing\\n"}]',
+        'color': 4, // Blue
+        'category': 'Work',
+        'tags': 'ideas,work',
+        'isFavorite': 1,
+        'createdAt': now.subtract(const Duration(days: 1)).toIso8601String(),
+        'updatedAt': isoNow,
+      },
+      {
+        'id': 'note_3',
+        'title': '📦 Archived Project: Old App',
+        'content':
+            '[{"insert":"This project has been archived. Check my GitHub for the latest version.\\n"}]',
+        'color': 9, // Grey
+        'category': 'Archive',
+        'isArchived': 1,
+        'createdAt': now.subtract(const Duration(days: 30)).toIso8601String(),
+        'updatedAt': now.subtract(const Duration(days: 15)).toIso8601String(),
+      },
+      {
+        'id': 'note_4',
+        'title': '🍏 Weekly Shopping',
+        'content':
+            '[{"insert":"- Milk\\n- Eggs\\n- Sourdough Bread\\n- Greek Yogurt\\n- Avocados\\n"}]',
+        'color': 5, // Green
+        'category': 'Personal',
+        'tags': 'shopping,home',
+        'createdAt': isoNow,
+        'updatedAt': isoNow,
+      },
+    ];
+
+    for (var note in notes) {
+      await db.insert(notesTable, note);
+    }
+
+    // 5. Insert Dummy Todos
+    final todos = [
+      {
+        'id': 'todo_1',
+        'title': 'Implement BLoC Pattern',
+        'description':
+            'Refactor the existing state management to use BLoC for scalability.',
+        'noteId': 'note_2',
+        'category': 'Work',
+        'priority': 3, // High
+        'isImportant': 1,
+        'dueDate': now.add(const Duration(days: 2)).toIso8601String(),
+        'isCompleted': 0,
+        'createdAt': isoNow,
+        'updatedAt': isoNow,
+      },
+      {
+        'id': 'todo_2',
+        'title': 'Buy groceries',
+        'noteId': 'note_4',
+        'category': 'Personal',
+        'priority': 2,
+        'dueDate': isoNow,
+        'isCompleted': 1,
+        'completedAt': isoNow,
+        'createdAt': now.subtract(const Duration(hours: 2)).toIso8601String(),
+        'updatedAt': isoNow,
+      },
+      {
+        'id': 'todo_3',
+        'title': 'Update Portfolio',
+        'description': 'Add the new MyNotes project to my portfolio website.',
+        'category': 'Career',
+        'priority': 1,
+        'dueDate': now.subtract(const Duration(days: 1)).toIso8601String(),
+        'isCompleted': 0,
+        'createdAt': now.subtract(const Duration(days: 2)).toIso8601String(),
+        'updatedAt': now.subtract(const Duration(days: 2)).toIso8601String(),
+      },
+    ];
+
+    for (var todo in todos) {
+      await db.insert(todosTable, todo);
+    }
+
+    // 6. Insert Dummy Reminders
+    final reminders = [
+      {
+        'id': 'rem_1',
+        'title': 'Meeting with Design Team',
+        'message': 'Discuss the new UI components and layout.',
+        'linkedNoteId': 'note_2',
+        'scheduledTime': now.add(const Duration(hours: 1)).toIso8601String(),
+        'isActive': 1,
+        'createdAt': isoNow,
+        'updatedAt': isoNow,
+      },
+      {
+        'id': 'rem_2',
+        'title': 'Task Overdue!',
+        'message': 'You missed the deadline for Portfolio Update.',
+        'linkedTodoId': 'todo_3',
+        'scheduledTime': now
+            .subtract(const Duration(hours: 2))
+            .toIso8601String(),
+        'isActive': 0,
+        'isCompleted': 1,
+        'createdAt': isoNow,
+        'updatedAt': isoNow,
+      },
+      {
+        'id': 'rem_3',
+        'title': 'Daily Standup',
+        'message': 'Prep your notes for the standup meeting.',
+        'scheduledTime': now.add(const Duration(days: 1)).toIso8601String(),
+        'recurrence': 'daily',
+        'isActive': 1,
+        'createdAt': isoNow,
+        'updatedAt': isoNow,
+      },
+    ];
+
+    for (var reminder in reminders) {
+      await db.insert(remindersTable, reminder);
+    }
+
+    // 7. Insert Reflections & Moods
+    final reflectionId = 'ref_1';
+    await db.insert(reflectionsTable, {
+      'id': reflectionId,
+      'questionId': 'q_1',
+      'answerText':
+          'I am grateful for the progress I made on MyNotes and for my supportive colleagues.',
+      'mood': 'Happy',
+      'moodValue': 5,
+      'energyLevel': 4,
+      'activityTags': 'Work,Coding',
+      'reflectionDate': isoNow,
+      'createdAt': isoNow,
+      'updatedAt': isoNow,
+    });
+
+    await db.insert(moodEntriesTable, {
+      'id': 'mood_1',
+      'reflectionId': reflectionId,
+      'mood': 'Happy',
+      'moodValue': 5,
+      'recordedAt': isoNow,
+    });
+
+    // 8. Insert Focus Sessions
+    await db.insert(focusSessionsTable, {
+      'id': 'focus_1',
+      'startTime': now.subtract(const Duration(hours: 2)).toIso8601String(),
+      'endTime': now
+          .subtract(const Duration(hours: 1, minutes: 35))
+          .toIso8601String(),
+      'durationSeconds': 1500, // 25 min
+      'taskTitle': 'Work on Editor UI',
+      'category': 'Coding',
+      'isCompleted': 1,
+      'rating': 5,
+      'createdAt': isoNow,
+      'updatedAt': isoNow,
+    });
+
+    // 9. Insert Note Link for Graph View
+    await db.insert(noteLinksTable, {
+      'sourceId': 'note_1',
+      'targetId': 'note_2',
+      'type': 'reference',
+      'createdAt': isoNow,
+    });
+
+    await db.insert(noteLinksTable, {
+      'sourceId': 'note_2',
+      'targetId': 'note_4',
+      'type': 'task',
+      'createdAt': isoNow,
+    });
+
+    // 10. Insert Smart Collection
+    await db.insert(smartCollectionsTable, {
+      'id': 'coll_1',
+      'name': 'Active Work',
+      'description': 'Filters for Work category notes that are not archived.',
+      'itemCount': 1,
+      'lastUpdated': isoNow,
+      'isActive': 1,
+      'logic': 'AND',
+    });
+
+    await db.insert(collectionRulesTable, {
+      'collectionId': 'coll_1',
+      'type': 'category',
+      'operator': 'equals',
+      'value': 'Work',
+    });
+
+    // 11. Insert Location Reminders
+    final locations = [
+      {
+        'id': 'loc_1',
+        'name': 'Home',
+        'latitude': 40.7128,
+        'longitude': -74.0060,
+        'address': 'New York, NY',
+        'created_at': isoNow,
+      },
+      {
+        'id': 'loc_2',
+        'name': 'Work Office',
+        'latitude': 34.0522,
+        'longitude': -118.2437,
+        'address': 'Los Angeles, CA',
+        'created_at': isoNow,
+      },
+    ];
+    for (var loc in locations) {
+      await db.insert(savedLocationsTable, loc);
+    }
+
+    final locationReminders = [
+      {
+        'id': 'lrem_1',
+        'message': 'Buy milk when arriving home',
+        'latitude': 40.7128,
+        'longitude': -74.0060,
+        'radius': 100.0,
+        'trigger_type': 'arrive',
+        'place_name': 'Home',
+        'place_address': 'New York, NY',
+        'linked_note_id': 'note_4',
+        'is_active': 1,
+        'created_at': isoNow,
+        'updated_at': isoNow,
+      },
+      {
+        'id': 'lrem_2',
+        'message': 'Submit report when leaving work',
+        'latitude': 34.0522,
+        'longitude': -118.2437,
+        'radius': 200.0,
+        'trigger_type': 'leave',
+        'place_name': 'Work Office',
+        'place_address': 'Los Angeles, CA',
+        'is_active': 1,
+        'created_at': isoNow,
+        'updated_at': isoNow,
+      },
+    ];
+    for (var lrem in locationReminders) {
+      await db.insert(locationRemindersTable, lrem);
+    }
+  }
+
   /// Delete all data (for testing)
   Future<void> clearAll() async {
     final db = await database;
+    await db.delete(focusSessionsTable);
     await db.delete(moodEntriesTable);
     await db.delete(reflectionsTable);
     await db.delete(reflectionQuestionsTable);
@@ -1577,6 +1958,12 @@ class NotesDatabase {
     await db.delete(remindersTable);
     await db.delete(todosTable);
     await db.delete(notesTable);
+    await db.delete(locationRemindersTable);
+    await db.delete(savedLocationsTable);
+    await db.delete(smartCollectionsTable);
+    await db.delete(collectionRulesTable);
+    await db.delete(reminderTemplatesTable);
+    await db.delete(noteLinksTable);
   }
 
   /// Convert Note to database map
@@ -1759,7 +2146,7 @@ class NotesDatabase {
       notes: map['description'],
       subtasks: map['subtasksJson'] != null
           ? (jsonDecode(map['subtasksJson']) as List)
-                .map((s) => SubTask.fromJson(s))
+                .map((s) => SubTask.fromJson(Map<String, dynamic>.from(s)))
                 .toList()
           : [],
       attachmentPaths: map['attachmentsJson'] != null

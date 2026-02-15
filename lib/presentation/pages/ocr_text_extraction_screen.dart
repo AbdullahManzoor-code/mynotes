@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../design_system/design_system.dart';
+import '../../core/services/app_logger.dart';
 
 /// OCR Text Extraction Screen
 /// Shows extracted text from scanned documents with editing capabilities
@@ -26,6 +27,7 @@ class _OcrTextExtractionScreenState extends State<OcrTextExtractionScreen> {
   @override
   void initState() {
     super.initState();
+    AppLogger.i('OcrTextExtractionScreen: initState');
     _textController = TextEditingController(
       text: widget.extractedText ?? _getDefaultText(),
     );
@@ -33,6 +35,7 @@ class _OcrTextExtractionScreenState extends State<OcrTextExtractionScreen> {
 
   @override
   void dispose() {
+    AppLogger.i('OcrTextExtractionScreen: dispose');
     _textController.dispose();
     super.dispose();
   }
@@ -372,6 +375,7 @@ Next Meeting: Tuesday at 10 AM''';
   }
 
   void _copyAllText() {
+    AppLogger.i('OcrTextExtractionScreen: Copying extracted text');
     Clipboard.setData(ClipboardData(text: _textController.text));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -383,6 +387,7 @@ Next Meeting: Tuesday at 10 AM''';
   }
 
   void _insertIntoNote() {
+    AppLogger.i('OcrTextExtractionScreen: Inserting into note');
     // Navigate back with extracted text
     Navigator.pop(context, {
       'extractedText': _textController.text,
@@ -391,7 +396,7 @@ Next Meeting: Tuesday at 10 AM''';
   }
 
   void _retakePhoto() {
+    AppLogger.i('OcrTextExtractionScreen: Retaking photo');
     Navigator.pop(context, {'action': 'retake'});
   }
 }
-

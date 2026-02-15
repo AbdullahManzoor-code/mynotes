@@ -63,7 +63,7 @@ import 'package:mynotes/data/repositories/reflection_repository_impl.dart';
 import 'package:mynotes/data/repositories/stats_repository_impl.dart';
 import 'package:mynotes/data/repositories/todo_repository_impl.dart';
 import 'package:mynotes/data/repositories/alarm_repository_impl.dart';
-import 'package:mynotes/data/datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
 import 'package:mynotes/core/services/connectivity_service.dart';
 
@@ -78,6 +78,10 @@ import 'package:mynotes/presentation/bloc/reflection/reflection_bloc.dart';
 import 'package:mynotes/presentation/bloc/focus/focus_bloc.dart';
 import 'package:mynotes/presentation/bloc/theme/theme_bloc.dart';
 import 'package:mynotes/presentation/bloc/audio_recorder/audio_recorder_bloc.dart';
+import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bloc.dart';
+import 'package:mynotes/data/repositories/location_reminder_repository.dart';
+import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
+import 'package:mynotes/presentation/bloc/accessibility_features/accessibility_features_bloc.dart';
 
 import 'package:mynotes/core/notifications/notification_service.dart';
 
@@ -85,23 +89,28 @@ final getIt = GetIt.instance;
 
 /// Initialize all dependencies for dependency injection
 Future<void> setupServiceLocator() async {
+  AppLogger.i('Initializing Service Locator...');
   // ==================== Global Services ====================
+  AppLogger.i('Registering GlobalUiService...');
   getIt.registerSingleton<GlobalUiService>(GlobalUiService());
 
   // ==================== Notifications ====================
+  AppLogger.i('Registering NotificationService...');
   final notificationService = LocalNotificationService();
   await notificationService.init();
   getIt.registerSingleton<NotificationService>(notificationService);
 
+  AppLogger.i('Registering ConnectivityService...');
   final connectivityService = ConnectivityService();
   connectivityService.initialize();
   getIt.registerSingleton<ConnectivityService>(connectivityService);
 
   // ==================== Database ====================
-  final notesDatabase = NotesDatabase();
-  getIt.registerSingleton<NotesDatabase>(notesDatabase);
+  AppLogger.i('Registering Database...');
+  final coreDatabase = CoreDatabase();
+  getIt.registerSingleton<CoreDatabase>(coreDatabase);
 
-  final database = await notesDatabase.database;
+  final database = await coreDatabase.database;
   getIt.registerSingleton<Database>(database);
 
   // ==================== LocalDataSources ====================
@@ -198,27 +207,30 @@ Future<void> setupServiceLocator() async {
 
   /// Note Repository
   getIt.registerSingleton<NoteRepository>(
-    NoteRepositoryImpl(database: getIt<NotesDatabase>()),
+    NoteRepositoryImpl(database: getIt<CoreDatabase>()),
   );
 
   /// Todo Repository
   getIt.registerSingleton<TodoRepository>(
-    TodoRepositoryImpl(database: getIt<NotesDatabase>()),
+    TodoRepositoryImpl(database: getIt<CoreDatabase>()),
   );
 
   /// Alarm Repository
   getIt.registerSingleton<AlarmRepository>(
-    AlarmRepositoryImpl(database: getIt<NotesDatabase>()),
+    AlarmRepositoryImpl(database: getIt<CoreDatabase>()),
   );
 
   /// Reflection Repository
   getIt.registerSingleton<ReflectionRepository>(
-    ReflectionRepositoryImpl(getIt<NotesDatabase>()),
+    ReflectionRepositoryImpl(getIt<CoreDatabase>()),
   );
 
   /// Stats Repository
-  getIt.registerSingleton<StatsRepository>(
-    StatsRepositoryImpl(getIt<NotesDatabase>()),
+  getIt.registerSingleton<StatsRepository>(StatsRepositoryImpl());
+
+  /// Location Reminder Repository
+  getIt.registerSingleton<LocationReminderRepository>(
+    LocationReminderRepository(),
   );
 
   // ==================== BLoCs ====================
@@ -356,6 +368,19 @@ Future<void> setupServiceLocator() async {
   /// Calendar Integration BLoC
   getIt.registerSingleton<CalendarIntegrationBloc>(
     CalendarIntegrationBloc(calendarService: getIt<CalendarService>()),
+  );
+
+  /// Location Reminder BLoC
+  getIt.registerSingleton<LocationReminderBloc>(
+    LocationReminderBloc(repository: getIt<LocationReminderRepository>()),
+  );
+
+  /// Settings BLoC
+  getIt.registerSingleton<SettingsBloc>(SettingsBloc());
+
+  /// Accessibility Features BLoC
+  getIt.registerSingleton<AccessibilityFeaturesBloc>(
+    AccessibilityFeaturesBloc(),
   );
 }
 

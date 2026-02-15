@@ -36,6 +36,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i('AudioRecorderScreen: Initialized');
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1000),
@@ -52,6 +53,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
   @override
   void dispose() {
+    AppLogger.i('AudioRecorderScreen: Disposed');
     _waveformTimer?.cancel();
     _pulseController.dispose();
     _waveController.dispose();
@@ -61,9 +63,13 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   }
 
   Future<void> _initializeRecorder() async {
+    AppLogger.i('AudioRecorderScreen: Requesting microphone permissions');
     final status = await Permission.microphone.request();
     if (status != PermissionStatus.granted) {
+      AppLogger.w('AudioRecorderScreen: Microphone permission denied');
       getIt<GlobalUiService>().showError('Microphone permission is required');
+    } else {
+      AppLogger.i('AudioRecorderScreen: Microphone permission granted');
     }
   }
 
@@ -88,12 +94,14 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
     _audioPlayer.onPlayerComplete.listen((_) {
       if (mounted && context.mounted) {
+        AppLogger.i('AudioRecorderScreen: Playback completed');
         context.read<AudioRecorderBloc>().add(PlaybackCompleted());
       }
     });
   }
 
   Future<void> _startRecording() async {
+    AppLogger.i('AudioRecorderScreen: _startRecording called');
     try {
       if (await _recorder.hasPermission()) {
         final dir = await getTemporaryDirectory();
@@ -110,11 +118,15 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
         );
 
         if (context.mounted) {
+          AppLogger.i('AudioRecorderScreen: Recording started at $path');
           context.read<AudioRecorderBloc>().add(StartRecording());
           _startWaveformSimulation();
         }
+      } else {
+        AppLogger.w('AudioRecorderScreen: Recording failed - No permission');
       }
     } catch (e) {
+      AppLogger.e('AudioRecorderScreen: Failed to start recording', e);
       getIt<GlobalUiService>().showError('Failed to start recording: $e');
     }
   }
@@ -137,6 +149,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   }
 
   Future<void> _pauseRecording() async {
+    AppLogger.i('AudioRecorderScreen: _pauseRecording called');
     await _recorder.pause();
     if (context.mounted) {
       context.read<AudioRecorderBloc>().add(PauseRecording());
@@ -144,6 +157,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   }
 
   Future<void> _resumeRecording() async {
+    AppLogger.i('AudioRecorderScreen: _resumeRecording called');
     await _recorder.resume();
     if (context.mounted) {
       context.read<AudioRecorderBloc>().add(ResumeRecording());
@@ -152,23 +166,34 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   }
 
   Future<void> _stopRecording() async {
+    AppLogger.i('AudioRecorderScreen: _stopRecording called');
     _waveformTimer?.cancel();
     final path = await _recorder.stop();
     if (context.mounted) {
+      AppLogger.i('AudioRecorderScreen: Recording stopped. Path: $path');
       context.read<AudioRecorderBloc>().add(StopRecording());
     }
   }
 
   Future<void> _playRecording() async {
     final state = context.read<AudioRecorderBloc>().state;
-    if (state.recordingPath == null) return;
+    if (state.recordingPath == null) {
+      AppLogger.w(
+        'AudioRecorderScreen: _playRecording called but no recordingPath',
+      );
+      return;
+    }
 
     if (state.isPlaying) {
+      AppLogger.i('AudioRecorderScreen: Pausing playback');
       await _audioPlayer.pause();
       if (context.mounted) {
         context.read<AudioRecorderBloc>().add(PausePlayback());
       }
     } else {
+      AppLogger.i(
+        'AudioRecorderScreen: Starting playback for ${state.recordingPath}',
+      );
       await _audioPlayer.play(DeviceFileSource(state.recordingPath!));
       if (context.mounted) {
         context.read<AudioRecorderBloc>().add(PlayRecording());
@@ -177,6 +202,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
   }
 
   void _discardRecording() {
+    AppLogger.i('AudioRecorderScreen: _discardRecording dialog shown');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -184,11 +210,15 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
         content: const Text('This recording will be permanently deleted.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('AudioRecorderScreen: Discard cancelled');
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
+              AppLogger.i('AudioRecorderScreen: Discard confirmed');
               Navigator.pop(context);
               Navigator.pop(context);
             },
@@ -201,6 +231,9 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
   void _saveRecording() {
     final state = context.read<AudioRecorderBloc>().state;
+    AppLogger.i(
+      'AudioRecorderScreen: _saveRecording called. Path: ${state.recordingPath}',
+    );
     if (state.recordingPath != null) {
       Navigator.pop(context, {
         'audioPath': state.recordingPath,
@@ -217,6 +250,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('AudioRecorderScreen: Building UI');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocBuilder<AudioRecorderBloc, AudioRecorderState>(
@@ -229,6 +263,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
             leading: IconButton(
               icon: Icon(Icons.close, color: AppColors.textPrimary(context)),
               onPressed: () {
+                AppLogger.i('AudioRecorderScreen: Close button pressed');
                 if (state.hasRecording || state.isRecording) {
                   _discardRecording();
                 } else {
@@ -248,7 +283,10 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
             actions: [
               if (state.hasRecording && !state.isRecording)
                 TextButton(
-                  onPressed: _saveRecording,
+                  onPressed: () {
+                    AppLogger.i('AudioRecorderScreen: Save button pressed');
+                    _saveRecording();
+                  },
                   child: Text(
                     'Save',
                     style: TextStyle(
@@ -434,6 +472,7 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
           // Re-record button
           GestureDetector(
             onTap: () {
+              AppLogger.i('AudioRecorderScreen: Re-record button pressed');
               context.read<AudioRecorderBloc>().add(ResetRecording());
             },
             child: Container(
@@ -455,7 +494,10 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
           // Play/Pause button
           GestureDetector(
-            onTap: _playRecording,
+            onTap: () {
+              AppLogger.i('AudioRecorderScreen: Playback control tapped');
+              _playRecording();
+            },
             child: Container(
               width: 80.w,
               height: 80.w,
@@ -481,7 +523,12 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
           // Delete button
           GestureDetector(
-            onTap: _discardRecording,
+            onTap: () {
+              AppLogger.i(
+                'AudioRecorderScreen: Discard recording button pressed',
+              );
+              _discardRecording();
+            },
             child: Container(
               width: 56.w,
               height: 56.w,
@@ -507,7 +554,10 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
         if (state.isRecording) ...[
           // Stop button
           GestureDetector(
-            onTap: _stopRecording,
+            onTap: () {
+              AppLogger.i('AudioRecorderScreen: Stop recording button pressed');
+              _stopRecording();
+            },
             child: Container(
               width: 56.w,
               height: 56.w,
@@ -524,9 +574,20 @@ class _AudioRecorderScreenState extends State<AudioRecorderScreen>
 
         // Record/Pause button
         GestureDetector(
-          onTap: state.isRecording
-              ? (state.isPaused ? _resumeRecording : _pauseRecording)
-              : _startRecording,
+          onTap: () {
+            if (state.isRecording) {
+              if (state.isPaused) {
+                AppLogger.i('AudioRecorderScreen: Resume recording tapped');
+                _resumeRecording();
+              } else {
+                AppLogger.i('AudioRecorderScreen: Pause recording tapped');
+                _pauseRecording();
+              }
+            } else {
+              AppLogger.i('AudioRecorderScreen: Start recording tapped');
+              _startRecording();
+            }
+          },
           child: AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
@@ -606,4 +667,3 @@ class _WaveformPainter extends CustomPainter {
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) => true;
 }
-

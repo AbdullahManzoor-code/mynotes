@@ -4,7 +4,7 @@ import '../design_system/design_system.dart';
 import '../pages/enhanced_note_editor_screen.dart';
 import '../pages/focus_session_screen.dart';
 import '../pages/backup_export_screen.dart';
-import '../pages/daily_highlight_summary_screen.dart';
+import '../pages/daily_focus_highlight_screen.dart';
 import 'quick_add_bottom_sheet.dart';
 
 /// Command Palette Overlay
@@ -78,7 +78,7 @@ class _CommandPaletteState extends State<CommandPalette> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const DailyHighlightSummaryScreen(),
+            builder: (context) => const DailyFocusHighlightScreen(),
           ),
         );
       },

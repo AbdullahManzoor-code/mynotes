@@ -1,6 +1,7 @@
 import 'dart:io' as io;
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:mynotes/injection_container.dart';
 import 'media_event.dart';
 import 'media_state.dart';
@@ -58,18 +59,22 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     CapturePhotoEvent event,
     Emitter<MediaState> emit,
   ) async {
+    AppLogger.i('Capturing photo for note: ${event.noteId}');
     try {
       emit(MediaLoading(event.noteId));
       final photoPath = await _mediaCaptureService.capturePhoto();
 
       if (photoPath != null) {
+        AppLogger.i('Photo captured to path: $photoPath');
         final media = await repository.addImageToNote(event.noteId, photoPath);
         emit(MediaAdded(event.noteId, media));
       } else {
+        AppLogger.w('Photo capture cancelled or failed');
         emit(MediaError(event.noteId, 'Failed to capture photo'));
       }
-    } catch (e) {
+    } catch (e, stack) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
+      AppLogger.e('Photo capture error: $errorMsg', e, stack);
       emit(MediaError(event.noteId, errorMsg));
     }
   }
@@ -78,18 +83,22 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     PickPhotoFromGalleryEvent event,
     Emitter<MediaState> emit,
   ) async {
+    AppLogger.i('Picking photo from gallery for note: ${event.noteId}');
     try {
       emit(MediaLoading(event.noteId));
       final photoPath = await _mediaCaptureService.pickPhotoFromGallery();
 
       if (photoPath != null) {
+        AppLogger.i('Photo picked from path: $photoPath');
         final media = await repository.addImageToNote(event.noteId, photoPath);
         emit(MediaAdded(event.noteId, media));
       } else {
+        AppLogger.i('Gallery pick cancelled');
         emit(MediaError(event.noteId, 'No photo selected'));
       }
-    } catch (e) {
+    } catch (e, stack) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
+      AppLogger.e('Gallery pick error: $errorMsg', e, stack);
       emit(MediaError(event.noteId, errorMsg));
     }
   }
@@ -98,12 +107,14 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     RemoveImageFromNoteEvent event,
     Emitter<MediaState> emit,
   ) async {
+    AppLogger.i('Removing image ${event.mediaId} from note ${event.noteId}');
     try {
       emit(MediaLoading(event.noteId));
       await repository.removeMediaFromNote(event.noteId, event.mediaId);
       emit(MediaRemoved(event.noteId, event.mediaId));
-    } catch (e) {
+    } catch (e, stack) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
+      AppLogger.e('Image removal error: $errorMsg', e, stack);
       emit(MediaError(event.noteId, errorMsg));
     }
   }
@@ -112,6 +123,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     StartAudioRecordingEvent event,
     Emitter<MediaState> emit,
   ) async {
+    AppLogger.i('Starting audio recording: ${event.fileName}');
     try {
       emit(MediaLoading(event.noteId));
       final success = await _mediaCaptureService.startAudioRecording(
@@ -119,12 +131,15 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       );
 
       if (success) {
+        AppLogger.i('Audio recording started successfully');
         emit(AudioRecordingStarted(event.noteId));
       } else {
+        AppLogger.w('Failed to start audio recording');
         emit(MediaError(event.noteId, 'Failed to start recording'));
       }
-    } catch (e) {
+    } catch (e, stack) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
+      AppLogger.e('Audio recording start error: $errorMsg', e, stack);
       emit(MediaError(event.noteId, errorMsg));
     }
   }
@@ -133,18 +148,22 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     StopAudioRecordingEvent event,
     Emitter<MediaState> emit,
   ) async {
+    AppLogger.i('Stopping audio recording for note: ${event.noteId}');
     try {
       emit(MediaLoading(event.noteId));
       final audioPath = await _mediaCaptureService.stopAudioRecording();
 
       if (audioPath != null) {
+        AppLogger.i('Audio recording saved to: $audioPath');
         final media = await repository.addImageToNote(event.noteId, audioPath);
         emit(MediaAdded(event.noteId, media));
       } else {
+        AppLogger.w('No audio path returned from recorder');
         emit(MediaError(event.noteId, 'Failed to save recording'));
       }
-    } catch (e) {
+    } catch (e, stack) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
+      AppLogger.e('Audio recording stop error: $errorMsg', e, stack);
       emit(MediaError(event.noteId, errorMsg));
     }
   }
@@ -237,6 +256,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     ScanDocumentEvent event,
     Emitter<MediaState> emit,
   ) async {
+    AppLogger.i('Scanning document: ${event.documentTitle}');
     try {
       emit(MediaLoading(event.noteId));
       final scannedDoc = await _documentScannerService.scanDocument(
@@ -244,6 +264,9 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       );
 
       if (scannedDoc != null && scannedDoc.pagePaths.isNotEmpty) {
+        AppLogger.i(
+          'Document scanned with ${scannedDoc.pagePaths.length} pages',
+        );
         // Add scanned document as attachment
         final documentPath = scannedDoc.pagePaths.join(',');
         final media = await repository.addImageToNote(
@@ -252,10 +275,12 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
         );
         emit(MediaAdded(event.noteId, media));
       } else {
+        AppLogger.w('Document scanning failed or cancelled');
         emit(MediaError(event.noteId, 'Failed to scan document'));
       }
-    } catch (e) {
+    } catch (e, stack) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
+      AppLogger.e('Document scanner error: $errorMsg', e, stack);
       emit(MediaError(event.noteId, errorMsg));
     }
   }
@@ -264,11 +289,13 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     CompressImageEvent event,
     Emitter<MediaState> emit,
   ) async {
+    AppLogger.i('Compressing image: ${event.mediaId}');
     try {
       emit(MediaLoading(event.noteId));
 
       final file = io.File(event.mediaId);
       if (!await file.exists()) {
+        AppLogger.w('Compression source file not found: ${event.mediaId}');
         emit(MediaError(event.noteId, 'File not found for compression'));
         return;
       }
@@ -276,12 +303,15 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       final compressedFile = await _mediaProcessingService.compressImage(file);
 
       if (compressedFile != null) {
+        AppLogger.i('Image compressed: ${compressedFile.path}');
         emit(MediaCompressed(event.noteId, event.mediaId, compressedFile.path));
       } else {
+        AppLogger.w('Image compression returned null');
         emit(MediaError(event.noteId, 'Image compression failed'));
       }
-    } catch (e) {
+    } catch (e, stack) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
+      AppLogger.e('Image compression error: $errorMsg', e, stack);
       emit(MediaError(event.noteId, errorMsg));
     }
   }
@@ -290,11 +320,13 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     CompressVideoEvent event,
     Emitter<MediaState> emit,
   ) async {
+    AppLogger.i('Compressing video: ${event.mediaId}');
     try {
       emit(MediaLoading(event.noteId));
 
       final file = io.File(event.mediaId);
       if (!await file.exists()) {
+        AppLogger.w('Compression source file not found: ${event.mediaId}');
         emit(MediaError(event.noteId, 'File not found for compression'));
         return;
       }
@@ -302,12 +334,15 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       final info = await _mediaProcessingService.compressVideo(file);
 
       if (info != null && info.path != null) {
+        AppLogger.i('Video compressed: ${info.path}');
         emit(MediaCompressed(event.noteId, event.mediaId, info.path!));
       } else {
+        AppLogger.w('Video compression failed or returned no path');
         emit(MediaError(event.noteId, 'Video compression failed'));
       }
-    } catch (e) {
+    } catch (e, stack) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
+      AppLogger.e('Video compression error: $errorMsg', e, stack);
       emit(MediaError(event.noteId, errorMsg));
     }
   }

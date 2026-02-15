@@ -1,18 +1,16 @@
 import 'package:sqflite/sqflite.dart';
 import '../../domain/entities/focus_session.dart';
 import '../../domain/repositories/stats_repository.dart';
-import '../datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 
 class StatsRepositoryImpl implements StatsRepository {
-  final NotesDatabase _db;
-
-  StatsRepositoryImpl(this._db);
+  final CoreDatabase _database = CoreDatabase();
 
   @override
   Future<void> saveFocusSession(FocusSession session) async {
-    final db = await _db.database;
+    final db = await _database.database;
     await db.insert(
-      NotesDatabase.focusSessionsTable,
+      CoreDatabase.focusSessionsTable,
       _focusSessionToMap(session),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -20,9 +18,9 @@ class StatsRepositoryImpl implements StatsRepository {
 
   @override
   Future<List<FocusSession>> getFocusSessions() async {
-    final db = await _db.database;
+    final db = await _database.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      NotesDatabase.focusSessionsTable,
+      CoreDatabase.focusSessionsTable,
       orderBy: 'startTime DESC',
     );
     return maps.map(_mapToFocusSession).toList();
@@ -33,9 +31,9 @@ class StatsRepositoryImpl implements StatsRepository {
     DateTime start,
     DateTime end,
   ) async {
-    final db = await _db.database;
+    final db = await _database.database;
     final List<Map<String, dynamic>> maps = await db.query(
-      NotesDatabase.focusSessionsTable,
+      CoreDatabase.focusSessionsTable,
       where: 'startTime >= ? AND startTime <= ?',
       whereArgs: [start.toIso8601String(), end.toIso8601String()],
       orderBy: 'startTime DESC',
@@ -45,14 +43,14 @@ class StatsRepositoryImpl implements StatsRepository {
 
   @override
   Future<Map<String, int>> getItemCounts() async {
-    final db = await _db.database;
+    final db = await _database.database;
     final result = await db.rawQuery('''
       SELECT 
-        (SELECT COUNT(*) FROM ${NotesDatabase.notesTable} WHERE isDeleted = 0 AND isArchived = 0) as notes_count,
-        (SELECT COUNT(*) FROM ${NotesDatabase.todosTable} WHERE isDeleted = 0) as todos_count,
-        (SELECT COUNT(*) FROM ${NotesDatabase.todosTable} WHERE isDeleted = 0 AND isCompleted = 1) as completed_todos_count,
-        (SELECT COUNT(*) FROM ${NotesDatabase.remindersTable} WHERE isDeleted = 0) as reminders_count,
-        (SELECT COUNT(*) FROM ${NotesDatabase.focusSessionsTable} WHERE isCompleted = 1) as focus_sessions_count
+        (SELECT COUNT(*) FROM ${CoreDatabase.notesTable} WHERE isDeleted = 0 AND isArchived = 0) as notes_count,
+        (SELECT COUNT(*) FROM ${CoreDatabase.todosTable} WHERE isDeleted = 0) as todos_count,
+        (SELECT COUNT(*) FROM ${CoreDatabase.todosTable} WHERE isDeleted = 0 AND isCompleted = 1) as completed_todos_count,
+        (SELECT COUNT(*) FROM ${CoreDatabase.remindersTable} WHERE isDeleted = 0) as reminders_count,
+        (SELECT COUNT(*) FROM ${CoreDatabase.focusSessionsTable} WHERE isCompleted = 1) as focus_sessions_count
     ''');
 
     if (result.isEmpty) {
@@ -77,7 +75,7 @@ class StatsRepositoryImpl implements StatsRepository {
 
   @override
   Future<Map<String, double>> getWeeklyActivity() async {
-    final db = await _db.database;
+    final db = await _database.database;
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
 
@@ -86,28 +84,28 @@ class StatsRepositoryImpl implements StatsRepository {
     final weekAgoStr = weekAgo.toIso8601String();
 
     final notes = await db.query(
-      NotesDatabase.notesTable,
+      CoreDatabase.notesTable,
       columns: ['createdAt'],
       where: 'createdAt >= ? AND isDeleted = 0',
       whereArgs: [weekAgoStr],
     );
 
     final todos = await db.query(
-      NotesDatabase.todosTable,
+      CoreDatabase.todosTable,
       columns: ['createdAt'],
       where: 'createdAt >= ? AND isDeleted = 0',
       whereArgs: [weekAgoStr],
     );
 
     final reflections = await db.query(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       columns: ['createdAt'],
       where: 'createdAt >= ? AND isDeleted = 0',
       whereArgs: [weekAgoStr],
     );
 
     final focusSessions = await db.query(
-      NotesDatabase.focusSessionsTable,
+      CoreDatabase.focusSessionsTable,
       columns: ['startTime'],
       where: 'startTime >= ? AND isCompleted = 1',
       whereArgs: [weekAgoStr],
@@ -154,14 +152,14 @@ class StatsRepositoryImpl implements StatsRepository {
 
   @override
   Future<List<Map<String, dynamic>>> getCategoryBreakdown() async {
-    final db = await _db.database;
+    final db = await _database.database;
 
     final result = await db.rawQuery('''
       SELECT category, COUNT(*) as count 
       FROM (
-        SELECT category FROM ${NotesDatabase.notesTable} WHERE isDeleted = 0
+        SELECT category FROM ${CoreDatabase.notesTable} WHERE isDeleted = 0
         UNION ALL
-        SELECT category FROM ${NotesDatabase.todosTable} WHERE isDeleted = 0
+        SELECT category FROM ${CoreDatabase.todosTable} WHERE isDeleted = 0
       )
       WHERE category IS NOT NULL AND category != ''
       GROUP BY category
@@ -170,9 +168,9 @@ class StatsRepositoryImpl implements StatsRepository {
 
     final totalResult = await db.rawQuery('''
       SELECT COUNT(*) as total FROM (
-        SELECT id FROM ${NotesDatabase.notesTable} WHERE isDeleted = 0
+        SELECT id FROM ${CoreDatabase.notesTable} WHERE isDeleted = 0
         UNION ALL
-        SELECT id FROM ${NotesDatabase.todosTable} WHERE isDeleted = 0
+        SELECT id FROM ${CoreDatabase.todosTable} WHERE isDeleted = 0
       )
     ''');
 
@@ -199,10 +197,10 @@ class StatsRepositoryImpl implements StatsRepository {
         ? (completedTodos / totalTodos * 100).round()
         : 0;
 
-    final db = await _db.database;
+    final db = await _database.database;
     final focusResult = await db.rawQuery('''
       SELECT SUM(durationSeconds) as total_seconds
-      FROM ${NotesDatabase.focusSessionsTable}
+      FROM ${CoreDatabase.focusSessionsTable}
       WHERE isCompleted = 1
     ''');
 
@@ -224,16 +222,16 @@ class StatsRepositoryImpl implements StatsRepository {
 
   @override
   Future<int> getCurrentStreak() async {
-    final db = await _db.database;
+    final db = await _database.database;
     // Streak based on having at least one note, todo, or reflection per day
     final result = await db.rawQuery('''
       SELECT DISTINCT date(createdAt) as day
       FROM (
-        SELECT createdAt FROM ${NotesDatabase.notesTable} WHERE isDeleted = 0
+        SELECT createdAt FROM ${CoreDatabase.notesTable} WHERE isDeleted = 0
         UNION ALL
-        SELECT createdAt FROM ${NotesDatabase.todosTable} WHERE isDeleted = 0
+        SELECT createdAt FROM ${CoreDatabase.todosTable} WHERE isDeleted = 0
         UNION ALL
-        SELECT createdAt FROM ${NotesDatabase.reflectionsTable} WHERE isDeleted = 0
+        SELECT createdAt FROM ${CoreDatabase.reflectionsTable} WHERE isDeleted = 0
       )
       ORDER BY day DESC
     ''');
@@ -269,16 +267,16 @@ class StatsRepositoryImpl implements StatsRepository {
 
   @override
   Future<List<Map<String, dynamic>>> getRecentItems({int limit = 5}) async {
-    final db = await _db.database;
+    final db = await _database.database;
     // We return maps that can be converted to UniversalItem or used directly
     final List<Map<String, dynamic>> result = await db.rawQuery(
       '''
       SELECT 'note' as item_type, id, title, content, createdAt, updatedAt, 0 as isTodo, 0 as isCompleted, NULL as reminderTime, category
-      FROM ${NotesDatabase.notesTable} 
+      FROM ${CoreDatabase.notesTable} 
       WHERE isDeleted = 0
       UNION ALL
       SELECT 'todo' as item_type, id, title, description as content, createdAt, updatedAt, 1 as isTodo, isCompleted, reminderTime, category
-      FROM ${NotesDatabase.todosTable} 
+      FROM ${CoreDatabase.todosTable} 
       WHERE isDeleted = 0
       ORDER BY updatedAt DESC
       LIMIT ?
@@ -290,13 +288,13 @@ class StatsRepositoryImpl implements StatsRepository {
 
   @override
   Future<List<Map<String, dynamic>>> getOverdueReminders() async {
-    final db = await _db.database;
+    final db = await _database.database;
     final now = DateTime.now().toIso8601String();
 
     final List<Map<String, dynamic>> result = await db.rawQuery(
       '''
       SELECT 'reminder' as item_type, id, title, message as content, createdAt, updatedAt, 0 as isTodo, isCompleted, scheduledTime as reminderTime, 'Reminder' as category
-      FROM ${NotesDatabase.remindersTable}
+      FROM ${CoreDatabase.remindersTable}
       WHERE scheduledTime < ? AND isCompleted = 0 AND isDeleted = 0
       ORDER BY scheduledTime ASC
     ''',
@@ -308,16 +306,16 @@ class StatsRepositoryImpl implements StatsRepository {
 
   @override
   Future<List<String>> getDailyHighlights() async {
-    final db = await _db.database;
+    final db = await _database.database;
     final today = DateTime.now().toIso8601String().split('T')[0];
 
     // Get top 3 activities: Completed todos first, then new notes
     final List<Map<String, dynamic>> result = await db.rawQuery(
       '''
-      SELECT title FROM ${NotesDatabase.todosTable} 
+      SELECT title FROM ${CoreDatabase.todosTable} 
       WHERE isCompleted = 1 AND isDeleted = 0 AND (updatedAt LIKE ? OR createdAt LIKE ?)
       UNION ALL
-      SELECT title FROM ${NotesDatabase.notesTable} 
+      SELECT title FROM ${CoreDatabase.notesTable} 
       WHERE isDeleted = 0 AND createdAt LIKE ?
       LIMIT 3
     ''',
@@ -339,13 +337,13 @@ class StatsRepositoryImpl implements StatsRepository {
   }
 
   Future<int> _getMostProductiveHour() async {
-    final db = await _db.database;
+    final db = await _database.database;
     final result = await db.rawQuery('''
       SELECT strftime('%H', createdAt) as hour, COUNT(*) as count
       FROM (
-        SELECT createdAt FROM ${NotesDatabase.notesTable} WHERE isDeleted = 0
+        SELECT createdAt FROM ${CoreDatabase.notesTable} WHERE isDeleted = 0
         UNION ALL
-        SELECT createdAt FROM ${NotesDatabase.todosTable} WHERE isDeleted = 0
+        SELECT createdAt FROM ${CoreDatabase.todosTable} WHERE isDeleted = 0
       )
       GROUP BY hour
       ORDER BY count DESC
@@ -357,13 +355,13 @@ class StatsRepositoryImpl implements StatsRepository {
   }
 
   Future<String> _getTopCategory() async {
-    final db = await _db.database;
+    final db = await _database.database;
     final result = await db.rawQuery('''
       SELECT category, COUNT(*) as count
       FROM (
-        SELECT category FROM ${NotesDatabase.notesTable} WHERE isDeleted = 0
+        SELECT category FROM ${CoreDatabase.notesTable} WHERE isDeleted = 0
         UNION ALL
-        SELECT category FROM ${NotesDatabase.todosTable} WHERE isDeleted = 0
+        SELECT category FROM ${CoreDatabase.todosTable} WHERE isDeleted = 0
       )
       WHERE category IS NOT NULL AND category != ''
       GROUP BY category

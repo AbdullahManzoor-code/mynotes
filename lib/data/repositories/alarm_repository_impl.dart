@@ -1,11 +1,11 @@
 import '../../domain/entities/alarm.dart';
 import '../../domain/repositories/alarm_repository.dart';
-import '../datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 
 class AlarmRepositoryImpl implements AlarmRepository {
-  final NotesDatabase _database;
+  final CoreDatabase _database;
 
-  AlarmRepositoryImpl({required NotesDatabase database}) : _database = database;
+  AlarmRepositoryImpl({required CoreDatabase database}) : _database = database;
 
   @override
   Future<List<Alarm>> getAlarms() async {

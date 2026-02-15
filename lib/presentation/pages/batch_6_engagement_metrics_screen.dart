@@ -7,6 +7,7 @@ import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import '../../injection_container.dart';
 import '../../core/services/global_ui_service.dart';
+import '../../core/utils/app_logger.dart';
 
 /// Engagement Metrics - Batch 6, Screen 4
 /// Refactored to use Design System and Stateless BLoC pattern
@@ -15,6 +16,7 @@ class EngagementMetricsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('EngagementMetricsScreen: Building');
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
@@ -33,6 +35,7 @@ class EngagementMetricsScreen extends StatelessWidget {
               color: AppColors.primaryColor,
             ),
             onPressed: () {
+              AppLogger.i('EngagementMetricsScreen: Refreshing metrics');
               context.read<SmartRemindersBloc>().add(
                 const LoadSuggestionsEvent(),
               );
@@ -50,6 +53,9 @@ class EngagementMetricsScreen extends StatelessWidget {
           }
 
           if (state is! SmartRemindersLoaded) {
+            AppLogger.w(
+              'EngagementMetricsScreen: Reminders not loaded. State: ${state.runtimeType}',
+            );
             return Center(
               child: Text(
                 'Load reminders to see your metrics',
@@ -62,6 +68,7 @@ class EngagementMetricsScreen extends StatelessWidget {
           }
 
           final aiEngine = AISuggestionEngine();
+          AppLogger.i('EngagementMetricsScreen: Requesting AI recommendations');
 
           return FutureBuilder<Map<String, dynamic>>(
             future: aiEngine.getPersonalizedRecommendationStrength(
@@ -76,7 +83,23 @@ class EngagementMetricsScreen extends StatelessWidget {
                 );
               }
 
+              if (snapshot.hasError) {
+                AppLogger.e(
+                  'EngagementMetricsScreen: AI engine error',
+                  snapshot.error,
+                );
+              }
+
               final data = snapshot.data ?? {};
+              if (data.isNotEmpty) {
+                AppLogger.i(
+                  'EngagementMetricsScreen: Received AI recommendations',
+                );
+              } else {
+                AppLogger.w(
+                  'EngagementMetricsScreen: No AI recommendations received',
+                );
+              }
               final reminders = state.params.reminders;
 
               return ListView(
@@ -441,4 +464,3 @@ class EngagementMetricsScreen extends StatelessWidget {
     return 'Low activity. We recommend setting simpler goals.';
   }
 }
-

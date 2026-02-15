@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:graphview/GraphView.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +19,7 @@ class GraphViewPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('GraphViewPage: Building wrapper');
     return BlocProvider(
       create: (context) => getIt<GraphBloc>()..add(LoadGraphData()),
       child: const _GraphViewContent(),
@@ -38,6 +40,7 @@ class _GraphViewContentState extends State<_GraphViewContent> {
   @override
   void initState() {
     super.initState();
+    AppLogger.i('GraphViewPage: Initialized');
     builder = FruchtermanReingoldAlgorithm(FruchtermanReingoldConfiguration());
   }
 
@@ -54,6 +57,7 @@ class _GraphViewContentState extends State<_GraphViewContent> {
           IconButton(
             icon: const Icon(Icons.refresh_rounded, color: Colors.white),
             onPressed: () {
+              AppLogger.i('GraphViewPage: Refreshing graph data');
               HapticFeedback.lightImpact();
               context.read<GraphBloc>().add(LoadGraphData());
             },
@@ -85,6 +89,7 @@ class _GraphViewContentState extends State<_GraphViewContent> {
             }
 
             if (state is GraphError) {
+              AppLogger.e('GraphViewPage: Graph error: ${state.message}');
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -107,8 +112,10 @@ class _GraphViewContentState extends State<_GraphViewContent> {
                           borderRadius: BorderRadius.circular(12.r),
                         ),
                       ),
-                      onPressed: () =>
-                          context.read<GraphBloc>().add(LoadGraphData()),
+                      onPressed: () {
+                        AppLogger.i('GraphViewPage: Retry Connection pressed');
+                        context.read<GraphBloc>().add(LoadGraphData());
+                      },
                       child: const Text('Retry Connection'),
                     ),
                   ],

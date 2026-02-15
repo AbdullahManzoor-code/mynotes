@@ -1,5 +1,6 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import '../design_system/design_system.dart';
 
 /// Edit Daily Highlight Screen
@@ -39,6 +40,7 @@ class _EditDailyHighlightScreenState extends State<EditDailyHighlightScreen> {
   @override
   void initState() {
     super.initState();
+    AppLogger.i('EditDailyHighlightScreen: Initialized');
     // Pre-populate first controller with example text
     _detailControllers[0].text =
         'I finally managed to clear the backlog and sent the final draft to the stakeholder. Feels like a weight off my shoulders.';
@@ -46,6 +48,7 @@ class _EditDailyHighlightScreenState extends State<EditDailyHighlightScreen> {
 
   @override
   void dispose() {
+    AppLogger.i('EditDailyHighlightScreen: Disposed');
     for (var controller in _detailControllers) {
       controller.dispose();
     }
@@ -117,7 +120,10 @@ class _EditDailyHighlightScreenState extends State<EditDailyHighlightScreen> {
             child: Row(
               children: [
                 GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    AppLogger.i('EditDailyHighlightScreen: Close pressed');
+                    Navigator.pop(context);
+                  },
                   child: SizedBox(
                     width: 40.w,
                     height: 40.w,
@@ -143,7 +149,10 @@ class _EditDailyHighlightScreenState extends State<EditDailyHighlightScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    AppLogger.i('EditDailyHighlightScreen: Cancel pressed');
+                    Navigator.pop(context);
+                  },
                   child: Text(
                     'Cancel',
                     style: TextStyle(
@@ -394,6 +403,9 @@ class _EditDailyHighlightScreenState extends State<EditDailyHighlightScreen> {
                 final isSelected = index == _selectedMood;
                 return GestureDetector(
                   onTap: () {
+                    AppLogger.i(
+                      'EditDailyHighlightScreen: Mood selected: ${_moodLabels[index]}',
+                    );
                     setState(() {
                       _selectedMood = index;
                     });
@@ -521,6 +533,7 @@ class _EditDailyHighlightScreenState extends State<EditDailyHighlightScreen> {
   }
 
   void _saveHighlights(BuildContext context) {
+    AppLogger.i('EditDailyHighlightScreen: Saving highlights');
     // Save the highlights
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(

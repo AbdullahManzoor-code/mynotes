@@ -12,6 +12,7 @@ import 'package:mynotes/presentation/bloc/focus/focus_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_state.dart';
 import 'package:mynotes/presentation/bloc/note/note_event.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'focus_celebration_screen.dart';
 
@@ -106,6 +107,7 @@ class FocusSessionScreen extends StatelessWidget {
   }
 
   void _initFocusScreen(BuildContext context) {
+    AppLogger.i('FocusSessionScreen: _initFocusScreen called');
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Trigger load notes for selection if needed
       context.read<NotesBloc>().add(const LoadNotesEvent());
@@ -113,6 +115,9 @@ class FocusSessionScreen extends StatelessWidget {
       final args = ModalRoute.of(context)?.settings.arguments;
       if (args is Map<String, dynamic>) {
         if (args['todoTitle'] != null && args['todoId'] != null) {
+          AppLogger.i(
+            'FocusSessionScreen: Initializing with passed todo: ${args['todoTitle']}',
+          );
           context.read<FocusBloc>().add(
             SelectTaskEvent(
               title: args['todoTitle'] as String,
@@ -124,6 +129,7 @@ class FocusSessionScreen extends StatelessWidget {
         // No todo passed, show task selection first if initial
         final currentStatus = context.read<FocusBloc>().state.status;
         if (currentStatus == FocusStatus.initial) {
+          AppLogger.i('FocusSessionScreen: Showing task selection');
           context.read<FocusBloc>().add(const ToggleTaskSelectionEvent(true));
         }
       }
@@ -131,6 +137,7 @@ class FocusSessionScreen extends StatelessWidget {
   }
 
   void _startSession(BuildContext context) async {
+    AppLogger.i('FocusSessionScreen: Attempting to start session');
     final focusState = context.read<FocusBloc>().state;
     if (focusState.distractionFreeMode) {
       final confirmed = await showDialog<bool>(
@@ -151,11 +158,17 @@ class FocusSessionScreen extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () {
+                AppLogger.i('FocusSessionScreen: Silent mode cancelled');
+                Navigator.pop(context, false);
+              },
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () {
+                AppLogger.i('FocusSessionScreen: Silent mode confirmed');
+                Navigator.pop(context, true);
+              },
               child: Text(
                 'I enabled it',
                 style: TextStyle(color: AppColors.focusAccentGreen),
@@ -168,6 +181,9 @@ class FocusSessionScreen extends StatelessWidget {
       if (confirmed != true) return;
     }
 
+    AppLogger.i(
+      'FocusSessionScreen: Starting session: ${focusState.initialTaskTitle}',
+    );
     context.read<FocusBloc>().add(
       StartFocusSessionEvent(
         minutes: focusState.initialMinutes,
@@ -182,18 +198,22 @@ class FocusSessionScreen extends StatelessWidget {
   }
 
   void _selectTask(BuildContext context, String title, String? id) {
+    AppLogger.i('FocusSessionScreen: _selectTask: $title');
     context.read<FocusBloc>().add(SelectTaskEvent(title: title, todoId: id));
   }
 
   void _togglePause(BuildContext context, FocusStatus status) {
     if (status == FocusStatus.active) {
+      AppLogger.i('FocusSessionScreen: Pausing session');
       context.read<FocusBloc>().add(const PauseFocusSessionEvent());
     } else {
+      AppLogger.i('FocusSessionScreen: Resuming session');
       context.read<FocusBloc>().add(const ResumeFocusSessionEvent());
     }
   }
 
   Future<void> _stopSession(BuildContext context) async {
+    AppLogger.i('FocusSessionScreen: _stopSession called');
     bool? shouldStop = true;
     final currentState = context.read<FocusBloc>().state;
     if (currentState.status == FocusStatus.active ||
@@ -216,11 +236,17 @@ class FocusSessionScreen extends StatelessWidget {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () {
+                AppLogger.i('FocusSessionScreen: End session cancelled');
+                Navigator.pop(context, false);
+              },
               child: const Text('Cancel'),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () {
+                AppLogger.i('FocusSessionScreen: End session confirmed');
+                Navigator.pop(context, true);
+              },
               child: const Text(
                 'End Session',
                 style: TextStyle(color: Colors.red),
@@ -232,16 +258,19 @@ class FocusSessionScreen extends StatelessWidget {
     }
 
     if (shouldStop == true) {
+      AppLogger.i('FocusSessionScreen: Stopping session');
       context.read<FocusBloc>().add(const StopFocusSessionEvent());
       Navigator.pop(context);
     }
   }
 
   void _toggleSettings(BuildContext context) {
+    AppLogger.i('FocusSessionScreen: Toggling settings');
     context.read<FocusBloc>().add(const ToggleSettingsEvent());
   }
 
   Widget _buildTaskSelectionView(BuildContext context) {
+    AppLogger.i('FocusSessionScreen: Building task selection view');
     return Scaffold(
       backgroundColor: AppColors.focusMidnightBlue,
       appBar: AppBar(
@@ -249,7 +278,10 @@ class FocusSessionScreen extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            AppLogger.i('FocusSessionScreen: Task selection close pressed');
+            Navigator.pop(context);
+          },
         ),
         title: Text(
           'Select Focus Task',
@@ -623,8 +655,10 @@ class FocusSessionScreen extends StatelessWidget {
           if (state.isBreak) ...[
             SizedBox(height: 16.h),
             TextButton(
-              onPressed: () =>
-                  context.read<FocusBloc>().add(const SkipBreakEvent()),
+              onPressed: () {
+                AppLogger.i('FocusSessionScreen: Skip Break pressed');
+                context.read<FocusBloc>().add(const SkipBreakEvent());
+              },
               child: const Text(
                 'Skip Break',
                 style: TextStyle(color: Colors.white70),
@@ -675,6 +709,9 @@ class FocusSessionScreen extends StatelessWidget {
                 max: 60,
                 divisions: 9,
                 onChanged: (val) {
+                  AppLogger.i(
+                    'FocusSessionScreen: Focus duration changed to $val',
+                  );
                   context.read<FocusBloc>().add(
                     UpdateFocusSettingsEvent(minutes: val),
                   );
@@ -687,6 +724,9 @@ class FocusSessionScreen extends StatelessWidget {
                 max: 15,
                 divisions: 12,
                 onChanged: (val) {
+                  AppLogger.i(
+                    'FocusSessionScreen: Short break changed to $val',
+                  );
                   context.read<FocusBloc>().add(
                     UpdateFocusSettingsEvent(shortBreakMinutes: val),
                   );
@@ -699,6 +739,7 @@ class FocusSessionScreen extends StatelessWidget {
                 max: 45,
                 divisions: 7,
                 onChanged: (val) {
+                  AppLogger.i('FocusSessionScreen: Long break changed to $val');
                   context.read<FocusBloc>().add(
                     UpdateFocusSettingsEvent(longBreakMinutes: val),
                   );
@@ -711,6 +752,9 @@ class FocusSessionScreen extends StatelessWidget {
                 max: 8,
                 divisions: 7,
                 onChanged: (val) {
+                  AppLogger.i(
+                    'FocusSessionScreen: Sessions per cycle changed to $val',
+                  );
                   context.read<FocusBloc>().add(
                     UpdateFocusSettingsEvent(sessionsBeforeLongBreak: val),
                   );
@@ -728,6 +772,9 @@ class FocusSessionScreen extends StatelessWidget {
                 ),
                 value: state.distractionFreeMode,
                 onChanged: (val) {
+                  AppLogger.i(
+                    'FocusSessionScreen: Deep Focus Mode changed to $val',
+                  );
                   context.read<FocusBloc>().add(
                     UpdateDistractionFreeModeEvent(val),
                   );

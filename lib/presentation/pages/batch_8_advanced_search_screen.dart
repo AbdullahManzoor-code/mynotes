@@ -10,6 +10,7 @@ import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'package:mynotes/presentation/design_system/app_spacing.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/core/utils/app_logger.dart';
 import 'package:mynotes/injection_container.dart';
 
 /// Advanced Search Interface - Batch 8, Screen 1
@@ -20,8 +21,13 @@ class AdvancedSearchScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) =>
-          getIt<AdvancedSearchBloc>()..add(LoadAdvancedSearchHistoryEvent()),
+      create: (context) {
+        AppLogger.i(
+          'AdvancedSearchScreen: Building provider and loading history',
+        );
+        return getIt<AdvancedSearchBloc>()
+          ..add(LoadAdvancedSearchHistoryEvent());
+      },
       child: Scaffold(
         backgroundColor: AppColors.lightBackground,
         appBar: AppBar(
@@ -52,6 +58,7 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
 
   @override
   void dispose() {
+    AppLogger.i('AdvancedSearchScreen: Body Disposed');
     _searchController.dispose();
     super.dispose();
   }
@@ -113,6 +120,9 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
           controller: _searchController,
           style: AppTypography.bodyMedium(context, AppColors.darkText),
           onChanged: (value) {
+            AppLogger.i(
+              'AdvancedSearchScreen: Search query changed to "$value"',
+            );
             // Trigger rebuild for clear button visibility
             context.read<AdvancedSearchBloc>().add(
               AdvancedSearchQueryChangedEvent(value),
@@ -120,6 +130,9 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
           },
           onSubmitted: (value) {
             if (value.isNotEmpty) {
+              AppLogger.i(
+                'AdvancedSearchScreen: Search query submitted: "$value"',
+              );
               _performSearch(context, value);
             }
           },
@@ -143,8 +156,12 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
                     ),
                     tooltip: 'Save Search',
                     onPressed: () {
+                      final query = _searchController.text;
+                      AppLogger.i(
+                        'AdvancedSearchScreen: Saving search query "$query"',
+                      );
                       context.read<AdvancedSearchBloc>().add(
-                        SaveSearchEvent(_searchController.text),
+                        SaveSearchEvent(query),
                       );
                       getIt<GlobalUiService>().showSuccess('Search saved');
                       getIt<GlobalUiService>().hapticFeedback();
@@ -157,6 +174,9 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
                       color: AppColors.tertiaryText,
                     ),
                     onPressed: () {
+                      AppLogger.i(
+                        'AdvancedSearchScreen: Clearing search field',
+                      );
                       _searchController.clear();
                       context.read<AdvancedSearchBloc>().add(
                         const AdvancedSearchQueryChangedEvent(''),
@@ -207,6 +227,7 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
         padding: EdgeInsets.zero,
         itemCount: suggestions.length,
         itemBuilder: (context, index) {
+          final suggestion = suggestions[index];
           return ListTile(
             leading: const Icon(
               Icons.history_rounded,
@@ -214,10 +235,15 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
               size: 20,
             ),
             title: Text(
-              suggestions[index],
+              suggestion,
               style: AppTypography.bodySmall(context, AppColors.darkText),
             ),
-            onTap: () => _performSearch(context, suggestions[index]),
+            onTap: () {
+              AppLogger.i(
+                'AdvancedSearchScreen: Tapping suggestion "$suggestion"',
+              );
+              _performSearch(context, suggestion);
+            },
           );
         },
       ),
@@ -262,6 +288,7 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
       ),
       selected: isSelected,
       onSelected: (selected) {
+        AppLogger.i('AdvancedSearchScreen: Selecting filter "$value"');
         context.read<AdvancedSearchBloc>().add(UpdateSearchFilterEvent(value));
         getIt<GlobalUiService>().hapticFeedback();
       },
@@ -308,6 +335,7 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
     final isSelected = state.selectedSort == value;
     return GestureDetector(
       onTap: () {
+        AppLogger.i('AdvancedSearchScreen: Selecting sort option "$value"');
         context.read<AdvancedSearchBloc>().add(UpdateSearchSortEvent(value));
         getIt<GlobalUiService>().hapticFeedback();
       },
@@ -372,8 +400,14 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
                 ),
                 onSelected: (value) {
                   if (value == 'view') {
+                    AppLogger.i(
+                      'AdvancedSearchScreen: Viewing saved search "$search"',
+                    );
                     _performSearch(context, search);
                   } else if (value == 'delete') {
+                    AppLogger.i(
+                      'AdvancedSearchScreen: Deleting saved search "$search"',
+                    );
                     context.read<AdvancedSearchBloc>().add(
                       RemoveSavedSearchEvent(search),
                     );
@@ -421,6 +455,7 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
             Text('Recent Searches', style: AppTypography.heading3(context)),
             TextButton(
               onPressed: () {
+                AppLogger.i('AdvancedSearchScreen: Clearing search history');
                 context.read<AdvancedSearchBloc>().add(
                   const ClearSearchHistoryEvent(),
                 );
@@ -441,8 +476,16 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
             return InputChip(
               label: Text(search),
               labelStyle: AppTypography.bodySmall(context),
-              onSelected: (_) => _performSearch(context, search),
+              onSelected: (_) {
+                AppLogger.i(
+                  'AdvancedSearchScreen: Tapping history item "$search"',
+                );
+                _performSearch(context, search);
+              },
               onDeleted: () {
+                AppLogger.i(
+                  'AdvancedSearchScreen: Removing history item "$search"',
+                );
                 context.read<AdvancedSearchBloc>().add(
                   RemoveFromSearchHistoryEvent(search),
                 );
@@ -464,6 +507,7 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
   void _performSearch(BuildContext context, String query) {
     if (query.isEmpty) return;
 
+    AppLogger.i('AdvancedSearchScreen: Performing search for "$query"');
     // Use the controller if provided from outside, but here we just navigate
     _searchController.text = query;
 
@@ -477,5 +521,3 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
     Navigator.pushNamed(context, AppRoutes.searchResults, arguments: query);
   }
 }
-
-

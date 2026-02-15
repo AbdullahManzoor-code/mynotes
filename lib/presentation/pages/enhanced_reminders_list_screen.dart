@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/presentation/design_system/design_system.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
 import 'package:mynotes/domain/entities/alarm.dart';
@@ -101,6 +102,7 @@ class EnhancedRemindersListScreen extends StatelessWidget {
   }
 
   void _initScreen(BuildContext context) {
+    AppLogger.i('EnhancedRemindersListScreen: Initializing screen data');
     // We use a small delay or postFrameCallback to avoid dispatching events during build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AlarmsBloc>().add(const LoadAlarmsEvent());
@@ -109,6 +111,9 @@ class EnhancedRemindersListScreen extends StatelessWidget {
   }
 
   void _completeReminder(BuildContext context, AlarmParams alarm) {
+    AppLogger.i(
+      'EnhancedRemindersListScreen: Completing reminder: ${alarm.alarmId}',
+    );
     HapticFeedback.lightImpact();
 
     if (alarm.alarmId != null) {
@@ -140,6 +145,9 @@ class EnhancedRemindersListScreen extends StatelessWidget {
   }
 
   void _snoozeReminder(BuildContext context, AlarmParams alarm) {
+    AppLogger.i(
+      'EnhancedRemindersListScreen: Showing snooze options for ${alarm.alarmId}',
+    );
     HapticFeedback.selectionClick();
     showModalBottomSheet(
       context: context,
@@ -155,6 +163,9 @@ class EnhancedRemindersListScreen extends StatelessWidget {
     Duration snoozeDuration,
     String snoozeLabel,
   ) {
+    AppLogger.i(
+      'EnhancedRemindersListScreen: Applying snooze: $snoozeLabel for ${alarm.alarmId}',
+    );
     HapticFeedback.lightImpact();
 
     final newTime = DateTime.now().add(snoozeDuration);
@@ -221,7 +232,12 @@ class EnhancedRemindersListScreen extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        AppLogger.i(
+                          'EnhancedRemindersListScreen: Back button tapped',
+                        );
+                        Navigator.pop(context);
+                      },
                       child: Icon(
                         Icons.arrow_back,
                         color: AppColors.textPrimary(context),
@@ -231,10 +247,15 @@ class EnhancedRemindersListScreen extends StatelessWidget {
                     Row(
                       children: [
                         GestureDetector(
-                          onTap: () => Navigator.pushNamed(
-                            context,
-                            AppRoutes.integratedFeatures,
-                          ),
+                          onTap: () {
+                            AppLogger.i(
+                              'EnhancedRemindersListScreen: AI Insights tapped',
+                            );
+                            Navigator.pushNamed(
+                              context,
+                              AppRoutes.integratedFeatures,
+                            );
+                          },
                           child: Container(
                             padding: EdgeInsets.all(8.w),
                             decoration: BoxDecoration(
@@ -263,7 +284,11 @@ class EnhancedRemindersListScreen extends StatelessWidget {
                         ),
                         SizedBox(width: 12.w),
                         GestureDetector(
-                          onTap: () {},
+                          onTap: () {
+                            AppLogger.i(
+                              'EnhancedRemindersListScreen: More options tapped',
+                            );
+                          },
                           child: Icon(
                             Icons.more_vert,
                             color: AppColors.textPrimary(context),
@@ -440,6 +465,7 @@ class EnhancedRemindersListScreen extends StatelessWidget {
     return FloatingActionButton(
       heroTag: 'reminders_enhanced_fab',
       onPressed: () {
+        AppLogger.i('EnhancedRemindersListScreen: Add Reminder FAB tapped');
         showModalBottomSheet(
           context: context,
           isScrollControlled: true,
@@ -558,7 +584,12 @@ class EnhancedRemindersListScreen extends StatelessWidget {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () => Navigator.pop(context),
+                  onTap: () {
+                    AppLogger.i(
+                      'EnhancedRemindersListScreen: Snooze bottom sheet closed',
+                    );
+                    Navigator.pop(context);
+                  },
                   child: Container(
                     padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
@@ -607,7 +638,10 @@ class EnhancedRemindersListScreen extends StatelessWidget {
 
   Widget _buildCustomSnoozeOption(BuildContext context, AlarmParams alarm) {
     return GestureDetector(
-      onTap: () => _showCustomSnoozeDialog(context, alarm),
+      onTap: () {
+        AppLogger.i('EnhancedRemindersListScreen: Custom snooze option tapped');
+        _showCustomSnoozeDialog(context, alarm);
+      },
       child: Container(
         width: double.infinity,
         margin: EdgeInsets.only(bottom: 8.h),
@@ -706,7 +740,12 @@ class EnhancedRemindersListScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i(
+                'EnhancedRemindersListScreen: Custom snooze dialog dismissed',
+              );
+              Navigator.pop(context);
+            },
             child: Text(
               'OK',
               style: AppTypography.body2(
@@ -928,6 +967,9 @@ class _EnhancedSnoozeOptionWidget extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        AppLogger.i(
+          'EnhancedRemindersListScreen: Snooze option selected: $title',
+        );
         if (duration != null) onTap(duration!);
       },
       child: Container(

@@ -9,6 +9,7 @@ import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bl
 import 'package:mynotes/presentation/bloc/location_picker/location_picker_bloc.dart';
 import '../design_system/design_system.dart';
 import 'dart:ui' as ui;
+import '../../core/services/app_logger.dart';
 
 // Type alias for PlacePrediction from PlacesService
 typedef PlacePredictionLocal = PlacePrediction;
@@ -41,6 +42,7 @@ class _LocationPickerLifecycleWrapperState
   late LocationService _locationService;
   late PlacesService _placesService;
   final _locationManager = LocationRemindersManager();
+  bool _useMap = true; // Added to allow bypassing the map
 
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
@@ -48,6 +50,7 @@ class _LocationPickerLifecycleWrapperState
   @override
   void initState() {
     super.initState();
+    AppLogger.i('LocationPickerScreen: initState');
     _locationService = LocationService.instance;
     _placesService = PlacesService.instance;
     _pickerBloc = LocationPickerBloc();
@@ -57,6 +60,7 @@ class _LocationPickerLifecycleWrapperState
 
   @override
   void dispose() {
+    AppLogger.i('LocationPickerScreen: dispose');
     _messageController.dispose();
     _searchController.dispose();
     _pickerBloc.close();
@@ -65,6 +69,7 @@ class _LocationPickerLifecycleWrapperState
 
   Future<void> _getCurrentLocation() async {
     try {
+      AppLogger.i('LocationPickerScreen: Getting current location');
       _pickerBloc.add(const SetLoadingState(true));
       final position = await _locationService.getCurrentPosition();
       if (position != null) {
@@ -73,6 +78,7 @@ class _LocationPickerLifecycleWrapperState
         _mapController?.animateCamera(CameraUpdate.newLatLng(location));
       }
     } catch (e) {
+      AppLogger.e('LocationPickerScreen: Error getting location', e);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -84,6 +90,7 @@ class _LocationPickerLifecycleWrapperState
   }
 
   Future<void> _selectLocation(LatLng location) async {
+    AppLogger.i('LocationPickerScreen: selectLocation: $location');
     _pickerBloc.add(SelectLocation(location));
 
     // Reverse geocode to get address
@@ -94,6 +101,7 @@ class _LocationPickerLifecycleWrapperState
       );
       _pickerBloc.add(UpdateAddress(address ?? ''));
     } catch (e) {
+      AppLogger.e('LocationPickerScreen: Error reverse geocoding', e);
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -149,8 +157,10 @@ class _LocationPickerLifecycleWrapperState
   }
 
   void _saveReminder() {
+    AppLogger.i('LocationPickerScreen: Saving reminder');
     final state = _pickerBloc.state;
     if (state.selectedLocation == null) {
+      AppLogger.w('LocationPickerScreen: Save failed - No location selected');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please select a location')));
@@ -158,6 +168,7 @@ class _LocationPickerLifecycleWrapperState
     }
 
     if (state.messageText.isEmpty) {
+      AppLogger.w('LocationPickerScreen: Save failed - Empty message');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please enter a message')));
@@ -293,6 +304,21 @@ class _LocationPickerLifecycleWrapperState
                 ),
               ),
               actions: [
+                IconButton(
+                  icon: Icon(
+                    _useMap ? Icons.map : Icons.edit_location_alt,
+                    color: AppColors.primary,
+                  ),
+                  tooltip: _useMap ? 'Using Map Mode' : 'Using Manual Mode',
+                  onPressed: () {
+                    AppLogger.i(
+                      'LocationPickerScreen: Toggling map mode to ${!_useMap}',
+                    );
+                    setState(() {
+                      _useMap = !_useMap;
+                    });
+                  },
+                ),
                 if (state.selectedLocation != null &&
                     state.messageText.isNotEmpty)
                   Container(
@@ -316,44 +342,83 @@ class _LocationPickerLifecycleWrapperState
             ),
             body: Stack(
               children: [
-                // Map
-                GoogleMap(
-                  onMapCreated: (controller) {
-                    _mapController = controller;
-                    if (state.selectedLocation != null) {
-                      _mapController!.animateCamera(
-                        CameraUpdate.newLatLngZoom(state.selectedLocation!, 15),
-                      );
-                    } else {
-                      _getCurrentLocation();
-                    }
-                  },
-                  initialCameraPosition: CameraPosition(
-                    target:
-                        state.selectedLocation ??
-                        const LatLng(37.7749, -122.4194),
-                    zoom: 15,
+                // Map or Fallback
+                if (_useMap)
+                  GoogleMap(
+                    onMapCreated: (controller) {
+                      _mapController = controller;
+                      if (state.selectedLocation != null) {
+                        _mapController!.animateCamera(
+                          CameraUpdate.newLatLngZoom(
+                            state.selectedLocation!,
+                            15,
+                          ),
+                        );
+                      } else {
+                        _getCurrentLocation();
+                      }
+                    },
+                    initialCameraPosition: CameraPosition(
+                      target:
+                          state.selectedLocation ??
+                          const LatLng(37.7749, -122.4194),
+                      zoom: 15,
+                    ),
+                    markers: markers,
+                    circles: circles,
+                    onTap: _selectLocation,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    compassEnabled: true,
+                    zoomControlsEnabled: false,
+                  )
+                else
+                  Container(
+                    width: double.infinity,
+                    height: double.infinity,
+                    color: Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey.shade900
+                        : Colors.grey.shade200,
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.location_off_outlined,
+                            size: 64.sp,
+                            color: Colors.grey,
+                          ),
+                          SizedBox(height: 16.h),
+                          Text(
+                            'Manual Location Mode',
+                            style: AppTypography.heading4(context, Colors.grey),
+                          ),
+                          SizedBox(height: 8.h),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 40.w),
+                            child: Text(
+                              'Map view is disabled. You can still select locations from your "Quick Select" list below or enter a message manually.',
+                              textAlign: TextAlign.center,
+                              style: AppTypography.body2(context, Colors.grey),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  markers: markers,
-                  circles: circles,
-                  onTap: _selectLocation,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: false,
-                  compassEnabled: true,
-                  zoomControlsEnabled: false,
-                ),
 
                 // My Location Button
-                Positioned(
-                  right: 16,
-                  bottom: 100,
-                  child: FloatingActionButton(
-                    mini: true,
-                    onPressed: _getCurrentLocation,
-                    tooltip: 'My location',
-                    child: const Icon(Icons.my_location),
+                if (_useMap)
+                  Positioned(
+                    right: 16,
+                    bottom: 100,
+                    child: FloatingActionButton(
+                      mini: true,
+                      onPressed: _getCurrentLocation,
+                      tooltip: 'My location',
+                      child: const Icon(Icons.my_location),
+                    ),
                   ),
-                ),
 
                 // Bottom sheet with controls
                 DraggableScrollableSheet(

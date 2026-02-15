@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/utils/app_logger.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
@@ -66,6 +67,7 @@ class SearchOperatorsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('SearchOperatorsScreen: build');
     return BlocBuilder<NotesBloc, NoteState>(
       builder: (context, state) {
         if (state is! NotesLoaded) {

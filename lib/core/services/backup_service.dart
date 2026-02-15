@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:archive/archive_io.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -101,15 +102,17 @@ class BackupService {
       }
 
       encoder.close();
+      AppLogger.i('Backup created successfully at $backupPath');
       return backupPath;
-    } catch (e) {
-      print('Backup Error: $e');
+    } catch (e, stack) {
+      AppLogger.e('Backup Error: $e', e, stack);
       return null;
     }
   }
 
   /// Share the backup file
   static Future<void> shareBackup(String filePath) async {
+    AppLogger.i('Sharing backup file: $filePath');
     await Share.shareXFiles(
       [XFile(filePath)],
       subject: 'MyNotes Backup',
@@ -119,24 +122,30 @@ class BackupService {
 
   /// Clear temporary files and cached media
   static Future<void> clearCache() async {
+    AppLogger.i('Clearing temporary cache...');
     try {
       final tempDir = await getTemporaryDirectory();
       if (await tempDir.exists()) {
+        int count = 0;
         await for (final entity in tempDir.list()) {
           if (entity is File) {
             await entity.delete();
+            count++;
           } else if (entity is Directory) {
             await entity.delete(recursive: true);
+            count++;
           }
         }
+        AppLogger.i('Cleared $count items from cache');
       }
-    } catch (e) {
-      print('Clear Cache Error: $e');
+    } catch (e, stack) {
+      AppLogger.e('Clear Cache Error: $e', e, stack);
     }
   }
 
   /// Import backup from zip file
   static Future<bool> importBackup(String zipPath, {bool merge = true}) async {
+    AppLogger.i('Importing backup from $zipPath (merge=$merge)');
     try {
       final bytes = await File(zipPath).readAsBytes();
       final archive = ZipDecoder().decodeBytes(bytes);
@@ -147,8 +156,10 @@ class BackupService {
           if (file.name == _dbName) {
             final dbPath = p.join(await getDatabasesPath(), _dbName);
             if (!merge) {
+              AppLogger.i('Restoring database file');
               await File(dbPath).writeAsBytes(data);
             } else {
+              AppLogger.w('Merge logic not implemented, ignoring DB file');
               // Merge logic would be more complex, needing a secondary DB or custom SQL
               // For now, let's just replace if not merging, or ignore if merging (placeholder)
             }
@@ -156,14 +167,16 @@ class BackupService {
             // Media files
             final docsDir = await getApplicationDocumentsDirectory();
             final filePath = p.join(docsDir.path, file.name);
+            AppLogger.i('Restoring media file: ${file.name}');
             await File(filePath).create(recursive: true);
             await File(filePath).writeAsBytes(data);
           }
         }
       }
+      AppLogger.i('Backup import completed successfully');
       return true;
-    } catch (e) {
-      print('Import Error: $e');
+    } catch (e, stack) {
+      AppLogger.e('Import Error: $e', e, stack);
       return false;
     }
   }

@@ -10,6 +10,7 @@ class RecurringTodoScheduleScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('RecurringTodoScheduleScreen: build');
     return BlocProvider(
       create: (context) => RecurrenceBloc(),
       child: const _RecurrenceView(),
@@ -192,7 +193,10 @@ class _RecurrenceView extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('RecurringTodoScheduleScreen: Cancel pressed');
+              Navigator.pop(context);
+            },
             child: Text(
               'Cancel',
               style: AppTypography.button(context, AppColors.primaryColor),
@@ -210,6 +214,9 @@ class _RecurrenceView extends StatelessWidget {
             builder: (context, state) {
               return TextButton(
                 onPressed: () {
+                  AppLogger.i(
+                    'RecurringTodoScheduleScreen: Done pressed - frequency: ${state.frequency}, days: ${state.selectedDays}',
+                  );
                   Navigator.pop(context, {
                     'frequency': state.frequency,
                     'days': state.selectedDays.toList(),
@@ -270,8 +277,10 @@ class _RecurrenceView extends StatelessWidget {
     final isSelected = state.frequency == value;
 
     return GestureDetector(
-      onTap: () =>
-          context.read<RecurrenceBloc>().add(UpdateFrequencyEvent(value)),
+      onTap: () {
+        AppLogger.i('RecurringTodoScheduleScreen: Frequency changed to $value');
+        context.read<RecurrenceBloc>().add(UpdateFrequencyEvent(value));
+      },
       child: Container(
         width: double.infinity,
         padding: AppSpacing.paddingAllM,
@@ -338,9 +347,14 @@ class _RecurrenceView extends StatelessWidget {
       child: Column(
         children: [
           GestureDetector(
-            onTap: () => context.read<RecurrenceBloc>().add(
-              const UpdateFrequencyEvent('weekly'),
-            ),
+            onTap: () {
+              AppLogger.i(
+                'RecurringTodoScheduleScreen: Frequency changed to weekly',
+              );
+              context.read<RecurrenceBloc>().add(
+                const UpdateFrequencyEvent('weekly'),
+              );
+            },
             child: Row(
               children: [
                 Expanded(
@@ -411,8 +425,12 @@ class _RecurrenceView extends StatelessWidget {
         final isSelected = state.selectedDays.contains(index);
 
         return GestureDetector(
-          onTap: () =>
-              context.read<RecurrenceBloc>().add(ToggleDayEvent(index)),
+          onTap: () {
+            AppLogger.i(
+              'RecurringTodoScheduleScreen: Day toggled index: $index',
+            );
+            context.read<RecurrenceBloc>().add(ToggleDayEvent(index));
+          },
           child: Container(
             width: 44.w,
             height: 44.h,
@@ -452,6 +470,7 @@ class _RecurrenceView extends StatelessWidget {
   Widget _buildCustomOption(BuildContext context) {
     return GestureDetector(
       onTap: () {
+        AppLogger.i('RecurringTodoScheduleScreen: Custom pressed');
         // Handle custom option
       },
       child: Container(
@@ -546,4 +565,3 @@ class _RecurrenceView extends StatelessWidget {
     );
   }
 }
-

@@ -3,11 +3,11 @@ import '../../domain/entities/reflection.dart';
 import '../../domain/entities/reflection_question.dart';
 import '../../domain/entities/reflection_answer.dart';
 import '../../domain/repositories/reflection_repository.dart';
-import '../datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 
 /// Repository for reflection/journaling entries
 class ReflectionRepositoryImpl implements ReflectionRepository {
-  final NotesDatabase _database;
+  final CoreDatabase _database;
 
   ReflectionRepositoryImpl(this._database);
 
@@ -15,7 +15,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<Reflection> createReflection(Reflection reflection) async {
     final db = await _database.database;
 
-    await db.insert(NotesDatabase.reflectionsTable, reflection.toMap());
+    await db.insert(CoreDatabase.reflectionsTable, reflection.toMap());
 
     return reflection;
   }
@@ -25,7 +25,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     final maps = await db.query(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       where: 'id = ? AND isDeleted = 0',
       whereArgs: [id],
     );
@@ -42,7 +42,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     final maps = await db.query(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       where: 'isDeleted = 0',
       orderBy: 'createdAt DESC',
       limit: limit,
@@ -60,7 +60,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     final maps = await db.query(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       where: 'createdAt >= ? AND createdAt <= ? AND isDeleted = 0',
       whereArgs: [startDate.toIso8601String(), endDate.toIso8601String()],
       orderBy: 'createdAt DESC',
@@ -104,7 +104,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     await db.update(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       reflection.toMap(),
       where: 'id = ?',
       whereArgs: [reflection.id],
@@ -116,7 +116,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     await db.update(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       {'isDeleted': 1},
       where: 'id = ?',
       whereArgs: [id],
@@ -128,7 +128,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     await db.delete(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       where: 'id = ?',
       whereArgs: [id],
     );
@@ -139,7 +139,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     final result = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM ${NotesDatabase.reflectionsTable} WHERE isDeleted = 0',
+      'SELECT COUNT(*) as count FROM ${CoreDatabase.reflectionsTable} WHERE isDeleted = 0',
     );
 
     return (result.first['count'] as int?) ?? 0;
@@ -149,7 +149,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<ReflectionQuestion> createQuestion(ReflectionQuestion question) async {
     final db = await _database.database;
 
-    await db.insert(NotesDatabase.reflectionQuestionsTable, {
+    await db.insert(CoreDatabase.reflectionQuestionsTable, {
       'id': question.id,
       'questionText': question.questionText,
       'category': question.category,
@@ -168,7 +168,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     final maps = await db.query(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       orderBy: 'question_order ASC, createdAt DESC',
     );
 
@@ -180,7 +180,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     final maps = await db.query(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       where: 'isDefault = 1',
       orderBy: 'question_order ASC',
     );
@@ -193,7 +193,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
 
     final maps = await db.query(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       where: 'isCustom = 1',
       orderBy: 'createdAt DESC',
     );
@@ -210,7 +210,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<void> deleteDraft(String questionId) async {
     final db = await _database.database;
     await db.delete(
-      NotesDatabase.reflectionDraftsTable,
+      CoreDatabase.reflectionDraftsTable,
       where: 'questionId = ?',
       whereArgs: [questionId],
     );
@@ -220,7 +220,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<void> deleteQuestion(String questionId) async {
     final db = await _database.database;
     await db.delete(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       where: 'id = ?',
       whereArgs: [questionId],
     );
@@ -230,7 +230,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<List<ReflectionAnswer>> getAllAnswers() async {
     final db = await _database.database;
     final maps = await db.query(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       where: 'isDeleted = 0',
       orderBy: 'createdAt DESC',
     );
@@ -245,7 +245,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final endOfDay = startOfDay.add(const Duration(days: 1));
 
     final result = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM ${NotesDatabase.reflectionsTable} WHERE createdAt >= ? AND createdAt < ? AND isDeleted = 0',
+      'SELECT COUNT(*) as count FROM ${CoreDatabase.reflectionsTable} WHERE createdAt >= ? AND createdAt < ? AND isDeleted = 0',
       [startOfDay.toIso8601String(), endOfDay.toIso8601String()],
     );
 
@@ -256,7 +256,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<List<ReflectionAnswer>> getAnswersByQuestion(String questionId) async {
     final db = await _database.database;
     final maps = await db.query(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       where: 'questionId = ? AND isDeleted = 0',
       whereArgs: [questionId],
       orderBy: 'createdAt DESC',
@@ -280,7 +280,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<String?> getDraft(String questionId) async {
     final db = await _database.database;
     final maps = await db.query(
-      NotesDatabase.reflectionDraftsTable,
+      CoreDatabase.reflectionDraftsTable,
       where: 'questionId = ?',
       whereArgs: [questionId],
       limit: 1,
@@ -293,7 +293,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<ReflectionQuestion?> getQuestionById(String id) async {
     final db = await _database.database;
     final maps = await db.query(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       where: 'id = ?',
       whereArgs: [id],
       limit: 1,
@@ -308,7 +308,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   ) async {
     final db = await _database.database;
     final maps = await db.query(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       where: 'category = ?',
       whereArgs: [category],
     );
@@ -319,7 +319,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<void> saveAnswer(ReflectionAnswer answer) async {
     final db = await _database.database;
     await db.insert(
-      NotesDatabase.reflectionsTable,
+      CoreDatabase.reflectionsTable,
       answer.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -337,13 +337,13 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
 
     if (existing.isNotEmpty) {
       await db.update(
-        NotesDatabase.reflectionDraftsTable,
+        CoreDatabase.reflectionDraftsTable,
         {'draftText': draftText, 'updatedAt': DateTime.now().toIso8601String()},
         where: 'questionId = ?',
         whereArgs: [questionId],
       );
     } else {
-      await db.insert(NotesDatabase.reflectionDraftsTable, {
+      await db.insert(CoreDatabase.reflectionDraftsTable, {
         'id': '${questionId}_draft',
         'questionId': questionId,
         'draftText': draftText,
@@ -357,7 +357,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<void> updateQuestion(ReflectionQuestion question) async {
     final db = await _database.database;
     await db.update(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       {
         'questionText': question.questionText,
         'category': question.category,
@@ -372,7 +372,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<int> getStreakCount() async {
     final db = await _database.database;
     final maps = await db.rawQuery(
-      'SELECT DISTINCT date(createdAt) as date FROM ${NotesDatabase.reflectionsTable} WHERE isDeleted = 0 ORDER BY date DESC',
+      'SELECT DISTINCT date(createdAt) as date FROM ${CoreDatabase.reflectionsTable} WHERE isDeleted = 0 ORDER BY date DESC',
     );
 
     if (maps.isEmpty) return 0;
@@ -404,7 +404,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<int> getLongestStreak() async {
     final db = await _database.database;
     final maps = await db.rawQuery(
-      'SELECT DISTINCT date(createdAt) as date FROM ${NotesDatabase.reflectionsTable} WHERE isDeleted = 0 ORDER BY date DESC',
+      'SELECT DISTINCT date(createdAt) as date FROM ${CoreDatabase.reflectionsTable} WHERE isDeleted = 0 ORDER BY date DESC',
     );
 
     if (maps.isEmpty) return 0;
@@ -432,7 +432,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   Future<int> getTotalReflectionsCount() async {
     final db = await _database.database;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM ${NotesDatabase.reflectionsTable} WHERE isDeleted = 0',
+      'SELECT COUNT(*) as count FROM ${CoreDatabase.reflectionsTable} WHERE isDeleted = 0',
     );
     return (result.first['count'] as int?) ?? 0;
   }
@@ -443,7 +443,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
 
     // First check for pinned question
     final pinned = await db.query(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       where: 'isPinned = 1 AND isDeleted = 0',
       limit: 1,
     );
@@ -454,7 +454,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
 
     // Otherwise pick random
     final maps = await db.query(
-      NotesDatabase.reflectionQuestionsTable,
+      CoreDatabase.reflectionQuestionsTable,
       where: 'isDeleted = 0',
       orderBy: 'RANDOM()',
       limit: 1,
@@ -469,12 +469,12 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
     await db.transaction((txn) async {
       // Unpin all first
-      await txn.update(NotesDatabase.reflectionQuestionsTable, {
+      await txn.update(CoreDatabase.reflectionQuestionsTable, {
         'isPinned': 0,
       }, where: 'isPinned = 1');
       // Pin the specific one
       await txn.update(
-        NotesDatabase.reflectionQuestionsTable,
+        CoreDatabase.reflectionQuestionsTable,
         {'isPinned': 1},
         where: 'id = ?',
         whereArgs: [questionId],
@@ -485,7 +485,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   @override
   Future<void> unpinAllQuestions() async {
     final db = await _database.database;
-    await db.update(NotesDatabase.reflectionQuestionsTable, {
+    await db.update(CoreDatabase.reflectionQuestionsTable, {
       'isPinned': 0,
     }, where: 'isPinned = 1');
   }

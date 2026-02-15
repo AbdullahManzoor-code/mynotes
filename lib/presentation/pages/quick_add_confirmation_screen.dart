@@ -36,6 +36,9 @@ class _QuickAddConfirmationScreenState extends State<QuickAddConfirmationScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i(
+      'QuickAddConfirmationScreen: Notification created - type: ${widget.type}, title: ${widget.title}',
+    );
 
     _confirmationController = AnimationController(
       duration: const Duration(milliseconds: 600),
@@ -72,6 +75,7 @@ class _QuickAddConfirmationScreenState extends State<QuickAddConfirmationScreen>
 
   @override
   void dispose() {
+    AppLogger.i('QuickAddConfirmationScreen: Disposed');
     _autoCloseTimer?.cancel();
     _confirmationController.dispose();
     _actionsController.dispose();
@@ -93,10 +97,12 @@ class _QuickAddConfirmationScreenState extends State<QuickAddConfirmationScreen>
   }
 
   void _closeScreen() {
+    AppLogger.i('QuickAddConfirmationScreen: Manual close');
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   void _openNoteEditor() {
+    AppLogger.i('QuickAddConfirmationScreen: Opening note editor');
     _autoCloseTimer?.cancel();
 
     Navigator.pushReplacementNamed(
@@ -107,12 +113,14 @@ class _QuickAddConfirmationScreenState extends State<QuickAddConfirmationScreen>
   }
 
   void _addAnotherNote() {
+    AppLogger.i('QuickAddConfirmationScreen: Add another note');
     _autoCloseTimer?.cancel();
 
     Navigator.pushReplacementNamed(context, '/quick-add');
   }
 
   void _setReminder() {
+    AppLogger.i('QuickAddConfirmationScreen: Set reminder');
     HapticFeedback.lightImpact();
 
     showModalBottomSheet(
@@ -488,4 +496,3 @@ class _QuickAddConfirmationScreenState extends State<QuickAddConfirmationScreen>
     );
   }
 }
-

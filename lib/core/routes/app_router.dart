@@ -7,97 +7,101 @@ import 'package:mynotes/presentation/bloc/note/note_event.dart'
 import 'package:mynotes/presentation/pages/search_filter_screen.dart'
     show SearchFilterScreen;
 import 'package:mynotes/presentation/widgets/create_alarm_bottom_sheet.dart';
-import '../../domain/entities/todo_item.dart';
-import '../../presentation/pages/splash_screen.dart';
-import '../../presentation/pages/onboarding_screen.dart';
-import '../../presentation/pages/today_dashboard_screen.dart';
-import '../../presentation/pages/main_home_screen.dart';
-import '../../presentation/pages/enhanced_notes_list_screen.dart';
-import '../../presentation/pages/enhanced_note_editor_screen.dart';
-// import '../../presentation/pages/enhanced_reminders_list_screen.dart';
-import '../../presentation/screens/todos_screen_fixed.dart';
-import '../../presentation/pages/todo_focus_screen.dart';
-import '../../presentation/pages/advanced_todo_screen.dart';
-import '../../presentation/pages/settings_screen.dart';
-import '../../presentation/pages/analytics_dashboard_screen.dart';
-import '../../presentation/pages/enhanced_global_search_screen.dart';
-// import '../../presentation/pages/search_filter_screen.dart';
-import '../../presentation/pages/media_viewer_screen.dart';
-import '../../presentation/pages/media_picker_screen.dart';
-import '../../presentation/pages/audio_recorder_screen.dart';
-import '../../presentation/pages/pdf_preview_screen.dart';
-import '../../presentation/pages/biometric_lock_screen.dart';
-import '../../presentation/pages/pin_setup_screen.dart';
-import '../../presentation/pages/focus_session_screen.dart';
-import '../../presentation/pages/focus_celebration_screen.dart';
-import '../../presentation/pages/document_scan_screen.dart';
-import '../../presentation/pages/drawing_canvas_screen.dart';
-import '../../presentation/pages/backup_export_screen.dart';
-import '../../presentation/pages/calendar_integration_screen.dart';
-import '../../presentation/pages/voice_settings_screen.dart';
-import '../../presentation/pages/font_settings_screen.dart';
-import '../../presentation/pages/edit_daily_highlight_screen_new.dart';
+import 'package:mynotes/domain/entities/todo_item.dart';
+import 'package:mynotes/presentation/pages/splash_screen.dart';
+import 'package:mynotes/presentation/pages/onboarding_screen.dart';
+import 'package:mynotes/presentation/pages/today_dashboard_screen.dart';
+import 'package:mynotes/presentation/pages/main_home_screen.dart';
+import 'package:mynotes/presentation/pages/enhanced_notes_list_screen.dart';
+import 'package:mynotes/presentation/pages/enhanced_note_editor_screen.dart';
+// import 'package:mynotes/presentation/pages/enhanced_reminders_list_screen.dart';
+import 'package:mynotes/presentation/screens/todos_screen_fixed.dart';
+import 'package:mynotes/presentation/pages/todo_focus_screen.dart';
+import 'package:mynotes/presentation/pages/advanced_todo_screen.dart';
+import 'package:mynotes/presentation/pages/settings_screen.dart';
+import 'package:mynotes/presentation/pages/analytics_dashboard_screen.dart';
+import 'package:mynotes/presentation/pages/enhanced_global_search_screen.dart';
+// import 'package:mynotes/presentation/pages/search_filter_screen.dart';
+import 'package:mynotes/presentation/pages/media_viewer_screen.dart';
+import 'package:mynotes/presentation/pages/media_picker_screen.dart';
+import 'package:mynotes/presentation/pages/audio_recorder_screen.dart';
+import 'package:mynotes/presentation/pages/pdf_preview_screen.dart';
+import 'package:mynotes/presentation/pages/biometric_lock_screen.dart';
+import 'package:mynotes/presentation/pages/pin_setup_screen.dart';
+import 'package:mynotes/presentation/pages/focus_session_screen.dart';
+import 'package:mynotes/presentation/pages/focus_celebration_screen.dart';
+import 'package:mynotes/presentation/pages/document_scan_screen.dart';
+import 'package:mynotes/presentation/pages/drawing_canvas_screen.dart';
+import 'package:mynotes/presentation/pages/backup_export_screen.dart';
+import 'package:mynotes/presentation/pages/calendar_integration_screen.dart';
+import 'package:mynotes/presentation/pages/voice_settings_screen.dart';
+import 'package:mynotes/presentation/pages/font_settings_screen.dart';
+import 'package:mynotes/presentation/pages/edit_daily_highlight_screen_new.dart';
 
-import '../../presentation/pages/empty_state_notes_help_screen.dart';
-import '../../presentation/pages/empty_state_todos_help_screen.dart';
-import '../../presentation/pages/recurring_todo_schedule_screen.dart';
-import '../../presentation/pages/ocr_text_extraction_screen.dart';
-import '../../presentation/screens/reflection_home_screen.dart';
-import '../../presentation/pages/home_widgets_screen.dart';
-import '../../presentation/pages/integrated_features_screen.dart';
-import '../../presentation/widgets/quick_add_bottom_sheet.dart';
-import '../../presentation/widgets/global_command_palette.dart';
-import '../../domain/entities/alarm.dart';
+import 'package:mynotes/presentation/pages/empty_state_notes_help_screen.dart';
+import 'package:mynotes/presentation/pages/empty_state_todos_help_screen.dart';
+import 'package:mynotes/presentation/pages/recurring_todo_schedule_screen.dart';
+import 'package:mynotes/presentation/pages/ocr_text_extraction_screen.dart';
+import 'package:mynotes/presentation/screens/reflection_home_screen.dart';
+import 'package:mynotes/presentation/pages/home_widgets_screen.dart';
+import 'package:mynotes/presentation/pages/integrated_features_screen.dart';
+import 'package:mynotes/presentation/widgets/quick_add_bottom_sheet.dart';
+import 'package:mynotes/presentation/widgets/global_command_palette.dart';
+import 'package:mynotes/domain/entities/alarm.dart';
 import 'app_routes.dart';
-import '../../presentation/pages/media_filter_screen.dart';
-import '../../presentation/pages/batch_4_media_organization_view.dart';
-import '../../presentation/pages/batch_4_media_search_results.dart';
-import '../../presentation/pages/media_analytics_dashboard.dart';
-import '../../presentation/pages/batch_5_create_collection_wizard.dart'
+import 'package:mynotes/presentation/pages/media_filter_screen.dart';
+import 'package:mynotes/presentation/pages/batch_4_media_organization_view.dart';
+import 'package:mynotes/presentation/pages/batch_4_media_search_results.dart';
+import 'package:mynotes/presentation/pages/media_analytics_dashboard.dart';
+import 'package:mynotes/presentation/pages/batch_5_create_collection_wizard.dart'
     hide Center;
-import '../../presentation/pages/batch_5_rule_builder_screen.dart'
+import 'package:mynotes/presentation/pages/batch_5_rule_builder_screen.dart'
     hide SizedBox;
-import '../../presentation/pages/batch_5_collection_details_screen.dart';
-import '../../presentation/pages/batch_5_collection_management_screen.dart';
-import '../../presentation/pages/batch_6_suggestion_recommendations_screen.dart';
-import '../../presentation/pages/batch_6_reminder_patterns_dashboard.dart';
-import '../../presentation/pages/batch_6_frequency_analytics_screen.dart';
-import '../../presentation/pages/batch_6_engagement_metrics_screen.dart';
-import '../../presentation/pages/batch_7_template_gallery_screen.dart';
-import '../../presentation/pages/batch_7_template_editor_screen.dart';
-import '../../presentation/pages/batch_8_advanced_search_screen.dart';
-import '../../presentation/pages/batch_8_search_results_screen.dart';
+import 'package:mynotes/presentation/pages/batch_5_collection_details_screen.dart';
+import 'package:mynotes/presentation/pages/batch_5_collection_management_screen.dart';
+import 'package:mynotes/presentation/pages/batch_6_suggestion_recommendations_screen.dart';
+import 'package:mynotes/presentation/pages/batch_6_reminder_patterns_dashboard.dart';
+import 'package:mynotes/presentation/pages/batch_6_frequency_analytics_screen.dart';
+import 'package:mynotes/presentation/pages/batch_6_engagement_metrics_screen.dart';
+import 'package:mynotes/presentation/pages/batch_7_template_gallery_screen.dart';
+import 'package:mynotes/presentation/pages/batch_7_template_editor_screen.dart';
+import 'package:mynotes/presentation/pages/batch_8_advanced_search_screen.dart';
+import 'package:mynotes/presentation/pages/batch_8_search_results_screen.dart';
 
 // Missing Routes Imports
-import '../../presentation/pages/archived_notes_screen.dart';
-import '../../presentation/pages/smart_collections_screen.dart';
-import '../../presentation/pages/smart_reminders_screen.dart';
-import '../../presentation/pages/location_reminder_screen.dart';
-import '../../presentation/pages/saved_locations_screen.dart';
-import '../../presentation/pages/alarms_screen.dart';
-import '../../presentation/pages/reminder_templates_screen.dart';
-import '../../presentation/pages/full_media_gallery_screen.dart';
-import '../../presentation/pages/video_trimming_screen.dart';
-import '../../presentation/pages/advanced_settings_screen.dart';
-import '../../presentation/pages/tag_management_screen.dart';
-import '../../presentation/pages/pdf_annotation_screen.dart';
-import '../../presentation/screens/answer_screen.dart';
-import '../../presentation/screens/reflection_history_screen.dart';
-import '../../presentation/screens/carousel_reflection_screen.dart';
-import '../../presentation/screens/question_list_screen.dart';
-import '../../presentation/pages/advanced_filters_screen.dart';
-import '../../presentation/pages/search_operators_screen.dart';
-import '../../presentation/pages/sort_customization_screen.dart';
-import '../../presentation/pages/quick_add_confirmation_screen.dart';
-import '../../presentation/pages/fixed_universal_quick_add_screen.dart';
-import '../../domain/entities/reflection_question.dart';
-import '../../presentation/pages/daily_focus_highlight_screen.dart';
+import 'package:mynotes/presentation/pages/archived_notes_screen.dart';
+import 'package:mynotes/presentation/pages/smart_collections_screen.dart';
+import 'package:mynotes/presentation/pages/smart_reminders_screen.dart';
+import 'package:mynotes/presentation/pages/location_reminder_screen.dart';
+import 'package:mynotes/presentation/pages/saved_locations_screen.dart';
+import 'package:mynotes/presentation/pages/alarms_screen.dart';
+import 'package:mynotes/presentation/pages/reminder_templates_screen.dart';
+import 'package:mynotes/presentation/pages/full_media_gallery_screen.dart';
+import 'package:mynotes/presentation/pages/video_trimming_screen.dart';
+import 'package:mynotes/presentation/pages/advanced_settings_screen.dart';
+import 'package:mynotes/presentation/pages/tag_management_screen.dart';
+import 'package:mynotes/presentation/pages/pdf_annotation_screen.dart';
+import 'package:mynotes/presentation/screens/answer_screen.dart';
+import 'package:mynotes/presentation/screens/reflection_history_screen.dart';
+import 'package:mynotes/presentation/screens/carousel_reflection_screen.dart';
+import 'package:mynotes/presentation/screens/question_list_screen.dart';
+import 'package:mynotes/presentation/pages/advanced_filters_screen.dart';
+import 'package:mynotes/presentation/pages/search_operators_screen.dart';
+import 'package:mynotes/presentation/pages/sort_customization_screen.dart';
+import 'package:mynotes/presentation/pages/quick_add_confirmation_screen.dart';
+import 'package:mynotes/presentation/pages/fixed_universal_quick_add_screen.dart';
+import 'package:mynotes/presentation/pages/unified_items_screen.dart';
+import 'package:mynotes/domain/entities/reflection_question.dart';
+import 'package:mynotes/presentation/pages/daily_focus_highlight_screen.dart';
+
+import 'package:mynotes/core/services/app_logger.dart';
 
 class AppRouter {
   static final GlobalKey<NavigatorState> navigatorKey =
       GlobalKey<NavigatorState>();
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    AppLogger.i('Navigating to route: ${settings.name}');
     switch (settings.name) {
       case AppRoutes.splash:
         return MaterialPageRoute(builder: (_) => const SplashScreen());
@@ -568,6 +572,9 @@ class AppRouter {
           builder: (_) => const FixedUniversalQuickAddScreen(),
         );
 
+      case AppRoutes.unifiedItems:
+        return MaterialPageRoute(builder: (_) => const UnifiedItemsScreen());
+
       // ==================== Templates ====================
       case AppRoutes.templateGallery:
         return MaterialPageRoute(builder: (_) => const TemplateGalleryScreen());
@@ -592,6 +599,7 @@ class AppRouter {
   }
 
   static Route<dynamic> _errorRoute() {
+    AppLogger.e('Navigation error: Route not found.');
     return MaterialPageRoute(
       builder: (_) => Scaffold(
         appBar: AppBar(title: const Text('Error')),

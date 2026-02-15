@@ -7,6 +7,7 @@ import '../design_system/app_typography.dart';
 import '../design_system/app_spacing.dart';
 import '../../core/services/global_ui_service.dart';
 import '../../injection_container.dart';
+import '../../core/utils/app_logger.dart';
 
 /// Collection Details - Batch 5, Screen 3
 /// Refactored to StatelessWidget with BLoC and Design System
@@ -17,6 +18,9 @@ class CollectionDetailsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i(
+      'CollectionDetailsScreen: Building for collection "${collection['name']}"',
+    );
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
@@ -39,6 +43,9 @@ class CollectionDetailsScreen extends StatelessWidget {
               borderRadius: BorderRadius.circular(12.r),
             ),
             onSelected: (value) {
+              AppLogger.i(
+                'CollectionDetailsScreen: Menu option selected: $value',
+              );
               if (value == 'edit') {
                 _showEditDialog(context);
               } else if (value == 'delete') {
@@ -83,6 +90,7 @@ class CollectionDetailsScreen extends StatelessWidget {
       body: BlocListener<SmartCollectionsBloc, SmartCollectionsState>(
         listener: (context, state) {
           if (state is SmartCollectionsError) {
+            AppLogger.e('CollectionDetailsScreen: Error: ${state.message}');
             getIt<GlobalUiService>().showError(state.message);
           }
         },
@@ -334,7 +342,11 @@ class CollectionDetailsScreen extends StatelessWidget {
                     Icons.chevron_right_rounded,
                     color: AppColors.tertiaryText,
                   ),
-                  onTap: () {},
+                  onTap: () {
+                    AppLogger.i(
+                      'CollectionDetailsScreen: Item "${item['name']}" tapped',
+                    );
+                  },
                 );
               },
             ),
@@ -344,6 +356,9 @@ class CollectionDetailsScreen extends StatelessWidget {
   }
 
   void _showEditDialog(BuildContext context) {
+    AppLogger.i(
+      'CollectionDetailsScreen: Showing edit dialog for "${collection['name']}"',
+    );
     final nameController = TextEditingController(text: collection['name']);
     final descController = TextEditingController(
       text: collection['description'],
@@ -382,11 +397,17 @@ class CollectionDetailsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('CollectionDetailsScreen: Edit dialog cancelled');
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
+              AppLogger.i(
+                'CollectionDetailsScreen: Save button in edit dialog pressed - new name: ${nameController.text}',
+              );
               Navigator.pop(context);
               getIt<GlobalUiService>().showSuccess('Collection updated');
             },
@@ -401,6 +422,9 @@ class CollectionDetailsScreen extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context) {
+    AppLogger.i(
+      'CollectionDetailsScreen: Showing delete confirmation for "${collection['name']}"',
+    );
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -417,11 +441,17 @@ class CollectionDetailsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('CollectionDetailsScreen: Delete cancelled');
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
+              AppLogger.i(
+                'CollectionDetailsScreen: Delete confirmed for "${collection['name']}" (ID: ${collection['id']})',
+              );
               context.read<SmartCollectionsBloc>().add(
                 DeleteSmartCollectionEvent(collectionId: collection['id']),
               );
@@ -438,4 +468,3 @@ class CollectionDetailsScreen extends StatelessWidget {
     );
   }
 }
-

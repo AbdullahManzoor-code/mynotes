@@ -7,6 +7,7 @@ import '../../../core/pdf/pdf_export_service.dart';
 import '../../../core/notifications/alarm_service.dart';
 import '../../../core/services/link_parser_service.dart';
 import '../../../domain/repositories/alarm_repository.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'note_event.dart';
 import 'note_state.dart';
 import '../../../domain/services/advanced_search_ranking_service.dart';
@@ -71,11 +72,14 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     LoadNotesEvent event,
     Emitter<NoteState> emit,
   ) async {
+    AppLogger.i('Handling LoadNotesEvent');
     try {
       emit(const NoteLoading());
       final notes = await _noteRepository.getNotes();
+      AppLogger.i('Fetched ${notes.length} notes from repository.');
 
       if (notes.isEmpty) {
+        AppLogger.i('No notes available.');
         emit(const NoteEmpty());
       } else {
         // If we are already in a NotesLoaded state, preserve configuration
@@ -110,7 +114,9 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
           emit(NotesLoaded.simple(notes));
         }
       }
-    } catch (e) {
+      AppLogger.i('Notes loaded successfully.');
+    } catch (e, stack) {
+      AppLogger.e('Error loading notes: $e', e, stack);
       emit(
         NoteError(
           'Failed to load notes: ${e.toString()}',
@@ -150,6 +156,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     CreateNoteEvent event,
     Emitter<NoteState> emit,
   ) async {
+    AppLogger.i('Handling CreateNoteEvent');
     try {
       emit(const NoteLoading());
 
@@ -162,12 +169,15 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
           )
           .toNote();
 
+      AppLogger.i('Created note entity locally: ${newNote.id}');
       await _noteRepository.createNote(newNote);
 
       // Sync links
       if (newNote.content.isNotEmpty) {
+        AppLogger.i('Parsing links from note content...');
         final titles = _linkParserService.extractLinks(newNote.content);
         if (titles.isNotEmpty) {
+          AppLogger.i('Found ${titles.length} link titles. Syncing...');
           await _noteRepository.resolveAndSyncLinks(newNote.id, titles);
         }
       }
@@ -192,6 +202,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     UpdateNoteEvent event,
     Emitter<NoteState> emit,
   ) async {
+    AppLogger.i('Handling UpdateNoteEvent for note: ${event.params.noteId}');
     try {
       emit(const NoteLoading());
 
@@ -209,10 +220,12 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       }
 
       emit(NoteUpdated(updatedNote));
+      AppLogger.i('Note ${updatedNote.id} updated successfully.');
 
       // Refresh notes list with current configuration
       await _onLoadNotes(const LoadNotesEvent(), emit);
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('Error updating note: $e', e, stack);
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
         NoteError(

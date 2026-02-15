@@ -7,6 +7,7 @@ import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import '../../injection_container.dart';
 import '../../core/services/global_ui_service.dart';
+import '../../core/utils/app_logger.dart';
 
 /// Reminder Patterns Dashboard - Batch 6, Screen 2
 /// Refactored to use Design System and BLoC integration
@@ -33,6 +34,7 @@ class ReminderPatternsDashboard extends StatelessWidget {
               color: AppColors.primaryColor,
             ),
             onPressed: () {
+              AppLogger.i('ReminderPatternsDashboard: Refreshing patterns');
               context.read<SmartRemindersBloc>().add(
                 const LoadSuggestionsEvent(),
               );
@@ -419,4 +421,3 @@ class ReminderPatternsDashboard extends StatelessWidget {
     }
   }
 }
-

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_quill/flutter_quill.dart' as quill;
+import 'package:flutter_quill/quill_delta.dart'; // Add this import
 import 'package:flutter_quill_extensions/flutter_quill_extensions.dart';
 import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/core/services/media_processing_service.dart';
@@ -23,7 +24,7 @@ import 'package:mynotes/presentation/design_system/design_system.dart';
 import 'package:mynotes/core/services/speech_service.dart';
 import 'package:mynotes/core/services/voice_command_service.dart';
 import 'package:mynotes/core/services/link_parser_service.dart';
-import 'package:mynotes/data/datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 import 'package:mynotes/data/repositories/note_repository_impl.dart';
 import 'package:mynotes/core/services/audio_feedback_service.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
@@ -38,10 +39,8 @@ import 'package:mynotes/presentation/widgets/audio_recorder_widget.dart';
 import 'package:mynotes/presentation/widgets/document_scanner_widget.dart';
 import 'package:mynotes/presentation/widgets/add_reminder_bottom_sheet.dart';
 import 'package:mynotes/presentation/widgets/note_template_selector.dart';
-import 'package:mynotes/presentation/widgets/video_player_widget.dart';
 import '../widgets/universal_media_sheet.dart';
 import 'package:mynotes/presentation/widgets/create_todo_bottom_sheet.dart';
-import 'package:mynotes/presentation/widgets/media_player_widget.dart';
 import 'package:mynotes/presentation/pages/media_viewer_screen.dart';
 import 'package:mynotes/presentation/widgets/note_suggestion_bar.dart';
 import 'package:mynotes/presentation/widgets/note_tags_input.dart';
@@ -59,6 +58,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   });
 
   void _loadContentIntoQuill(quill.QuillController controller, String content) {
+    AppLogger.i('EnhancedNoteEditorScreen: _loadContentIntoQuill called');
     if (content.isEmpty) return;
     try {
       if (content.startsWith('[') || content.startsWith('{')) {
@@ -67,17 +67,22 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
         controller.document = quill.Document()..insert(0, content);
       }
     } catch (e) {
+      AppLogger.e('EnhancedNoteEditorScreen: Error loading quill content', e);
       controller.document = quill.Document()..insert(0, content);
     }
   }
 
   void _insertExtractedText(quill.QuillController controller, String text) {
+    AppLogger.i('EnhancedNoteEditorScreen: _insertExtractedText called');
     if (text.isEmpty) return;
     final index = controller.selection.baseOffset;
     controller.document.insert(index, '\n$text\n');
   }
 
   void _handleError(BuildContext context, String code) {
+    AppLogger.e(
+      'EnhancedNoteEditorScreen: _handleError called with code: $code',
+    );
     String message;
     switch (code) {
       case 'SPEECH_PERMISSION_DENIED':
@@ -126,6 +131,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     TextEditingController titleController,
     quill.QuillController quillController,
   ) {
+    AppLogger.i('EnhancedNoteEditorScreen: _saveNote triggered');
     final params = state.params;
     final noteParams = params.copyWith(
       title: titleController.text,
@@ -133,6 +139,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     );
 
     if (noteParams.title.isEmpty && quillController.document.isEmpty()) {
+      AppLogger.w('EnhancedNoteEditorScreen: Attempted to save empty note');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Note is empty')));
@@ -140,8 +147,12 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     }
 
     if (note != null) {
+      AppLogger.i(
+        'EnhancedNoteEditorScreen: Updating existing note: ${note!.id}',
+      );
       context.read<NotesBloc>().add(UpdateNoteEvent(noteParams));
     } else {
+      AppLogger.i('EnhancedNoteEditorScreen: Creating new note');
       context.read<NotesBloc>().add(CreateNoteEvent(params: noteParams));
     }
 
@@ -223,10 +234,13 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                           body: Column(
                             children: [
                               if (state.summary != null)
-                                _buildSummaryCard(context, state.summary!),
+                                _buildSummaryCard(summary: state.summary!),
                               NoteSuggestionBar(
                                 suggestions: state.suggestions,
                                 onAccept: (suggestion) {
+                                  AppLogger.i(
+                                    'EnhancedNoteEditorScreen: Suggestion accepted: ${suggestion.title}',
+                                  );
                                   editorBloc.add(
                                     SuggestionActionAccepted(suggestion),
                                   );
@@ -240,7 +254,11 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                                     ),
                                   );
                                 },
-                                onDismiss: () {},
+                                onDismiss: () {
+                                  AppLogger.i(
+                                    'EnhancedNoteEditorScreen: Suggestion dismissed',
+                                  );
+                                },
                               ),
                               _buildTitleField(
                                 context,
@@ -315,11 +333,13 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     NoteEditorBloc editorBloc,
     quill.QuillController quillController,
   ) async {
+    AppLogger.i('EnhancedNoteEditorScreen: _pickImage triggered');
     try {
       final picker = ImagePicker();
       final image = await picker.pickImage(source: ImageSource.gallery);
 
       if (image != null) {
+        AppLogger.i('EnhancedNoteEditorScreen: Image picked: ${image.path}');
         editorBloc.add(MediaAdded(image.path, MediaType.image));
 
         final index = quillController.selection.baseOffset;
@@ -328,8 +348,11 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
           index + 1,
           quill.BlockEmbed.image(image.path),
         );
+      } else {
+        AppLogger.i('EnhancedNoteEditorScreen: Image picking cancelled');
       }
     } catch (e) {
+      AppLogger.e('EnhancedNoteEditorScreen: Error picking image', e);
       editorBloc.add(
         ErrorOccurred('Failed to pick image: $e', code: 'MEDIA_ADD_FAILED'),
       );
@@ -365,6 +388,9 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
           ...state.linkedNotes.map(
             (linkedNote) => InkWell(
               onTap: () {
+                AppLogger.i(
+                  'EnhancedNoteEditorScreen: Linked note tapped: ${linkedNote.id}',
+                );
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -420,6 +446,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   }
 
   void _showTagPicker(BuildContext context, NoteEditorBloc editorBloc) {
+    AppLogger.i('EnhancedNoteEditorScreen: _showTagPicker triggered');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -436,6 +463,9 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                 initialTags: editorBloc.state.params.tags,
                 maxTags: 10,
                 onTagsChanged: (updatedTags) {
+                  AppLogger.i(
+                    'EnhancedNoteEditorScreen: Tags changed: $updatedTags',
+                  );
                   // Update all tags in the editor
                   final currentTags = Set<String>.from(
                     editorBloc.state.params.tags,
@@ -444,6 +474,9 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                   // Remove tags that are no longer in the list
                   for (final tag in currentTags) {
                     if (!updatedTags.contains(tag)) {
+                      AppLogger.i(
+                        'EnhancedNoteEditorScreen: Removing tag: $tag',
+                      );
                       editorBloc.add(TagRemoved(tag));
                     }
                   }
@@ -451,6 +484,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                   // Add new tags
                   for (final tag in updatedTags) {
                     if (!currentTags.contains(tag)) {
+                      AppLogger.i('EnhancedNoteEditorScreen: Adding tag: $tag');
                       editorBloc.add(TagAdded(tag));
                     }
                   }
@@ -466,6 +500,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   }
 
   void _showMoreOptions(BuildContext context, NoteEditorBloc editorBloc) {
+    AppLogger.i('EnhancedNoteEditorScreen: _showMoreOptions triggered');
     // Capture `note` from the StatelessWidget's field before entering the sheet
     final currentNote = note;
 
@@ -495,6 +530,9 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
               subtitle: 'Generate a concise overview of this note',
               color: AppColors.primary,
               onTap: () {
+                AppLogger.i(
+                  'EnhancedNoteEditorScreen: AI Summary option tapped',
+                );
                 Navigator.pop(sheetContext);
                 editorBloc.add(const GenerateSummaryRequested());
               },
@@ -505,8 +543,8 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
               subtitle: 'Scan images and documents for text',
               color: Colors.orange.shade400,
               onTap: () {
+                AppLogger.i('EnhancedNoteEditorScreen: OCR option tapped');
                 Navigator.pop(sheetContext);
-                // Trigger OCR for existing media if needed
                 _showOCRSourcePicker(context, editorBloc);
               },
             ),
@@ -516,6 +554,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
               subtitle: 'Promote this note to a todo item',
               color: Colors.green.shade400,
               onTap: () {
+                AppLogger.i('EnhancedNoteEditorScreen: Convert to task tapped');
                 Navigator.pop(sheetContext);
                 editorBloc.add(const PromoteToTodoRequested());
               },
@@ -526,6 +565,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
               subtitle: 'Send as text, PDF or Markdown',
               color: Colors.blue.shade400,
               onTap: () {
+                AppLogger.i('EnhancedNoteEditorScreen: Share option tapped');
                 Navigator.pop(sheetContext);
                 _handleShare(editorBloc);
               },
@@ -537,7 +577,11 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
               subtitle: 'Move to trash',
               color: Colors.red.shade400,
               onTap: () {
+                AppLogger.i('EnhancedNoteEditorScreen: Delete option tapped');
                 if (currentNote != null) {
+                  AppLogger.i(
+                    'EnhancedNoteEditorScreen: Dispatching DeleteNoteEvent for ${currentNote.id}',
+                  );
                   context.read<NotesBloc>().add(
                     DeleteNoteEvent(currentNote.id),
                   );
@@ -578,19 +622,28 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   }
 
   void _handleShare(NoteEditorBloc editorBloc) {
+    AppLogger.i('EnhancedNoteEditorScreen: _handleShare triggered');
     final state = editorBloc.state;
     if (state is NoteEditorLoaded) {
       final text = "${state.params.title}\n\n${state.params.content}";
+      AppLogger.i(
+        'EnhancedNoteEditorScreen: Sharing note: ${state.params.title}',
+      );
       Share.share(
         text,
         subject: state.params.title.isNotEmpty
             ? state.params.title
             : 'MyNotes Content',
       );
+    } else {
+      AppLogger.w(
+        'EnhancedNoteEditorScreen: Attempted to share while state is not NoteEditorLoaded',
+      );
     }
   }
 
   void _showOCRSourcePicker(BuildContext context, NoteEditorBloc editorBloc) {
+    AppLogger.i('EnhancedNoteEditorScreen: _showOCRSourcePicker triggered');
     HapticFeedback.mediumImpact();
     showModalBottomSheet(
       context: context,
@@ -632,13 +685,23 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                   icon: Icons.camera_alt_rounded,
                   label: 'Camera',
                   onTap: () async {
+                    AppLogger.i(
+                      'EnhancedNoteEditorScreen: OCR Camera source selected',
+                    );
                     Navigator.pop(context);
                     final picker = ImagePicker();
                     final image = await picker.pickImage(
                       source: ImageSource.camera,
                     );
                     if (image != null) {
+                      AppLogger.i(
+                        'EnhancedNoteEditorScreen: OCR Camera image captured: ${image.path}',
+                      );
                       editorBloc.add(TextExtractionRequested(image.path));
+                    } else {
+                      AppLogger.i(
+                        'EnhancedNoteEditorScreen: OCR Camera capture cancelled',
+                      );
                     }
                   },
                 ),
@@ -647,13 +710,23 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                   icon: Icons.photo_library_rounded,
                   label: 'Gallery',
                   onTap: () async {
+                    AppLogger.i(
+                      'EnhancedNoteEditorScreen: OCR Gallery source selected',
+                    );
                     Navigator.pop(context);
                     final picker = ImagePicker();
                     final image = await picker.pickImage(
                       source: ImageSource.gallery,
                     );
                     if (image != null) {
+                      AppLogger.i(
+                        'EnhancedNoteEditorScreen: OCR Gallery image selected: ${image.path}',
+                      );
                       editorBloc.add(TextExtractionRequested(image.path));
+                    } else {
+                      AppLogger.i(
+                        'EnhancedNoteEditorScreen: OCR Gallery selection cancelled',
+                      );
                     }
                   },
                 ),
@@ -718,7 +791,12 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
             child: IconButton(
               icon: Icon(Icons.cloud_upload_outlined, color: AppColors.primary),
               tooltip: 'Save Note',
-              onPressed: () => editorBloc.add(const SaveNoteRequested()),
+              onPressed: () {
+                AppLogger.i(
+                  'EnhancedNoteEditorScreen: Appbar Save button tapped',
+                );
+                editorBloc.add(const SaveNoteRequested());
+              },
             ),
           ),
         IconButton(
@@ -728,6 +806,9 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
           ),
           tooltip: 'Pin Note',
           onPressed: () {
+            AppLogger.i(
+              'EnhancedNoteEditorScreen: Pin toggle button tapped. Current: ${state.params.isPinned}',
+            );
             HapticFeedback.lightImpact();
             editorBloc.add(const PinToggled());
           },
@@ -735,65 +816,68 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
         IconButton(
           icon: const Icon(Icons.more_horiz),
           tooltip: 'More Options',
-          onPressed: () => _showMoreOptions(context, editorBloc),
+          onPressed: () {
+            AppLogger.i('EnhancedNoteEditorScreen: More options button tapped');
+            _showMoreOptions(context, editorBloc);
+          },
         ),
       ],
     );
   }
 
-  Widget _buildSummaryCard(BuildContext context, String summary) {
-    return AppAnimations.tapScale(
-      child: GlassContainer(
-        margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
-        borderRadius: 16.r,
-        blur: 10,
-        color: AppColors.primary.withOpacity(0.05),
-        padding: EdgeInsets.all(16.w),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  Icons.summarize_outlined,
-                  color: AppColors.primary,
-                  size: 18.sp,
-                ),
-                SizedBox(width: 8.w),
-                Text(
-                  'AI SUMMARY',
-                  style: AppTypography.caption(context).copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-                const Spacer(),
-                InkWell(
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    // Optional: Copy summary or expand
-                  },
-                  child: Icon(
-                    Icons.copy_rounded,
-                    size: 14.sp,
-                    color: AppColors.textSecondary(context),
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 10.h),
-            Text(
-              summary,
-              style: AppTypography.body1(
-                context,
-              ).copyWith(fontSize: 14.sp, height: 1.5),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  // Widget _buildSummaryCard(BuildContext context, String summary) {
+  //   return AppAnimations.tapScale(
+  //     child: GlassContainer(
+  //       margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+  //       borderRadius: 16.r,
+  //       blur: 10,
+  //       color: AppColors.primary.withOpacity(0.05),
+  //       padding: EdgeInsets.all(16.w),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: [
+  //           Row(
+  //             children: [
+  //               Icon(
+  //                 Icons.summarize_outlined,
+  //                 color: AppColors.primary,
+  //                 size: 18.sp,
+  //               ),
+  //               SizedBox(width: 8.w),
+  //               Text(
+  //                 'AI SUMMARY',
+  //                 style: AppTypography.caption(context).copyWith(
+  //                   color: AppColors.primary,
+  //                   fontWeight: FontWeight.w700,
+  //                   letterSpacing: 1.2,
+  //                 ),
+  //               ),
+  //               const Spacer(),
+  //               InkWell(
+  //                 onTap: () {
+  //                   HapticFeedback.lightImpact();
+  //                   // Optional: Copy summary or expand
+  //                 },
+  //                 child: Icon(
+  //                   Icons.copy_rounded,
+  //                   size: 14.sp,
+  //                   color: AppColors.textSecondary(context),
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+  //           SizedBox(height: 10.h),
+  //           Text(
+  //             summary,
+  //             style: AppTypography.body1(
+  //               context,
+  //             ).copyWith(fontSize: 14.sp, height: 1.5),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildTitleField(
     BuildContext context,
@@ -869,21 +953,38 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
       child: quill.QuillSimpleToolbar(
         controller: quillController,
         config: quill.QuillSimpleToolbarConfig(
-          showAlignmentButtons: false,
-          showCenterAlignment: false,
-          showJustifyAlignment: false,
-          showLeftAlignment: false,
-          showRightAlignment: false,
+          showAlignmentButtons: true,
+          showCenterAlignment: true,
+          showJustifyAlignment: true,
+          showLeftAlignment: true,
+          showRightAlignment: true,
           showDirection: false,
           showUndo: true,
           showRedo: true,
+          // showHeaderSelection: true,
+          showListNumbers: true,
+          showListBullets: true,
+          showListCheck: true,
+          showCodeBlock: true,
+          showQuote: true,
+          showInlineCode: true,
+          showLink: true,
+          showSearchButton: true,
           showFontFamily: false,
-          showFontSize: false,
+          showFontSize: true,
           showSubscript: false,
           showSuperscript: false,
           showSmallButton: true,
           multiRowsDisplay: false,
-          // padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+          buttonOptions: quill.QuillSimpleToolbarButtonOptions(
+            base: quill.QuillToolbarBaseButtonOptions(
+              iconTheme: quill.QuillIconTheme(
+                iconButtonSelectedData: quill.IconButtonData(
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -915,42 +1016,66 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
               icon: Icons.add_circle_outline,
               color: AppColors.primary,
               tooltip: 'Add Attachment',
-              onPressed: () =>
-                  _showUnifiedMediaSheet(context, editorBloc, quillController),
+              onPressed: () {
+                AppLogger.i(
+                  'EnhancedNoteEditorScreen: Add Attachment button tapped',
+                );
+                _showUnifiedMediaSheet(context, editorBloc, quillController);
+              },
             ),
             _buildPremiumIconButton(
               icon: Icons.mic_none,
               color: Colors.red.shade400,
               tooltip: 'Record Audio',
-              onPressed: () => _openAudioRecorder(context, editorBloc),
+              onPressed: () {
+                AppLogger.i(
+                  'EnhancedNoteEditorScreen: Record Audio button tapped',
+                );
+                _openAudioRecorder(context, editorBloc);
+              },
             ),
             _buildPremiumIconButton(
               icon: Icons.brush_outlined,
               color: Colors.green.shade400,
               tooltip: 'Sketch',
-              onPressed: () =>
-                  _openDrawingCanvas(context, editorBloc, quillController),
+              onPressed: () {
+                AppLogger.i('EnhancedNoteEditorScreen: Sketch button tapped');
+                _openDrawingCanvas(context, editorBloc, quillController);
+              },
             ),
             _buildPremiumIconButton(
               icon: Icons.sell_outlined,
               color: Colors.orange.shade400,
               tooltip: 'Tags',
-              onPressed: () => _showTagPicker(context, editorBloc),
+              onPressed: () {
+                AppLogger.i('EnhancedNoteEditorScreen: Tags button tapped');
+                _showTagPicker(context, editorBloc);
+              },
             ),
             _buildPremiumIconButton(
               icon: Icons.notifications_active_outlined,
               color: Colors.blue.shade400,
               tooltip: 'Reminder',
-              onPressed: () => _openReminderPicker(context, editorBloc),
+              onPressed: () {
+                AppLogger.i('EnhancedNoteEditorScreen: Reminder button tapped');
+                _openReminderPicker(context, editorBloc);
+              },
             ),
             _buildPremiumIconButton(
               icon: Icons.hub_outlined,
               color: Colors.indigo.shade400,
               tooltip: 'Graph View',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const GraphViewPage()),
-              ),
+              onPressed: () {
+                AppLogger.i(
+                  'EnhancedNoteEditorScreen: Graph View button tapped',
+                );
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const GraphViewPage(),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -982,8 +1107,10 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   ) {
     return FloatingActionButton(
       heroTag: 'note_editor_fab',
-      onPressed: () =>
-          _saveNote(context, state, titleController, quillController),
+      onPressed: () {
+        AppLogger.i('EnhancedNoteEditorScreen: FAB Save pressed');
+        _saveNote(context, state, titleController, quillController);
+      },
       child: const Icon(Icons.save),
     );
   }
@@ -1001,6 +1128,9 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
       isScrollControlled: true,
       builder: (sheetContext) => UniversalMediaSheet(
         onOptionSelected: (option) {
+          AppLogger.i(
+            'EnhancedNoteEditorScreen: Media option selected: $option',
+          );
           switch (option) {
             case MediaOption.photo:
               _pickImage(context, editorBloc, quillController);
@@ -1079,6 +1209,9 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                   SizedBox(height: 24.h),
                   ElevatedButton(
                     onPressed: () {
+                      AppLogger.i(
+                        'EnhancedNoteEditorScreen: Dictation stopped by user',
+                      );
                       speechService.stopListening();
                       Navigator.pop(context);
                     },
@@ -1149,12 +1282,20 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () {
+              AppLogger.i(
+                'EnhancedNoteEditorScreen: Add Link dialog cancelled',
+              );
+              Navigator.pop(dialogContext);
+            },
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
               final url = urlController.text.trim();
+              AppLogger.i(
+                'EnhancedNoteEditorScreen: Add Link dialog - Add tapped: $url',
+              );
               if (url.isNotEmpty) {
                 final index = quillController.selection.baseOffset;
                 quillController.document.insert(index, url);
@@ -1208,7 +1349,10 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
         builder: (routeContext) => Scaffold(
           body: DocumentScannerWidget(
             onScanComplete: (doc) => _onScanComplete(context, editorBloc, doc),
-            onCancel: () => Navigator.pop(routeContext),
+            onCancel: () {
+              AppLogger.i('EnhancedNoteEditorScreen: Document scan cancelled');
+              Navigator.pop(routeContext);
+            },
           ),
         ),
       ),
@@ -1216,22 +1360,32 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   }
 
   void _openReminderPicker(BuildContext context, NoteEditorBloc editorBloc) {
+    AppLogger.i('EnhancedNoteEditorScreen: Opening reminder picker');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) => AddReminderBottomSheet(
-        onReminderCreated: (alarm) => editorBloc.add(AlarmAdded(alarm)),
+        onReminderCreated: (alarm) {
+          AppLogger.i(
+            'EnhancedNoteEditorScreen: Reminder created: ${alarm.id}',
+          );
+          editorBloc.add(AlarmAdded(alarm));
+        },
       ),
     );
   }
 
   void _openTemplateSelector(BuildContext context, NoteEditorBloc editorBloc) {
+    AppLogger.i('EnhancedNoteEditorScreen: Opening template selector');
     showModalBottomSheet(
       context: context,
       builder: (sheetContext) => Container(
         padding: const EdgeInsets.all(16),
         child: TemplateSelector(
           onTemplateSelected: (template) {
+            AppLogger.i(
+              'EnhancedNoteEditorScreen: Template selected: $template',
+            );
             editorBloc.add(TemplateApplied(template));
             Navigator.pop(sheetContext);
           },
@@ -1241,11 +1395,15 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
   }
 
   void _openTodoPicker(BuildContext context, NoteEditorBloc editorBloc) {
+    AppLogger.i('EnhancedNoteEditorScreen: Opening todo picker');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (sheetContext) => CreateTodoBottomSheet(
-        onTodoCreated: (todo) => editorBloc.add(TodoAdded(todo)),
+        onTodoCreated: (todo) {
+          AppLogger.i('EnhancedNoteEditorScreen: Todo created: ${todo.text}');
+          editorBloc.add(TodoAdded(todo));
+        },
       ),
     );
   }
@@ -1373,11 +1531,19 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () {
+              AppLogger.i(
+                'EnhancedNoteEditorScreen: Extraction prompt cancelled',
+              );
+              Navigator.pop(dialogContext);
+            },
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
+              AppLogger.i(
+                'EnhancedNoteEditorScreen: Extraction prompt accepted for $name',
+              );
               Navigator.pop(dialogContext);
               editorBloc.add(TextExtractionRequested(path));
             },
@@ -1395,212 +1561,337 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     NoteEditorState state,
     NoteEditorBloc editorBloc,
   ) {
-    final audioAttachments = state.params.media
-        .where((m) => m.type == MediaType.audio)
-        .map(
-          (m) => AudioMetadata(
-            filePath: m.filePath,
-            fileName: m.name,
-            fileSize: 0,
-            duration: Duration(milliseconds: m.durationMs),
-            createdAt: m.createdAt,
-          ),
-        )
-        .toList();
-
-    final videoAttachments = state.params.media
-        .where((m) => m.type == MediaType.video)
-        .map(
-          (m) => VideoMetadata(
-            filePath: m.filePath,
-            fileName: m.name,
-            fileSize: 0,
-            duration: Duration(milliseconds: m.durationMs),
-            thumbnailPath: m.thumbnailPath,
-            createdAt: m.createdAt,
-          ),
-        )
-        .toList();
-
-    final scannedDocs = state.params.media
-        .where((m) => m.name.startsWith('Scan') || m.filePath.contains('scan'))
-        .map(
-          (m) => ScannedDocument(
-            filePath: m.filePath,
-            fileName: m.name,
-            pageImagePaths: [m.filePath],
-            createdAt: m.createdAt,
-            pageCount: 1,
-          ),
-        )
-        .toList();
-
-    final fileAttachments = state.params.media
-        .where((m) => m.type == MediaType.document)
-        .toList();
+    if (state.params.media.isEmpty &&
+        state.suggestions.isEmpty &&
+        state.linkedNotes.isEmpty &&
+        (state.summary == null || state.summary!.isEmpty)) {
+      return const SizedBox.shrink();
+    }
 
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (fileAttachments.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Attached Files',
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-                const SizedBox(height: 8),
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: fileAttachments.length,
-                  itemBuilder: (context, index) {
-                    final file = fileAttachments[index];
-                    return ListTile(
-                      leading: const Icon(
-                        Icons.description,
-                        color: Colors.orange,
-                      ),
-                      title: Text(file.name),
-                      subtitle: Text(
-                        '${(file.size / 1024).toStringAsFixed(1)} KB',
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.spellcheck),
-                            tooltip: 'Extract Text',
-                            onPressed: () => editorBloc.add(
-                              TextExtractionRequested(file.filePath),
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.delete_outline),
-                            onPressed: () {
-                              final globalIndex = state.params.media.indexOf(
-                                file,
-                              );
-                              if (globalIndex != -1) {
-                                editorBloc.add(MediaRemoved(globalIndex));
-                              }
-                            },
-                          ),
-                        ],
-                      ),
-                      onTap: () => _openMediaViewer(
-                        context,
-                        editorBloc,
-                        state,
-                        index,
-                        MediaType.document,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
+        if (state.isSummarizing)
+          const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: LinearProgressIndicator(),
           ),
-        if (audioAttachments.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: AudioAttachmentsList(
-              audios: audioAttachments,
-              onAudioDelete: (index) {
-                final audio = audioAttachments[index];
-                final globalIndex = state.params.media.indexWhere(
-                  (m) => m.filePath == audio.filePath,
-                );
-                if (globalIndex != -1) {
-                  editorBloc.add(MediaRemoved(globalIndex));
-                }
-              },
-            ),
-          ),
-        if (videoAttachments.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: VideoAttachmentsList(
-              videos: videoAttachments,
-              onVideoDelete: (index) {
-                final video = videoAttachments[index];
-                final globalIndex = state.params.media.indexWhere(
-                  (m) => m.filePath == video.filePath,
-                );
-                if (globalIndex != -1) {
-                  editorBloc.add(MediaRemoved(globalIndex));
-                }
-              },
-              onVideoTap: (index) => _openMediaViewer(
-                context,
-                editorBloc,
-                state,
-                index,
-                MediaType.video,
-              ),
-            ),
-          ),
-        if (scannedDocs.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: DocumentAttachmentsList(
-              documents: scannedDocs,
-              onDocumentDelete: (index) {
-                final doc = scannedDocs[index];
-                final globalIndex = state.params.media.indexWhere(
-                  (m) => m.filePath == doc.filePath,
-                );
-                if (globalIndex != -1) {
-                  editorBloc.add(MediaRemoved(globalIndex));
-                }
-              },
-              onDocumentTap: (index) => _openMediaViewer(
-                context,
-                editorBloc,
-                state,
-                index,
-                MediaType.image,
-              ),
-            ),
-          ),
-        _buildImageGallery(context, editorBloc, state),
+        if (state.summary != null && state.summary!.isNotEmpty)
+          _buildSummaryCard(summary: state.summary!),
+        if (state.suggestions.isNotEmpty)
+          _buildSuggestionsList(state, editorBloc),
+        if (state.linkedNotes.isNotEmpty) _buildBacklinksSection(state),
+        _buildMediaGallery(context, state, editorBloc),
       ],
     );
   }
 
-  Widget _buildImageGallery(
-    BuildContext context,
-    NoteEditorBloc editorBloc,
-    NoteEditorState state,
-  ) {
-    final images = state.params.media
-        .where((m) => m.type == MediaType.image)
-        .toList();
-    if (images.isEmpty) return const SizedBox.shrink();
-
+  Widget _buildSummaryCard({required String summary}) {
     return Container(
-      height: 120,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: ListView.separated(
+      margin: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      padding: EdgeInsets.all(16.w),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(16.r),
+        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.auto_awesome, color: AppColors.primary, size: 20.sp),
+              SizedBox(width: 8.w),
+              Text(
+                'AI Summary',
+                style: AppTypography.bodySmall().copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 8.h),
+          Text(summary, style: AppTypography.bodyMedium()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuggestionsList(NoteEditorState state, NoteEditorBloc bloc) {
+    return Container(
+      height: 50.h,
+      margin: EdgeInsets.symmetric(vertical: 8.h),
+      child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: images.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        itemCount: state.suggestions.length,
         itemBuilder: (context, index) {
-          return ImageThumbnailWidget(
-            imagePath: images[index].filePath,
-            onTap: () => _openMediaViewer(
-              context,
-              editorBloc,
-              state,
-              index,
-              MediaType.image,
+          final suggestion = state.suggestions[index];
+          return Padding(
+            padding: EdgeInsets.only(right: 8.w),
+            child: ActionChip(
+              avatar: Icon(
+                suggestion.type == SuggestionType.todo
+                    ? Icons.check_circle_outline
+                    : Icons.notifications_active_outlined,
+                size: 16.sp,
+                color: AppColors.primary,
+              ),
+              label: Text(suggestion.title),
+              onPressed: () {
+                AppLogger.i(
+                  'EnhancedNoteEditorScreen: Horizontal suggestion chip tapped: ${suggestion.title}',
+                );
+                bloc.add(SuggestionActionAccepted(suggestion));
+              },
+              backgroundColor: AppColors.primary.withOpacity(0.05),
             ),
           );
         },
       ),
     );
+  }
+
+  Widget _buildBacklinksSection(NoteEditorState state) {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Linked Notes', style: AppTypography.bodySmall()),
+          SizedBox(height: 8.h),
+          Wrap(
+            spacing: 8.w,
+            children: state.linkedNotes.map((note) {
+              return Chip(
+                label: Text(note.title),
+                backgroundColor: AppColors.secondaryText.withOpacity(0.1),
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMediaGallery(
+    BuildContext context,
+    NoteEditorState state,
+    NoteEditorBloc editorBloc,
+  ) {
+    final media = state.params.media;
+    if (media.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Attachments (${media.length})',
+                style: AppTypography.heading2(context),
+              ),
+              if (media.length > 3)
+                TextButton(
+                  onPressed: () {
+                    AppLogger.i(
+                      'EnhancedNoteEditorScreen: View All Attachments tapped',
+                    );
+                    // TODO: Show full gallery
+                  },
+                  child: const Text('View All'),
+                ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 160.h,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.symmetric(horizontal: 16.w),
+            itemCount: media.length,
+            itemBuilder: (context, index) {
+              final item = media[index];
+              return Padding(
+                padding: EdgeInsets.only(right: 12.w),
+                child: _buildMediaPreviewItem(
+                  context,
+                  item,
+                  index,
+                  editorBloc,
+                  state,
+                ),
+              );
+            },
+          ),
+        ),
+        SizedBox(height: 16.h),
+      ],
+    );
+  }
+
+  Widget _buildMediaPreviewItem(
+    BuildContext context,
+    MediaItem item,
+    int index,
+    NoteEditorBloc bloc,
+    NoteEditorState state,
+  ) {
+    return GestureDetector(
+      onTap: () {
+        AppLogger.i(
+          'EnhancedNoteEditorScreen: Media preview tapped: ${item.name} ($index)',
+        );
+        _openMediaViewer(context, bloc, state, index, item.type);
+      },
+      child: Container(
+        width: 140.w,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16.r),
+          color: AppColors.surface(context),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16.r),
+          child: Stack(
+            children: [
+              _buildMediaThumbnail(item),
+              _buildMediaOverlay(item),
+              Positioned(
+                top: 4,
+                right: 4,
+                child: GestureDetector(
+                  onTap: () {
+                    AppLogger.i(
+                      'EnhancedNoteEditorScreen: Removing media attachment at index $index: ${item.name}',
+                    );
+                    bloc.add(MediaRemoved(index));
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.close, color: Colors.white, size: 14.sp),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                child: Container(
+                  padding: EdgeInsets.all(8.w),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.7),
+                      ],
+                    ),
+                  ),
+                  child: Text(
+                    item.name,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 10.sp,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMediaThumbnail(MediaItem item) {
+    switch (item.type) {
+      case MediaType.image:
+        return Image.file(
+          File(item.filePath),
+          width: 140.w,
+          height: 160.h,
+          fit: BoxFit.cover,
+        );
+      case MediaType.video:
+        return item.thumbnailPath != null
+            ? Image.file(
+                File(item.thumbnailPath!),
+                width: 140.w,
+                height: 160.h,
+                fit: BoxFit.cover,
+              )
+            : Container(
+                color: Colors.black87,
+                child: const Center(
+                  child: Icon(Icons.videocam, color: Colors.white),
+                ),
+              );
+      case MediaType.audio:
+        return Container(
+          color: AppColors.primary.withOpacity(0.1),
+          child: Center(
+            child: Icon(
+              Icons.audiotrack,
+              color: AppColors.primary,
+              size: 40.sp,
+            ),
+          ),
+        );
+      case MediaType.document:
+        return Container(
+          color: Colors.orange.withOpacity(0.1),
+          child: Center(
+            child: Icon(Icons.description, color: Colors.orange, size: 40.sp),
+          ),
+        );
+    }
+  }
+
+  Widget _buildMediaOverlay(MediaItem item) {
+    if (item.type == MediaType.video) {
+      return Center(
+        child: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: const BoxDecoration(
+            color: Colors.black26,
+            shape: BoxShape.circle,
+          ),
+          child: const Icon(Icons.play_arrow, color: Colors.white),
+        ),
+      );
+    }
+    if (item.type == MediaType.audio) {
+      return Center(
+        child: Text(
+          '${(item.durationMs / 1000).toStringAsFixed(1)}s',
+          style: TextStyle(
+            color: AppColors.primary,
+            fontSize: 12.sp,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      );
+    }
+    return const SizedBox.shrink();
   }
 
   void _openMediaViewer(
@@ -1688,6 +1979,7 @@ class _NoteEditorLifecycleWrapperState
   @override
   void initState() {
     super.initState();
+    AppLogger.i('EnhancedNoteEditorScreen: LifecycleWrapper initState');
     _editorBloc =
         NoteEditorBloc(
           speechService: _speechService,
@@ -1695,7 +1987,7 @@ class _NoteEditorLifecycleWrapperState
           feedbackService: _feedbackService,
           ocrService: OCRService(),
           mediaProcessingService: getIt<MediaProcessingService>(),
-          noteRepository: NoteRepositoryImpl(database: NotesDatabase()),
+          noteRepository: NoteRepositoryImpl(database: CoreDatabase()),
           linkParserService: LinkParserService(),
         )..add(
           NoteEditorInitialized(
@@ -1732,6 +2024,7 @@ class _NoteEditorLifecycleWrapperState
 
   @override
   void dispose() {
+    AppLogger.i('EnhancedNoteEditorScreen: LifecycleWrapper dispose');
     _debounceTimer?.cancel();
     _titleController.dispose();
     _quillController.dispose();
@@ -1745,15 +2038,62 @@ class _NoteEditorLifecycleWrapperState
 
   @override
   Widget build(BuildContext context) {
-    return widget.builder(
-      context,
-      _editorBloc,
-      _quillController,
-      _titleController,
-      _titleFocusNode,
-      _contentFocusNode,
-      _scrollController,
-      _quillScrollController,
+    return BlocProvider.value(
+      value: _editorBloc,
+      child: BlocListener<NoteEditorBloc, NoteEditorState>(
+        listenWhen: (previous, current) {
+          if (previous is NoteEditorLoaded && current is NoteEditorLoaded) {
+            // Only trigger listener if content/title changed EXTERNALLY
+            // (e.g. template applied, OCR, or initial load)
+            // If it's just user typing, the controllers are already in sync.
+            return (previous.params.content != current.params.content ||
+                    previous.params.title != current.params.title) &&
+                !_isUndoingOrRedoing;
+          }
+          return previous is NoteEditorInitial && current is NoteEditorLoaded;
+        },
+        listener: (context, state) {
+          if (state is NoteEditorLoaded) {
+            final params = state.params;
+
+            // Sync Title
+            if (_titleController.text != params.title) {
+              _titleController.text = params.title;
+            }
+
+            // Sync Content
+            try {
+              final json = jsonDecode(params.content);
+              final delta = Delta.fromJson(json);
+              if (jsonEncode(_quillController.document.toDelta().toJson()) !=
+                  params.content) {
+                _isUndoingOrRedoing = true;
+                _quillController.document = quill.Document.fromDelta(delta);
+                _isUndoingOrRedoing = false;
+              }
+            } catch (e) {
+              // If not JSON, insert as plain text
+              if (_quillController.document.toPlainText().trim() !=
+                  params.content.trim()) {
+                _isUndoingOrRedoing = true;
+                _quillController.document = quill.Document();
+                _quillController.document.insert(0, params.content);
+                _isUndoingOrRedoing = false;
+              }
+            }
+          }
+        },
+        child: widget.builder(
+          context,
+          _editorBloc,
+          _quillController,
+          _titleController,
+          _titleFocusNode,
+          _contentFocusNode,
+          _scrollController,
+          _quillScrollController,
+        ),
+      ),
     );
   }
 }

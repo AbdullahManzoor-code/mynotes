@@ -3,21 +3,21 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'package:package_info_plus/package_info_plus.dart';
-import '../../core/services/global_ui_service.dart';
-import '../bloc/theme/theme_bloc.dart';
-import '../bloc/theme/theme_event.dart';
-import '../bloc/theme/theme_state.dart';
-import '../bloc/settings/settings_bloc.dart';
-import '../bloc/params/settings_params.dart';
-import '../design_system/design_system.dart';
-import 'font_settings_screen.dart';
-import 'voice_settings_screen.dart';
-import 'backup_export_screen.dart';
-import 'biometric_lock_screen.dart';
-import '../../core/services/backup_service.dart';
-import '../../injection_container.dart' show getIt;
-import '../widgets/developer_test_links_sheet.dart';
-import '../widgets/theme_color_picker_bottomsheet.dart';
+import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/presentation/bloc/theme/theme_bloc.dart';
+import 'package:mynotes/presentation/bloc/theme/theme_event.dart';
+import 'package:mynotes/presentation/bloc/theme/theme_state.dart';
+import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
+import 'package:mynotes/presentation/bloc/params/settings_params.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/presentation/pages/font_settings_screen.dart';
+import 'package:mynotes/presentation/pages/voice_settings_screen.dart';
+import 'package:mynotes/presentation/pages/backup_export_screen.dart';
+import 'package:mynotes/presentation/pages/biometric_lock_screen.dart';
+import 'package:mynotes/core/services/backup_service.dart';
+import 'package:mynotes/injection_container.dart' show getIt;
+import 'package:mynotes/presentation/widgets/developer_test_links_sheet.dart';
+import 'package:mynotes/presentation/widgets/theme_color_picker_bottomsheet.dart';
 
 /// Settings Screen (ORG-006)
 /// Optimized settings management with BLoC and Design System
@@ -26,10 +26,7 @@ class SettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => SettingsBloc()..add(const LoadSettingsEvent()),
-      child: const _SettingsScreenContent(),
-    );
+    return const _SettingsScreenContent();
   }
 }
 
@@ -38,6 +35,7 @@ class _SettingsScreenContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('SettingsScreen: build');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocBuilder<SettingsBloc, SettingsState>(
@@ -53,6 +51,7 @@ class _SettingsScreenContent extends StatelessWidget {
         }
 
         if (state is SettingsError) {
+          AppLogger.e('SettingsScreen: Error', state.message);
           return Scaffold(
             backgroundColor: isDark
                 ? AppColors.darkBackground
@@ -75,9 +74,12 @@ class _SettingsScreenContent extends StatelessWidget {
                   Text(state.message, style: AppTypography.caption(context)),
                   SizedBox(height: AppSpacing.lg),
                   ElevatedButton(
-                    onPressed: () => context.read<SettingsBloc>().add(
-                      const LoadSettingsEvent(),
-                    ),
+                    onPressed: () {
+                      AppLogger.i('SettingsScreen: Retry loading settings');
+                      context.read<SettingsBloc>().add(
+                        const LoadSettingsEvent(),
+                      );
+                    },
                     child: const Text('Retry'),
                   ),
                 ],
@@ -185,20 +187,24 @@ class _SettingsScreenContent extends StatelessWidget {
   }
 
   void _handleSettingsMenu(BuildContext context, String value) {
+    AppLogger.i('SettingsScreen: _handleSettingsMenu called with: $value');
     switch (value) {
       case 'voice':
+        AppLogger.i('SettingsScreen: Navigating to VoiceSettingsScreen');
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const VoiceSettingsScreen()),
         );
         break;
       case 'security':
+        AppLogger.i('SettingsScreen: Navigating to BiometricLockScreen');
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const BiometricLockScreen()),
         );
         break;
       case 'backup':
+        AppLogger.i('SettingsScreen: Navigating to BackupExportScreen');
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const BackupExportScreen()),
@@ -249,6 +255,9 @@ class _SettingsScreenContent extends StatelessWidget {
                 title: 'Appearance',
                 subtitle: isDark ? 'Dark Mode' : 'Light Mode',
                 trailing: _buildSwitch(themeState.isDarkMode, (value) {
+                  AppLogger.i(
+                    'SettingsScreen: Dark mode toggle changed to $value',
+                  );
                   context.read<ThemeBloc>().add(
                     UpdateThemeEvent.toggleDarkMode(themeState.params),
                   );
@@ -265,7 +274,10 @@ class _SettingsScreenContent extends StatelessWidget {
                   size: 18.sp,
                   color: AppColors.secondaryText,
                 ),
-                onTap: () => _showThemePicker(context),
+                onTap: () {
+                  AppLogger.i('SettingsScreen: Color Theme option tapped');
+                  _showThemePicker(context);
+                },
                 hasDivider: true,
               ),
               _buildSettingTile(
@@ -278,7 +290,10 @@ class _SettingsScreenContent extends StatelessWidget {
                   size: 18.sp,
                   color: AppColors.secondaryText,
                 ),
-                onTap: () => _showFontSettings(context),
+                onTap: () {
+                  AppLogger.i('SettingsScreen: Typography option tapped');
+                  _showFontSettings(context);
+                },
                 hasDivider: true,
               ),
               _buildSettingTile(
@@ -287,6 +302,9 @@ class _SettingsScreenContent extends StatelessWidget {
                 title: 'Micro-animations',
                 subtitle: 'Smooth transitions for focus',
                 trailing: _buildSwitch(params.useCustomColors, (value) {
+                  AppLogger.i(
+                    'SettingsScreen: Micro-animations toggle changed to $value',
+                  );
                   context.read<SettingsBloc>().add(
                     UpdateSettingsEvent(
                       params.copyWith(useCustomColors: value),
@@ -332,6 +350,7 @@ class _SettingsScreenContent extends StatelessWidget {
               color: AppColors.secondaryText,
             ),
             onTap: () {
+              AppLogger.i('SettingsScreen: Security Setup tapped');
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -347,6 +366,9 @@ class _SettingsScreenContent extends StatelessWidget {
             title: 'Private Reflection',
             subtitle: 'Hide sensitive note previews',
             trailing: _buildSwitch(false, (value) {
+              AppLogger.i(
+                'SettingsScreen: Private Reflection toggle changed to $value (Coming soon)',
+              );
               getIt<GlobalUiService>().showInfo(
                 'Private Reflection: This feature is coming soon.',
               );
@@ -361,12 +383,12 @@ class _SettingsScreenContent extends StatelessWidget {
               subtitle: params.biometricEnabled
                   ? 'Biometric protection active'
                   : 'Disabled',
-              trailing: _buildSwitch(
-                params.biometricEnabled,
-                (value) => context.read<SettingsBloc>().add(
-                  ToggleBiometricEvent(value),
-                ),
-              ),
+              trailing: _buildSwitch(params.biometricEnabled, (value) {
+                AppLogger.i(
+                  'SettingsScreen: Biometric Lock toggle changed to $value',
+                );
+                context.read<SettingsBloc>().add(ToggleBiometricEvent(value));
+              }),
             ),
         ],
       ),
@@ -399,6 +421,9 @@ class _SettingsScreenContent extends StatelessWidget {
             title: 'Notifications',
             subtitle: 'Receive alerts and reminders',
             trailing: _buildSwitch(params.notificationsEnabled, (value) {
+              AppLogger.i(
+                'SettingsScreen: Notifications toggle changed to $value',
+              );
               context.read<SettingsBloc>().add(
                 UpdateSettingsEvent(
                   params.copyWith(notificationsEnabled: value),
@@ -419,7 +444,10 @@ class _SettingsScreenContent extends StatelessWidget {
                 color: AppColors.secondaryText,
               ),
               hasDivider: true,
-              onTap: () => _showNotificationSoundPicker(context, params),
+              onTap: () {
+                AppLogger.i('SettingsScreen: Notification Sound option tapped');
+                _showNotificationSoundPicker(context, params);
+              },
             ),
           if (params.notificationsEnabled)
             _buildSettingTile(
@@ -428,6 +456,9 @@ class _SettingsScreenContent extends StatelessWidget {
               title: 'Vibration',
               subtitle: 'Haptic feedback for alerts',
               trailing: _buildSwitch(params.vibrationEnabled, (value) {
+                AppLogger.i(
+                  'SettingsScreen: Vibration toggle changed to $value',
+                );
                 context.read<SettingsBloc>().add(
                   UpdateSettingsEvent(params.copyWith(vibrationEnabled: value)),
                 );
@@ -441,6 +472,9 @@ class _SettingsScreenContent extends StatelessWidget {
               title: 'LED Notifications',
               subtitle: 'Flash LED indicator',
               trailing: _buildSwitch(params.ledEnabled, (value) {
+                AppLogger.i(
+                  'SettingsScreen: LED Notifications toggle changed to $value',
+                );
                 context.read<SettingsBloc>().add(
                   UpdateSettingsEvent(params.copyWith(ledEnabled: value)),
                 );
@@ -456,6 +490,9 @@ class _SettingsScreenContent extends StatelessWidget {
                   ? '${params.quietHoursStart} - ${params.quietHoursEnd}'
                   : 'Not set',
               trailing: _buildSwitch(params.quietHoursEnabled, (value) {
+                AppLogger.i(
+                  'SettingsScreen: Quiet Hours toggle changed to $value',
+                );
                 context.read<SettingsBloc>().add(
                   UpdateSettingsEvent(
                     params.copyWith(quietHoursEnabled: value),
@@ -464,7 +501,10 @@ class _SettingsScreenContent extends StatelessWidget {
               }),
               hasDivider: !params.quietHoursEnabled,
               onTap: params.quietHoursEnabled
-                  ? () => _showQuietHoursPicker(context, params)
+                  ? () {
+                      AppLogger.i('SettingsScreen: Quiet Hours option tapped');
+                      _showQuietHoursPicker(context, params);
+                    }
                   : null,
             ),
         ],
@@ -591,6 +631,7 @@ class _SettingsScreenContent extends StatelessWidget {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: () {
+                AppLogger.i('SettingsScreen: Backup & Export Wizard tapped');
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -627,7 +668,10 @@ class _SettingsScreenContent extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
-              onPressed: () => _clearCache(context),
+              onPressed: () {
+                AppLogger.i('SettingsScreen: Clear Cache tapped');
+                _clearCache(context);
+              },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.error,
                 side: BorderSide(color: AppColors.error),
@@ -682,6 +726,7 @@ class _SettingsScreenContent extends StatelessWidget {
           color: AppColors.secondaryText,
         ),
         onTap: () {
+          AppLogger.i('SettingsScreen: Developer Test Links tapped');
           showModalBottomSheet(
             context: context,
             builder: (_) => const DeveloperTestLinksSheet(),
@@ -978,6 +1023,7 @@ class _SettingsScreenContent extends StatelessWidget {
   }
 
   void _clearCache(BuildContext context) {
+    AppLogger.i('SettingsScreen: _clearCache dialog triggered');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -987,13 +1033,20 @@ class _SettingsScreenContent extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('SettingsScreen: Clear Cache cancelled');
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
+              AppLogger.i(
+                'SettingsScreen: Clear Cache confirmed. Calling BackupService.clearCache()',
+              );
               await BackupService.clearCache();
               if (context.mounted) {
+                AppLogger.i('SettingsScreen: Cache cleared successfully');
                 Navigator.pop(context);
                 getIt<GlobalUiService>().showSuccess(
                   'Cache cleared successfully',

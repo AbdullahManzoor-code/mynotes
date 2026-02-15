@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert' show jsonEncode;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/domain/entities/universal_item.dart';
 import 'package:mynotes/presentation/bloc/params/note_params.dart';
@@ -272,9 +273,15 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
       if (event.note != null) {
         params = NoteParams.fromNote(event.note!);
       } else if (event.template != null) {
+        String content = event.template.contentPlaceholder;
+        if (!content.startsWith('[{"insert"')) {
+          content = jsonEncode([
+            {'insert': '$content\n'},
+          ]);
+        }
         params = NoteParams(
-          title: event.template.title ?? '',
-          content: event.template.content ?? '',
+          title: event.template.titlePlaceholder,
+          content: content,
         );
       } else {
         params = NoteParams(content: event.initialContent ?? '');
@@ -624,11 +631,20 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
   ) {
     if (state is NoteEditorLoaded) {
       final s = state as NoteEditorLoaded;
+
+      // Ensure content is in Quill Delta JSON format
+      String formattedContent = event.template.contentPlaceholder;
+      if (!formattedContent.startsWith('[{"insert"')) {
+        formattedContent = jsonEncode([
+          {'insert': '$formattedContent\n'},
+        ]);
+      }
+
       emit(
         s.copyWith(
           params: s.params.copyWith(
             title: event.template.titlePlaceholder,
-            content: event.template.contentPlaceholder,
+            content: formattedContent,
           ),
           isDirty: true,
         ),

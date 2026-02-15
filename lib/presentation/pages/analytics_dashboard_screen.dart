@@ -29,6 +29,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i('AnalyticsDashboardScreen: Initialized');
     _tabController = TabController(length: 5, vsync: this);
     _initializeAnimations();
     _startAnimations();
@@ -64,6 +65,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
 
   @override
   void dispose() {
+    AppLogger.i('AnalyticsDashboardScreen: Disposed');
     _tabController.dispose();
     _chartController.dispose();
     _statsController.dispose();
@@ -91,6 +93,7 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('AnalyticsDashboardScreen: Building UI');
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       appBar: AppBar(
@@ -103,9 +106,12 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: () => context.read<AnalyticsBloc>().add(
-              const RefreshAnalyticsEvent(),
-            ),
+            onPressed: () {
+              AppLogger.i(
+                'AnalyticsDashboardScreen: Refresh analytics pressed',
+              );
+              context.read<AnalyticsBloc>().add(const RefreshAnalyticsEvent());
+            },
           ),
         ],
         bottom: TabBar(
@@ -115,6 +121,11 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white60,
           labelStyle: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold),
+          onTap: (index) {
+            AppLogger.i(
+              'AnalyticsDashboardScreen: Tab changed to index $index',
+            );
+          },
           tabs: const [
             Tab(text: 'Overview'),
             Tab(text: 'Focus'),
@@ -129,6 +140,9 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
           if (state is AnalyticsLoading) {
             return _buildLoadingState();
           } else if (state is AnalyticsLoaded) {
+            AppLogger.i(
+              'AnalyticsDashboardScreen: Analytics loaded successfully',
+            );
             return TabBarView(
               controller: _tabController,
               children: [
@@ -140,6 +154,9 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
               ],
             );
           } else if (state is AnalyticsError) {
+            AppLogger.e(
+              'AnalyticsDashboardScreen: Error state - ${state.message}',
+            );
             return _buildErrorState(state.message);
           }
           return _buildLoadingState();
@@ -171,8 +188,10 @@ class _AnalyticsDashboardScreenState extends State<AnalyticsDashboardScreen>
           ),
           SizedBox(height: 24.h),
           ElevatedButton(
-            onPressed: () =>
-                context.read<AnalyticsBloc>().add(const LoadAnalyticsEvent()),
+            onPressed: () {
+              AppLogger.i('AnalyticsDashboardScreen: Retry button pressed');
+              context.read<AnalyticsBloc>().add(const LoadAnalyticsEvent());
+            },
             child: const Text('Retry'),
           ),
         ],
@@ -890,4 +909,3 @@ extension DoubleClamped on double {
     return this;
   }
 }
-

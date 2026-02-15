@@ -10,6 +10,9 @@ import '../bloc/theme/theme_event.dart';
 import '../bloc/theme/theme_state.dart';
 import '../bloc/settings/settings_bloc.dart';
 
+import 'package:mynotes/core/database/core_database.dart';
+import 'package:mynotes/presentation/bloc/alarm/alarms_bloc.dart';
+
 // ==================== Core Screens ====================
 import 'analytics_dashboard_screen.dart';
 import 'focus_session_screen.dart';
@@ -35,9 +38,8 @@ import 'today_dashboard_screen.dart';
 import 'main_home_screen.dart';
 
 // ==================== Special Screens ====================
-import 'cross_feature_demo.dart';
 import 'search_filter_screen.dart';
-import 'todos_list_screen.dart' show TodosListScreen;
+import '../screens/todos_screen_fixed.dart';
 import 'voice_settings_screen.dart';
 import 'settings_screen.dart';
 import 'privacy_policy_screen.dart';
@@ -53,7 +55,7 @@ import 'biometric_lock_screen.dart';
 // ==================== Empty States & Helpers ====================
 import 'empty_state_notes_help_screen.dart';
 import 'empty_state_todos_help_screen.dart';
-import 'daily_highlight_summary_screen.dart';
+import 'daily_focus_highlight_screen.dart';
 import 'location_reminder_screen.dart';
 
 /// Advanced Settings Screen
@@ -64,11 +66,12 @@ class AdvancedSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('AdvancedSettingsScreen: Building UI');
     return BlocBuilder<SettingsBloc, SettingsState>(
       builder: (context, state) {
         final params = state is SettingsLoaded ? state.params : null;
-        final isDeveloperMode = params?.developerModeEnabled ?? false;
-        final showDebugInfo = params?.showDebugInfo ?? false;
+        final isDeveloperMode = params?.developerModeEnabled ?? true;
+        final showDebugInfo = params?.showDebugInfo ?? true;
 
         return Scaffold(
           backgroundColor: AppColors.darkBackground,
@@ -79,6 +82,7 @@ class AdvancedSettingsScreen extends StatelessWidget {
             actions: [
               IconButton(
                 onPressed: () {
+                  AppLogger.i('AdvancedSettingsScreen: Toggle Developer Mode');
                   if (params != null) {
                     context.read<SettingsBloc>().add(
                       UpdateSettingsEvent(params.toggleDeveloperMode()),
@@ -109,7 +113,11 @@ class AdvancedSettingsScreen extends StatelessWidget {
                     Icons.mic,
                     trailing: Switch(
                       value: true,
-                      onChanged: (value) {},
+                      onChanged: (value) {
+                        AppLogger.i(
+                          'AdvancedSettingsScreen: Voice Recognition toggled to $value',
+                        );
+                      },
                       activeColor: AppColors.primary,
                     ),
                   ),
@@ -119,7 +127,11 @@ class AdvancedSettingsScreen extends StatelessWidget {
                     Icons.notifications_active,
                     trailing: Switch(
                       value: true,
-                      onChanged: (value) {},
+                      onChanged: (value) {
+                        AppLogger.i(
+                          'AdvancedSettingsScreen: Smart Notifications toggled to $value',
+                        );
+                      },
                       activeColor: AppColors.primary,
                     ),
                   ),
@@ -133,26 +145,40 @@ class AdvancedSettingsScreen extends StatelessWidget {
                     'Analytics Dashboard',
                     'View productivity insights',
                     Icons.analytics,
-                    () => _navigateToScreen(
-                      context,
-                      const AnalyticsDashboardScreen(),
-                    ),
+                    () {
+                      AppLogger.i(
+                        'AdvancedSettingsScreen: Action Analytics Dashboard tapped',
+                      );
+                      _navigateToScreen(
+                        context,
+                        const AnalyticsDashboardScreen(),
+                      );
+                    },
                   ),
                   _buildActionTile(
                     'Global Search',
                     'Search across everything',
                     Icons.search,
-                    () => _navigateToScreen(
-                      context,
-                      const EnhancedGlobalSearchScreen(),
-                    ),
+                    () {
+                      AppLogger.i(
+                        'AdvancedSettingsScreen: Action Global Search tapped',
+                      );
+                      _navigateToScreen(
+                        context,
+                        const EnhancedGlobalSearchScreen(),
+                      );
+                    },
                   ),
                   _buildActionTile(
                     'Focus Session',
                     'Start Pomodoro timer',
                     Icons.psychology,
-                    () =>
-                        _navigateToScreen(context, const FocusSessionScreen()),
+                    () {
+                      AppLogger.i(
+                        'AdvancedSettingsScreen: Action Focus Session tapped',
+                      );
+                      _navigateToScreen(context, const FocusSessionScreen());
+                    },
                   ),
                 ]),
 
@@ -164,13 +190,23 @@ class AdvancedSettingsScreen extends StatelessWidget {
                     'Export Data',
                     'Backup your items',
                     Icons.download,
-                    () => _handleExportData(context),
+                    () {
+                      AppLogger.i(
+                        'AdvancedSettingsScreen: Action Export Data tapped',
+                      );
+                      _handleExportData(context);
+                    },
                   ),
                   _buildActionTile(
                     'Clear Cache',
                     'Free up storage space',
                     Icons.cleaning_services,
-                    () => _handleClearCache(context),
+                    () {
+                      AppLogger.i(
+                        'AdvancedSettingsScreen: Action Clear Cache tapped',
+                      );
+                      _handleClearCache(context);
+                    },
                   ),
                   _buildSettingTile(
                     'Debug Info',
@@ -179,6 +215,9 @@ class AdvancedSettingsScreen extends StatelessWidget {
                     trailing: Switch(
                       value: showDebugInfo,
                       onChanged: (value) {
+                        AppLogger.i(
+                          'AdvancedSettingsScreen: Debug Info toggled to $value',
+                        );
                         if (params != null) {
                           context.read<SettingsBloc>().add(
                             UpdateSettingsEvent(params.toggleDebugInfo()),
@@ -219,14 +258,23 @@ class AdvancedSettingsScreen extends StatelessWidget {
                     'Rate App',
                     'Help us improve',
                     Icons.star_outline,
-                    () => _handleRateApp(context),
+                    () {
+                      AppLogger.i(
+                        'AdvancedSettingsScreen: Action Rate App tapped',
+                      );
+                      _handleRateApp(context);
+                    },
                   ),
                   _buildActionTile(
                     'Privacy Policy',
                     'Read how we protect your data',
                     Icons.privacy_tip_outlined,
-                    () =>
-                        _navigateToScreen(context, const PrivacyPolicyScreen()),
+                    () {
+                      AppLogger.i(
+                        'AdvancedSettingsScreen: Action Privacy Policy tapped',
+                      );
+                      _navigateToScreen(context, const PrivacyPolicyScreen());
+                    },
                   ),
                 ]),
 
@@ -303,6 +351,9 @@ class AdvancedSettingsScreen extends StatelessWidget {
               Switch(
                 value: state.isDarkMode,
                 onChanged: (value) {
+                  AppLogger.i(
+                    'AdvancedSettingsScreen: Theme toggled to ${value ? 'Dark' : 'Light'}',
+                  );
                   context.read<ThemeBloc>().add(
                     UpdateThemeEvent.toggleDarkMode(state.params),
                   );
@@ -570,11 +621,11 @@ class AdvancedSettingsScreen extends StatelessWidget {
 
         // ==================== Todos Management ====================
         _buildDeveloperSubsection('✅ Todos', [
-          _buildDevTile(
-            'Todos List',
-            'All todos',
-            () => _navigateToScreen(context, TodosListScreen()),
-          ),
+          // _buildDevTile(
+          //   'Todos List',
+          //   'All todos',
+          //   () => _navigateToScreen(context, TodosListScreen()),
+          // ),
           // AdvancedTodoScreen and TodoFocusScreen require Note parameters
           // Available through Todos List when editing
           _buildDevTile(
@@ -611,11 +662,11 @@ class AdvancedSettingsScreen extends StatelessWidget {
             'Advanced filtering',
             () => _navigateToScreen(context, const SearchFilterScreen()),
           ),
-          _buildDevTile(
-            'Cross Feature Demo',
-            'Cross-feature demo',
-            () => _navigateToScreen(context, const CrossFeatureDemo()),
-          ),
+          // _buildDevTile(
+          //   'Cross Feature Demo',
+          //   'Cross-feature demo',
+          //   () => _navigateToScreen(context, const CrossFeatureDemo()),
+          // ),
         ]),
 
         SizedBox(height: 24.h),
@@ -671,12 +722,12 @@ class AdvancedSettingsScreen extends StatelessWidget {
             'Calendar view',
             () => _navigateToScreen(context, const CalendarIntegrationScreen()),
           ),
-          _buildDevTile(
-            'Daily Highlights',
-            'Daily summary',
-            () =>
-                _navigateToScreen(context, const DailyHighlightSummaryScreen()),
-          ),
+          // _buildDevTile(
+          //   'Daily Highlights',
+          //   'Daily summary',
+          //   () =>
+          //       _navigateToScreen(context, const DailyHighlightSummaryScreen()),
+          // ),
           // EditDailyHighlightScreen is in edit_daily_highlight_screen_new.dart
           // Uncomment if needed - currently using alternative
         ]),
@@ -699,21 +750,20 @@ class AdvancedSettingsScreen extends StatelessWidget {
         // ==================== Test Actions ====================
         _buildDeveloperSubsection('🧪 Test Actions', [
           _buildDevTile(
-            'Generate Sample Data',
-            'Create test items',
-            _generateSampleData,
+            'Seed Dummy Data',
+            'Clears DB and adds test notes/todos',
+            () => _generateSampleData(context),
           ),
-          // _buildDevTile('Clear All Data', 'Reset database', _clearAllData),
+          _buildDevTile(
+            'Trigger Test Alarm',
+            'Schedules a notification for 10s from now',
+            () => _testAlarm(context),
+          ),
           _buildDevTile(
             'Export Database',
             'Download SQLite file',
             _exportDatabase,
           ),
-          // _buildDevTile(
-          //   'Test Voice Parser',
-          //   'Try smart parsing',
-          //   _testVoiceParser,
-          // ),
         ]),
       ],
     );
@@ -778,37 +828,64 @@ class AdvancedSettingsScreen extends StatelessWidget {
 
   // Action methods
   void _navigateToScreen(BuildContext context, Widget screen) {
+    AppLogger.i('AdvancedSettingsScreen: Navigating to ${screen.runtimeType}');
     Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
   void _handleExportData(BuildContext context) {
+    AppLogger.i('AdvancedSettingsScreen: _handleExportData called');
     // TODO: Implement data export
     _showSnackbar('Export feature coming soon');
   }
 
   void _handleClearCache(BuildContext context) {
+    AppLogger.i('AdvancedSettingsScreen: _handleClearCache called');
     // TODO: Implement cache clearing
     _showSnackbar('Cache cleared successfully');
   }
 
   void _handleRateApp(BuildContext context) {
+    AppLogger.i('AdvancedSettingsScreen: _handleRateApp called');
     // TODO: Open app store rating
     _showSnackbar('Thank you for your support!');
   }
 
   Future<void> _launchUrl(BuildContext context, String urlString) async {
+    AppLogger.i('AdvancedSettingsScreen: _launchUrl called for $urlString');
     final Uri url = Uri.parse(urlString);
     if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      AppLogger.w('AdvancedSettingsScreen: Could not launch $urlString');
       _showSnackbar('Could not launch $urlString');
     }
   }
 
-  void _generateSampleData() {
-    // TODO: Generate sample data for testing
-    _showSnackbar('Sample data generated');
+  Future<void> _generateSampleData(BuildContext context) async {
+    AppLogger.i('AdvancedSettingsScreen: _generateSampleData called');
+    try {
+      await CoreDatabase().seedDummyData();
+      AppLogger.i('AdvancedSettingsScreen: Database seeded successfully');
+      _showSnackbar('Database seeded with dummy data');
+    } catch (e) {
+      AppLogger.e('AdvancedSettingsScreen: Seeding failed', e);
+      _showSnackbar('Seeding failed: $e');
+    }
+  }
+
+  void _testAlarm(BuildContext context) {
+    AppLogger.i('AdvancedSettingsScreen: _testAlarm called');
+    context.read<AlarmsBloc>().add(
+      AddAlarmEvent.quickAlarm(
+        fromNow: const Duration(seconds: 10),
+        title: 'Test Alarm 🚀',
+        description: 'This is a test notification from developer tools.',
+      ),
+    );
+
+    _showSnackbar('Alarm scheduled for 10 seconds');
   }
 
   void _clearAllData(BuildContext context) {
+    AppLogger.i('AdvancedSettingsScreen: _clearAllData dialog shown');
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
@@ -819,11 +896,15 @@ class AdvancedSettingsScreen extends StatelessWidget {
         contentTextStyle: TextStyle(color: Colors.grey.shade300),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('AdvancedSettingsScreen: Clear All Data cancelled');
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
+              AppLogger.i('AdvancedSettingsScreen: Clear All Data confirmed');
               Navigator.pop(context);
               // TODO: Clear database
               _showSnackbar('All data cleared');
@@ -836,11 +917,13 @@ class AdvancedSettingsScreen extends StatelessWidget {
   }
 
   void _exportDatabase() {
+    AppLogger.i('AdvancedSettingsScreen: _exportDatabase called');
     // TODO: Export database file
     _showSnackbar('Database exported to Downloads');
   }
 
   void _testVoiceParser(BuildContext context) {
+    AppLogger.i('AdvancedSettingsScreen: _testVoiceParser called');
     // TODO: Open voice parser test dialog
     _navigateToScreen(context, const FixedUniversalQuickAddScreen());
   }

@@ -13,6 +13,7 @@ import 'package:mynotes/presentation/pages/location_picker_screen.dart';
 import 'package:mynotes/presentation/pages/saved_locations_screen.dart';
 import 'package:mynotes/core/services/location_reminders_manager.dart';
 import '../design_system/design_system.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'dart:ui' as ui;
 
 /// Location Reminder Screen - Polished & Functional
@@ -109,6 +110,7 @@ class LocationReminderScreen extends StatelessWidget {
               size: 20.sp,
             ),
             onPressed: () {
+              AppLogger.i('LocationReminderScreen: Saved Locations pressed');
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const SavedLocationsScreen()),
@@ -129,7 +131,10 @@ class LocationReminderScreen extends StatelessWidget {
               color: AppColors.textPrimary(context),
               size: 20.sp,
             ),
-            onPressed: () => _showHelpDialog(context),
+            onPressed: () {
+              AppLogger.i('LocationReminderScreen: Help dialog pressed');
+              _showHelpDialog(context);
+            },
             splashRadius: 24.r,
           ),
         ),
@@ -168,10 +173,7 @@ class LocationReminderScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            LottieAnimationWidget(
-              'location_empty',
-              height: 200.h,
-            ),
+            LottieAnimationWidget('location_empty', height: 200.h),
             SizedBox(height: 24.h),
             Text(
               'No Location Reminders',
@@ -312,6 +314,7 @@ class LocationReminderScreen extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
+            AppLogger.i('LocationReminderScreen: New Reminder FAB tapped');
             HapticFeedback.mediumImpact();
             _createNewReminder(context);
           },
@@ -563,9 +566,11 @@ class _LocationLifecycleWrapperState extends State<_LocationLifecycleWrapper> {
   }
 
   Future<void> _initialize() async {
+    AppLogger.i('Initializing location manager...');
     try {
       await _locationManager.initialize();
       final permissionsGranted = await _locationManager.arePermissionsGranted();
+      AppLogger.i('Location permissions granted: $permissionsGranted');
 
       if (!permissionsGranted && mounted) {
         showDialog(
@@ -573,6 +578,9 @@ class _LocationLifecycleWrapperState extends State<_LocationLifecycleWrapper> {
           barrierDismissible: false,
           builder: (dialogContext) => LocationPermissionDialog(
             onPermissionsGranted: () {
+              AppLogger.i(
+                'Permissions granted via dialog. Starting monitoring.',
+              );
               _locationManager.startMonitoring();
               if (mounted) {
                 context.read<LocationReminderBloc>().add(
@@ -583,15 +591,20 @@ class _LocationLifecycleWrapperState extends State<_LocationLifecycleWrapper> {
           ),
         );
       } else if (permissionsGranted) {
+        AppLogger.i('Starting location monitoring...');
         await _locationManager.startMonitoring();
+        if (mounted) {
+          context.read<LocationReminderBloc>().add(LoadLocationReminders());
+        }
       }
-    } catch (e) {
-      debugPrint('Error initializing location services: $e');
+    } catch (e, stack) {
+      AppLogger.e('Error initializing location services: $e', e, stack);
     }
   }
 
   @override
   void dispose() {
+    AppLogger.i('Disposing location manager wrapper');
     _locationManager.dispose();
     super.dispose();
   }

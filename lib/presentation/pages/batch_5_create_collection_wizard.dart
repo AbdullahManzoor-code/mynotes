@@ -10,6 +10,7 @@ import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'package:mynotes/presentation/design_system/app_spacing.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/core/utils/app_logger.dart';
 
 /// Create Smart Collection Wizard - Batch 5, Screen 1
 /// Refactored to use Design System, Global UI Services, and BLoC
@@ -44,6 +45,9 @@ class _CreateSmartCollectionWizardState
   }
 
   void _onNameChanged() {
+    AppLogger.i(
+      'CreateSmartCollectionWizard: Name changed to ${_collectionNameController.text}',
+    );
     context.read<SmartCollectionWizardBloc>().add(
       UpdateWizardBasicInfoEvent(
         name: _collectionNameController.text,
@@ -53,6 +57,7 @@ class _CreateSmartCollectionWizardState
   }
 
   void _onDescriptionChanged() {
+    AppLogger.i('CreateSmartCollectionWizard: Description changed');
     context.read<SmartCollectionWizardBloc>().add(
       UpdateWizardBasicInfoEvent(
         name: _collectionNameController.text,
@@ -63,6 +68,7 @@ class _CreateSmartCollectionWizardState
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('CreateSmartCollectionWizard: Building UI');
     return BlocProvider<SmartCollectionWizardBloc>(
       create: (context) => getIt<SmartCollectionWizardBloc>(),
       child: BlocBuilder<SmartCollectionWizardBloc, SmartCollectionWizardState>(
@@ -88,6 +94,9 @@ class _CreateSmartCollectionWizardState
                   child: PageView(
                     controller: _pageController,
                     onPageChanged: (index) {
+                      AppLogger.i(
+                        'CreateSmartCollectionWizard: Navigated to step $index',
+                      );
                       context.read<SmartCollectionWizardBloc>().add(
                         UpdateWizardStepEvent(step: index),
                       );
@@ -302,7 +311,12 @@ class _CreateSmartCollectionWizardState
                   foregroundColor: AppColors.primaryColor,
                   textStyle: AppTypography.button(context),
                 ),
-                onPressed: () => _navigateToRuleBuilder(context, state),
+                onPressed: () {
+                  AppLogger.i(
+                    'CreateSmartCollectionWizard: Navigate to rule builder',
+                  );
+                  _navigateToRuleBuilder(context, state);
+                },
               ),
             ],
           ),
@@ -355,6 +369,9 @@ class _CreateSmartCollectionWizardState
                         color: AppColors.error,
                       ),
                       onPressed: () {
+                        AppLogger.i(
+                          'CreateSmartCollectionWizard: Remove rule at index $index',
+                        );
                         context.read<SmartCollectionWizardBloc>().add(
                           RemoveWizardRuleEvent(index: index),
                         );
@@ -457,9 +474,14 @@ class _CreateSmartCollectionWizardState
                   'AND',
                   'Matches everything',
                   state.logic == 'AND',
-                  () => context.read<SmartCollectionWizardBloc>().add(
-                    const UpdateWizardLogicEvent(logic: 'AND'),
-                  ),
+                  () {
+                    AppLogger.i(
+                      'CreateSmartCollectionWizard: Logic set to AND',
+                    );
+                    context.read<SmartCollectionWizardBloc>().add(
+                      const UpdateWizardLogicEvent(logic: 'AND'),
+                    );
+                  },
                 ),
               ),
               AppSpacing.gapM,
@@ -469,9 +491,12 @@ class _CreateSmartCollectionWizardState
                   'OR',
                   'Matches anything',
                   state.logic == 'OR',
-                  () => context.read<SmartCollectionWizardBloc>().add(
-                    const UpdateWizardLogicEvent(logic: 'OR'),
-                  ),
+                  () {
+                    AppLogger.i('CreateSmartCollectionWizard: Logic set to OR');
+                    context.read<SmartCollectionWizardBloc>().add(
+                      const UpdateWizardLogicEvent(logic: 'OR'),
+                    );
+                  },
                 ),
               ),
             ],
@@ -558,6 +583,9 @@ class _CreateSmartCollectionWizardState
             Expanded(
               child: OutlinedButton(
                 onPressed: () {
+                  AppLogger.i(
+                    'CreateSmartCollectionWizard: Previous Step button pressed',
+                  );
                   _pageController.previousPage(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
@@ -607,6 +635,7 @@ class _CreateSmartCollectionWizardState
   }
 
   void _nextStep() {
+    AppLogger.i('CreateSmartCollectionWizard: Next Step button pressed');
     _pageController.nextPage(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
@@ -631,6 +660,9 @@ class _CreateSmartCollectionWizardState
       arguments: state.rules,
     );
     if (result != null && result is List<Map<String, dynamic>>) {
+      AppLogger.i(
+        'CreateSmartCollectionWizard: Rules updated from builder - count: ${result.length}',
+      );
       context.read<SmartCollectionWizardBloc>().add(
         UpdateWizardRulesEvent(rules: result),
       );
@@ -641,7 +673,13 @@ class _CreateSmartCollectionWizardState
     BuildContext context,
     SmartCollectionWizardState state,
   ) {
+    AppLogger.i(
+      'CreateSmartCollectionWizard: Create Collection button pressed',
+    );
     if (state.name.isEmpty) {
+      AppLogger.w(
+        'CreateSmartCollectionWizard: Validation failed - name is empty',
+      );
       getIt<GlobalUiService>().showWarning('Please provide a name');
       return;
     }
@@ -668,4 +706,3 @@ class _CreateSmartCollectionWizardState
     Navigator.pop(context);
   }
 }
-

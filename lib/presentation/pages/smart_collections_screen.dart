@@ -27,6 +27,7 @@ class _SmartCollectionsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('_SmartCollectionsView: build');
     return Scaffold(
       backgroundColor: AppColors.background(context),
       appBar: _buildAppBar(context),
@@ -115,8 +116,10 @@ class _SmartCollectionsView extends StatelessWidget {
     final isSelected = selectedValue == value;
 
     return GestureDetector(
-      onTap: () =>
-          context.read<SmartCollectionsBloc>().add(FilterChangedEvent(value)),
+      onTap: () {
+        AppLogger.i('_SmartCollectionsView: Filter changed to $value');
+        context.read<SmartCollectionsBloc>().add(FilterChangedEvent(value));
+      },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
         decoration: BoxDecoration(
@@ -190,13 +193,18 @@ class _SmartCollectionsView extends StatelessWidget {
     final IconData itemIcon = _getCollectionIcon(collection.id);
 
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) =>
-              _CollectionDetailsScreen(collection: collection),
-        ),
-      ),
+      onTap: () {
+        AppLogger.i(
+          '_SmartCollectionsView: Opening collection details - ${collection.name}',
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                _CollectionDetailsScreen(collection: collection),
+          ),
+        );
+      },
       child: Container(
         margin: EdgeInsets.only(bottom: 12.h),
         padding: AppSpacing.paddingAllM,
@@ -324,9 +332,14 @@ class _SmartCollectionsView extends StatelessWidget {
               Text(collection.isActive ? 'Archive' : 'Activate'),
             ],
           ),
-          onTap: () => context.read<SmartCollectionsBloc>().add(
-            ArchiveSmartCollectionEvent(collectionId: collection.id),
-          ),
+          onTap: () {
+            AppLogger.i(
+              '_SmartCollectionsView: Archive/Activate collection - ${collection.id}',
+            );
+            context.read<SmartCollectionsBloc>().add(
+              ArchiveSmartCollectionEvent(collectionId: collection.id),
+            );
+          },
         ),
         PopupMenuItem(
           child: Row(
@@ -336,9 +349,14 @@ class _SmartCollectionsView extends StatelessWidget {
               const Text('Delete', style: TextStyle(color: Colors.red)),
             ],
           ),
-          onTap: () => context.read<SmartCollectionsBloc>().add(
-            DeleteSmartCollectionEvent(collectionId: collection.id),
-          ),
+          onTap: () {
+            AppLogger.i(
+              '_SmartCollectionsView: Delete collection - ${collection.id}',
+            );
+            context.read<SmartCollectionsBloc>().add(
+              DeleteSmartCollectionEvent(collectionId: collection.id),
+            );
+          },
         ),
       ],
     );
@@ -346,7 +364,10 @@ class _SmartCollectionsView extends StatelessWidget {
 
   Widget _buildCreateButton(BuildContext context) {
     return FloatingActionButton.extended(
-      onPressed: () => _showCreateDialog(context),
+      onPressed: () {
+        AppLogger.i('_SmartCollectionsView: Create button pressed');
+        _showCreateDialog(context);
+      },
       label: const Text('New Collection'),
       icon: const Icon(Icons.add),
       backgroundColor: AppColors.primaryColor,
@@ -383,12 +404,18 @@ class _SmartCollectionsView extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () {
+              AppLogger.i('_SmartCollectionsView: Create dialog cancelled');
+              Navigator.pop(dialogContext);
+            },
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
               if (nameController.text.isNotEmpty) {
+                AppLogger.i(
+                  '_SmartCollectionsView: Creating smart collection - ${nameController.text}',
+                );
                 context.read<SmartCollectionsBloc>().add(
                   CreateSmartCollectionEvent(
                     name: nameController.text,
@@ -407,6 +434,9 @@ class _SmartCollectionsView extends StatelessWidget {
   }
 
   void _showRuleBuilder(BuildContext context, SmartCollection collection) {
+    AppLogger.i(
+      '_SmartCollectionsView: Showing rule builder for ${collection.name}',
+    );
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -419,6 +449,7 @@ class _SmartCollectionsView extends StatelessWidget {
   }
 
   void _showInfoDialog(BuildContext context) {
+    AppLogger.i('_SmartCollectionsView: Showing info dialog');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -433,7 +464,10 @@ class _SmartCollectionsView extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('_SmartCollectionsView: Info dialog dismissed');
+              Navigator.pop(context);
+            },
             child: const Text('Got it'),
           ),
         ],
@@ -869,4 +903,3 @@ class _RuleBuilderSheet extends StatelessWidget {
     );
   }
 }
-

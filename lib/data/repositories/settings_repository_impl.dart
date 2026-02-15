@@ -1,10 +1,10 @@
 import 'package:uuid/uuid.dart';
 import '../../domain/entities/user_settings.dart';
-import '../datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 
 /// Repository for user settings persistence
 class SettingsRepositoryImpl {
-  final NotesDatabase _database;
+  final CoreDatabase _database;
   late UserSettings _cachedSettings;
   bool _settingsLoaded = false;
 
@@ -17,7 +17,7 @@ class SettingsRepositoryImpl {
     }
 
     final db = await _database.database;
-    final maps = await db.query(NotesDatabase.userSettingsTable);
+    final maps = await db.query(CoreDatabase.userSettingsTable);
 
     if (maps.isEmpty) {
       // Create default settings
@@ -27,10 +27,7 @@ class SettingsRepositoryImpl {
         updatedAt: DateTime.now(),
       );
 
-      await db.insert(
-        NotesDatabase.userSettingsTable,
-        defaultSettings.toMap(),
-      );
+      await db.insert(CoreDatabase.userSettingsTable, defaultSettings.toMap());
 
       _cachedSettings = defaultSettings;
       _settingsLoaded = true;
@@ -47,11 +44,8 @@ class SettingsRepositoryImpl {
     final db = await _database.database;
 
     await db.update(
-      NotesDatabase.userSettingsTable,
-      {
-        ...settings.toMap(),
-        'updatedAt': DateTime.now().toIso8601String(),
-      },
+      CoreDatabase.userSettingsTable,
+      {...settings.toMap(), 'updatedAt': DateTime.now().toIso8601String()},
       where: 'id = ?',
       whereArgs: [settings.id],
     );

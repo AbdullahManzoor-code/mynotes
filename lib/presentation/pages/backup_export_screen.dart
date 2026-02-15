@@ -15,6 +15,7 @@ class BackupExportScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('BackupExportScreen: Building wrapper');
     return BlocProvider(
       create: (context) =>
           getIt<BackupBloc>()..add(const LoadBackupStatsEvent()),
@@ -33,6 +34,9 @@ class _BackupExportView extends StatelessWidget {
     return BlocConsumer<BackupBloc, BackupState>(
       listener: (context, state) {
         if (state is BackupCompleted) {
+          AppLogger.i(
+            'BackupExportScreen: Backup completed successfully: ${state.backupFile}',
+          );
           final statsState = context.read<BackupBloc>().state;
           double totalSize = 0;
           if (statsState is BackupStatsLoaded) {
@@ -51,12 +55,17 @@ class _BackupExportView extends StatelessWidget {
             ),
           );
         } else if (state is BackupError) {
+          AppLogger.e('BackupExportScreen: Backup error: ${state.message}');
           getIt<GlobalUiService>().showError(state.message);
         } else if (state is RestoreCompleted) {
+          AppLogger.i('BackupExportScreen: Restore completed successfully');
           getIt<GlobalUiService>().showSuccess(state.message);
         }
       },
       builder: (context, state) {
+        AppLogger.i(
+          'BackupExportScreen: Building with state: ${state.runtimeType}',
+        );
         bool isLoading = state is BackupInProgress || state is BackupInitial;
         BackupParams params = const BackupParams();
 
@@ -190,6 +199,9 @@ class _BackupExportView extends StatelessWidget {
                               Switch(
                                 value: params.includeMedia,
                                 onChanged: (value) {
+                                  AppLogger.i(
+                                    'BackupExportScreen: Include media toggled: $value',
+                                  );
                                   context.read<BackupBloc>().add(
                                     UpdateBackupSettingsEvent(
                                       params.copyWith(includeMedia: value),
@@ -237,6 +249,9 @@ class _BackupExportView extends StatelessWidget {
                               isExpanded: true,
                               onChanged: (value) {
                                 if (value != null) {
+                                  AppLogger.i(
+                                    'BackupExportScreen: Export format changed to $value',
+                                  );
                                   context.read<BackupBloc>().add(
                                     UpdateBackupSettingsEvent(
                                       params.copyWith(exportFormat: value),
@@ -395,7 +410,10 @@ class _BackupExportView extends StatelessWidget {
         children: [
           IconButton(
             icon: const Icon(Icons.close_rounded),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('BackupExportScreen: Close button pressed');
+              Navigator.pop(context);
+            },
           ),
           Text('Backup & Export', style: AppTypography.displayMedium(context)),
           SizedBox(width: 40.w),
@@ -511,22 +529,31 @@ class _BackupExportView extends StatelessWidget {
   }
 
   void _startExport(BuildContext context, BackupParams params) {
+    AppLogger.i(
+      'BackupExportScreen: _startExport triggered with format: ${params.exportFormat}',
+    );
     context.read<BackupBloc>().add(CreateBackupEvent(params));
   }
 
   Future<void> _importData(BuildContext context, BackupParams params) async {
+    AppLogger.i('BackupExportScreen: _importData triggered');
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['zip', 'json'],
     );
 
     if (result != null && result.files.single.path != null) {
+      AppLogger.i(
+        'BackupExportScreen: Import file selected: ${result.files.single.path}',
+      );
       context.read<BackupBloc>().add(
         RestoreBackupEvent(
           params: params,
           backupFilePath: result.files.single.path!,
         ),
       );
+    } else {
+      AppLogger.i('BackupExportScreen: Import file selection cancelled');
     }
   }
 }
@@ -545,6 +572,7 @@ class BackupCompleteScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('BackupCompleteScreen: Building for $backupPath');
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final fileName = backupPath.split(Platform.pathSeparator).last;
 
@@ -560,7 +588,10 @@ class BackupCompleteScreen extends StatelessWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios_rounded),
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      AppLogger.i('BackupCompleteScreen: Back button tapped');
+                      Navigator.pop(context);
+                    },
                   ),
                   Expanded(
                     child: Text(
@@ -683,8 +714,12 @@ class BackupCompleteScreen extends StatelessWidget {
                         width: double.infinity,
                         height: 56.h,
                         child: ElevatedButton(
-                          onPressed: () =>
-                              BackupService.shareBackup(backupPath),
+                          onPressed: () {
+                            AppLogger.i(
+                              'BackupCompleteScreen: Save or Share tapped',
+                            );
+                            BackupService.shareBackup(backupPath);
+                          },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primaryColor,
                             foregroundColor: Colors.white,
@@ -716,8 +751,12 @@ class BackupCompleteScreen extends StatelessWidget {
                         width: double.infinity,
                         height: 56.h,
                         child: OutlinedButton(
-                          onPressed: () =>
-                              BackupService.shareBackup(backupPath),
+                          onPressed: () {
+                            AppLogger.i(
+                              'BackupCompleteScreen: Share Archive tapped',
+                            );
+                            BackupService.shareBackup(backupPath);
+                          },
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppColors.darkText,
                             side: const BorderSide(
@@ -755,6 +794,7 @@ class BackupCompleteScreen extends StatelessWidget {
               padding: AppSpacing.paddingAllM,
               child: TextButton(
                 onPressed: () {
+                  AppLogger.i('BackupCompleteScreen: Done button tapped');
                   Navigator.pop(context);
                   Navigator.pop(context);
                 },
@@ -772,4 +812,3 @@ class BackupCompleteScreen extends StatelessWidget {
     );
   }
 }
-

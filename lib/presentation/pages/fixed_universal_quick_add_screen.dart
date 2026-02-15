@@ -39,6 +39,7 @@ class _FixedUniversalQuickAddScreenState
   @override
   void initState() {
     super.initState();
+    AppLogger.i('FixedUniversalQuickAddScreen: Initialized');
     _bloc = QuickAddBloc();
     _bloc.add(InitializeQuickAdd());
     _initializeAnimations();
@@ -47,6 +48,7 @@ class _FixedUniversalQuickAddScreenState
   }
 
   void _initializeAnimations() {
+    AppLogger.i('FixedUniversalQuickAddScreen: _initializeAnimations');
     _slideController = AnimationController(
       duration: const Duration(milliseconds: 500),
       vsync: this,
@@ -61,28 +63,30 @@ class _FixedUniversalQuickAddScreenState
   }
 
   Future<void> _initializeVoice() async {
+    AppLogger.i('FixedUniversalQuickAddScreen: _initializeVoice');
     try {
       _speechToText = stt.SpeechToText();
       final isAvailable = await _speechToText.initialize(
         onStatus: (status) {
-          AppLogger.i('Voice status: $status');
+          AppLogger.i('FixedUniversalQuickAddScreen Voice status: $status');
           if (status == 'notListening' && _bloc.state.isListening) {
             _bloc.add(const ToggleListening(false));
           }
         },
         onError: (error) {
-          AppLogger.e('Voice error: $error');
+          AppLogger.e('FixedUniversalQuickAddScreen Voice error: $error');
           _handleVoiceError(error);
         },
       );
       _bloc.add(SetVoiceAvailable(isAvailable));
     } catch (e) {
-      AppLogger.e('Voice init error: $e');
+      AppLogger.e('FixedUniversalQuickAddScreen Voice init error: $e');
     }
   }
 
   @override
   void dispose() {
+    AppLogger.i('FixedUniversalQuickAddScreen: Disposed');
     _slideController.dispose();
     _voiceController.dispose();
     _controller.dispose();
@@ -143,7 +147,9 @@ class _FixedUniversalQuickAddScreenState
   }
 
   void _handleSubmit() {
+    AppLogger.i('FixedUniversalQuickAddScreen: _handleSubmit called');
     if (_controller.text.isEmpty || _bloc.state.previewItem == null) {
+      AppLogger.w('FixedUniversalQuickAddScreen: Validation failed');
       _showErrorSnackbar('Please enter something');
       return;
     }
@@ -187,7 +193,12 @@ class _FixedUniversalQuickAddScreenState
           return Scaffold(
             backgroundColor: Colors.black.withOpacity(0.7),
             body: GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                AppLogger.i(
+                  'FixedUniversalQuickAddScreen: Background tap dismissal',
+                );
+                Navigator.pop(context);
+              },
               child: Stack(
                 children: [
                   SlideTransition(
@@ -404,6 +415,9 @@ class _FixedUniversalQuickAddScreenState
               SizedBox(width: 12.w),
               GestureDetector(
                 onTap: () {
+                  AppLogger.i(
+                    'FixedUniversalQuickAddScreen: Clear text button pressed',
+                  );
                   _controller.clear();
                   _onTextChanged();
                 },
@@ -496,7 +510,12 @@ class _FixedUniversalQuickAddScreenState
         children: [
           Expanded(
             child: GestureDetector(
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                AppLogger.i(
+                  'FixedUniversalQuickAddScreen: Cancel button pressed',
+                );
+                Navigator.pop(context);
+              },
               child: Container(
                 padding: EdgeInsets.symmetric(vertical: 14.h),
                 decoration: BoxDecoration(
@@ -571,4 +590,3 @@ class _FixedUniversalQuickAddScreenState
     return Colors.red;
   }
 }
-

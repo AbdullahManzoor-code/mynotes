@@ -18,6 +18,7 @@ class ArchivedNotesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('ArchivedNotesScreen: Building UI');
     final body = BlocBuilder<NotesBloc, NoteState>(
       builder: (context, state) {
         if (state is NoteLoading) {
@@ -26,6 +27,9 @@ class ArchivedNotesScreen extends StatelessWidget {
 
         if (state is ArchivedNotesLoaded) {
           final archivedNotes = state.notes;
+          AppLogger.i(
+            'ArchivedNotesScreen: Loaded ${archivedNotes.length} archived notes',
+          );
 
           if (archivedNotes.isEmpty) {
             return Center(
@@ -79,6 +83,9 @@ class ArchivedNotesScreen extends StatelessWidget {
                     icon: Icons.delete_outline,
                   ),
                   onDismissed: (direction) {
+                    AppLogger.i(
+                      'ArchivedNotesScreen: Note $index dismissed in direction $direction',
+                    );
                     if (direction == DismissDirection.startToEnd) {
                       _unarchiveNote(context, note);
                     } else {
@@ -89,6 +96,9 @@ class ArchivedNotesScreen extends StatelessWidget {
                     note: note,
                     isGridView: false,
                     onTap: () {
+                      AppLogger.i(
+                        'ArchivedNotesScreen: Note $index tapped - ${note.id}',
+                      );
                       Navigator.pushNamed(
                         context,
                         '/notes/editor',
@@ -96,6 +106,9 @@ class ArchivedNotesScreen extends StatelessWidget {
                       );
                     },
                     onLongPress: () {
+                      AppLogger.i(
+                        'ArchivedNotesScreen: Note $index long-pressed - ${note.id}',
+                      );
                       _showArchiveContextMenu(context, note);
                     },
                   ),
@@ -106,6 +119,7 @@ class ArchivedNotesScreen extends StatelessWidget {
         }
 
         if (state is NoteError) {
+          AppLogger.e('ArchivedNotesScreen: Error state - ${state.message}');
           return Center(
             child: Padding(
               padding: EdgeInsets.all(20.r),
@@ -164,12 +178,16 @@ class ArchivedNotesScreen extends StatelessWidget {
   }
 
   void _unarchiveNote(BuildContext context, Note note) {
+    AppLogger.i('ArchivedNotesScreen: Unarchiving note - ${note.id}');
     context.read<NotesBloc>().add(RestoreArchivedNoteEvent(note.id));
 
     getIt<GlobalUiService>().showSuccess(
       'Note unarchived',
       actionLabel: 'Undo',
       onActionPressed: () {
+        AppLogger.i(
+          'ArchivedNotesScreen: Undo unarchive pressed for ${note.id}',
+        );
         context.read<NotesBloc>().add(
           ToggleArchiveNoteEvent(
             NoteParams.fromNote(note).copyWith(isArchived: true),
@@ -180,6 +198,9 @@ class ArchivedNotesScreen extends StatelessWidget {
   }
 
   void _deleteNoteForever(BuildContext context, Note note) {
+    AppLogger.i(
+      'ArchivedNotesScreen: Showing delete forever confirmation for ${note.id}',
+    );
     showDialog<bool>(
       context: context,
       builder: (BuildContext dialogContext) => AlertDialog(
@@ -193,11 +214,17 @@ class ArchivedNotesScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
+            onPressed: () {
+              AppLogger.i('ArchivedNotesScreen: Delete forever cancelled');
+              Navigator.pop(dialogContext, false);
+            },
             child: Text('Cancel', style: AppTypography.button(dialogContext)),
           ),
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
+            onPressed: () {
+              AppLogger.i('ArchivedNotesScreen: Delete forever confirmed');
+              Navigator.pop(dialogContext, true);
+            },
             child: Text(
               'Delete',
               style: AppTypography.button(
@@ -216,6 +243,7 @@ class ArchivedNotesScreen extends StatelessWidget {
   }
 
   void _showArchiveContextMenu(BuildContext context, Note note) {
+    AppLogger.i('ArchivedNotesScreen: Showing context menu for ${note.id}');
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -241,6 +269,9 @@ class ArchivedNotesScreen extends StatelessWidget {
                   ),
                 ),
                 onTap: () {
+                  AppLogger.i(
+                    'ArchivedNotesScreen: Restore from context menu - ${note.id}',
+                  );
                   Navigator.pop(modalContext);
                   _unarchiveNote(context, note);
                 },
@@ -255,6 +286,9 @@ class ArchivedNotesScreen extends StatelessWidget {
                   style: AppTypography.bodyLarge(context, AppColors.errorColor),
                 ),
                 onTap: () {
+                  AppLogger.i(
+                    'ArchivedNotesScreen: Delete forever from context menu - ${note.id}',
+                  );
                   Navigator.pop(modalContext);
                   _deleteNoteForever(context, note);
                 },

@@ -1,17 +1,17 @@
 import '../../core/pdf/pdf_export_service.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/repositories/note_repository.dart';
-import '../datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 
 /// Real implementation of NoteRepository using SQLite
 class NoteRepositoryImpl implements NoteRepository {
-  final NotesDatabase _database;
+  final CoreDatabase _database;
 
-  NoteRepositoryImpl({required NotesDatabase database}) : _database = database;
+  NoteRepositoryImpl({required CoreDatabase database}) : _database = database;
 
   Future<Note> _enrichNote(Note note) async {
-    final todos = await _database.getTodos(note.id);
-    final alarms = await _database.getAlarms(note.id);
+    final todos = await _database.getTodos(noteId: note.id);
+    final alarms = await _database.getAlarms();
     final media = await _database.getMediaForNote(note.id);
 
     return note.copyWith(
@@ -84,10 +84,10 @@ class NoteRepositoryImpl implements NoteRepository {
     try {
       await _database.createNote(note);
       if (note.todos != null) {
-        await _database.addTodos(note.id, note.todos!);
+        await _database.addTodos(note.todos!, note.id);
       }
       if (note.alarms != null) {
-        await _database.updateAlarms(note.id, note.alarms!);
+        await _database.updateAlarms(note.alarms!);
       }
       // Media is usually added separately via addMediaToNote calls from Bloc
       // but if creating full note from backup/restore:
@@ -106,10 +106,10 @@ class NoteRepositoryImpl implements NoteRepository {
     try {
       await _database.updateNote(note);
       if (note.todos != null) {
-        await _database.addTodos(note.id, note.todos!);
+        await _database.addTodos(note.todos!, note.id);
       }
       if (note.alarms != null) {
-        await _database.updateAlarms(note.id, note.alarms!);
+        await _database.updateAlarms(note.alarms!);
       }
       // Sync media items
       await _database.syncMediaForNote(note.id, note.media);

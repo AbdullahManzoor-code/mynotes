@@ -13,6 +13,7 @@ import '../bloc/media_viewer/media_viewer_bloc.dart';
 import '../bloc/media_viewer/media_viewer_event.dart';
 import '../bloc/media_viewer/media_viewer_state.dart';
 import '../../injection_container.dart';
+import '../../core/services/app_logger.dart';
 import 'image_editor_screen.dart';
 import 'video_editor_screen.dart';
 import 'text_editor_screen.dart';
@@ -44,11 +45,15 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
   @override
   void initState() {
     super.initState();
+    AppLogger.i(
+      'MediaViewerScreen: initState (initialIndex: ${widget.initialIndex})',
+    );
     _pageController = PageController(initialPage: widget.initialIndex);
   }
 
   @override
   void dispose() {
+    AppLogger.i('MediaViewerScreen: dispose');
     _pageController.dispose();
     super.dispose();
   }
@@ -66,15 +71,20 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
       child: BlocConsumer<MediaViewerBloc, MediaViewerState>(
         listener: (context, state) {
           if (state is MediaViewerDeleted) {
+            AppLogger.i(
+              'MediaViewerScreen: Media item deleted: ${state.media.id}',
+            );
             if (widget.onDelete != null) {
               widget.onDelete!(state.media);
             }
             Navigator.pop(context);
           } else if (state is MediaViewerUpdated && state.message != null) {
+            AppLogger.i('MediaViewerScreen: Media updated: ${state.message}');
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(SnackBar(content: Text(state.message!)));
           } else if (state is MediaViewerFailure) {
+            AppLogger.e('MediaViewerScreen: Viewer error: ${state.error}');
             ScaffoldMessenger.of(
               context,
             ).showSnackBar(SnackBar(content: Text(state.error)));
@@ -98,7 +108,10 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
               backgroundColor: Colors.black87,
               leading: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () {
+                  AppLogger.i('MediaViewerScreen: Close button pressed');
+                  Navigator.pop(context);
+                },
               ),
               title: Text(
                 '${currentIndex + 1} / ${state.mediaItems.length}',
@@ -111,6 +124,9 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
                     color: isMarkupEnabled ? Colors.orange : Colors.white,
                   ),
                   onPressed: () {
+                    AppLogger.i(
+                      'MediaViewerScreen: Toggle markup pressed (current: $isMarkupEnabled)',
+                    );
                     context.read<MediaViewerBloc>().add(
                       const ToggleMarkupEvent(),
                     );
@@ -121,6 +137,9 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
                   IconButton(
                     icon: const Icon(Icons.download, color: Colors.white),
                     onPressed: () {
+                      AppLogger.i(
+                        'MediaViewerScreen: Save to gallery pressed: ${currentMedia.id}',
+                      );
                       context.read<MediaViewerBloc>().add(
                         SaveMediaToGalleryEvent(currentMedia),
                       );
@@ -133,12 +152,20 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
                         currentMedia.name.endsWith('.txt')))
                   IconButton(
                     icon: const Icon(Icons.edit, color: Colors.white),
-                    onPressed: () => _editCurrentMedia(context, state),
+                    onPressed: () {
+                      AppLogger.i(
+                        'MediaViewerScreen: Edit media pressed: ${currentMedia.id}',
+                      );
+                      _editCurrentMedia(context, state);
+                    },
                   ),
                 if (widget.onDelete != null)
                   IconButton(
                     icon: const Icon(Icons.delete, color: Colors.white),
                     onPressed: () {
+                      AppLogger.i(
+                        'MediaViewerScreen: Delete media pressed: ${currentMedia.id}',
+                      );
                       context.read<MediaViewerBloc>().add(
                         DeleteMediaItemEvent(currentMedia),
                       );
@@ -559,4 +586,3 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     }
   }
 }
-

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/domain/entities/todo_item.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_state.dart';
@@ -62,7 +63,10 @@ class DailyFocusHighlightScreen extends StatelessWidget {
             color: AppColors.textPrimary(context),
             size: 20.sp,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            AppLogger.i('DailyFocusHighlightScreenV2: Back pressed');
+            Navigator.pop(context);
+          },
         ),
       ),
       actions: [
@@ -79,6 +83,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               size: 20.sp,
             ),
             onPressed: () {
+              AppLogger.i('DailyFocusHighlightScreenV2: Info pressed');
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -542,6 +547,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
+                  AppLogger.i(
+                    'DailyFocusHighlightScreenV2: Start Focus Session pressed',
+                  );
                   HapticFeedback.mediumImpact();
                   Navigator.pushNamed(
                     context,
@@ -590,6 +598,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
+                  AppLogger.i(
+                    'DailyFocusHighlightScreenV2: Share Highlight pressed',
+                  );
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(

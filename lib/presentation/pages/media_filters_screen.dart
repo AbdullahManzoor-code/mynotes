@@ -4,6 +4,7 @@ import '../bloc/media_filters/media_filters_bloc.dart';
 import '../bloc/media_filters/media_filters_event.dart';
 import '../bloc/media_filters/media_filters_state.dart';
 import '../design_system/design_system.dart';
+import '../../core/services/app_logger.dart';
 
 /// Media Filters & Effects Screen
 /// Apply filters to images: Grayscale, Sepia, Blur, Brightness, etc.
@@ -57,7 +58,10 @@ class MediaFiltersScreen extends StatelessWidget {
       ),
       actions: [
         TextButton(
-          onPressed: () => _saveFilteredImage(context),
+          onPressed: () {
+            AppLogger.i('MediaFiltersScreen: Save filtered image pressed');
+            _saveFilteredImage(context);
+          },
           child: const Text('Save'),
         ),
       ],
@@ -169,6 +173,9 @@ class MediaFiltersScreen extends StatelessWidget {
           Slider(
             value: state.intensity,
             onChanged: (value) {
+              AppLogger.i(
+                'MediaFiltersScreen: Intensity changed: ${value.toInt()}%',
+              );
               context.read<MediaFiltersBloc>().add(UpdateIntensityEvent(value));
             },
             min: 0,
@@ -179,6 +186,7 @@ class MediaFiltersScreen extends StatelessWidget {
             children: [
               TextButton.icon(
                 onPressed: () {
+                  AppLogger.i('MediaFiltersScreen: Reset filter pressed');
                   context.read<MediaFiltersBloc>().add(
                     const ResetFilterEvent(),
                   );
@@ -189,6 +197,7 @@ class MediaFiltersScreen extends StatelessWidget {
               const Spacer(),
               TextButton.icon(
                 onPressed: () {
+                  AppLogger.i('MediaFiltersScreen: Toggle preview pressed');
                   // Compare before/after
                   context.read<MediaFiltersBloc>().add(
                     const TogglePreviewEvent(),
@@ -237,6 +246,9 @@ class MediaFiltersScreen extends StatelessWidget {
               padding: EdgeInsets.only(right: 12.w),
               child: GestureDetector(
                 onTap: () {
+                  AppLogger.i(
+                    'MediaFiltersScreen: Filter selected: ${filter.name}',
+                  );
                   context.read<MediaFiltersBloc>().add(
                     ApplyFilterEvent(filter.type),
                   );

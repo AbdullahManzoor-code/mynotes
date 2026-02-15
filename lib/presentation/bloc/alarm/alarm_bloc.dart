@@ -2,6 +2,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
 import 'package:mynotes/domain/entities/alarm.dart';
 import 'package:uuid/uuid.dart';
@@ -172,7 +173,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
   ) async {
     try {
       emit(const AlarmLoading(message: 'Loading alarms...'));
-      debugPrint('[AlarmBloc] Loading alarms...');
+      AppLogger.i('Loading alarms...');
 
       // Load alarms from repository
       final alarmEntities = await _alarmRepository.getAlarms();
@@ -199,7 +200,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       // Sort by alarm time
       resultAlarms.sort((a, b) => a.alarmTime.compareTo(b.alarmTime));
 
-      debugPrint('[AlarmBloc] Loaded ${resultAlarms.length} alarms');
+      AppLogger.i('Loaded ${resultAlarms.length} alarms');
 
       emit(
         AlarmLoaded(
@@ -213,7 +214,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         ),
       );
     } catch (e, stackTrace) {
-      debugPrint('[AlarmBloc] Load error: $e\n$stackTrace');
+      AppLogger.e('Load error: $e', e, stackTrace);
       emit(
         AlarmError(
           'Failed to load alarms: ${e.toString()}',
@@ -233,7 +234,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
 
       // Validate input
       _validateAlarmParams(event.params);
-      debugPrint('[AlarmBloc] Adding alarm: ${event.params.title}');
+      AppLogger.i('Adding alarm: ${event.params.title}');
 
       // Generate ID if not provided
       final alarmId = event.params.alarmId ?? _uuid.v4();
@@ -250,9 +251,9 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       if (alarmToSave.noteId != null) {
         try {
           linkedNote = await _noteRepository.getNoteById(alarmToSave.noteId!);
-          debugPrint('[AlarmBloc] Found linked note: ${linkedNote?.title}');
+          AppLogger.i('Found linked note: ${linkedNote?.title}');
         } catch (e) {
-          debugPrint('[AlarmBloc] Warning: Could not load linked note: $e');
+          AppLogger.w('Warning: Could not load linked note: $e');
           // Continue - linked note is optional
         }
       }
@@ -270,7 +271,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
               ? alarmToSave.repeatDays
               : null,
         );
-        debugPrint('[AlarmBloc] Notification scheduled successfully');
+        AppLogger.i('Notification scheduled successfully');
       } catch (e, stackTrace) {
         throw ReminderSchedulingException(
           message: 'Failed to schedule notification: $e',
@@ -283,7 +284,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       try {
         final alarmEntity = _toAlarmEntity(alarmToSave);
         await _alarmRepository.createAlarm(alarmEntity);
-        debugPrint('[AlarmBloc] Alarm saved to database');
+        AppLogger.i('Alarm saved to database');
       } catch (e, stackTrace) {
         // Rollback: Cancel the scheduled notification
         await _notificationService.cancel(alarmId.hashCode);
@@ -297,7 +298,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       // Update cache
       _cachedAlarms.add(alarmToSave);
 
-      debugPrint('[AlarmBloc] Alarm created successfully: $alarmId');
+      AppLogger.i('Alarm created successfully: $alarmId');
       emit(
         AlarmSuccess(
           'Alarm set for ${alarmToSave.getTimeString()}',
@@ -305,7 +306,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         ),
       );
     } on ValidationException catch (e) {
-      debugPrint('[AlarmBloc] Validation error: ${e.message}');
+      AppLogger.w('Validation error: ${e.message}');
       emit(
         AlarmValidationError(
           e.message,
@@ -314,16 +315,16 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         ),
       );
     } on InvalidReminderDateException catch (e) {
-      debugPrint('[AlarmBloc] Date validation error: ${e.message}');
+      AppLogger.w('Date validation error: ${e.message}');
       emit(AlarmValidationError(e.message, field: 'alarmTime'));
     } on ReminderSchedulingException catch (e) {
-      debugPrint('[AlarmBloc] Scheduling error: ${e.message}');
+      AppLogger.e('Scheduling error: ${e.message}', e, e.stackTrace);
       emit(AlarmError(e.message, code: e.code, exception: e));
     } on ReminderException catch (e) {
-      debugPrint('[AlarmBloc] Reminder error: ${e.message}');
+      AppLogger.e('Reminder error: ${e.message}', e, e.stackTrace);
       emit(AlarmError(e.message, code: e.code, exception: e));
     } catch (e, stackTrace) {
-      debugPrint('[AlarmBloc] Unexpected error: $e\n$stackTrace');
+      AppLogger.e('Unexpected error: $e', e, stackTrace);
       emit(
         AlarmError(
           'Failed to create alarm: ${e.toString()}',
@@ -344,7 +345,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       // ✅ FIXED: Use event.params instead of event.alarm
       _validateAlarmId(event.params.alarmId);
       _validateAlarmParams(event.params);
-      debugPrint('[AlarmBloc] Updating alarm: ${event.params.alarmId}');
+      AppLogger.i('Updating alarm: ${event.params.alarmId}');
 
       final alarmToUpdate = event.params.copyWith(updatedAt: DateTime.now());
 
@@ -354,7 +355,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         try {
           linkedNote = await _noteRepository.getNoteById(alarmToUpdate.noteId!);
         } catch (e) {
-          debugPrint('[AlarmBloc] Warning: Could not load linked note: $e');
+          AppLogger.w('Warning: Could not load linked note: $e');
         }
       }
 
@@ -380,7 +381,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
                 : null,
           );
         }
-        debugPrint('[AlarmBloc] Notification rescheduled successfully');
+        AppLogger.i('Notification rescheduled successfully');
       } catch (e, stackTrace) {
         throw ReminderSchedulingException(
           message: 'Failed to reschedule notification: $e',
@@ -393,7 +394,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       try {
         final alarmEntity = _toAlarmEntity(alarmToUpdate);
         await _alarmRepository.updateAlarm(alarmEntity);
-        debugPrint('[AlarmBloc] Alarm updated in database');
+        AppLogger.i('Alarm updated in database');
       } catch (e, stackTrace) {
         // Rollback notification if database fails
         if (alarmToUpdate.alarmId != null) {
@@ -417,10 +418,10 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         _cachedAlarms.add(alarmToUpdate);
       }
 
-      debugPrint('[AlarmBloc] Alarm updated successfully');
+      AppLogger.i('Alarm updated successfully');
       emit(AlarmSuccess('Alarm updated successfully', result: alarmToUpdate));
     } on ValidationException catch (e) {
-      debugPrint('[AlarmBloc] Validation error: ${e.message}');
+      AppLogger.w('Validation error: ${e.message}');
       emit(
         AlarmValidationError(
           e.message,
@@ -429,16 +430,16 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         ),
       );
     } on InvalidReminderDateException catch (e) {
-      debugPrint('[AlarmBloc] Date validation error: ${e.message}');
+      AppLogger.w('Date validation error: ${e.message}');
       emit(AlarmValidationError(e.message, field: 'alarmTime'));
     } on ReminderSchedulingException catch (e) {
-      debugPrint('[AlarmBloc] Scheduling error: ${e.message}');
+      AppLogger.e('Scheduling error: ${e.message}', e, e.stackTrace);
       emit(AlarmError(e.message, code: e.code, exception: e));
     } on ReminderException catch (e) {
-      debugPrint('[AlarmBloc] Reminder error: ${e.message}');
+      AppLogger.e('Reminder error: ${e.message}', e, e.stackTrace);
       emit(AlarmError(e.message, code: e.code, exception: e));
     } catch (e, stackTrace) {
-      debugPrint('[AlarmBloc] Unexpected error: $e\n$stackTrace');
+      AppLogger.e('Unexpected error: $e', e, stackTrace);
       emit(
         AlarmError(
           'Failed to update alarm: ${e.toString()}',
@@ -458,7 +459,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
 
       // ✅ FIXED: Use event.alarmId instead of event.params
       _validateAlarmId(event.alarmId);
-      debugPrint('[AlarmBloc] Deleting alarm: ${event.alarmId}');
+      AppLogger.i('Deleting alarm: ${event.alarmId}');
 
       // Find alarm in cache for undo support
       AlarmParams? alarmToDelete;
@@ -473,16 +474,16 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       // Cancel notification
       try {
         await _notificationService.cancel(event.alarmId.hashCode);
-        debugPrint('[AlarmBloc] Notification cancelled');
+        AppLogger.i('Notification cancelled');
       } catch (e) {
-        debugPrint('[AlarmBloc] Warning: Failed to cancel notification: $e');
+        AppLogger.w('Warning: Failed to cancel notification: $e');
         // Continue - notification might not exist
       }
 
       // Delete from repository
       try {
         await _alarmRepository.deleteAlarm(event.alarmId);
-        debugPrint('[AlarmBloc] Alarm deleted from database');
+        AppLogger.i('Alarm deleted from database');
       } catch (e, stackTrace) {
         throw ReminderException(
           message: 'Failed to delete alarm from database: $e',
@@ -494,7 +495,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       // Update cache
       _cachedAlarms.removeWhere((a) => a.alarmId == event.alarmId);
 
-      debugPrint('[AlarmBloc] Alarm deleted successfully');
+      AppLogger.i('Alarm deleted successfully');
       emit(
         AlarmDeleted(
           alarmId: event.alarmId,
@@ -502,13 +503,13 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         ),
       );
     } on ReminderNotFoundException catch (e) {
-      debugPrint('[AlarmBloc] Alarm not found: ${e.reminderId}');
+      AppLogger.w('Alarm not found: ${e.reminderId}');
       emit(AlarmError(e.message, code: e.code, exception: e));
     } on ReminderException catch (e) {
-      debugPrint('[AlarmBloc] Delete error: ${e.message}');
+      AppLogger.e('Delete error: ${e.message}', e, e.stackTrace);
       emit(AlarmError(e.message, code: e.code, exception: e));
     } catch (e, stackTrace) {
-      debugPrint('[AlarmBloc] Unexpected error: $e\n$stackTrace');
+      AppLogger.e('Unexpected error: $e', e, stackTrace);
       emit(
         AlarmError(
           'Failed to delete alarm: ${e.toString()}',
@@ -527,8 +528,8 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       emit(const AlarmLoading(message: 'Snoozing alarm...'));
 
       _validateAlarmId(event.alarmId);
-      debugPrint(
-        '[AlarmBloc] Snoozing alarm: ${event.alarmId} for ${event.snoozeMinutes} minutes',
+      AppLogger.i(
+        'Snoozing alarm: ${event.alarmId} for ${event.snoozeMinutes} minutes',
       );
 
       // Find alarm in cache
@@ -570,7 +571,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         repeatDays: null, // One-time for snooze
       );
 
-      debugPrint('[AlarmBloc] Alarm snoozed until $snoozeUntil');
+      AppLogger.i('Alarm snoozed until $snoozeUntil');
       emit(
         AlarmSnoozed(
           alarm: alarm,
@@ -579,9 +580,10 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         ),
       );
     } on ReminderNotFoundException catch (e) {
+      AppLogger.w('Alarm not found for snooze: ${e.reminderId}');
       emit(AlarmError(e.message, code: e.code, exception: e));
     } catch (e, stackTrace) {
-      debugPrint('[AlarmBloc] Snooze error: $e\n$stackTrace');
+      AppLogger.e('Snooze error: $e', e, stackTrace);
       emit(
         AlarmError(
           'Failed to snooze alarm: ${e.toString()}',
@@ -598,7 +600,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
   ) async {
     try {
       _validateAlarmId(event.alarmId);
-      debugPrint('[AlarmBloc] Completing alarm: ${event.alarmId}');
+      AppLogger.i('Completing alarm: ${event.alarmId}');
 
       // Find alarm
       AlarmParams? alarm;
@@ -640,16 +642,15 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
           scheduledTime: nextOccurrence,
           repeatDays: alarm.repeatDays.isNotEmpty ? alarm.repeatDays : null,
         );
-        debugPrint(
-          '[AlarmBloc] Recurring alarm rescheduled for $nextOccurrence',
-        );
+        AppLogger.i('Recurring alarm rescheduled for $nextOccurrence');
       }
 
       emit(AlarmSuccess('Alarm completed', result: alarm));
     } on ReminderNotFoundException catch (e) {
+      AppLogger.w('Alarm not found for complete: ${e.reminderId}');
       emit(AlarmError(e.message, code: e.code, exception: e));
     } catch (e, stackTrace) {
-      debugPrint('[AlarmBloc] Complete error: $e\n$stackTrace');
+      AppLogger.e('Complete error: $e', e, stackTrace);
       emit(
         AlarmError(
           'Failed to complete alarm: ${e.toString()}',
@@ -666,6 +667,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
   ) async {
     try {
       _validateAlarmId(event.alarmId);
+      AppLogger.i('Toggling alarm status: ${event.alarmId}');
 
       // Find alarm
       AlarmParams? alarm;
@@ -684,8 +686,10 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       // Dispatch update event
       add(UpdateAlarmEvent(updatedAlarm));
     } on ReminderNotFoundException catch (e) {
+      AppLogger.w('Alarm not found for toggle: ${e.reminderId}');
       emit(AlarmError(e.message, code: e.code, exception: e));
     } catch (e) {
+      AppLogger.e('Toggle error: $e', e, null);
       emit(
         AlarmError(
           'Failed to toggle alarm: ${e.toString()}',
@@ -702,7 +706,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
   ) async {
     try {
       emit(const AlarmLoading(message: 'Deleting alarms...'));
-      debugPrint('[AlarmBloc] Deleting alarms for note: ${event.noteId}');
+      AppLogger.i('Deleting alarms for note: ${event.noteId}');
 
       final alarmsToDelete = _cachedAlarms
           .where((a) => a.noteId == event.noteId)
@@ -716,7 +720,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
 
       _cachedAlarms.removeWhere((a) => a.noteId == event.noteId);
 
-      debugPrint('[AlarmBloc] Deleted ${alarmsToDelete.length} alarms');
+      AppLogger.i('Deleted ${alarmsToDelete.length} alarms');
       emit(
         AlarmSuccess(
           'Deleted ${alarmsToDelete.length} alarms',
@@ -724,7 +728,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         ),
       );
     } catch (e, stackTrace) {
-      debugPrint('[AlarmBloc] Delete error: $e\n$stackTrace');
+      AppLogger.e('Delete for note error: $e', e, stackTrace);
       emit(
         AlarmError(
           'Failed to delete alarms: ${e.toString()}',

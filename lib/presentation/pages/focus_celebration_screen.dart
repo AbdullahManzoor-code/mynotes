@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import '../design_system/design_system.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/focus/focus_bloc.dart';
@@ -31,6 +32,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i('FocusCelebrationScreen: Initialized');
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 10),
     );
@@ -39,6 +41,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
 
   @override
   void dispose() {
+    AppLogger.i('FocusCelebrationScreen: Disposed');
     _confettiController.dispose();
     super.dispose();
   }
@@ -146,7 +149,10 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
               color: Colors.white.withOpacity(0.4),
               size: 24.sp,
             ),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('FocusCelebrationScreen: Close button pressed');
+              Navigator.pop(context);
+            },
           ),
           Text(
             'SESSION RESULTS',
@@ -315,6 +321,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
             height: 64.h,
             child: ElevatedButton(
               onPressed: () {
+                AppLogger.i('FocusCelebrationScreen: Take Long Break pressed');
                 context.read<FocusBloc>().add(const StartBreakSessionEvent());
                 Navigator.pushReplacement(
                   context,
@@ -355,6 +362,7 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
           // Done / Start New Button
           TextButton(
             onPressed: () {
+              AppLogger.i('FocusCelebrationScreen: Done & Finish pressed');
               // Reset to initial state
               context.read<FocusBloc>().add(const StopFocusSessionEvent());
               Navigator.pop(context);
@@ -403,4 +411,3 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
     );
   }
 }
-

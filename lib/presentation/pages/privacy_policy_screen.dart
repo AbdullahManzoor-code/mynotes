@@ -6,6 +6,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('PrivacyPolicyScreen: build');
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       appBar: AppBar(

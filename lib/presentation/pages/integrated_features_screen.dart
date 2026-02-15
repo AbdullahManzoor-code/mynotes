@@ -6,7 +6,9 @@ import '../widgets/collection_manager_widget.dart';
 import '../widgets/kanban_board_widget.dart';
 import '../design_system/design_system.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/design_system/app_typography.dart'; // Added
+import '../../core/design_system/app_typography.dart';
+import '../../core/services/app_logger.dart';
+import 'graph_view_page.dart';
 
 class IntegratedFeaturesScreen extends StatelessWidget {
   const IntegratedFeaturesScreen({super.key});
@@ -16,7 +18,7 @@ class IntegratedFeaturesScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return DefaultTabController(
-      length: 5,
+      length: 6,
       child: Scaffold(
         appBar: AppBar(
           title: Text(
@@ -39,6 +41,7 @@ class IntegratedFeaturesScreen extends StatelessWidget {
                 _buildTab('Collections', Icons.folder),
                 _buildTab('Kanban', Icons.list_alt),
                 _buildTab('AI & Insights', Icons.auto_awesome),
+                _buildTab('Graph', Icons.hub),
               ],
               indicator: BoxDecoration(
                 border: Border(
@@ -64,6 +67,7 @@ class IntegratedFeaturesScreen extends StatelessWidget {
             _buildCollectionsTab(context),
             _buildKanbanBoardTab(context),
             _buildAIInsightsTab(context),
+            const GraphViewPage(),
           ],
         ),
       ),
@@ -98,6 +102,15 @@ class IntegratedFeaturesScreen extends StatelessWidget {
               Icons.image_outlined,
             ),
             SizedBox(height: 16.h),
+            _buildHubCard(
+              context,
+              title: 'Media Insights',
+              subtitle: 'Analyze your media storage and usage',
+              icon: Icons.data_usage_rounded,
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.mediaAnalytics),
+            ),
+            SizedBox(height: 16.h),
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12.r),
@@ -110,6 +123,9 @@ class IntegratedFeaturesScreen extends StatelessWidget {
               height: 400.h,
               child: MediaGalleryWidget(
                 onMediaSelected: (mediaItems) {
+                  AppLogger.i(
+                    'IntegratedFeaturesScreen: Selected ${mediaItems.length} media item(s)',
+                  );
                   _showSnackBar(
                     context,
                     'Selected ${mediaItems.length} media item(s)',
@@ -159,6 +175,7 @@ class IntegratedFeaturesScreen extends StatelessWidget {
               height: 400.h,
               child: DrawingCanvasWidget(
                 onDrawingComplete: (image) {
+                  AppLogger.i('IntegratedFeaturesScreen: Drawing completed');
                   _showSnackBar(context, 'Drawing saved successfully!');
                 },
               ),
@@ -193,6 +210,15 @@ class IntegratedFeaturesScreen extends StatelessWidget {
               Icons.folder_outlined,
             ),
             SizedBox(height: 16.h),
+            _buildHubCard(
+              context,
+              title: 'Smart Collections',
+              subtitle: 'AI-powered auto-organizing folders',
+              icon: Icons.auto_fix_high_rounded,
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.smartCollections),
+            ),
+            SizedBox(height: 16.h),
             Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12.r),
@@ -205,9 +231,15 @@ class IntegratedFeaturesScreen extends StatelessWidget {
               height: 400.h,
               child: CollectionManagerWidget(
                 onCollectionSelected: (collection) {
+                  AppLogger.i(
+                    'IntegratedFeaturesScreen: Collection selected: ${collection.name}',
+                  );
                   _showSnackBar(context, 'Collection: ${collection.name}');
                 },
                 onCollectionCreated: (collection) {
+                  AppLogger.i(
+                    'IntegratedFeaturesScreen: Collection created: ${collection.name}',
+                  );
                   _showSnackBar(context, 'Created: ${collection.name}');
                 },
               ),
@@ -330,6 +362,40 @@ class IntegratedFeaturesScreen extends StatelessWidget {
               onTap: () =>
                   Navigator.pushNamed(context, AppRoutes.templateGallery),
             ),
+            SizedBox(height: 12.h),
+            _buildHubCard(
+              context,
+              title: 'Unified Item View',
+              subtitle: 'All notes, todos, and alerts in one stream',
+              icon: Icons.dashboard_customize_outlined,
+              onTap: () => Navigator.pushNamed(context, AppRoutes.unifiedItems),
+            ),
+            SizedBox(height: 12.h),
+            _buildHubCard(
+              context,
+              title: 'Detailed Analytics',
+              subtitle: 'Deeper insights into your productivity',
+              icon: Icons.bar_chart_rounded,
+              onTap: () => Navigator.pushNamed(context, AppRoutes.analytics),
+            ),
+            SizedBox(height: 12.h),
+            _buildHubCard(
+              context,
+              title: 'Engagement Metrics',
+              subtitle: 'Check how consistent you are',
+              icon: Icons.speed_rounded,
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.engagementMetrics),
+            ),
+            SizedBox(height: 12.h),
+            _buildHubCard(
+              context,
+              title: 'Frequency Analysis',
+              subtitle: 'Visualize your reminder density',
+              icon: Icons.timeline_rounded,
+              onTap: () =>
+                  Navigator.pushNamed(context, AppRoutes.frequencyAnalytics),
+            ),
             SizedBox(height: 24.h),
             _buildFeatureList(context, [
               'Dynamic suggestions based on usage',
@@ -352,7 +418,10 @@ class IntegratedFeaturesScreen extends StatelessWidget {
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
-      onTap: onTap,
+      onTap: () {
+        AppLogger.i('IntegratedFeaturesScreen: Hub Card Tapped: $title');
+        onTap();
+      },
       borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.all(16.w),

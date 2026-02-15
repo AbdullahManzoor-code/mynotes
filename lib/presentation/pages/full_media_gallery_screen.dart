@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 
 import '../bloc/media/media_gallery/media_gallery_bloc.dart';
 import '../design_system/design_system.dart';
@@ -19,6 +20,7 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
 
   @override
   void dispose() {
+    AppLogger.i('FullMediaGalleryScreen: Disposed');
     _searchController.dispose();
     super.dispose();
   }
@@ -26,18 +28,24 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
   @override
   void initState() {
     super.initState();
+    AppLogger.i('FullMediaGalleryScreen: Initialized');
     context.read<MediaGalleryBloc>().add(const LoadAllMediaEvent());
   }
 
   void _toggleMultiSelect(String mediaId) {
+    AppLogger.i('FullMediaGalleryScreen: Toggled multi-select for $mediaId');
     context.read<MediaGalleryBloc>().add(SelectMediaEvent(mediaId: mediaId));
   }
 
   void _clearSelection() {
+    AppLogger.i('FullMediaGalleryScreen: Selection cleared');
     context.read<MediaGalleryBloc>().add(const ClearSelectionEvent());
   }
 
   void _deleteSelectedMedia(Set<String> selectedIds) {
+    AppLogger.i(
+      'FullMediaGalleryScreen: Requesting delete for ${selectedIds.length} items',
+    );
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -47,11 +55,15 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('FullMediaGalleryScreen: Delete cancelled');
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
+              AppLogger.i('FullMediaGalleryScreen: Delete confirmed');
               for (final mediaId in selectedIds) {
                 context.read<MediaGalleryBloc>().add(
                   DeleteMediaEvent(mediaId: mediaId),

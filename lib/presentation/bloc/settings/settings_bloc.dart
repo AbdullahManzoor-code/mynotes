@@ -9,6 +9,8 @@ import '../../../core/services/backup_service.dart';
 import '../../../core/services/theme_customization_service.dart';
 import '../../../domain/repositories/stats_repository.dart';
 
+import 'package:mynotes/core/services/app_logger.dart';
+
 part 'settings_event.dart';
 part 'settings_state.dart';
 
@@ -72,13 +74,16 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     LoadSettingsEvent event,
     Emitter<SettingsState> emit,
   ) async {
+    AppLogger.i('Handling LoadSettingsEvent');
     emit(const SettingsLoading());
     try {
       final prefs = await SharedPreferences.getInstance();
 
+      AppLogger.i('Checking biometric availability...');
       final biometricAvailable = await _biometricService.isBiometricAvailable();
       final biometricEnabled = await _biometricService.isBiometricEnabled();
 
+      AppLogger.i('Fetching stats for settings screen...');
       final counts = await getIt<StatsRepository>().getItemCounts();
       final stats = await BackupService.getBackupStats();
 
@@ -105,7 +110,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       );
 
       emit(SettingsLoaded(params));
-    } catch (e) {
+      AppLogger.i('Settings loaded successfully.');
+    } catch (e, stack) {
+      AppLogger.e('Error loading settings: $e', e, stack);
       emit(SettingsError(e.toString()));
     }
   }
@@ -114,10 +121,12 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
     UpdateSettingsEvent event,
     Emitter<SettingsState> emit,
   ) async {
+    AppLogger.i('Handling UpdateSettingsEvent');
     try {
       final prefs = await SharedPreferences.getInstance();
       final params = event.params;
 
+      AppLogger.i('Saving updated settings to SharedPreferences...');
       await prefs.setBool(_notificationsKey, params.notificationsEnabled);
       await prefs.setBool(_soundKey, params.soundEnabled);
       await prefs.setBool(_vibrationKey, params.vibrationEnabled);
@@ -142,7 +151,9 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
       }
 
       emit(SettingsLoaded(params));
-    } catch (e) {
+      AppLogger.i('Settings updated successfully.');
+    } catch (e, stack) {
+      AppLogger.e('Error updating settings: $e', e, stack);
       emit(SettingsError(e.toString()));
     }
   }

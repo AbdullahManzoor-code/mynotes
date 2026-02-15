@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/domain/entities/universal_item.dart';
 import '../design_system/design_system.dart';
 import '../widgets/universal_item_card.dart';
@@ -41,6 +42,7 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
   @override
   void initState() {
     super.initState();
+    AppLogger.i('CrossFeatureDemo: Initialized');
     _bloc = CrossFeatureBloc()..add(const StartScenario(0));
     _initializeAnimation();
   }
@@ -61,12 +63,14 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
 
   @override
   void dispose() {
+    AppLogger.i('CrossFeatureDemo: Disposed');
     _transformController.dispose();
     _bloc.close();
     super.dispose();
   }
 
   Future<void> _nextStep() async {
+    AppLogger.i('CrossFeatureDemo: Moving to next step');
     _bloc.add(NextStep());
 
     _transformController.forward().then((_) {
@@ -110,8 +114,12 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
                 elevation: 0,
                 actions: [
                   IconButton(
-                    onPressed: () =>
-                        _bloc.add(StartScenario(state.selectedScenario)),
+                    onPressed: () {
+                      AppLogger.i(
+                        'CrossFeatureDemo: Refresh scenario pressed for scenario ${state.selectedScenario}',
+                      );
+                      _bloc.add(StartScenario(state.selectedScenario));
+                    },
                     icon: const Icon(Icons.refresh),
                   ),
                 ],
@@ -158,6 +166,7 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
           final isSelected = index == state.selectedScenario;
           return GestureDetector(
             onTap: () {
+              AppLogger.i('CrossFeatureDemo: Scenario $index selected');
               _bloc.add(StartScenario(index));
             },
             child: Container(
@@ -383,7 +392,10 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
       width: double.infinity,
       child: ElevatedButton(
         onPressed: isComplete
-            ? () => _bloc.add(StartScenario(state.selectedScenario))
+            ? () {
+                AppLogger.i('CrossFeatureDemo: Restarting demo scenario');
+                _bloc.add(StartScenario(state.selectedScenario));
+              }
             : _nextStep,
         style: ElevatedButton.styleFrom(
           backgroundColor: isComplete
@@ -492,4 +504,3 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
     );
   }
 }
-

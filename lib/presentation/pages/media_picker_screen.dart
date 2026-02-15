@@ -26,6 +26,7 @@ class MediaPickerScreen extends StatelessWidget {
     required BuildContext context,
     required bool isVideo,
   }) async {
+    AppLogger.i('MediaPickerScreen: Capturing from camera (isVideo: $isVideo)');
     final ImagePicker picker = ImagePicker();
     try {
       XFile? file;
@@ -42,6 +43,7 @@ class MediaPickerScreen extends StatelessWidget {
       }
 
       if (file != null && context.mounted) {
+        AppLogger.i('MediaPickerScreen: Captured successfully: ${file.path}');
         Navigator.pop(context, [
           {
             'path': file.path,
@@ -51,6 +53,7 @@ class MediaPickerScreen extends StatelessWidget {
         ]);
       }
     } catch (e) {
+      AppLogger.e('MediaPickerScreen: Failed to capture from camera', e);
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
@@ -70,6 +73,9 @@ class MediaPickerScreen extends StatelessWidget {
         child: BlocConsumer<MediaPickerBloc, MediaPickerState>(
           listener: (context, state) {
             if (state is MediaPickerLoaded && state.error != null) {
+              AppLogger.e(
+                'MediaPickerScreen: Error loading assets: ${state.error}',
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(state.error!),
@@ -77,6 +83,9 @@ class MediaPickerScreen extends StatelessWidget {
                 ),
               );
             } else if (state is MediaPickerSelectionConfirmed) {
+              AppLogger.i(
+                'MediaPickerScreen: Selection confirmed with ${state.selectedFiles.length} files',
+              );
               Navigator.pop(context, state.selectedFiles);
             }
           },

@@ -30,6 +30,7 @@ class TodayDashboardScreen extends StatelessWidget {
   const TodayDashboardScreen({super.key});
 
   void _loadDashboardData(BuildContext context) {
+    AppLogger.i('Loading Dashboard Data...');
     context.read<NotesBloc>().add(const LoadNotesEvent());
     context.read<AlarmsBloc>().add(LoadAlarms());
     context.read<ReflectionBloc>().add(const InitializeReflectionEvent());
@@ -40,7 +41,10 @@ class TodayDashboardScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Builder(
       builder: (context) {
-        Future.microtask(() => _loadDashboardData(context));
+        Future.microtask(() {
+          AppLogger.i('Dashboard built, triggering data load');
+          _loadDashboardData(context);
+        });
 
         final now = DateTime.now();
         final greeting = _getGreeting(now.hour);
@@ -66,6 +70,7 @@ class TodayDashboardScreen extends StatelessWidget {
               backgroundColor: AppColors.background(context),
               body: RefreshIndicator(
                 onRefresh: () async {
+                  AppLogger.i('Dashboard manual refresh triggered');
                   HapticFeedback.mediumImpact();
                   _loadDashboardData(context);
                   await Future.delayed(const Duration(milliseconds: 800));

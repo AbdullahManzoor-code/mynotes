@@ -9,6 +9,7 @@ import '../design_system/app_typography.dart';
 import '../design_system/app_spacing.dart';
 import '../../core/services/global_ui_service.dart';
 import '../../injection_container.dart';
+import '../../core/utils/app_logger.dart';
 
 /// Collection Management - Batch 5, Screen 4
 /// Refactored to StatelessWidget with BLoC and Design System
@@ -17,6 +18,7 @@ class CollectionManagementScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('CollectionManagementScreen: Building UI');
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
@@ -36,6 +38,9 @@ class CollectionManagementScreen extends StatelessWidget {
               size: 24.sp,
             ),
             onPressed: () {
+              AppLogger.i(
+                'CollectionManagementScreen: Create collection button pressed',
+              );
               Navigator.pushNamed(context, AppRoutes.createCollection);
               getIt<GlobalUiService>().hapticFeedback();
             },
@@ -57,6 +62,9 @@ class CollectionManagementScreen extends StatelessWidget {
                 }
 
                 if (state is SmartCollectionsError) {
+                  AppLogger.e(
+                    'CollectionManagementScreen: Error loading collections: ${state.message}',
+                  );
                   return Center(
                     child: Padding(
                       padding: AppSpacing.paddingAllM,
@@ -75,9 +83,14 @@ class CollectionManagementScreen extends StatelessWidget {
                           ),
                           AppSpacing.gapM,
                           ElevatedButton(
-                            onPressed: () => context
-                                .read<SmartCollectionsBloc>()
-                                .add(const LoadSmartCollectionsEvent()),
+                            onPressed: () {
+                              AppLogger.i(
+                                'CollectionManagementScreen: Retry button pressed',
+                              );
+                              context.read<SmartCollectionsBloc>().add(
+                                const LoadSmartCollectionsEvent(),
+                              );
+                            },
                             style: ElevatedButton.styleFrom(
                               backgroundColor: AppColors.primaryColor,
                               shape: RoundedRectangleBorder(
@@ -94,6 +107,9 @@ class CollectionManagementScreen extends StatelessWidget {
 
                 if (state is SmartCollectionsLoaded) {
                   final collections = state.params.filteredCollections;
+                  AppLogger.i(
+                    'CollectionManagementScreen: Loaded ${collections.length} filtered collections',
+                  );
                   if (collections.isEmpty) {
                     return _buildEmptyState(context);
                   }
@@ -139,6 +155,9 @@ class CollectionManagementScreen extends StatelessWidget {
           contentPadding: EdgeInsets.symmetric(vertical: 0, horizontal: 16.w),
         ),
         onChanged: (value) {
+          AppLogger.i(
+            'CollectionManagementScreen: Search query changed: $value',
+          );
           context.read<SmartCollectionsBloc>().add(
             SearchSmartCollectionsEvent(query: value),
           );
@@ -181,8 +200,12 @@ class CollectionManagementScreen extends StatelessWidget {
             SizedBox(
               width: 200.w,
               child: ElevatedButton(
-                onPressed: () =>
-                    Navigator.pushNamed(context, AppRoutes.createCollection),
+                onPressed: () {
+                  AppLogger.i(
+                    'CollectionManagementScreen: Get Started button pressed',
+                  );
+                  Navigator.pushNamed(context, AppRoutes.createCollection);
+                },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryColor,
                   padding: EdgeInsets.symmetric(vertical: 16.h),
@@ -221,6 +244,9 @@ class CollectionManagementScreen extends StatelessWidget {
       ),
       child: InkWell(
         onTap: () {
+          AppLogger.i(
+            'CollectionManagementScreen: Collection card tapped: ${collection.name}',
+          );
           Navigator.pushNamed(
             context,
             AppRoutes.collectionDetails,
@@ -317,6 +343,9 @@ class CollectionManagementScreen extends StatelessWidget {
       ),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.r)),
       onSelected: (value) {
+        AppLogger.i(
+          'CollectionManagementScreen: Menu option selected for ${collection.name}: $value',
+        );
         if (value == 'delete') {
           _confirmDelete(context, collection);
         }
@@ -368,6 +397,9 @@ class CollectionManagementScreen extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context, SmartCollection collection) {
+    AppLogger.i(
+      'CollectionManagementScreen: Showing delete confirmation for ${collection.name}',
+    );
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -383,7 +415,12 @@ class CollectionManagementScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
+            onPressed: () {
+              AppLogger.i(
+                'CollectionManagementScreen: Delete cancelled for ${collection.name}',
+              );
+              Navigator.pop(dialogContext);
+            },
             child: Text(
               'Cancel',
               style: AppTypography.button(context, AppColors.secondaryText),
@@ -391,6 +428,9 @@ class CollectionManagementScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () {
+              AppLogger.i(
+                'CollectionManagementScreen: Delete confirmed for ${collection.name} (ID: ${collection.id})',
+              );
               context.read<SmartCollectionsBloc>().add(
                 DeleteSmartCollectionEvent(collectionId: collection.id),
               );
@@ -414,4 +454,3 @@ class CollectionManagementScreen extends StatelessWidget {
     );
   }
 }
-

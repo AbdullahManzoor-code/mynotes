@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/presentation/bloc/params/todo_params.dart';
 import 'dart:convert';
@@ -310,11 +311,13 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
   }
 
   Future<void> _onLoadTodos(LoadTodos event, Emitter<TodosState> emit) async {
+    AppLogger.i('Loading todos...');
     try {
       emit(TodosLoading());
 
       final allTodos = await _todoRepository.getTodos();
       final stats = allTodos.stats;
+      AppLogger.i('Loaded ${allTodos.length} todos');
 
       // Apply current filters and sorting
       var filteredTodos = allTodos.filter(TodoFilter.all);
@@ -331,7 +334,8 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           showFilters: false,
         ),
       );
-    } catch (e) {
+    } catch (e, stack) {
+      AppLogger.e('Failed to load todos: $e', e, stack);
       emit(TodosError('Failed to load todos: $e'));
     }
   }
@@ -339,11 +343,13 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
   void _onToggleFilters(ToggleFilters event, Emitter<TodosState> emit) {
     if (state is TodosLoaded) {
       final current = state as TodosLoaded;
+      AppLogger.i('Toggling filters visibility: ${!current.showFilters}');
       emit(current.copyWith(showFilters: !current.showFilters));
     }
   }
 
   Future<void> _onAddTodo(AddTodo event, Emitter<TodosState> emit) async {
+    AppLogger.i('Adding todo: ${event.params.text}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -362,6 +368,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Todo added successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -370,13 +377,15 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             clearLastDeleted: true,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to add todo: $e', e, stack);
         emit(TodosError('Failed to add todo: $e'));
       }
     }
   }
 
   Future<void> _onUpdateTodo(UpdateTodo event, Emitter<TodosState> emit) async {
+    AppLogger.i('Updating todo: ${event.params.todoId}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -398,6 +407,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Todo updated successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -405,13 +415,15 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             stats: stats,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to update todo: $e', e, stack);
         emit(TodosError('Failed to update todo: $e'));
       }
     }
   }
 
   Future<void> _onToggleTodo(ToggleTodo event, Emitter<TodosState> emit) async {
+    AppLogger.i('Toggling todo status: ${event.params.todoId}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -434,6 +446,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Todo status toggled successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -441,13 +454,15 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             stats: stats,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to toggle todo status: $e', e, stack);
         emit(TodosError('Failed to toggle todo: $e'));
       }
     }
   }
 
   Future<void> _onDeleteTodo(DeleteTodo event, Emitter<TodosState> emit) async {
+    AppLogger.i('Deleting todo: ${event.todoId}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -469,6 +484,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Todo deleted successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -477,7 +493,8 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             lastDeletedTodo: todoToDelete,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to delete todo: $e', e, stack);
         emit(TodosError('Failed to delete todo: $e'));
       }
     }
@@ -557,6 +574,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     ToggleImportantTodo event,
     Emitter<TodosState> emit,
   ) async {
+    AppLogger.i('Toggling todo importance: ${event.todoId}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -576,6 +594,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Todo importance toggled successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -583,7 +602,8 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             stats: stats,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to toggle importance: $e', e, stack);
         emit(TodosError('Failed to toggle importance: $e'));
       }
     }
@@ -593,6 +613,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     UpdateSubtasks event,
     Emitter<TodosState> emit,
   ) async {
+    AppLogger.i('Updating subtasks for todo: ${event.todoId}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -615,6 +636,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Subtasks updated successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -622,7 +644,8 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             stats: stats,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to update subtasks: $e', e, stack);
         emit(TodosError('Failed to update subtasks: $e'));
       }
     }
@@ -632,6 +655,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     UndoDeleteTodo event,
     Emitter<TodosState> emit,
   ) async {
+    AppLogger.i('Restoring deleted todo: ${event.todo.id}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -647,6 +671,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Todo restored successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -655,7 +680,8 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             clearLastDeleted: true,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to restore todo: $e', e, stack);
         emit(TodosError('Failed to restore todo: $e'));
       }
     }
@@ -665,6 +691,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     AddAlarmToTodo event,
     Emitter<TodosState> emit,
   ) async {
+    AppLogger.i('Adding alarm to todo: ${event.todoId}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -709,6 +736,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Alarm added to todo successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -716,7 +744,8 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             stats: stats,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to add alarm to todo: $e', e, stack);
         emit(TodosError('Failed to add alarm to todo: $e'));
       }
     }
@@ -726,6 +755,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
     RemoveAlarmFromTodo event,
     Emitter<TodosState> emit,
   ) async {
+    AppLogger.i('Removing alarm from todo: ${event.todoId}');
     if (state is TodosLoaded) {
       try {
         final currentState = state as TodosLoaded;
@@ -757,6 +787,7 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
           currentState.searchQuery,
         );
 
+        AppLogger.i('Alarm removed from todo successfully');
         emit(
           currentState.copyWith(
             allTodos: allTodos,
@@ -764,7 +795,8 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
             stats: stats,
           ),
         );
-      } catch (e) {
+      } catch (e, stack) {
+        AppLogger.e('Failed to remove alarm from todo: $e', e, stack);
         emit(TodosError('Failed to remove alarm from todo: $e'));
       }
     }

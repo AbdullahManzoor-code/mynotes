@@ -4,6 +4,8 @@ import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/bloc/reminder_templates/reminder_templates_bloc.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart'
+    show AppLogger;
 
 /// Reminder Templates Screen (ALM-004)
 /// Pre-built reminder templates for quick reminder creation
@@ -12,11 +14,13 @@ class ReminderTemplatesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('ReminderTemplatesScreen: build');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocBuilder<ReminderTemplatesBloc, ReminderTemplatesState>(
       builder: (context, state) {
         if (state is ReminderTemplatesInitial) {
+          AppLogger.i('ReminderTemplatesBloc: Loading templates');
           context.read<ReminderTemplatesBloc>().add(const LoadTemplatesEvent());
         }
 
@@ -29,6 +33,7 @@ class ReminderTemplatesScreen extends StatelessWidget {
         }
 
         if (state is ReminderTemplatesError) {
+          AppLogger.e('ReminderTemplatesScreen: Error', state.message);
           return Scaffold(
             backgroundColor: AppColors.background(context),
             appBar: _buildAppBar(context, {}),
@@ -166,6 +171,9 @@ class ReminderTemplatesScreen extends StatelessWidget {
               padding: EdgeInsets.only(right: 8.w),
               child: GestureDetector(
                 onTap: () {
+                  AppLogger.i(
+                    'ReminderTemplatesScreen: Filter category - $category',
+                  );
                   context.read<ReminderTemplatesBloc>().add(
                     FilterTemplatesByCategoryEvent(category: category),
                   );
@@ -217,7 +225,12 @@ class ReminderTemplatesScreen extends StatelessWidget {
     final categoryIcon = _getCategoryIcon(template['category']);
 
     return GestureDetector(
-      onTap: () => _showTemplateDetails(template, context),
+      onTap: () {
+        AppLogger.i(
+          'ReminderTemplatesScreen: Template tapped - ${template['name']}',
+        );
+        _showTemplateDetails(template, context);
+      },
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.card(context),
@@ -304,6 +317,9 @@ class ReminderTemplatesScreen extends StatelessWidget {
               right: 8.w,
               child: GestureDetector(
                 onTap: () {
+                  AppLogger.i(
+                    'ReminderTemplatesScreen: Toggle favorite - ${template['id']}',
+                  );
                   context.read<ReminderTemplatesBloc>().add(
                     ToggleFavoriteTemplateEvent(templateId: template['id']),
                   );
@@ -461,7 +477,12 @@ class ReminderTemplatesScreen extends StatelessWidget {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () {
+                      AppLogger.i(
+                        'ReminderTemplatesScreen: Close template details',
+                      );
+                      Navigator.pop(context);
+                    },
                     child: Text('Close'),
                   ),
                 ),
@@ -469,6 +490,9 @@ class ReminderTemplatesScreen extends StatelessWidget {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () {
+                      AppLogger.i(
+                        'ReminderTemplatesScreen: Use template success - ${template['name']}',
+                      );
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text(
@@ -523,4 +547,3 @@ class ReminderTemplatesScreen extends StatelessWidget {
     );
   }
 }
-

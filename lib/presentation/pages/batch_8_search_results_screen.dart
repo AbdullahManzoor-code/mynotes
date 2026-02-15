@@ -9,6 +9,7 @@ import 'package:mynotes/core/design_system/app_colors.dart'; // Added
 import 'package:mynotes/core/design_system/app_typography.dart'; // Added
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/core/utils/app_logger.dart';
 import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/presentation/bloc/note/note_event.dart';
 
@@ -43,6 +44,7 @@ class SearchResultsScreen extends StatelessWidget {
           }
 
           if (state is NoteError) {
+            AppLogger.e('SearchResultsScreen: Error: ${state.message}');
             return Center(
               child: Padding(
                 padding: AppSpacing.paddingAllL,
@@ -88,6 +90,7 @@ class SearchResultsScreen extends StatelessWidget {
           }
 
           // Initial load
+          AppLogger.i('SearchResultsScreen: Initial load for "$searchQuery"');
           context.read<NotesBloc>().add(SearchNotesEvent(searchQuery));
           return const Center(
             child: CircularProgressIndicator(color: AppColors.primaryColor),
@@ -134,6 +137,7 @@ class SearchResultsScreen extends StatelessWidget {
                 color: AppColors.primaryColor,
               ),
               onPressed: () {
+                AppLogger.i('SearchResultsScreen: Tapping tune/filters button');
                 // Toggle filters - In a Stateless widget we could use a local ValueNotifier
                 // or just handle it if it's purely for show.
                 // Given the requirement, we should move the toggle to Bloc or keep it simple.
@@ -178,6 +182,7 @@ class SearchResultsScreen extends StatelessWidget {
       selected: isSelected,
       onSelected: (selected) {
         if (selected) {
+          AppLogger.i('SearchResultsScreen: Selecting sort by $value');
           // Add Sort event to Bloc
           getIt<GlobalUiService>().hapticFeedback();
         }
@@ -260,7 +265,10 @@ class SearchResultsScreen extends StatelessWidget {
         side: BorderSide(color: isDark ? Colors.grey[700]! : Colors.grey[200]!),
       ),
       child: InkWell(
-        onTap: () => _showResultDetails(context, result),
+        onTap: () {
+          AppLogger.i('SearchResultsScreen: Tapping result card for "$title"');
+          _showResultDetails(context, result);
+        },
         borderRadius: BorderRadius.circular(12.r),
         child: Padding(
           padding: EdgeInsets.all(12.w),
@@ -403,6 +411,8 @@ class SearchResultsScreen extends StatelessWidget {
   }
 
   void _showResultDetails(BuildContext context, Map<String, dynamic> result) {
+    final title = result['title'] as String? ?? 'Untitled';
+    AppLogger.i('SearchResultsScreen: Showing result details for "$title"');
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.surface(context),
@@ -419,7 +429,7 @@ class SearchResultsScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  result['title'] as String? ?? 'Untitled',
+                  title,
                   style: AppTypography.heading3().copyWith(
                     fontWeight: FontWeight.bold,
                     color: isDark ? AppColors.lightText : AppColors.darkText,
@@ -469,12 +479,16 @@ class SearchResultsScreen extends StatelessWidget {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: () {
+                      AppLogger.i(
+                        'SearchResultsScreen: Navigating to full item view for "$title"',
+                      );
                       Navigator.pop(context);
                       // Navigate to full item view
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primaryColor,
                       foregroundColor: Colors.white,
+                      elevation: 0,
                       padding: EdgeInsets.symmetric(vertical: 12.h),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8.r),
@@ -543,5 +557,3 @@ class SearchResultsScreen extends StatelessWidget {
     }
   }
 }
-
-

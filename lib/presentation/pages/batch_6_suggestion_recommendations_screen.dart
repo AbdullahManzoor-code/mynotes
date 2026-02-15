@@ -6,6 +6,7 @@ import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import '../../core/services/global_ui_service.dart';
 import '../../injection_container.dart';
+import '../../core/utils/app_logger.dart';
 
 /// Suggestion Recommendations - Batch 6, Screen 1
 /// Refactored to use Design System and Global UI Services
@@ -32,6 +33,9 @@ class SuggestionRecommendationsScreen extends StatelessWidget {
               color: AppColors.primaryColor,
             ),
             onPressed: () {
+              AppLogger.i(
+                'SuggestionRecommendationsScreen: Refreshing suggestions',
+              );
               context.read<SmartRemindersBloc>().add(
                 const LoadSuggestionsEvent(),
               );
@@ -49,6 +53,9 @@ class SuggestionRecommendationsScreen extends StatelessWidget {
           }
 
           if (state is SmartRemindersError) {
+            AppLogger.e(
+              'SuggestionRecommendationsScreen: Error state: ${state.message}',
+            );
             return Center(
               child: Padding(
                 padding: AppSpacing.paddingAllL,
@@ -68,9 +75,14 @@ class SuggestionRecommendationsScreen extends StatelessWidget {
                     ),
                     AppSpacing.gapL,
                     ElevatedButton(
-                      onPressed: () => context.read<SmartRemindersBloc>().add(
-                        const LoadSuggestionsEvent(),
-                      ),
+                      onPressed: () {
+                        AppLogger.i(
+                          'SuggestionRecommendationsScreen: Retrying load',
+                        );
+                        context.read<SmartRemindersBloc>().add(
+                          const LoadSuggestionsEvent(),
+                        );
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primaryColor,
                       ),
@@ -252,8 +264,12 @@ class SuggestionRecommendationsScreen extends StatelessWidget {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () {
+                    final sid = suggestion['id'];
+                    AppLogger.i(
+                      'SuggestionRecommendationsScreen: Dismissing suggestion $sid',
+                    );
                     context.read<SmartRemindersBloc>().add(
-                      RejectSuggestionEvent(suggestionId: suggestion['id']),
+                      RejectSuggestionEvent(suggestionId: sid),
                     );
                     getIt<GlobalUiService>().hapticFeedback();
                   },
@@ -277,8 +293,12 @@ class SuggestionRecommendationsScreen extends StatelessWidget {
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {
+                    final sid = suggestion['id'];
+                    AppLogger.i(
+                      'SuggestionRecommendationsScreen: Applying suggestion $sid',
+                    );
                     context.read<SmartRemindersBloc>().add(
-                      AcceptSuggestionEvent(suggestionId: suggestion['id']),
+                      AcceptSuggestionEvent(suggestionId: sid),
                     );
                     getIt<GlobalUiService>().showSuccess('Suggestion accepted');
                     getIt<GlobalUiService>().hapticFeedback();
@@ -321,4 +341,3 @@ class SuggestionRecommendationsScreen extends StatelessWidget {
     }
   }
 }
-

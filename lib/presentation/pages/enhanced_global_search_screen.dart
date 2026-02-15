@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
@@ -68,7 +69,10 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
                     ),
 
                     GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        AppLogger.i('EnhancedGlobalSearch: Cancel pressed');
+                        Navigator.pop(context);
+                      },
                       child: Text(
                         'Cancel',
                         style: TextStyle(
@@ -148,6 +152,7 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
               textInputAction: TextInputAction.search,
               onSubmitted: (query) {
                 if (query.isNotEmpty) {
+                  AppLogger.i('EnhancedGlobalSearch: onSubmitted: $query');
                   context.read<SearchBloc>().add(PerformSearch(query));
                 }
               },
@@ -157,7 +162,10 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
           // Voice search button
           if (state.isVoiceAvailable && !state.isListening)
             GestureDetector(
-              onTap: () => wrapper?.startVoiceSearch(),
+              onTap: () {
+                AppLogger.i('EnhancedGlobalSearch: Voice search mic pressed');
+                wrapper?.startVoiceSearch();
+              },
               child: Container(
                 padding: EdgeInsets.all(8.w),
                 margin: EdgeInsets.symmetric(horizontal: 4.w),
@@ -176,7 +184,10 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
           // Stop voice button
           if (state.isListening)
             GestureDetector(
-              onTap: () => wrapper?.stopVoiceSearch(),
+              onTap: () {
+                AppLogger.i('EnhancedGlobalSearch: Stop voice search pressed');
+                wrapper?.stopVoiceSearch();
+              },
               child: Container(
                 padding: EdgeInsets.all(8.w),
                 margin: EdgeInsets.symmetric(horizontal: 4.w),
@@ -192,7 +203,10 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
           if ((wrapper?.searchController.text.isNotEmpty ?? false) &&
               !state.isListening)
             GestureDetector(
-              onTap: () => wrapper?.clearSearch(),
+              onTap: () {
+                AppLogger.i('EnhancedGlobalSearch: Clear search pressed');
+                wrapper?.clearSearch();
+              },
               child: Container(
                 padding: EdgeInsets.all(8.w),
                 child: Icon(
@@ -205,7 +219,10 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
 
           // Filter button
           GestureDetector(
-            onTap: () => context.read<SearchBloc>().add(ToggleFilters()),
+            onTap: () {
+              AppLogger.i('EnhancedGlobalSearch: Toggle filters pressed');
+              context.read<SearchBloc>().add(ToggleFilters());
+            },
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 16.w),
               child: Icon(
@@ -296,7 +313,10 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
     final isSelected = selected == value;
 
     return GestureDetector(
-      onTap: () => context.read<SearchBloc>().add(ApplyFilter(value)),
+      onTap: () {
+        AppLogger.i('EnhancedGlobalSearch: Filter chip pressed: $label');
+        context.read<SearchBloc>().add(ApplyFilter(value));
+      },
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
         decoration: BoxDecoration(
@@ -388,8 +408,12 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
                   search,
                   style: TextStyle(fontSize: 16.sp, color: Colors.white),
                 ),
-                onTap: () =>
-                    context.read<SearchBloc>().add(PerformSearch(search)),
+                onTap: () {
+                  AppLogger.i(
+                    'EnhancedGlobalSearch: Recent search item pressed: $search',
+                  );
+                  context.read<SearchBloc>().add(PerformSearch(search));
+                },
               );
             },
           ),
@@ -460,6 +484,9 @@ class EnhancedGlobalSearchScreen extends StatelessWidget {
   Widget _buildSearchResultCard(BuildContext context, Note note) {
     return GestureDetector(
       onTap: () async {
+        AppLogger.i(
+          'EnhancedGlobalSearch: Search result card pressed: ${note.title}',
+        );
         if (context.mounted) {
           Navigator.pop(context);
           if (context.mounted) {
@@ -579,6 +606,7 @@ class _SearchLifecycleWrapperState extends State<_SearchLifecycleWrapper> {
   @override
   void initState() {
     super.initState();
+    AppLogger.i('SearchLifecycleWrapper: Initialized');
     searchController.addListener(_onSearchChanged);
     _initializeVoiceSearch();
 
@@ -594,6 +622,7 @@ class _SearchLifecycleWrapperState extends State<_SearchLifecycleWrapper> {
 
   @override
   void dispose() {
+    AppLogger.i('SearchLifecycleWrapper: Disposed');
     _debounceTimer?.cancel();
     searchController.dispose();
     searchFocusNode.dispose();
@@ -616,16 +645,19 @@ class _SearchLifecycleWrapperState extends State<_SearchLifecycleWrapper> {
   }
 
   void clearSearch() {
+    AppLogger.i('SearchLifecycleWrapper: clearSearch called');
     searchController.clear();
     context.read<SearchBloc>().add(ClearSearch());
     searchFocusNode.requestFocus();
   }
 
   Future<void> _initializeVoiceSearch() async {
+    AppLogger.i('SearchLifecycleWrapper: _initializeVoiceSearch called');
     _speechToText = stt.SpeechToText();
     await _speechToText.initialize(
       onStatus: (status) {
         if (status == 'notListening') {
+          AppLogger.i('SearchLifecycleWrapper: voice status changed: $status');
           context.read<SearchBloc>().add(StopVoiceSearch());
         }
       },
@@ -634,8 +666,10 @@ class _SearchLifecycleWrapperState extends State<_SearchLifecycleWrapper> {
   }
 
   Future<void> startVoiceSearch() async {
+    AppLogger.i('SearchLifecycleWrapper: startVoiceSearch called');
     final permission = await Permission.microphone.request();
     if (permission != PermissionStatus.granted) {
+      AppLogger.w('SearchLifecycleWrapper: Microphone permission denied');
       _showErrorSnackbar('Microphone permission required');
       return;
     }
@@ -643,6 +677,7 @@ class _SearchLifecycleWrapperState extends State<_SearchLifecycleWrapper> {
     context.read<SearchBloc>().add(StartVoiceSearch());
     await _speechToText.listen(
       onResult: (result) {
+        AppLogger.i('SearchLifecycleWrapper: voice search result received');
         searchController.text = result.recognizedWords;
         context.read<SearchBloc>().add(
           VoiceSearchResult(
@@ -657,6 +692,7 @@ class _SearchLifecycleWrapperState extends State<_SearchLifecycleWrapper> {
   }
 
   void stopVoiceSearch() {
+    AppLogger.i('SearchLifecycleWrapper: stopVoiceSearch called');
     _speechToText.stop();
     context.read<SearchBloc>().add(StopVoiceSearch());
   }

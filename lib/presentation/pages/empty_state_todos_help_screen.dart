@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import '../design_system/design_system.dart';
 import '../widgets/lottie_animation_widget.dart';
 
@@ -54,6 +55,7 @@ class EmptyStateTodosHelpScreen extends StatelessWidget {
         margin: EdgeInsets.only(left: 16.w),
         child: IconButton(
           onPressed: () {
+            AppLogger.i('EmptyStateTodosHelpScreen: Menu pressed');
             // Handle menu action
           },
           icon: const Icon(Icons.menu),
@@ -65,6 +67,7 @@ class EmptyStateTodosHelpScreen extends StatelessWidget {
           margin: EdgeInsets.only(right: 16.w),
           child: IconButton(
             onPressed: () {
+              AppLogger.i('EmptyStateTodosHelpScreen: Settings pressed');
               // Handle settings action
             },
             icon: const Icon(Icons.settings_outlined),
@@ -212,6 +215,9 @@ class EmptyStateTodosHelpScreen extends StatelessWidget {
           height: 56.h,
           child: ElevatedButton.icon(
             onPressed: () {
+              AppLogger.i(
+                'EmptyStateTodosHelpScreen: Create Your First Task pressed',
+              );
               // Navigate to todo editor
               Navigator.pushNamed(context, '/todos/advanced');
             },
@@ -235,6 +241,7 @@ class EmptyStateTodosHelpScreen extends StatelessWidget {
         // Secondary Quick Add Button
         TextButton.icon(
           onPressed: () {
+            AppLogger.i('EmptyStateTodosHelpScreen: Quick Add Task pressed');
             // Handle quick add action
             Navigator.pushNamed(context, '/quick-add');
           },
@@ -254,4 +261,3 @@ class EmptyStateTodosHelpScreen extends StatelessWidget {
     );
   }
 }
-

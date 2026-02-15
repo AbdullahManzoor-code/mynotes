@@ -14,6 +14,7 @@ class AlarmsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('AlarmsScreen: Building UI');
     // Initial load
     context.read<AlarmsBloc>().add(const LoadAlarmsEvent());
 
@@ -44,6 +45,9 @@ class AlarmsScreen extends StatelessWidget {
                 AlarmFilter.snoozed,
                 AlarmFilter.completed,
               ];
+              AppLogger.i(
+                'AlarmsScreen: Tab changed to ${filters[index].name}',
+              );
               context.read<AlarmsBloc>().add(FilterAlarms(filters[index].name));
             },
             tabs: const [
@@ -60,6 +64,7 @@ class AlarmsScreen extends StatelessWidget {
               icon: const Icon(Icons.search, color: Colors.white),
               tooltip: 'Search Reminders',
               onPressed: () {
+                AppLogger.i('AlarmsScreen: Search button pressed');
                 showSearch(
                   context: context,
                   delegate: _AlarmSearchDelegate(context.read<AlarmsBloc>()),
@@ -70,6 +75,7 @@ class AlarmsScreen extends StatelessWidget {
               icon: const Icon(Icons.delete_sweep, color: Colors.white),
               tooltip: 'Clear Completed',
               onPressed: () {
+                AppLogger.i('AlarmsScreen: Clear Completed button pressed');
                 _showClearCompletedConfirmation(context);
               },
             ),
@@ -82,6 +88,7 @@ class AlarmsScreen extends StatelessWidget {
             }
 
             if (state is AlarmsError) {
+              AppLogger.e('AlarmsScreen: Error state - ${state.message}');
               return Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -95,8 +102,10 @@ class AlarmsScreen extends StatelessWidget {
                     ),
                     SizedBox(height: 16.h),
                     ElevatedButton.icon(
-                      onPressed: () =>
-                          context.read<AlarmsBloc>().add(LoadAlarms()),
+                      onPressed: () {
+                        AppLogger.i('AlarmsScreen: Retry after error pressed');
+                        context.read<AlarmsBloc>().add(LoadAlarms());
+                      },
                       icon: const Icon(Icons.refresh),
                       label: const Text('Retry'),
                     ),
@@ -107,6 +116,9 @@ class AlarmsScreen extends StatelessWidget {
 
             if (state is AlarmsLoaded) {
               final alarms = state.filteredAlarms;
+              AppLogger.i(
+                'AlarmsScreen: Loaded ${alarms.length} filtered alarms',
+              );
 
               if (alarms.isEmpty) {
                 return _buildEmptyState(context, state.currentFilter);
@@ -124,7 +136,10 @@ class AlarmsScreen extends StatelessWidget {
           },
         ),
         floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => _showCreateAlarmSheet(context),
+          onPressed: () {
+            AppLogger.i('AlarmsScreen: New Reminder FAB pressed');
+            _showCreateAlarmSheet(context);
+          },
           backgroundColor: AppColors.primaryColor,
           icon: const Icon(Icons.add_alarm, color: Colors.white),
           label: Text(
@@ -137,6 +152,7 @@ class AlarmsScreen extends StatelessWidget {
   }
 
   void _showClearCompletedConfirmation(BuildContext context) {
+    AppLogger.i('AlarmsScreen: Showing Clear Completed confirmation dialog');
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -146,11 +162,15 @@ class AlarmsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              AppLogger.i('AlarmsScreen: Clear Completed cancelled');
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
+              AppLogger.i('AlarmsScreen: Clear Completed confirmed');
               context.read<AlarmsBloc>().add(ClearCompletedAlarms());
               Navigator.pop(context);
             },
@@ -327,17 +347,31 @@ class AlarmsScreen extends StatelessWidget {
           padding: EdgeInsets.only(bottom: 12.h),
           child: AlarmCardWidget(
             alarm: alarm,
-            onTap: () => _handleAlarmTap(context, alarm),
-            onToggle: () => context.read<AlarmsBloc>().add(
-              ToggleAlarmEvent(alarmId: alarm.alarmId!),
-            ),
+            onTap: () {
+              AppLogger.i('AlarmsScreen: Alarm card tapped - ${alarm.alarmId}');
+              _handleAlarmTap(context, alarm);
+            },
+            onToggle: () {
+              AppLogger.i(
+                'AlarmsScreen: Alarm toggle pressed - ${alarm.alarmId}',
+              );
+              context.read<AlarmsBloc>().add(
+                ToggleAlarmEvent(alarmId: alarm.alarmId!),
+              );
+            },
             onSnooze: (preset) {
+              AppLogger.i(
+                'AlarmsScreen: Alarm snooze pressed - ${alarm.alarmId}',
+              );
               context.read<AlarmsBloc>().add(
                 SnoozeAlarmEvent(alarmId: alarm.alarmId!, snoozeMinutes: 10),
               );
               getIt<GlobalUiService>().showInfo('Snoozed: ${preset.name}');
             },
             onReschedule: () {
+              AppLogger.i(
+                'AlarmsScreen: Alarm reschedule pressed - ${alarm.alarmId}',
+              );
               showModalBottomSheet(
                 context: context,
                 isScrollControlled: true,
@@ -346,6 +380,9 @@ class AlarmsScreen extends StatelessWidget {
               );
             },
             onDelete: () {
+              AppLogger.i(
+                'AlarmsScreen: Alarm delete pressed - ${alarm.alarmId}',
+              );
               context.read<AlarmsBloc>().add(
                 DeleteAlarmEvent(alarmId: alarm.alarmId!),
               );
@@ -358,6 +395,7 @@ class AlarmsScreen extends StatelessWidget {
   }
 
   void _showCreateAlarmSheet(BuildContext context) {
+    AppLogger.i('AlarmsScreen: Showing Create Alarm sheet');
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -368,14 +406,23 @@ class AlarmsScreen extends StatelessWidget {
 
   void _handleAlarmTap(BuildContext context, AlarmParams alarm) {
     if (alarm.noteId != null) {
+      AppLogger.i(
+        'AlarmsScreen: Handling tap for linked note - ${alarm.noteId}',
+      );
       // Navigate to note
       getIt<GlobalUiService>().showInfo('Opening linked note: ${alarm.noteId}');
       // Implementation: Navigation.pushNamed(context, AppRoutes.noteDetail, arguments: alarm.linkedNoteId);
     } else if (alarm.reminderId != null) {
+      AppLogger.i(
+        'AlarmsScreen: Handling tap for linked reminder - ${alarm.reminderId}',
+      );
       getIt<GlobalUiService>().showInfo(
         'Opening linked reminder: ${alarm.reminderId}',
       );
     } else {
+      AppLogger.i(
+        'AlarmsScreen: Handling tap for editing alarm - ${alarm.alarmId}',
+      );
       // Edit alarm
       showModalBottomSheet(
         context: context,
@@ -398,6 +445,7 @@ class _AlarmSearchDelegate extends SearchDelegate<String> {
       IconButton(
         icon: const Icon(Icons.clear),
         onPressed: () {
+          AppLogger.i('AlarmsScreen: Search clear pressed');
           query = '';
           alarmsBloc.add(const SearchAlarms(query: ''));
         },
@@ -410,6 +458,7 @@ class _AlarmSearchDelegate extends SearchDelegate<String> {
     return IconButton(
       icon: const Icon(Icons.arrow_back),
       onPressed: () {
+        AppLogger.i('AlarmsScreen: Search back pressed');
         close(context, '');
         alarmsBloc.add(const SearchAlarms(query: '')); // Reset search on exit
       },
@@ -418,6 +467,7 @@ class _AlarmSearchDelegate extends SearchDelegate<String> {
 
   @override
   Widget buildResults(BuildContext context) {
+    AppLogger.i('AlarmsScreen: Search results requested for query: "$query"');
     alarmsBloc.add(SearchAlarms(query: query));
 
     return BlocBuilder<AlarmsBloc, AlarmsState>(
@@ -425,6 +475,7 @@ class _AlarmSearchDelegate extends SearchDelegate<String> {
       builder: (context, state) {
         if (state is AlarmsLoaded) {
           final results = state.filteredAlarms;
+          AppLogger.i('AlarmsScreen: Found ${results.length} search results');
           if (results.isEmpty) {
             return Center(child: Text('No reminders found for "$query"'));
           }
@@ -438,8 +489,11 @@ class _AlarmSearchDelegate extends SearchDelegate<String> {
                 title: Text(alarm.title),
                 subtitle: Text(alarm.alarmTime.toString()),
                 onTap: () {
+                  AppLogger.i(
+                    'AlarmsScreen: Search result tapped - ${alarm.alarmId}',
+                  );
                   // Handle selection
-                  close(context, alarm.id ?? '');
+                  close(context, alarm.alarmId ?? '');
                 },
               );
             },

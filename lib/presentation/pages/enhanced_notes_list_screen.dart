@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/presentation/pages/archived_notes_screen.dart'
     show ArchivedNotesScreen;
 import 'package:mynotes/presentation/widgets/notes_search_bar.dart'
@@ -15,13 +16,10 @@ import 'package:mynotes/presentation/bloc/note/note_state.dart';
 import 'package:mynotes/presentation/widgets/note_card_widget.dart';
 import 'package:mynotes/presentation/widgets/notes_view_options_sheet.dart';
 // import 'package:mynotes/presentation/widgets/notes_search_bar.dart';
-import 'package:mynotes/presentation/pages/empty_state_notes_help_screen.dart';
-import 'package:mynotes/core/routes/app_routes.dart';
+
 import 'package:mynotes/presentation/bloc/params/note_params.dart';
 import '../bloc/note/note_event.dart';
-import '../widgets/quick_add_bottom_sheet.dart';
 import '../widgets/animated_list_grid_view.dart';
-import '../widgets/svg_image_widget.dart';
 
 /// Simple template data class for note templates
 class SimpleNoteTemplate {
@@ -56,11 +54,13 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i('Initializing EnhancedNotesListScreen');
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_handleTabSelection);
   }
 
   void _handleTabSelection() {
+    AppLogger.i('Notes list tab switched to: ${_tabController.index}');
     if (_tabController.index == 1) {
       // Load Archived Notes when switching to second tab
       context.read<NotesBloc>().add(const LoadArchivedNotesEvent());
@@ -72,6 +72,7 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
 
   @override
   void dispose() {
+    AppLogger.i('Disposing EnhancedNotesListScreen');
     _tabController.removeListener(_handleTabSelection);
     _tabController.dispose();
     super.dispose();
@@ -117,6 +118,7 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
   ];
 
   void _createFromTemplate(BuildContext context, SimpleNoteTemplate template) {
+    AppLogger.i('Creating note from template: ${template.title}');
     Navigator.pushNamed(
       context,
       '/notes/editor',
@@ -241,7 +243,10 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
       extendBodyBehindAppBar: true,
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'enhanced_notes_fab',
-        onPressed: () => Navigator.pushNamed(context, '/notes/editor'),
+        onPressed: () {
+          AppLogger.i('EnhancedNotesListScreen: New Note FAB pressed');
+          Navigator.pushNamed(context, '/notes/editor');
+        },
         backgroundColor: AppColors.primary,
         elevation: 8,
         highlightElevation: 0,
@@ -363,6 +368,9 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
                       IconButton(
                         onPressed: () {
                           if (isLoaded) {
+                            AppLogger.i(
+                              'EnhancedNotesListScreen: Toggled view mode',
+                            );
                             HapticFeedback.lightImpact();
                             context.read<NotesBloc>().add(
                               UpdateNoteViewConfigEvent(
@@ -391,6 +399,9 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
                       IconButton(
                         onPressed: () {
                           if (isLoaded) {
+                            AppLogger.i(
+                              'EnhancedNotesListScreen: Opening view options sheet',
+                            );
                             _showViewOptionsSheet(
                               context,
                               state as NotesLoaded,
@@ -644,6 +655,9 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
   Widget _buildTemplateCard(BuildContext context, SimpleNoteTemplate template) {
     return GestureDetector(
       onTap: () {
+        AppLogger.i(
+          'EnhancedNotesListScreen: Template card tapped: ${template.title}',
+        );
         HapticFeedback.mediumImpact();
         _createFromTemplate(context, template);
       },
@@ -856,7 +870,10 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
       child: InputChip(
         label: Text(label),
         avatar: Icon(icon, size: 14.sp, color: color ?? AppColors.primary),
-        onDeleted: onDeleted,
+        onDeleted: () {
+          AppLogger.i('EnhancedNotesListScreen: Filter chip deleted: $label');
+          onDeleted();
+        },
         backgroundColor: (color ?? AppColors.primary).withOpacity(0.1),
         labelStyle: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.w500),
       ),
@@ -876,11 +893,15 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
         currentSortOption: state.sortBy,
         sortDescending: state.sortDescending,
         onViewModeChanged: (mode) {
+          AppLogger.i('EnhancedNotesListScreen: View mode changed to: $mode');
           context.read<NotesBloc>().add(
             UpdateNoteViewConfigEvent(viewMode: mode),
           );
         },
         onSortChanged: (option, descending) {
+          AppLogger.i(
+            'EnhancedNotesListScreen: Sort option changed: $option, descending: $descending',
+          );
           context.read<NotesBloc>().add(
             UpdateNoteViewConfigEvent(
               sortBy: option,
@@ -905,12 +926,22 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
             return NoteCardWidget(
               note: note,
               isGridView: true,
-              onTap: () => Navigator.pushNamed(
-                context,
-                '/notes/editor',
-                arguments: {'note': note},
-              ),
-              onLongPress: () => _showNoteContextMenu(context, note),
+              onTap: () {
+                AppLogger.i(
+                  'EnhancedNotesListScreen: Note tapped (grid): ${note.id}',
+                );
+                Navigator.pushNamed(
+                  context,
+                  '/notes/editor',
+                  arguments: {'note': note},
+                );
+              },
+              onLongPress: () {
+                AppLogger.i(
+                  'EnhancedNotesListScreen: Note long pressed (grid): ${note.id}',
+                );
+                _showNoteContextMenu(context, note);
+              },
             );
           },
           childCount: notes.length,
@@ -945,24 +976,40 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
               ),
               onDismissed: (direction) {
                 if (direction == DismissDirection.startToEnd) {
+                  AppLogger.i(
+                    'EnhancedNotesListScreen: Note archived via swipe: ${note.id}',
+                  );
                   context.read<NotesBloc>().add(
                     ToggleArchiveNoteEvent(
                       NoteParams.fromNote(note).toggleArchive(),
                     ),
                   );
                 } else {
+                  AppLogger.i(
+                    'EnhancedNotesListScreen: Note deleted via swipe: ${note.id}',
+                  );
                   context.read<NotesBloc>().add(DeleteNoteEvent(note.id));
                 }
               },
               child: NoteCardWidget(
                 note: note,
                 isGridView: false,
-                onTap: () => Navigator.pushNamed(
-                  context,
-                  '/notes/editor',
-                  arguments: {'note': note},
-                ),
-                onLongPress: () => _showNoteContextMenu(context, note),
+                onTap: () {
+                  AppLogger.i(
+                    'EnhancedNotesListScreen: Note tapped (list): ${note.id}',
+                  );
+                  Navigator.pushNamed(
+                    context,
+                    '/notes/editor',
+                    arguments: {'note': note},
+                  );
+                },
+                onLongPress: () {
+                  AppLogger.i(
+                    'EnhancedNotesListScreen: Note long pressed (list): ${note.id}',
+                  );
+                  _showNoteContextMenu(context, note);
+                },
               ),
             ),
           );
@@ -995,6 +1042,9 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
                   style: AppTypography.bodyLarge(context),
                 ),
                 onTap: () {
+                  AppLogger.i(
+                    'EnhancedNotesListScreen: Context menu - Pin/Unpin tapped: ${note.id}',
+                  );
                   Navigator.pop(context);
                   context.read<NotesBloc>().add(
                     TogglePinNoteEvent(params.togglePin()),
@@ -1011,6 +1061,9 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
                   style: AppTypography.bodyLarge(context),
                 ),
                 onTap: () {
+                  AppLogger.i(
+                    'EnhancedNotesListScreen: Context menu - Archive tapped: ${note.id}',
+                  );
                   Navigator.pop(context);
                   context.read<NotesBloc>().add(
                     ToggleArchiveNoteEvent(params.toggleArchive()),
@@ -1029,6 +1082,9 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
                   ).copyWith(color: AppColors.errorColor),
                 ),
                 onTap: () {
+                  AppLogger.i(
+                    'EnhancedNotesListScreen: Context menu - Delete tapped: ${note.id}',
+                  );
                   Navigator.pop(context);
                   context.read<NotesBloc>().add(DeleteNoteEvent(note.id));
                 },

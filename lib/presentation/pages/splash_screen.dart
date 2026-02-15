@@ -29,8 +29,16 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i('SplashScreen: initState - Application starting');
     _setupAnimations();
     _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    AppLogger.i('SplashScreen: dispose');
+    _controller.dispose();
+    super.dispose();
   }
 
   void _setupAnimations() {
@@ -58,6 +66,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   Future<void> _initializeApp() async {
     try {
+      AppLogger.i('SplashScreen: Starting initialization sequence');
       // Step 1: Check first launch
       setState(() {
         _initStatus = 'Checking preferences...';
@@ -73,6 +82,7 @@ class _SplashScreenState extends State<SplashScreen>
       // Notification service is already initialized in main.dart
 
       // Step 3: Start clipboard monitoring
+      AppLogger.i('SplashScreen: Initializing clipboard monitoring');
       final clipboardService = RepositoryProvider.of<ClipboardService>(context);
       await clipboardService.startMonitoring();
 
@@ -92,10 +102,12 @@ class _SplashScreenState extends State<SplashScreen>
 
       // Check if first launch
       final isFirstLaunch = await _checkFirstLaunch();
+      AppLogger.i('SplashScreen: isFirstLaunch = $isFirstLaunch');
 
       // Check if biometric is enabled
       final biometricService = BiometricAuthService();
       final isBiometricEnabled = await biometricService.isBiometricEnabled();
+      AppLogger.i('SplashScreen: isBiometricEnabled = $isBiometricEnabled');
 
       // Navigate to appropriate screen
       if (!mounted) return;
@@ -103,13 +115,19 @@ class _SplashScreenState extends State<SplashScreen>
       await _controller.reverse();
 
       if (isFirstLaunch) {
+        AppLogger.i('SplashScreen: Navigating to Onboarding');
         Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
       } else if (isBiometricEnabled) {
+        AppLogger.i(
+          'SplashScreen: Biometric enabled, navigating to Lock Screen',
+        );
         Navigator.of(context).pushReplacementNamed(AppRoutes.biometricLock);
       } else {
+        AppLogger.i('SplashScreen: Navigating to Home');
         Navigator.of(context).pushReplacementNamed(AppRoutes.home);
       }
     } catch (e) {
+      AppLogger.e('SplashScreen: Initialization error', e);
       if (mounted) {
         setState(() {
           _initStatus = 'Error: ${e.toString()}';
@@ -121,12 +139,6 @@ class _SplashScreenState extends State<SplashScreen>
   Future<bool> _checkFirstLaunch() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool('first_launch') ?? true;
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
   }
 
   @override

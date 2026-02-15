@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../design_system/design_system.dart';
-import '../../core/services/theme_customization_service.dart';
-import '../bloc/settings/settings_bloc.dart';
-import '../bloc/params/settings_params.dart';
-import '../../injection_container.dart' show getIt;
+import 'package:mynotes/core/services/app_logger.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/core/services/theme_customization_service.dart';
+import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
+import 'package:mynotes/presentation/bloc/params/settings_params.dart';
+import 'package:mynotes/injection_container.dart' show getIt;
 
 /// Font Settings Screen
 /// Refactored to StatelessWidget using SettingsBloc and Design System
@@ -13,6 +14,7 @@ class FontSettingsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('FontSettingsScreen: Building');
     return BlocProvider.value(
       value: BlocProvider.of<SettingsBloc>(context),
       child: const _FontSettingsView(),
@@ -35,7 +37,10 @@ class _FontSettingsView extends StatelessWidget {
             Icons.arrow_back_ios_rounded,
             color: AppColors.darkText,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            AppLogger.i('FontSettingsScreen: Back button pressed');
+            Navigator.pop(context);
+          },
         ),
         title: Text(
           'Font Settings',
@@ -46,7 +51,10 @@ class _FontSettingsView extends StatelessWidget {
             builder: (context, state) {
               if (state is SettingsLoaded) {
                 return TextButton(
-                  onPressed: () => _resetToDefaults(context, state.params),
+                  onPressed: () {
+                    AppLogger.i('FontSettingsScreen: Reset button tapped');
+                    _resetToDefaults(context, state.params);
+                  },
                   child: Text(
                     'Reset',
                     style: AppTypography.button(
@@ -63,6 +71,9 @@ class _FontSettingsView extends StatelessWidget {
       ),
       body: BlocBuilder<SettingsBloc, SettingsState>(
         builder: (context, state) {
+          AppLogger.i(
+            'FontSettingsScreen: Building with state ${state.runtimeType}',
+          );
           if (state is SettingsInitial || state is SettingsLoading) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -74,6 +85,9 @@ class _FontSettingsView extends StatelessWidget {
               orElse: () => AppFontFamily.system,
             );
             final selectedScale = params.fontScale;
+            AppLogger.i(
+              'FontSettingsScreen: Selected font: ${params.fontFamily}, Scale: ${params.fontScale}',
+            );
 
             return SingleChildScrollView(
               padding: AppSpacing.paddingAllL,
@@ -291,6 +305,9 @@ class _FontSettingsView extends StatelessWidget {
     SettingsParams params,
     AppFontFamily font,
   ) {
+    AppLogger.i(
+      'FontSettingsScreen: _updateFont called for ${font.displayName}',
+    );
     final newParams = params.copyWith(fontFamily: font.displayName);
     context.read<SettingsBloc>().add(UpdateSettingsEvent(newParams));
     AppTypography.updateFontSettings(font, params.fontScale);
@@ -302,6 +319,9 @@ class _FontSettingsView extends StatelessWidget {
     SettingsParams params,
     FontSizeScale scale,
   ) {
+    AppLogger.i(
+      'FontSettingsScreen: _updateScale called for ${scale.displayName}',
+    );
     final newParams = params.copyWith(fontScale: scale.scale);
     context.read<SettingsBloc>().add(UpdateSettingsEvent(newParams));
     final font = AppFontFamily.values.firstWhere(
@@ -315,6 +335,7 @@ class _FontSettingsView extends StatelessWidget {
   }
 
   void _resetToDefaults(BuildContext context, SettingsParams params) {
+    AppLogger.i('FontSettingsScreen: _resetToDefaults called');
     final newParams = params.copyWith(
       fontFamily: 'System Default',
       fontScale: 1.0,
@@ -324,4 +345,3 @@ class _FontSettingsView extends StatelessWidget {
     getIt<GlobalUiService>().showSuccess('Font settings reset to defaults');
   }
 }
-

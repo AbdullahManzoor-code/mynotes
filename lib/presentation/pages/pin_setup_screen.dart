@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../design_system/design_system.dart';
 import '../bloc/pin_setup/pin_setup_bloc.dart';
+import '../../core/services/app_logger.dart';
 
 /// PIN Setup Screen
 /// Allows users to create, change, or reset their PIN for fallback authentication
@@ -41,6 +42,9 @@ class _PinSetupScreenState extends State<PinSetupScreen>
   @override
   void initState() {
     super.initState();
+    AppLogger.i(
+      'PinSetupScreen: initState (isFirstSetup: ${widget.isFirstSetup}, isChanging: ${widget.isChanging})',
+    );
     _bloc = PinSetupBloc(
       isFirstSetup: widget.isFirstSetup,
       isChanging: widget.isChanging,
@@ -58,6 +62,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
 
   @override
   void dispose() {
+    AppLogger.i('PinSetupScreen: dispose');
     _shakeController.dispose();
     _pinController.dispose();
     _bloc.close();
@@ -71,6 +76,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
       child: BlocConsumer<PinSetupBloc, PinSetupState>(
         listener: (context, state) {
           if (state.errorMessage.isNotEmpty) {
+            AppLogger.e('PinSetupScreen: PIN error: ${state.errorMessage}');
             _shakeController.reset();
             _shakeController.forward();
             HapticFeedback.mediumImpact();
@@ -78,6 +84,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
           }
 
           if (state.isSuccess) {
+            AppLogger.i('PinSetupScreen: PIN setup successful');
             HapticFeedback.heavyImpact();
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -96,6 +103,7 @@ class _PinSetupScreenState extends State<PinSetupScreen>
           if (state.isConfirming &&
               _pinController.text.length == 4 &&
               state.errorMessage.isEmpty) {
+            AppLogger.i('PinSetupScreen: PIN entered, moving to confirmation');
             _pinController.clear();
           }
         },
@@ -281,4 +289,3 @@ class _PinSetupScreenState extends State<PinSetupScreen>
     await prefs.setBool(_pinEnabledKey, false);
   }
 }
-

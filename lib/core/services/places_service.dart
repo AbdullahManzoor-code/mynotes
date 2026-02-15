@@ -24,7 +24,7 @@ class PlacesService {
     double? longitude,
     int radiusMeters = 50000,
   }) async {
-    if (query.length < 2) return [];
+    if (query.length < 2 || _apiKey == 'YOUR_GOOGLE_API_KEY') return [];
 
     String url = '$_baseUrl/autocomplete/json?input=$query&key=$_apiKey';
 
@@ -53,6 +53,8 @@ class PlacesService {
 
   // Get place details including coordinates
   Future<PlaceDetails?> getPlaceDetails(String placeId) async {
+    if (_apiKey == 'YOUR_GOOGLE_API_KEY') return null;
+
     final url =
         '$_baseUrl/details/json?place_id=$placeId&fields=name,formatted_address,geometry&key=$_apiKey';
 

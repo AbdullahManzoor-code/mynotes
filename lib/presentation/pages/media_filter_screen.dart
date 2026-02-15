@@ -5,6 +5,7 @@ import 'package:mynotes/presentation/bloc/media/media_gallery/media_gallery_bloc
 import 'package:mynotes/presentation/bloc/media/media_filter/media_filter_bloc.dart';
 import 'package:mynotes/presentation/bloc/params/media_filter_params.dart';
 import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 
 /// Advanced Media Filter Screen - Batch 4, Screen 1
 /// Refactored to BLoC and Design System - ORG-004
@@ -132,6 +133,7 @@ class _AdvancedMediaFilterContent extends StatelessWidget {
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
           onSelected: (selected) {
+            AppLogger.i('AdvancedMediaFilterScreen: Media type selected: $type ($selected)');
             context.read<MediaFilterBloc>().add(
               UpdateMediaTypeEvent(selected ? type : null),
             );
@@ -188,10 +190,11 @@ class _AdvancedMediaFilterContent extends StatelessWidget {
           if (params.fromDate != null || params.toDate != null)
             TextButton(
               onPressed: () {
-                context.read<MediaFilterBloc>().add(
-                  const UpdateDateRangeEvent(fromDate: null, toDate: null),
-                );
-              },
+              AppLogger.i('AdvancedMediaFilterScreen: Clear dates pressed');
+              context.read<MediaFilterBloc>().add(
+                const UpdateDateRangeEvent(fromDate: null, toDate: null),
+              );
+            },
               child: Text(
                 'Clear Dates',
                 style: TextStyle(color: AppColors.errorColor),
@@ -318,9 +321,12 @@ class _AdvancedMediaFilterContent extends StatelessWidget {
               padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
               side: BorderSide(color: AppColors.secondaryText),
             ),
-            onPressed: () => context.read<MediaFilterBloc>().add(
-              const ClearAllFiltersEvent(),
-            ),
+            onPressed: () {
+              AppLogger.i('AdvancedMediaFilterScreen: Reset filters pressed');
+              context.read<MediaFilterBloc>().add(
+                const ClearAllFiltersEvent(),
+              );
+            },
           ),
         ),
         SizedBox(width: AppSpacing.md),
@@ -347,7 +353,10 @@ class _AdvancedMediaFilterContent extends StatelessWidget {
                 ),
                 onPressed: isLoading
                     ? null
-                    : () => _applyFilter(context, params),
+                    : () {
+                        AppLogger.i('AdvancedMediaFilterScreen: Apply filter pressed');
+                        _applyFilter(context, params);
+                      },
               );
             },
           ),

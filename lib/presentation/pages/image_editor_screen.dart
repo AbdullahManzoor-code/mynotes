@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:pro_image_editor/pro_image_editor.dart';
 import '../../domain/entities/media_item.dart';
+import '../../core/services/app_logger.dart';
 
 class ImageEditorScreen extends StatelessWidget {
   final MediaItem mediaItem;
@@ -19,6 +20,7 @@ class ImageEditorScreen extends StatelessWidget {
       File(mediaItem.filePath),
       callbacks: ProImageEditorCallbacks(
         onImageEditingComplete: (bytes) async {
+          AppLogger.i('ImageEditorScreen: onImageEditingComplete');
           // Save the edited image to a temporary file
           final tempDir = Directory.systemTemp;
           final editedFile = File(
@@ -29,7 +31,10 @@ class ImageEditorScreen extends StatelessWidget {
           onSave(editedFile.path);
           if (context.mounted) Navigator.pop(context);
         },
-        onCloseEditor: (mode) => Navigator.pop(context),
+        onCloseEditor: (mode) {
+          AppLogger.i('ImageEditorScreen: onCloseEditor with mode: $mode');
+          Navigator.pop(context);
+        },
       ),
       configs: const ProImageEditorConfigs(
         designMode: ImageEditorDesignMode.material,

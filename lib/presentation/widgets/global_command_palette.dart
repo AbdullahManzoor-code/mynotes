@@ -6,7 +6,7 @@ import '../pages/enhanced_note_editor_screen.dart';
 import '../pages/focus_session_screen.dart';
 import '../pages/enhanced_reminders_list_screen.dart';
 import '../pages/settings_screen.dart';
-import '../pages/daily_highlight_summary_screen.dart';
+import '../pages/daily_focus_highlight_screen.dart';
 import 'quick_add_bottom_sheet.dart';
 
 /// Global Command Palette
@@ -405,7 +405,7 @@ class _GlobalCommandPaletteState extends State<GlobalCommandPalette>
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => const DailyHighlightSummaryScreen(),
+                builder: (context) => const DailyFocusHighlightScreen(),
               ),
             );
           });

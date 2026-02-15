@@ -8,6 +8,7 @@ class SmartRemindersScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('SmartRemindersScreen: build');
     return DefaultTabController(
       length: 3,
       child: Scaffold(
@@ -67,6 +68,7 @@ class SmartRemindersScreen extends StatelessWidget {
         ),
         floatingActionButton: FloatingActionButton(
           onPressed: () {
+            AppLogger.i('SmartRemindersScreen: Refresh FAB pressed');
             context.read<SmartRemindersBloc>().add(
               const LoadSuggestionsEvent(),
             );
@@ -170,6 +172,9 @@ class SmartRemindersScreen extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.close, size: 20),
                 onPressed: () {
+                  AppLogger.i(
+                    'SmartRemindersScreen: Reject suggestion - ${suggestion['id']}',
+                  );
                   context.read<SmartRemindersBloc>().add(
                     RejectSuggestionEvent(
                       suggestionId: suggestion['id'] as String,
@@ -204,6 +209,9 @@ class SmartRemindersScreen extends StatelessWidget {
               const Spacer(),
               ElevatedButton(
                 onPressed: () {
+                  AppLogger.i(
+                    'SmartRemindersScreen: Accept suggestion - ${suggestion['id']}',
+                  );
                   context.read<SmartRemindersBloc>().add(
                     AcceptSuggestionEvent(
                       suggestionId: suggestion['id'] as String,
@@ -523,4 +531,3 @@ class SmartRemindersScreen extends StatelessWidget {
     );
   }
 }
-

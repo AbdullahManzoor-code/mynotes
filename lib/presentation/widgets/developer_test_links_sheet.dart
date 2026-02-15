@@ -63,6 +63,7 @@ class DeveloperTestLinksSheet extends StatelessWidget {
       // • Sort Button (Tap -> Sort Options)
       // • FAB (Tap -> Create New Todo)
       _TestRoute('⏰ Reminders List', AppRoutes.remindersList),
+      _TestRoute('AdvancedSettings', AppRoutes.advancedSettings),
 
       // Purpose: Manages all scheduled reminders, alarms, and notifications for the user.
       // Flow: BottomNav 'Reminders' tab.
@@ -470,10 +471,7 @@ class DeveloperTestLinksSheet extends StatelessWidget {
       // • Map View (Pan/Zoom -> Select Spot)
       // • Search Place (Input -> Find Location)
       // • Radius Slider (Slide -> Adjust Geofence)
-      _TestRoute(
-        '🗺️ Location Reminder',
-        AppRoutes.locationReminder,
-      ),
+      _TestRoute('🗺️ Location Reminder', AppRoutes.locationReminder),
 
       // Purpose: Placeholder for upcoming location-based features.
       // Flow: Integrated Features -> Location Demo.

@@ -3,12 +3,14 @@ import 'package:introduction_screen/introduction_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../design_system/design_system.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/services/app_logger.dart';
 
 /// Onboarding Screen using introduction_screen package
 class OnboardingScreen extends StatelessWidget {
   const OnboardingScreen({super.key});
 
   void _finishOnboarding(BuildContext context) async {
+    AppLogger.i('OnboardingScreen: Completing onboarding');
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('first_launch', false);
 

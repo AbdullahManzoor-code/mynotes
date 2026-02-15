@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
+import 'package:mynotes/core/services/app_logger.dart';
 import '../bloc/drawing_canvas/drawing_canvas_bloc.dart';
 import '../design_system/design_system.dart';
 
@@ -27,6 +28,7 @@ class DrawingCanvasScreen extends StatelessWidget {
           ),
           TextButton(
             onPressed: () {
+              AppLogger.i('DrawingCanvas: Clear confirmed');
               context.read<DrawingCanvasBloc>().add(const ClearCanvasEvent());
               Navigator.pop(ctx);
             },
@@ -41,6 +43,7 @@ class DrawingCanvasScreen extends StatelessWidget {
     BuildContext context,
     List<DrawingPath> paths,
   ) async {
+    AppLogger.i('DrawingCanvas: Saving drawing with ${paths.length} paths');
     try {
       // Create a recorder to capture the canvas
       final recorder = ui.PictureRecorder();
@@ -112,25 +115,36 @@ class DrawingCanvasScreen extends StatelessWidget {
                 icon: const Icon(Icons.undo),
                 onPressed: state.paths.isEmpty
                     ? null
-                    : () => context.read<DrawingCanvasBloc>().add(
-                        const UndoEvent(),
-                      ),
+                    : () {
+                        AppLogger.i('DrawingCanvas: Undo pressed');
+                        context.read<DrawingCanvasBloc>().add(
+                          const UndoEvent(),
+                        );
+                      },
                 tooltip: 'Undo',
               ),
               IconButton(
                 icon: const Icon(Icons.redo),
-                onPressed: () =>
-                    context.read<DrawingCanvasBloc>().add(const RedoEvent()),
+                onPressed: () {
+                  AppLogger.i('DrawingCanvas: Redo pressed');
+                  context.read<DrawingCanvasBloc>().add(const RedoEvent());
+                },
                 tooltip: 'Redo',
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline),
-                onPressed: () => _showClearDialog(context),
+                onPressed: () {
+                  AppLogger.i('DrawingCanvas: Clear pressed');
+                  _showClearDialog(context);
+                },
                 tooltip: 'Clear',
               ),
               IconButton(
                 icon: const Icon(Icons.save_alt),
-                onPressed: () => _saveDrawing(context, state.paths),
+                onPressed: () {
+                  AppLogger.i('DrawingCanvas: Save pressed');
+                  _saveDrawing(context, state.paths);
+                },
                 tooltip: 'Save',
               ),
             ],
@@ -248,9 +262,14 @@ class DrawingCanvasScreen extends StatelessWidget {
                     children: colorOptions
                         .map(
                           (color) => GestureDetector(
-                            onTap: () => context.read<DrawingCanvasBloc>().add(
-                              SetPenColorEvent(color),
-                            ),
+                            onTap: () {
+                              AppLogger.i(
+                                'DrawingCanvas: color selected: $color',
+                              );
+                              context.read<DrawingCanvasBloc>().add(
+                                SetPenColorEvent(color),
+                              );
+                            },
                             child: Container(
                               margin: EdgeInsets.symmetric(horizontal: 4.w),
                               width: 30.w,
@@ -292,6 +311,7 @@ class DrawingCanvasScreen extends StatelessWidget {
                     .toList(),
                 onChanged: (val) {
                   if (val != null) {
+                    AppLogger.i('DrawingCanvas: pen width changed to $val');
                     context.read<DrawingCanvasBloc>().add(
                       SetPenWidthEvent(val),
                     );
@@ -321,8 +341,10 @@ class DrawingCanvasScreen extends StatelessWidget {
           size: 16,
         ),
         label: Text(label),
-        onPressed: () =>
-            context.read<DrawingCanvasBloc>().add(SetToolEvent(tool)),
+        onPressed: () {
+          AppLogger.i('DrawingCanvas: tool selected: $tool');
+          context.read<DrawingCanvasBloc>().add(SetToolEvent(tool));
+        },
         backgroundColor: isSelected ? Colors.blue : Colors.white,
         labelStyle: TextStyle(color: isSelected ? Colors.white : Colors.black),
       ),
@@ -364,4 +386,3 @@ class DrawingPainter extends CustomPainter {
     return oldDelegate.paths.length != paths.length;
   }
 }
-

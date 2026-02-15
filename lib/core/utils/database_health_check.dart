@@ -1,13 +1,13 @@
-import '../../data/datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 import '../../data/repositories/reflection_repository_impl.dart';
 import '../../domain/entities/note.dart';
 
 /// Database health check utility
 class DatabaseHealthCheck {
-  final NotesDatabase _notesDb;
+  final CoreDatabase _notesDb;
   final ReflectionRepositoryImpl _reflectionRepo;
 
-  DatabaseHealthCheck({required NotesDatabase notesDb})
+  DatabaseHealthCheck({required CoreDatabase notesDb})
     : _notesDb = notesDb,
       _reflectionRepo = ReflectionRepositoryImpl(notesDb);
 
@@ -235,4 +235,3 @@ class DatabaseHealthCheck {
     return buffer.toString();
   }
 }
-

@@ -1,10 +1,10 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:mynotes/domain/entities/location_reminder_model.dart';
 import 'package:mynotes/domain/entities/saved_location_model.dart';
-import 'package:mynotes/data/datasources/local_database.dart';
+import 'package:mynotes/core/database/core_database.dart';
 
 class LocationReminderRepository {
-  final NotesDatabase _database = NotesDatabase();
+  final CoreDatabase _database = CoreDatabase();
 
   // Location Reminders CRUD operations
 

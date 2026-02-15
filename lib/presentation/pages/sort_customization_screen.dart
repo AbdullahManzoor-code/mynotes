@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/utils/app_logger.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
@@ -16,6 +17,7 @@ class SortCustomizationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('SortCustomizationScreen: build');
     return DefaultTabController(
       length: 3,
       child: BlocBuilder<NotesBloc, NoteState>(
@@ -166,6 +168,9 @@ class SortCustomizationScreen extends StatelessWidget {
 
     return GestureDetector(
       onTap: () {
+        AppLogger.i(
+          'SortCustomizationScreen: Quick sort selected - ${option['name']}',
+        );
         context.read<NotesBloc>().add(
           UpdateNoteViewConfigEvent(
             sortBy: option['primary'] as NoteSortOption,
@@ -259,6 +264,7 @@ class SortCustomizationScreen extends StatelessWidget {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {
+                    AppLogger.i('SortCustomizationScreen: Reset sort settings');
                     context.read<NotesBloc>().add(
                       const UpdateNoteViewConfigEvent(
                         sortBy: NoteSortOption.dateModified,
@@ -276,6 +282,7 @@ class SortCustomizationScreen extends StatelessWidget {
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed: () {
+                    AppLogger.i('SortCustomizationScreen: Save sort settings');
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Sort settings saved')),
                     );

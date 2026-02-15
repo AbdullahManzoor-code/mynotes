@@ -7,6 +7,7 @@ import '../bloc/navigation/navigation_bloc.dart';
 import '../bloc/smart_reminders/smart_reminders_bloc.dart';
 import '../design_system/design_system.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/services/app_logger.dart';
 import 'today_dashboard_screen.dart';
 import 'enhanced_notes_list_screen.dart';
 import 'enhanced_reminders_list_screen.dart';
@@ -19,7 +20,12 @@ import 'settings_screen.dart';
 class MainNavigationScreen extends StatelessWidget {
   const MainNavigationScreen({super.key});
 
-  void _onTabChanged(BuildContext context, PageController controller, int index) {
+  void _onTabChanged(
+    BuildContext context,
+    PageController controller,
+    int index,
+  ) {
+    AppLogger.i('MainNavigationScreen: Tab changed to: $index');
     context.read<NavigationBloc>().add(TabChanged(index));
     controller.animateToPage(
       index,
@@ -29,6 +35,7 @@ class MainNavigationScreen extends StatelessWidget {
   }
 
   void _openQuickAdd(BuildContext context) {
+    AppLogger.i('MainNavigationScreen: Opening Universal Quick Add');
     Navigator.of(context).pushNamed(AppRoutes.universalQuickAdd);
   }
 
@@ -43,7 +50,8 @@ class MainNavigationScreen extends StatelessWidget {
               builder: (context, themeState) {
                 return Scaffold(
                   body: BlocListener<NavigationBloc, NavigationState>(
-                    listenWhen: (prev, curr) => prev.currentIndex != curr.currentIndex,
+                    listenWhen: (prev, curr) =>
+                        prev.currentIndex != curr.currentIndex,
                     listener: (context, state) {
                       if (pageController.hasClients &&
                           pageController.page?.round() != state.currentIndex) {
@@ -81,7 +89,8 @@ class MainNavigationScreen extends StatelessWidget {
 
                           return BottomNavigationBar(
                             currentIndex: navState.currentIndex,
-                            onTap: (index) => _onTabChanged(context, pageController, index),
+                            onTap: (index) =>
+                                _onTabChanged(context, pageController, index),
                             type: BottomNavigationBarType.fixed,
                             elevation: 8.0,
                             backgroundColor: themeState.isDarkMode
@@ -138,10 +147,7 @@ class MainNavigationScreen extends StatelessWidget {
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.elasticOut,
                     builder: (context, value, child) {
-                      return Transform.scale(
-                        scale: value,
-                        child: child,
-                      );
+                      return Transform.scale(scale: value, child: child);
                     },
                     child: FloatingActionButton(
                       onPressed: () => _openQuickAdd(context),
@@ -186,16 +192,18 @@ class _NavigationLifecycleWrapperState
   @override
   void initState() {
     super.initState();
+    AppLogger.i('MainNavigationScreen: initState');
     _pageController = PageController(initialPage: widget.initialPage);
   }
 
   @override
   void dispose() {
+    AppLogger.i('MainNavigationScreen: dispose');
     _pageController.dispose();
     super.dispose();
   }
 
   @override
-  Widget build(BuildContext context) => widget.builder(context, _pageController);
+  Widget build(BuildContext context) =>
+      widget.builder(context, _pageController);
 }
-

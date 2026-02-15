@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:mynotes/domain/entities/saved_location_model.dart';
 import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bloc.dart';
 
@@ -8,6 +9,7 @@ class SavedLocationsScreen extends StatelessWidget {
   const SavedLocationsScreen({super.key});
 
   void _showAddLocationDialog(BuildContext context) {
+    AppLogger.i('SavedLocationsScreen: Show add location dialog');
     context.read<LocationReminderBloc>().add(GetCurrentLocation());
     showDialog(
       context: context,
@@ -23,6 +25,9 @@ class SavedLocationsScreen extends StatelessWidget {
   }
 
   void _addSavedLocation(BuildContext context, String name, LatLng location) {
+    AppLogger.i(
+      'SavedLocationsScreen: Saving location - name: $name, coords: $location',
+    );
     final newLocation = SavedLocation.create(
       name: name,
       latitude: location.latitude,
@@ -30,15 +35,16 @@ class SavedLocationsScreen extends StatelessWidget {
     );
 
     context.read<LocationReminderBloc>().add(
-          SaveLocation(location: newLocation),
-        );
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Saved "$name" location')),
+      SaveLocation(location: newLocation),
     );
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Saved "$name" location')));
   }
 
   void _editLocation(BuildContext context, SavedLocation location) {
+    AppLogger.i('SavedLocationsScreen: Editing location - ${location.name}');
     showDialog(
       context: context,
       builder: (_) => _EditLocationDialog(
@@ -46,8 +52,8 @@ class SavedLocationsScreen extends StatelessWidget {
         onSave: (name) {
           final updated = location.copyWith(name: name);
           context.read<LocationReminderBloc>().add(
-                UpdateSavedLocation(updated),
-              );
+            UpdateSavedLocation(updated),
+          );
           Navigator.of(context).pop();
         },
       ),
@@ -55,6 +61,7 @@ class SavedLocationsScreen extends StatelessWidget {
   }
 
   void _deleteLocation(BuildContext context, SavedLocation location) {
+    AppLogger.i('SavedLocationsScreen: Deleting location - ${location.name}');
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -62,14 +69,18 @@ class SavedLocationsScreen extends StatelessWidget {
         content: Text('Remove "${location.name}" from saved locations?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
+            onPressed: () {
+              AppLogger.i('SavedLocationsScreen: Delete location cancelled');
+              Navigator.of(dialogContext).pop();
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
+              AppLogger.i('SavedLocationsScreen: Delete location confirmed');
               context.read<LocationReminderBloc>().add(
-                    DeleteSavedLocation(location),
-                  );
+                DeleteSavedLocation(location),
+              );
               Navigator.of(dialogContext).pop();
             },
             child: const Text('Delete'),
@@ -81,6 +92,7 @@ class SavedLocationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('SavedLocationsScreen: build');
     return Scaffold(
       appBar: AppBar(title: const Text('Saved Locations')),
       body: BlocBuilder<LocationReminderBloc, LocationReminderState>(
@@ -90,6 +102,10 @@ class SavedLocationsScreen extends StatelessWidget {
           }
 
           if (state is LocationReminderError) {
+            AppLogger.e(
+              'SavedLocationsScreen: LocationReminderError',
+              state.message,
+            );
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -103,9 +119,14 @@ class SavedLocationsScreen extends StatelessWidget {
                   Text(state.message),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () => context
-                        .read<LocationReminderBloc>()
-                        .add(LoadLocationReminders()),
+                    onPressed: () {
+                      AppLogger.i(
+                        'SavedLocationsScreen: Retry loading reminders',
+                      );
+                      context.read<LocationReminderBloc>().add(
+                        LoadLocationReminders(),
+                      );
+                    },
                     child: const Text('Retry'),
                   ),
                 ],
@@ -132,7 +153,10 @@ class SavedLocationsScreen extends StatelessWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddLocationDialog(context),
+        onPressed: () {
+          AppLogger.i('SavedLocationsScreen: FAB Add Location pressed');
+          _showAddLocationDialog(context);
+        },
         icon: const Icon(Icons.add_location_alt),
         label: const Text('Add Location'),
       ),
@@ -160,15 +184,19 @@ class SavedLocationsScreen extends StatelessWidget {
             Text(
               'Save your favorite places to quickly select them '
               'when creating reminders.',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.grey),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => _showAddLocationDialog(context),
+              onPressed: () {
+                AppLogger.i(
+                  'SavedLocationsScreen: Empty state Add Location pressed',
+                );
+                _showAddLocationDialog(context);
+              },
               icon: const Icon(Icons.add),
               label: const Text('Save First Location'),
             ),
@@ -190,10 +218,9 @@ class SavedLocationsScreen extends StatelessWidget {
         subtitle: Text(
           '${location.latitude.toStringAsFixed(4)}, '
           '${location.longitude.toStringAsFixed(4)}',
-          style: Theme.of(context)
-              .textTheme
-              .labelSmall
-              ?.copyWith(color: Colors.grey),
+          style: Theme.of(
+            context,
+          ).textTheme.labelSmall?.copyWith(color: Colors.grey),
         ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
@@ -289,9 +316,14 @@ class _AddLocationDialogState extends State<_AddLocationDialog> {
                     const Text('Could not get current location'),
                     const SizedBox(height: 8),
                     TextButton.icon(
-                      onPressed: () => context
-                          .read<LocationReminderBloc>()
-                          .add(GetCurrentLocation()),
+                      onPressed: () {
+                        AppLogger.i(
+                          'AddLocationDialog: Requesting location retry',
+                        );
+                        context.read<LocationReminderBloc>().add(
+                          GetCurrentLocation(),
+                        );
+                      },
                       icon: const Icon(Icons.refresh),
                       label: const Text('Try Again'),
                     ),
@@ -305,13 +337,12 @@ class _AddLocationDialogState extends State<_AddLocationDialog> {
               child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed:
-                  _nameController.text.isEmpty || currentLocation == null
-                      ? null
-                      : () => widget.onSave(
-                            _nameController.text,
-                            currentLocation,
-                          ),
+              onPressed: _nameController.text.isEmpty || currentLocation == null
+                  ? null
+                  : () {
+                      AppLogger.i('AddLocationDialog: Save button pressed');
+                      widget.onSave(_nameController.text, currentLocation);
+                    },
               child: const Text('Save'),
             ),
           ],
@@ -335,10 +366,7 @@ class _EditLocationDialog extends StatefulWidget {
   final SavedLocation location;
   final Function(String) onSave;
 
-  const _EditLocationDialog({
-    required this.location,
-    required this.onSave,
-  });
+  const _EditLocationDialog({required this.location, required this.onSave});
 
   @override
   State<_EditLocationDialog> createState() => _EditLocationDialogState();
@@ -362,9 +390,7 @@ class _EditLocationDialogState extends State<_EditLocationDialog> {
         onChanged: (_) => setState(() {}),
         decoration: InputDecoration(
           labelText: 'Location Name',
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
           prefixIcon: const Icon(Icons.location_on),
         ),
       ),
@@ -376,7 +402,10 @@ class _EditLocationDialogState extends State<_EditLocationDialog> {
         ElevatedButton(
           onPressed: _nameController.text.isEmpty
               ? null
-              : () => widget.onSave(_nameController.text),
+              : () {
+                  AppLogger.i('EditLocationDialog: Update button pressed');
+                  widget.onSave(_nameController.text);
+                },
           child: const Text('Update'),
         ),
       ],

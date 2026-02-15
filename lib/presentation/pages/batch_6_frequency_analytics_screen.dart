@@ -6,6 +6,7 @@ import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import '../../injection_container.dart';
 import '../../core/services/global_ui_service.dart';
+import '../../core/utils/app_logger.dart';
 
 /// Frequency Analytics - Batch 6, Screen 3
 /// Modernized to use Design System and converted to StatelessWidget
@@ -14,6 +15,7 @@ class FrequencyAnalyticsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('FrequencyAnalyticsScreen: Building');
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
@@ -29,6 +31,7 @@ class FrequencyAnalyticsScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.sync_rounded, color: AppColors.primaryColor),
             onPressed: () {
+              AppLogger.i('FrequencyAnalyticsScreen: Refreshing analytics');
               context.read<SmartRemindersBloc>().add(
                 const LoadSuggestionsEvent(),
               );
@@ -40,12 +43,16 @@ class FrequencyAnalyticsScreen extends StatelessWidget {
       body: BlocBuilder<SmartRemindersBloc, SmartRemindersState>(
         builder: (context, state) {
           if (state is SmartRemindersLoading) {
+            AppLogger.i('FrequencyAnalyticsScreen: Loading state');
             return const Center(
               child: CircularProgressIndicator(color: AppColors.primaryColor),
             );
           }
 
           if (state is SmartRemindersInitial) {
+            AppLogger.i(
+              'FrequencyAnalyticsScreen: Initial state, loading data',
+            );
             context.read<SmartRemindersBloc>().add(
               const LoadSuggestionsEvent(),
             );
@@ -55,6 +62,9 @@ class FrequencyAnalyticsScreen extends StatelessWidget {
           }
 
           if (state is! SmartRemindersLoaded) {
+            AppLogger.w(
+              'FrequencyAnalyticsScreen: Reminders not loaded. State: ${state.runtimeType}',
+            );
             return Center(
               child: Text(
                 'Connect reminders to view analytics',
@@ -65,6 +75,8 @@ class FrequencyAnalyticsScreen extends StatelessWidget {
               ),
             );
           }
+
+          AppLogger.i('FrequencyAnalyticsScreen: Data loaded successfully');
 
           return SingleChildScrollView(
             padding: AppSpacing.paddingAllM,
@@ -126,6 +138,7 @@ class FrequencyAnalyticsScreen extends StatelessWidget {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          AppLogger.i('FrequencyAnalyticsScreen: Changing period to $value');
           context.read<SmartRemindersBloc>().add(
             ChangePeriodEvent(period: value),
           );
@@ -502,4 +515,3 @@ class FrequencyAnalyticsScreen extends StatelessWidget {
     );
   }
 }
-

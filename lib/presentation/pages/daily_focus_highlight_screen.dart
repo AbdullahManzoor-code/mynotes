@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/domain/entities/todo_item.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_state.dart';
@@ -20,6 +21,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppLogger.i('DailyFocusHighlightScreen: Building UI');
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -99,7 +101,10 @@ class DailyFocusHighlightScreen extends StatelessWidget {
             color: AppColors.textPrimary(context),
             size: 20.sp,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            AppLogger.i('DailyFocusHighlightScreen: Back button pressed');
+            Navigator.pop(context);
+          },
           splashRadius: 24.r,
         ),
       ),
@@ -117,6 +122,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               size: 20.sp,
             ),
             onPressed: () {
+              AppLogger.i('DailyFocusHighlightScreen: Info button pressed');
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
@@ -174,7 +180,11 @@ class DailyFocusHighlightScreen extends StatelessWidget {
           // Animation placeholder
           SizedBox(
             height: 200.h,
-            child: LottieAnimationWidget('empty_state', width: 180.w, height: 180.h),
+            child: LottieAnimationWidget(
+              'empty_state',
+              width: 180.w,
+              height: 180.h,
+            ),
           ),
           SizedBox(height: 32.h),
 
@@ -667,6 +677,9 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
+                  AppLogger.i(
+                    'DailyFocusHighlightScreen: Start Focus Session pressed',
+                  );
                   HapticFeedback.mediumImpact();
                   Navigator.pushNamed(
                     context,
@@ -715,6 +728,7 @@ class DailyFocusHighlightScreen extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
+                  AppLogger.i('DailyFocusHighlightScreen: Share pressed');
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(

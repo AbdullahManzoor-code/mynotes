@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
+import 'package:mynotes/core/services/app_logger.dart';
 import '../bloc/analytics/analytics_bloc.dart';
 import 'edit_daily_highlight_screen_new.dart';
 import '../design_system/design_system.dart';
@@ -24,17 +25,20 @@ class _DailyHighlightSummaryScreenState
   @override
   void initState() {
     super.initState();
+    AppLogger.i('DailyHighlightSummaryScreen: Initialized');
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 3),
     );
     // Trigger confetti on entry
     Future.delayed(const Duration(milliseconds: 500), () {
+      AppLogger.i('DailyHighlightSummaryScreen: Playing confetti');
       _confettiController.play();
     });
   }
 
   @override
   void dispose() {
+    AppLogger.i('DailyHighlightSummaryScreen: Disposed');
     _confettiController.dispose();
     super.dispose();
   }
@@ -161,7 +165,10 @@ class _DailyHighlightSummaryScreenState
       child: Row(
         children: [
           GestureDetector(
-            onTap: () => Navigator.pop(context),
+            onTap: () {
+              AppLogger.i('DailyHighlightSummaryScreen: Close pressed');
+              Navigator.pop(context);
+            },
             child: Container(
               width: 48.w,
               height: 48.w,
@@ -185,7 +192,12 @@ class _DailyHighlightSummaryScreenState
             ),
           ),
           GestureDetector(
-            onTap: () => _shareHighlights(),
+            onTap: () {
+              AppLogger.i(
+                'DailyHighlightSummaryScreen: Share highlights pressed',
+              );
+              _shareHighlights();
+            },
             child: Container(
               width: 48.w,
               height: 48.w,
@@ -374,7 +386,12 @@ class _DailyHighlightSummaryScreenState
           width: double.infinity,
           height: 56.h,
           child: ElevatedButton(
-            onPressed: () => _saveAsReflection(context),
+            onPressed: () {
+              AppLogger.i(
+                'DailyHighlightSummaryScreen: Save as Reflection pressed',
+              );
+              _saveAsReflection(context);
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primaryColor,
               foregroundColor: Colors.white,
@@ -407,7 +424,10 @@ class _DailyHighlightSummaryScreenState
           width: double.infinity,
           height: 56.h,
           child: OutlinedButton(
-            onPressed: () => _editWins(context),
+            onPressed: () {
+              AppLogger.i('DailyHighlightSummaryScreen: Edit Wins pressed');
+              _editWins(context);
+            },
             style: OutlinedButton.styleFrom(
               backgroundColor: Colors.white.withOpacity(0.05),
               foregroundColor: Colors.white,
@@ -488,4 +508,3 @@ class _DailyHighlightSummaryScreenState
     );
   }
 }
-

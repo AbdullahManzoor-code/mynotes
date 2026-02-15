@@ -100,6 +100,7 @@ class AppRoutes {
   static const String quickAdd = '/quick-add';
   static const String quickAddConfirmation = '/quick-add-confirmation';
   static const String universalQuickAdd = '/universal-quick-add';
+  static const String unifiedItems = '/unified-items';
 
   // ==================== Advanced Features Integration ====================
   static const String integratedFeatures = '/integrated-features';
