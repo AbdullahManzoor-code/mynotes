@@ -213,6 +213,97 @@ class _LocationPickerLifecycleWrapperState
     Navigator.of(context).pop();
   }
 
+  /// Build Google Map with error handling for missing API key
+  Widget _buildGoogleMap(
+    LocationPickerState state,
+    Set<Marker> markers,
+    Set<Circle> circles,
+    BuildContext context,
+  ) {
+    try {
+      return GoogleMap(
+        onMapCreated: (controller) {
+          try {
+            _mapController = controller;
+            if (state.selectedLocation != null) {
+              _mapController!.animateCamera(
+                CameraUpdate.newLatLngZoom(state.selectedLocation!, 15),
+              );
+            } else {
+              _getCurrentLocation();
+            }
+          } catch (e) {
+            AppLogger.e('LocationPickerScreen: Error in onMapCreated', e);
+            if (mounted) {
+              setState(() {
+                _useMap = false;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Map initialization failed: $e'),
+                  duration: const Duration(seconds: 4),
+                ),
+              );
+            }
+          }
+        },
+        initialCameraPosition: CameraPosition(
+          target: state.selectedLocation ?? const LatLng(37.7749, -122.4194),
+          zoom: 15,
+        ),
+        markers: markers,
+        circles: circles,
+        onTap: _selectLocation,
+        myLocationEnabled: true,
+        myLocationButtonEnabled: false,
+        compassEnabled: true,
+        zoomControlsEnabled: false,
+      );
+    } catch (e) {
+      // If map fails to initialize, fall back to manual mode
+      AppLogger.e('LocationPickerScreen: GoogleMap initialization failed', e);
+      if (mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() {
+              _useMap = false;
+            });
+          }
+        });
+      }
+      // Return a placeholder while we switch to manual mode
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Theme.of(context).brightness == Brightness.dark
+            ? Colors.grey.shade900
+            : Colors.grey.shade200,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.warning_rounded, size: 64.sp, color: Colors.amber),
+              SizedBox(height: 16.h),
+              Text(
+                'Map Unavailable',
+                style: AppTypography.heading4(context, Colors.amber),
+              ),
+              SizedBox(height: 8.h),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 40.w),
+                child: Text(
+                  'Please configure Google Maps API key or use manual selection mode.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodySmall(context, Colors.grey),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocProvider.value(
@@ -344,34 +435,7 @@ class _LocationPickerLifecycleWrapperState
               children: [
                 // Map or Fallback
                 if (_useMap)
-                  GoogleMap(
-                    onMapCreated: (controller) {
-                      _mapController = controller;
-                      if (state.selectedLocation != null) {
-                        _mapController!.animateCamera(
-                          CameraUpdate.newLatLngZoom(
-                            state.selectedLocation!,
-                            15,
-                          ),
-                        );
-                      } else {
-                        _getCurrentLocation();
-                      }
-                    },
-                    initialCameraPosition: CameraPosition(
-                      target:
-                          state.selectedLocation ??
-                          const LatLng(37.7749, -122.4194),
-                      zoom: 15,
-                    ),
-                    markers: markers,
-                    circles: circles,
-                    onTap: _selectLocation,
-                    myLocationEnabled: true,
-                    myLocationButtonEnabled: false,
-                    compassEnabled: true,
-                    zoomControlsEnabled: false,
-                  )
+                  _buildGoogleMap(state, markers, circles, context)
                 else
                   Container(
                     width: double.infinity,

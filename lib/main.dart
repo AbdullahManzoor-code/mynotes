@@ -4,6 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:vibration/vibration.dart';
 // import 'package:mynotes/domain/entities/alarm.dart';
 import 'package:mynotes/domain/repositories/alarm_repository.dart';
 import 'package:mynotes/presentation/bloc/reflection/reflection_event.dart';
@@ -56,10 +60,180 @@ import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/injection_container.dart'
     show getIt, setupServiceLocator;
 
+// ════════════════════════════════════════════════════════════════════════════════
+// CRITICAL: Background Alarm Callback
+// ════════════════════════════════════════════════════════════════════════════════
+// This function runs in a separate isolate when the alarm triggers, even if app is killed.
+// It MUST be a top-level function (not a class method) and annotated with @pragma.
+// ════════════════════════════════════════════════════════════════════════════════
+
+@pragma('vm:entry-point')
+void alarmCallback() {
+  AppLogger.i('═' * 70);
+  AppLogger.i('🔔 [BACKGROUND-ALARM] Alarm callback triggered in isolate!');
+  AppLogger.i('═' * 70);
+
+  try {
+    // Initialize Awesome Notifications in this isolate (fresh context)
+    AppLogger.i(
+      '[BACKGROUND-ALARM] Re-initializing AwesomeNotifications in isolate...',
+    );
+    AwesomeNotifications().initialize(null, [
+      NotificationChannel(
+        channelKey: 'alarm_channel',
+        channelName: 'Alarm Notifications',
+        channelDescription: 'Channel for alarm trigger notifications',
+        defaultColor: const Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        importance: NotificationImportance.Max,
+        channelShowBadge: true,
+        locked: true, // User can't dismiss easily
+        playSound: true,
+        enableVibration: true,
+      ),
+    ]);
+    AppLogger.i(
+      '[BACKGROUND-ALARM] ✅ AwesomeNotifications initialized in isolate',
+    );
+
+    // Trigger Vibration
+    AppLogger.i('[BACKGROUND-ALARM] Starting vibration pattern...');
+    Vibration.vibrate(pattern: [500, 1000, 500, 1000], repeat: -1);
+    AppLogger.i('[BACKGROUND-ALARM] ✅ Vibration started');
+
+    // Trigger Sound
+    AppLogger.i('[BACKGROUND-ALARM] Playing alarm sound...');
+    FlutterRingtonePlayer().playAlarm();
+    AppLogger.i('[BACKGROUND-ALARM] ✅ Alarm sound started');
+
+    // Show Notification
+    AppLogger.i('[BACKGROUND-ALARM] Creating notification...');
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 10,
+        channelKey: 'alarm_channel',
+        title: '⏰ Alarm!',
+        body: 'Your alarm is going off!',
+        wakeUpScreen: true, // Turns screen on
+        category: NotificationCategory.Alarm,
+        fullScreenIntent: true, // Shows full-screen UI on lockscreen
+        autoDismissible: false, // Persist until action taken
+        locked: true,
+      ),
+      actionButtons: [
+        NotificationActionButton(
+          key: 'STOP_ALARM',
+          label: 'Stop',
+          actionType: ActionType.Default,
+        ),
+        NotificationActionButton(
+          key: 'SNOOZE_ALARM',
+          label: 'Snooze 10min',
+          actionType: ActionType.Default,
+        ),
+      ],
+    );
+    AppLogger.i('[BACKGROUND-ALARM] ✅ Notification created');
+    AppLogger.i('═' * 70);
+    AppLogger.i('✅ [BACKGROUND-ALARM] Alarm callback completed successfully!');
+    AppLogger.i('═' * 70);
+  } catch (e, stack) {
+    AppLogger.e('═' * 70);
+    AppLogger.e('❌ [BACKGROUND-ALARM-ERROR] Failed to trigger alarm!');
+    AppLogger.e('═' * 70);
+    AppLogger.e('Error: $e');
+    AppLogger.e('Stack trace: $stack');
+    AppLogger.e('═' * 70);
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// Notification Action Handler
+// ════════════════════════════════════════════════════════════════════════════════
+// This handles actions from alarm notifications (both foreground and background)
+
+@pragma('vm:entry-point')
+Future<void> _onNotificationActionReceived(
+  ReceivedAction receivedAction,
+) async {
+  AppLogger.i('═' * 60);
+  AppLogger.i('🔔 [NOTIFICATION-ACTION] Action received!');
+  AppLogger.i('═' * 60);
+  AppLogger.i('Button Key: ${receivedAction.buttonKeyPressed}');
+  AppLogger.i('Notification ID: ${receivedAction.id}');
+  AppLogger.i('═' * 60);
+
+  try {
+    if (receivedAction.buttonKeyPressed == 'STOP_ALARM') {
+      AppLogger.i('🛑 [ALARM-ACTION] Stopping alarm...');
+      FlutterRingtonePlayer().stop();
+      Vibration.cancel();
+      AwesomeNotifications().dismiss(receivedAction.id ?? 10);
+      AppLogger.i('✅ [ALARM-ACTION] Alarm stopped successfully');
+    } else if (receivedAction.buttonKeyPressed == 'SNOOZE_ALARM') {
+      AppLogger.i('💤 [ALARM-ACTION] Snoozing alarm for 10 minutes...');
+      FlutterRingtonePlayer().stop();
+      Vibration.cancel();
+      // Schedule another alarm in 10 minutes
+      await AndroidAlarmManager.oneShot(
+        const Duration(minutes: 10),
+        (receivedAction.id ?? 10) + 1000,
+        alarmCallback,
+        exact: true,
+        wakeup: true,
+      );
+      AwesomeNotifications().dismiss(receivedAction.id ?? 10);
+      AppLogger.i('✅ [ALARM-ACTION] Alarm snoozed for 10 minutes');
+    }
+  } catch (e, stack) {
+    AppLogger.e('[ALARM-ACTION-ERROR] Failed to handle action: $e');
+    AppLogger.e('Stack: $stack');
+  }
+}
+
 void main() async {
   AppLogger.i('App starting: main() entry point');
   WidgetsFlutterBinding.ensureInitialized();
   AppLogger.i('Flutter binding initialized');
+
+  // Initialize Android Alarm Manager (CRITICAL for background alarms)
+  AppLogger.i('═' * 60);
+  AppLogger.i('[INIT] Initializing AndroidAlarmManager...');
+  try {
+    await AndroidAlarmManager.initialize();
+    AppLogger.i('[INIT] ✅ AndroidAlarmManager initialized successfully');
+  } catch (e) {
+    AppLogger.e('[INIT-ERROR] Failed to initialize AndroidAlarmManager: $e');
+  }
+  AppLogger.i('═' * 60);
+
+  // Initialize Awesome Notifications in main isolate (for foreground/UI interaction)
+  AppLogger.i('[INIT] Initializing AwesomeNotifications in main isolate...');
+  try {
+    AwesomeNotifications().initialize(null, [
+      NotificationChannel(
+        channelKey: 'alarm_channel',
+        channelName: 'Alarm Notifications',
+        channelDescription: 'Alarm trigger notifications',
+        defaultColor: const Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        importance: NotificationImportance.Max,
+        channelShowBadge: true,
+        locked: true,
+        playSound: true,
+        enableVibration: true,
+      ),
+    ]);
+    AppLogger.i('[INIT] ✅ AwesomeNotifications initialized in main isolate');
+
+    // Set up listener for notification actions (including from background alarm)
+    AwesomeNotifications().setListeners(
+      onActionReceivedMethod: _onNotificationActionReceived,
+    );
+    AppLogger.i('[INIT] ✅ Notification action listener registered');
+  } catch (e) {
+    AppLogger.e('[INIT-ERROR] Failed to initialize AwesomeNotifications: $e');
+  }
 
   // Initialize database factory ONLY for desktop platforms (Windows/Linux/Mac)
   if (!kIsWeb && (Platform.isWindows || Platform.isLinux || Platform.isMacOS)) {
@@ -77,52 +251,57 @@ void main() async {
   AppLogger.i('Initializing CoreDatabase...');
   final database = CoreDatabase();
 
-  // Get notification service from locator
+  // Get notificationservice from locator (already initialized with AlarmService)
+  AppLogger.i('Retrieving NotificationService from locator...');
   final notificationService = getIt<NotificationService>();
+  AppLogger.i('✅ NotificationService retrieved (includes AlarmService support)');
 
-  // Initialize alarm notification service (for specific alarm handling)
-  AppLogger.i('Initializing alarm notification service...');
-  final alarmNotificationService = notifications.AlarmService();
-  await alarmNotificationService.init(
-    onActionReceived: (actionId, payload, input) {
-      AppLogger.i('Notification action received: $actionId');
-      if (actionId == 'quick_reply' && input != null && input.isNotEmpty) {
-        AppLogger.i('Quick reply input received: $input');
-        // Save quick note/todo from notification
-        getIt<NotesBloc>().add(
-          CreateNoteEvent(
-            params: NoteParams(
-              title: 'Quick Note (from notification)',
-              content: input,
-              tags: ['quick-add'],
-            ),
+  // Get AlarmService from locator (already initialized)
+  AppLogger.i('Retrieving AlarmService from locator...');
+  final alarmNotificationService = getIt<notifications.AlarmService>();
+  AppLogger.i('✅ AlarmService retrieved for alarm handling');
+
+  // Set up alarm action handler
+  AppLogger.i('Setting up alarm action handler...');
+  alarmNotificationService.onActionReceived = (actionId, payload, input) {
+    AppLogger.i('Alarm action received: $actionId');
+    if (actionId == 'quick_reply' && input != null && input.isNotEmpty) {
+      AppLogger.i('Quick reply input received: $input');
+      // Save quick note/todo from notification
+      getIt<NotesBloc>().add(
+        CreateNoteEvent(
+          params: NoteParams(
+            title: 'Quick Note (from notification)',
+            content: input,
+            tags: ['quick-add'],
           ),
-        );
-        return;
-      }
+        ),
+      );
+      return;
+    }
 
-      if (payload != null) {
-        try {
-          final data = jsonDecode(payload);
-          final String alarmId = data['id']; // We ensured payload has id
-          AppLogger.i('Alarm action payload parsed: ID=$alarmId');
+    if (payload != null) {
+      try {
+        final data = jsonDecode(payload);
+        final String alarmId = data['id']; // We ensured payload has id
+        AppLogger.i('Alarm action payload parsed: ID=$alarmId');
 
-          if (actionId == 'complete') {
-            AppLogger.i('Marking alarm as completed: $alarmId');
-            getIt<AlarmsBloc>().add(MarkAlarmCompleted(alarmId));
-          } else if (actionId == 'snooze') {
-            // Default snooze 10 mins
-            AppLogger.i('Snoozing alarm: $alarmId');
-            getIt<AlarmsBloc>().add(
-              SnoozeAlarm(alarmId: alarmId, snoozeMinutes: 10),
-            );
-          }
-        } catch (e, stack) {
-          AppLogger.e('Error parsing payload for action: $e', e, stack);
+        if (actionId == 'complete') {
+          AppLogger.i('Marking alarm as completed: $alarmId');
+          getIt<AlarmsBloc>().add(MarkAlarmCompleted(alarmId));
+        } else if (actionId == 'snooze') {
+          // Default snooze 10 mins
+          AppLogger.i('Snoozing alarm: $alarmId');
+          getIt<AlarmsBloc>().add(
+            SnoozeAlarm(alarmId: alarmId, snoozeMinutes: 10),
+          );
         }
+      } catch (e, stack) {
+        AppLogger.e('Error parsing payload for action: $e', e, stack);
       }
-    },
-  );
+    }
+  };
+  AppLogger.i('✅ Alarm action handler registered');
 
   // AlarmsBloc is now registered via injection_container
   AppLogger.i('Loading initial alarms...');

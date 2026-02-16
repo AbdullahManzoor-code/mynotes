@@ -153,10 +153,11 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
       'id': question.id,
       'questionText': question.questionText,
       'category': question.category,
-      'isDefault': question.isUserCreated ? 0 : 1,
       'isCustom': question.isUserCreated ? 1 : 0,
+      'isPinned': question.isPinned ? 1 : 0,
       'frequency': question.frequency,
       'createdAt': question.createdAt.toIso8601String(),
+      'updatedAt': question.updatedAt.toIso8601String(),
     });
 
     return question;
@@ -181,7 +182,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
 
     final maps = await db.query(
       CoreDatabase.reflectionQuestionsTable,
-      where: 'isDefault = 1',
+      where: 'isCustom = 0',
       orderBy: 'question_order ASC',
     );
 
@@ -281,12 +282,12 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     final db = await _database.database;
     final maps = await db.query(
       CoreDatabase.reflectionDraftsTable,
-      where: 'questionId = ?',
+      where: 'questionId = ? AND isDeleted = 0',
       whereArgs: [questionId],
       limit: 1,
     );
     if (maps.isEmpty) return null;
-    return maps.first['draftText'] as String?;
+    return maps.first['answerText'] as String?;
   }
 
   @override
@@ -328,9 +329,10 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
   @override
   Future<void> saveDraft(String questionId, String draftText) async {
     final db = await _database.database;
+    final now = DateTime.now().toIso8601String();
     final existing = await db.query(
-      'reflection_drafts',
-      where: 'questionId = ?',
+      CoreDatabase.reflectionDraftsTable,
+      where: 'questionId = ? AND isDeleted = 0',
       whereArgs: [questionId],
       limit: 1,
     );
@@ -338,17 +340,18 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     if (existing.isNotEmpty) {
       await db.update(
         CoreDatabase.reflectionDraftsTable,
-        {'draftText': draftText, 'updatedAt': DateTime.now().toIso8601String()},
-        where: 'questionId = ?',
+        {'answerText': draftText, 'lastEditedAt': now},
+        where: 'questionId = ? AND isDeleted = 0',
         whereArgs: [questionId],
       );
     } else {
       await db.insert(CoreDatabase.reflectionDraftsTable, {
-        'id': '${questionId}_draft',
+        'id': '${questionId}_draft_${DateTime.now().millisecondsSinceEpoch}',
         'questionId': questionId,
-        'draftText': draftText,
-        'createdAt': DateTime.now().toIso8601String(),
-        'updatedAt': DateTime.now().toIso8601String(),
+        'answerText': draftText,
+        'isDeleted': 0,
+        'lastEditedAt': now,
+        'createdAt': now,
       });
     }
   }
@@ -444,7 +447,7 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     // First check for pinned question
     final pinned = await db.query(
       CoreDatabase.reflectionQuestionsTable,
-      where: 'isPinned = 1 AND isDeleted = 0',
+      where: 'isPinned = 1',
       limit: 1,
     );
 
@@ -455,7 +458,6 @@ class ReflectionRepositoryImpl implements ReflectionRepository {
     // Otherwise pick random
     final maps = await db.query(
       CoreDatabase.reflectionQuestionsTable,
-      where: 'isDeleted = 0',
       orderBy: 'RANDOM()',
       limit: 1,
     );

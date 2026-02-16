@@ -34,7 +34,8 @@ android {
         applicationId = "com.abdullahmanzoor.mynotes"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 24                 // UPDATED: Required for android_alarm_manager_plus
+        multiDexEnabled = true      // ADDED: Required for method count limits
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -71,5 +72,5 @@ flutter {
 }
 //new
 dependencies {
-    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4") // UPDATED: Latest version for Java 8 support
 }

@@ -99,9 +99,9 @@ class ReflectionAnswer extends Equatable {
 
   factory ReflectionAnswer.fromMap(Map<String, dynamic> map) {
     return ReflectionAnswer(
-      id: map['id'] as String,
-      questionId: map['questionId'] as String,
-      answerText: map['answerText'] as String,
+      id: (map['id'] as String?) ?? '',
+      questionId: (map['questionId'] as String?) ?? '',
+      answerText: (map['answerText'] as String?) ?? '',
       mood: map['mood'] as String?,
       moodValue: map['moodValue'] as int?,
       energyLevel: map['energyLevel'] as int?,
@@ -113,11 +113,15 @@ class ReflectionAnswer extends Equatable {
               .toList() ??
           [],
       isPrivate: (map['isPrivate'] as int?) == 1,
-      createdAt: DateTime.parse(map['createdAt'] as String),
-      updatedAt: DateTime.parse(map['updatedAt'] ?? map['createdAt'] as String),
-      reflectionDate: DateTime.parse(
-        map['reflectionDate'] ?? map['createdAt'] as String,
-      ),
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'] as String)
+          : DateTime.now(),
+      reflectionDate: map['reflectionDate'] != null
+          ? DateTime.parse(map['reflectionDate'] as String)
+          : DateTime.now(),
       linkedNoteId: map['linkedNoteId'] as String?,
       linkedTodoId: map['linkedTodoId'] as String?,
       isDeleted: (map['isDeleted'] as int?) == 1,

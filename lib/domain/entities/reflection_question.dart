@@ -10,6 +10,7 @@ class ReflectionQuestion extends Equatable {
   final bool isPinned;
   final String frequency; // daily, weekly, monthly, once
   final DateTime createdAt;
+  final DateTime updatedAt;
 
   const ReflectionQuestion({
     required this.id,
@@ -19,7 +20,8 @@ class ReflectionQuestion extends Equatable {
     this.isPinned = false,
     this.frequency = 'daily',
     required this.createdAt,
-  });
+    DateTime? updatedAt,
+  }) : updatedAt = updatedAt ?? createdAt;
 
   ReflectionQuestion copyWith({
     String? id,
@@ -29,6 +31,7 @@ class ReflectionQuestion extends Equatable {
     bool? isPinned,
     String? frequency,
     DateTime? createdAt,
+    DateTime? updatedAt,
   }) {
     return ReflectionQuestion(
       id: id ?? this.id,
@@ -38,6 +41,7 @@ class ReflectionQuestion extends Equatable {
       isPinned: isPinned ?? this.isPinned,
       frequency: frequency ?? this.frequency,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -50,17 +54,23 @@ class ReflectionQuestion extends Equatable {
     isPinned,
     frequency,
     createdAt,
+    updatedAt,
   ];
 
   factory ReflectionQuestion.fromMap(Map<String, dynamic> map) {
     return ReflectionQuestion(
-      id: map['id'] as String,
-      questionText: (map['questionText'] ?? map['text']) as String,
-      category: map['category'] as String,
-      isUserCreated: (map['isCustom'] ?? 0) == 1,
-      isPinned: (map['isPinned'] ?? 0) == 1,
-      frequency: map['frequency'] as String? ?? 'daily',
-      createdAt: DateTime.parse(map['createdAt'] as String),
+      id: (map['id'] as String?) ?? '',
+      questionText: ((map['questionText'] ?? map['text']) as String?) ?? '',
+      category: (map['category'] as String?) ?? 'General',
+      isUserCreated: (map['isCustom'] as int?) == 1,
+      isPinned: (map['isPinned'] as int?) == 1,
+      frequency: (map['frequency'] as String?) ?? 'daily',
+      createdAt: map['createdAt'] != null
+          ? DateTime.parse(map['createdAt'] as String)
+          : DateTime.now(),
+      updatedAt: map['updatedAt'] != null
+          ? DateTime.parse(map['updatedAt'] as String)
+          : DateTime.now(),
     );
   }
 
@@ -73,6 +83,7 @@ class ReflectionQuestion extends Equatable {
       'isPinned': isPinned ? 1 : 0,
       'frequency': frequency,
       'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
     };
   }
 }

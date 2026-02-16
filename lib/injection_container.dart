@@ -84,6 +84,7 @@ import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
 import 'package:mynotes/presentation/bloc/accessibility_features/accessibility_features_bloc.dart';
 
 import 'package:mynotes/core/notifications/notification_service.dart';
+import 'package:mynotes/core/notifications/alarm_service.dart';
 
 final getIt = GetIt.instance;
 
@@ -95,10 +96,17 @@ Future<void> setupServiceLocator() async {
   getIt.registerSingleton<GlobalUiService>(GlobalUiService());
 
   // ==================== Notifications ====================
-  AppLogger.i('Registering NotificationService...');
+  AppLogger.i('Registering AlarmService...');
+  final alarmService = AlarmService();
+  await alarmService.init();
+  getIt.registerSingleton<AlarmService>(alarmService);
+  AppLogger.i('✅ AlarmService registered for background alarms');
+
+  AppLogger.i('Registering NotificationService with AlarmService...');
   final notificationService = LocalNotificationService();
-  await notificationService.init();
+  await notificationService.init(alarmService: alarmService);
   getIt.registerSingleton<NotificationService>(notificationService);
+  AppLogger.i('✅ NotificationService registered with AlarmService integration');
 
   AppLogger.i('Registering ConnectivityService...');
   final connectivityService = ConnectivityService();

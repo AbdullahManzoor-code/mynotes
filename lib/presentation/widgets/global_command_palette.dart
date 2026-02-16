@@ -5,7 +5,7 @@ import '../design_system/design_system.dart';
 import '../pages/enhanced_note_editor_screen.dart';
 import '../pages/focus_session_screen.dart';
 import '../pages/enhanced_reminders_list_screen.dart';
-import '../pages/settings_screen.dart';
+import '../pages/unified_settings_screen.dart';
 import '../pages/daily_focus_highlight_screen.dart';
 import 'quick_add_bottom_sheet.dart';
 
@@ -303,7 +303,9 @@ class _GlobalCommandPaletteState extends State<GlobalCommandPalette>
           _closeAndNavigate(() {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              MaterialPageRoute(
+                builder: (context) => const UnifiedSettingsScreen(),
+              ),
             );
           });
         },

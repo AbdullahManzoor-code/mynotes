@@ -7,7 +7,7 @@ import '../bloc/reflection/reflection_bloc.dart';
 import '../bloc/reflection/reflection_event.dart';
 import '../bloc/reflection/reflection_state.dart';
 import '../design_system/design_system.dart';
-import '../pages/settings_screen.dart';
+import '../pages/unified_settings_screen.dart';
 import 'package:local_auth/local_auth.dart';
 import '../../injection_container.dart' show getIt;
 import 'question_list_screen.dart';
@@ -203,7 +203,7 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
+                        builder: (context) => const UnifiedSettingsScreen(),
                       ),
                     );
                   },
@@ -946,4 +946,3 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
     );
   }
 }
-

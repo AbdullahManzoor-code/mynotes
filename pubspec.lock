@@ -995,6 +995,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "11.0.0"
+  flutter_ringtone_player:
+    dependency: "direct main"
+    description:
+      name: flutter_ringtone_player
+      sha256: ae4a2caab2cfd14902f3ee5fe0307c454b396f0077fa34700238d6c4bd99cfec
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0+4"
   flutter_screenutil:
     dependency: "direct main"
     description:
@@ -2962,6 +2970,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "10.1.0"
+  vibration:
+    dependency: "direct main"
+    description:
+      name: vibration
+      sha256: "3cbdf4c93b469ec27b212c8dd0c720f85acc1186a68d08b56087f4e32b4c8e20"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.1.6"
+  vibration_platform_interface:
+    dependency: transitive
+    description:
+      name: vibration_platform_interface
+      sha256: "4134fbfcd427b59a7a91f8733292e4e9b29a7f1e8224ff0d80f5745fbf0743c6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.1"
   video_compress:
     dependency: "direct main"
     description:

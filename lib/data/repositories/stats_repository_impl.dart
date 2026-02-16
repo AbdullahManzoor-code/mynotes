@@ -275,7 +275,7 @@ class StatsRepositoryImpl implements StatsRepository {
       FROM ${CoreDatabase.notesTable} 
       WHERE isDeleted = 0
       UNION ALL
-      SELECT 'todo' as item_type, id, title, description as content, createdAt, updatedAt, 1 as isTodo, isCompleted, reminderTime, category
+      SELECT 'todo' as item_type, id, title, description as content, createdAt, updatedAt, 1 as isTodo, isCompleted, dueDate as reminderTime, category
       FROM ${CoreDatabase.todosTable} 
       WHERE isDeleted = 0
       ORDER BY updatedAt DESC

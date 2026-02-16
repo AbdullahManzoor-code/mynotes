@@ -56,6 +56,7 @@ class DatabaseSchema {
         isPinned INTEGER NOT NULL DEFAULT 0,
         isArchived INTEGER NOT NULL DEFAULT 0,
         isFavorite INTEGER NOT NULL DEFAULT 0,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         tags TEXT,
         priority INTEGER DEFAULT 1,
         linkedReflectionId TEXT,
@@ -78,6 +79,7 @@ class DatabaseSchema {
         isCompleted INTEGER NOT NULL DEFAULT 0,
         isImportant INTEGER NOT NULL DEFAULT 0,
         hasReminder INTEGER NOT NULL DEFAULT 0,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         reminderId TEXT,
         dueDate TEXT,
         completedAt TEXT,
@@ -100,6 +102,8 @@ class DatabaseSchema {
         recurrence TEXT,
         snoozeCount INTEGER DEFAULT 0,
         isActive INTEGER NOT NULL DEFAULT 1,
+        isCompleted INTEGER NOT NULL DEFAULT 0,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         hasVibration INTEGER NOT NULL DEFAULT 1,
         hasSound INTEGER NOT NULL DEFAULT 1,
         label TEXT,
@@ -137,7 +141,13 @@ class DatabaseSchema {
         mood TEXT,
         moodValue INTEGER,
         energyLevel INTEGER,
+        sleepQuality INTEGER,
         activityTags TEXT,
+        isPrivate INTEGER NOT NULL DEFAULT 0,
+        linkedNoteId TEXT,
+        linkedTodoId TEXT,
+        draft TEXT,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         reflectionDate TEXT NOT NULL,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
@@ -153,6 +163,17 @@ class DatabaseSchema {
         reflectionId TEXT NOT NULL,
         questionId TEXT,
         answerText TEXT NOT NULL,
+        mood TEXT,
+        moodValue INTEGER,
+        energyLevel INTEGER,
+        sleepQuality INTEGER,
+        activityTags TEXT,
+        isPrivate INTEGER NOT NULL DEFAULT 0,
+        reflectionDate TEXT NOT NULL,
+        linkedNoteId TEXT,
+        linkedTodoId TEXT,
+        draft TEXT,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL,
         FOREIGN KEY (reflectionId) REFERENCES $reflectionsTable(id),
@@ -167,6 +188,7 @@ class DatabaseSchema {
         id TEXT PRIMARY KEY,
         questionId TEXT,
         answerText TEXT,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         lastEditedAt TEXT NOT NULL,
         createdAt TEXT NOT NULL,
         FOREIGN KEY (questionId) REFERENCES $reflectionQuestionsTable(id)
@@ -178,9 +200,12 @@ class DatabaseSchema {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $reflectionQuestionsTable (
         id TEXT PRIMARY KEY,
-        question TEXT NOT NULL,
-        category TEXT,
-        isActive INTEGER NOT NULL DEFAULT 1,
+        questionText TEXT NOT NULL,
+        category TEXT NOT NULL DEFAULT 'General',
+        isCustom INTEGER NOT NULL DEFAULT 0,
+        isPinned INTEGER NOT NULL DEFAULT 0,
+        frequency TEXT NOT NULL DEFAULT 'daily',
+        question_order INTEGER DEFAULT 0,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL
       )
@@ -194,6 +219,7 @@ class DatabaseSchema {
         tagName TEXT NOT NULL UNIQUE,
         colorHex TEXT,
         frequency INTEGER DEFAULT 0,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         createdAt TEXT NOT NULL
       )
     ''');
@@ -206,6 +232,7 @@ class DatabaseSchema {
         reflectionId TEXT,
         mood TEXT NOT NULL,
         moodValue INTEGER NOT NULL,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         recordedAt TEXT NOT NULL,
         FOREIGN KEY (reflectionId) REFERENCES $reflectionsTable(id)
       )
@@ -265,6 +292,7 @@ class DatabaseSchema {
         taskTitle TEXT,
         category TEXT,
         isCompleted INTEGER NOT NULL DEFAULT 0,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         rating INTEGER,
         createdAt TEXT NOT NULL,
         updatedAt TEXT NOT NULL

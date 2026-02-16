@@ -1,11 +1,11 @@
 // lib/core/notifications/notification_service.dart
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
-
-/// Enum for alarm recurrence patterns
-enum AlarmRecurrence { none, daily, weekdays, weekends, weekly, custom }
+import 'package:mynotes/core/notifications/alarm_service.dart';
+import 'package:mynotes/domain/entities/alarm.dart' show AlarmRecurrence;
 
 /// Extension to convert List<int> to AlarmRecurrence
 extension AlarmRecurrenceHelper on List<int> {
@@ -16,17 +16,16 @@ extension AlarmRecurrenceHelper on List<int> {
     // Check for weekdays (Mon-Fri = 1,2,3,4,5)
     final weekdays = [1, 2, 3, 4, 5];
     if (length == 5 && weekdays.every((d) => contains(d))) {
-      return AlarmRecurrence.weekdays;
+      return AlarmRecurrence.weekly;
     }
 
     // Check for weekends (Sat-Sun = 0,6)
     final weekends = [0, 6];
     if (length == 2 && weekends.every((d) => contains(d))) {
-      return AlarmRecurrence.weekends;
+      return AlarmRecurrence.weekly;
     }
 
-    if (length == 1) return AlarmRecurrence.weekly;
-
+    // Any other combination of days = custom
     return AlarmRecurrence.custom;
   }
 }
@@ -39,17 +38,15 @@ extension AlarmRecurrenceToList on AlarmRecurrence {
         return [];
       case AlarmRecurrence.daily:
         return [0, 1, 2, 3, 4, 5, 6]; // All days
-      case AlarmRecurrence.weekdays:
-        return [1, 2, 3, 4, 5]; // Mon-Fri
-      case AlarmRecurrence.weekends:
-        return [0, 6]; // Sat-Sun
       case AlarmRecurrence.weekly:
-        // For weekly, we need the day of week from the scheduled time
-        // But since we don't have that here, return empty for now
-        // This should be handled by the caller
+        return [1, 2, 3, 4, 5]; // Mon-Fri
+      case AlarmRecurrence.monthly:
+        return [0, 6]; // Sat-Sun
+      case AlarmRecurrence.yearly:
+        // For yearly, return single day (not directly applicable)
         return [];
       case AlarmRecurrence.custom:
-        // Custom should be handled by weekDays field
+        // Custom should be handled by caller with weekDays field
         return [];
     }
   }
@@ -163,31 +160,46 @@ class MockNotificationService implements NotificationService {
   }
 }
 
-/// Concrete implementation using flutter_local_notifications
+/// Concrete implementation using flutter_local_notifications + AlarmService
+/// This delegates to AlarmService for background execution support
 class LocalNotificationService implements NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
+  late AlarmService _alarmService;
 
-  Future<void> init() async {
-    tz.initializeTimeZones();
+  Future<void> init({AlarmService? alarmService}) async {
+    _alarmService = alarmService ?? AlarmService();
 
-    const AndroidInitializationSettings androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
+    try {
+      AppLogger.i(
+        '[NOTIFICATION-SERVICE] Initializing LocalNotificationService...',
+      );
+      tz.initializeTimeZones();
 
-    final DarwinInitializationSettings darwinSettings =
-        DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
-        );
+      const AndroidInitializationSettings androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
-    final InitializationSettings settings = InitializationSettings(
-      android: androidSettings,
-      iOS: darwinSettings,
-      macOS: darwinSettings,
-    );
+      final DarwinInitializationSettings darwinSettings =
+          DarwinInitializationSettings(
+            requestAlertPermission: true,
+            requestBadgePermission: true,
+            requestSoundPermission: true,
+          );
 
-    await _plugin.initialize(settings);
+      final InitializationSettings settings = InitializationSettings(
+        android: androidSettings,
+        iOS: darwinSettings,
+        macOS: darwinSettings,
+      );
+
+      await _plugin.initialize(settings);
+      AppLogger.i(
+        '[NOTIFICATION-SERVICE] ✅ LocalNotificationService initialized',
+      );
+    } catch (e) {
+      AppLogger.e('[NOTIFICATION-SERVICE-ERROR] Initialization failed: $e');
+      rethrow;
+    }
   }
 
   @override
@@ -199,112 +211,125 @@ class LocalNotificationService implements NotificationService {
     List<int>? repeatDays,
     String? payload,
   }) async {
-    final androidDetails = AndroidNotificationDetails(
-      'reminders',
-      'Reminders',
-      channelDescription: 'Reminder notifications',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
+    try {
+      AppLogger.i(
+        '[NOTIFICATION-SERVICE] Scheduling notification via AlarmService...',
+      );
 
-    final details = NotificationDetails(android: androidDetails);
-
-    final scheduledDate = tz.TZDateTime.from(scheduledTime, tz.local);
-
-    if (repeatDays != null && repeatDays.isNotEmpty) {
-      // For repeating notifications, use matchDateTimeComponents
-      DateTimeComponents? matchDateTimeComponents;
-      if (repeatDays.length == 7) {
-        // Daily
-        matchDateTimeComponents = DateTimeComponents.time;
-      } else if (repeatDays.length == 1) {
-        // Weekly
-        matchDateTimeComponents = DateTimeComponents.dayOfWeekAndTime;
-      } else {
-        // Custom - for now, treat as daily if not empty
-        matchDateTimeComponents = DateTimeComponents.time;
+      // Determine recurrence from repeatDays
+      AlarmRecurrence recurrence = AlarmRecurrence.none;
+      if (repeatDays != null && repeatDays.isNotEmpty) {
+        if (repeatDays.length == 7) {
+          recurrence = AlarmRecurrence.daily;
+        } else if (repeatDays.length == 1) {
+          recurrence = AlarmRecurrence.weekly;
+        } else if (repeatDays.length == 5 &&
+            [1, 2, 3, 4, 5].every((d) => repeatDays.contains(d))) {
+          recurrence = AlarmRecurrence.weekly;
+        } else {
+          recurrence = AlarmRecurrence.none;
+        }
       }
 
-      await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduledDate,
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        matchDateTimeComponents: matchDateTimeComponents,
+      // Initialize AlarmService if needed
+      try {
+        await _alarmService.init();
+      } catch (e) {
+        AppLogger.w('[NOTIFICATION-SERVICE] AlarmService init error: $e');
+      }
+
+      // Delegate to AlarmService for background-capable scheduling
+      await _alarmService.scheduleAlarm(
+        id: 'notification_$id',
+        dateTime: scheduledTime,
+        title: title,
         payload: payload,
+        vibrate: true,
+        recurrence: recurrence,
       );
-    } else {
-      // One-time notification
-      await _plugin.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduledDate,
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: payload,
+
+      AppLogger.i(
+        '[NOTIFICATION-SERVICE] ✅ Notification scheduled via AlarmService',
       );
+    } catch (e) {
+      AppLogger.e('[NOTIFICATION-SERVICE-ERROR] Failed to schedule: $e');
+      rethrow;
     }
   }
 
   @override
   Future<void> cancel(int id) async {
-    await _plugin.cancel(id);
+    try {
+      AppLogger.i('[NOTIFICATION-SERVICE] Cancelling notification ID: $id');
+      await _alarmService.cancelAlarm('notification_$id');
+      await _plugin.cancel(id);
+      AppLogger.i('[NOTIFICATION-SERVICE] ✅ Notification cancelled');
+    } catch (e) {
+      AppLogger.e('[NOTIFICATION-SERVICE-ERROR] Failed to cancel: $e');
+    }
   }
 
   @override
   Future<void> cancelAll() async {
-    await _plugin.cancelAll();
+    try {
+      AppLogger.i('[NOTIFICATION-SERVICE] Cancelling all notifications...');
+      await _alarmService.cancelAllAlarms();
+      await _plugin.cancelAll();
+      AppLogger.i('[NOTIFICATION-SERVICE] ✅ All notifications cancelled');
+    } catch (e) {
+      AppLogger.e('[NOTIFICATION-SERVICE-ERROR] Failed to cancel all: $e');
+    }
   }
 
   @override
   Future<bool> areNotificationsEnabled() async {
-    return await _plugin
-            .resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin
-            >()
-            ?.areNotificationsEnabled() ??
-        false;
+    try {
+      return await _plugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >()
+              ?.areNotificationsEnabled() ??
+          false;
+    } catch (e) {
+      AppLogger.w('[NOTIFICATION-SERVICE] Error checking notifications: $e');
+      return false;
+    }
   }
 
   @override
   Future<bool> requestPermission() async {
-    // For Android, permissions are usually handled at install time
-    // For iOS, use the main plugin
-    final iosImplementation = _plugin
-        .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >();
-    if (iosImplementation != null) {
-      return await iosImplementation.requestPermissions(
-            alert: true,
-            badge: true,
-            sound: true,
-          ) ??
-          false;
+    try {
+      final iosImplementation = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      if (iosImplementation != null) {
+        return await iosImplementation.requestPermissions(
+              alert: true,
+              badge: true,
+              sound: true,
+            ) ??
+            false;
+      }
+      return true;
+    } catch (e) {
+      AppLogger.w('[NOTIFICATION-SERVICE] Error requesting permission: $e');
+      return false;
     }
-    // For Android, assume permission is granted (handled at install time)
-    return true;
   }
 
   @override
   Future<List<PendingNotification>> getPendingNotifications() async {
-    final pending = await _plugin.pendingNotificationRequests();
-    return pending
-        .map(
-          (p) => PendingNotification(
-            id: p.id,
-            title: p.title,
-            body: p.body,
-            // Note: flutter_local_notifications doesn't provide scheduled time in pending requests
-          ),
-        )
-        .toList();
+    try {
+      final pending = await _plugin.pendingNotificationRequests();
+      return pending
+          .map(
+            (p) => PendingNotification(id: p.id, title: p.title, body: p.body),
+          )
+          .toList();
+    } catch (e) {
+      AppLogger.e('[NOTIFICATION-SERVICE-ERROR] Failed to get pending: $e');
+      return [];
+    }
   }
 }

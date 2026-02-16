@@ -3,7 +3,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 import 'schema/tables.dart';
 import 'schema/indexes.dart';
-import 'schema/fts.dart';
+// import 'schema/fts.dart'; // FTS5 disabled - causes issues on some devices
 import 'seed/database_seed.dart';
 import 'dao/tables_reference.dart';
 import 'dao/notes_dao.dart';
@@ -77,8 +77,8 @@ class CoreDatabase {
     // Create all indexes
     await DatabaseIndexes.createAll(db);
 
-    // Create full-text search table and triggers
-    await DatabaseFTS.createFullTextSearch(db);
+    // FTS5 disabled - causes issues on some devices
+    // await DatabaseFTS.createFullTextSearch(db);
 
     // Insert seed data
     await DatabaseSeed.insertTestData(db);

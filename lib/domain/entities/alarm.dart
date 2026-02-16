@@ -171,6 +171,26 @@ class Alarm extends Equatable {
 
       case AlarmRecurrence.none:
         return null;
+      case AlarmRecurrence.custom:
+        // For custom recurrence, use weekDays if available
+        if (weekDays == null || weekDays!.isEmpty) {
+          return null; // No custom pattern defined
+        }
+        // Find next occurrence based on selected weekdays
+        for (int i = 0; i < 30; i++) {
+          final testDate = now.add(Duration(days: i));
+          if (weekDays!.contains(testDate.weekday) && testDate.isAfter(now)) {
+            next = DateTime(
+              testDate.year,
+              testDate.month,
+              testDate.day,
+              scheduledTime.hour,
+              scheduledTime.minute,
+            );
+            break;
+          }
+        }
+        break;
     }
 
     return next;
@@ -287,7 +307,7 @@ class Alarm extends Equatable {
 }
 
 /// Recurrence pattern (ALM-002)
-enum AlarmRecurrence { none, daily, weekly, monthly, yearly }
+enum AlarmRecurrence { none, daily, weekly, monthly, yearly, custom }
 
 extension AlarmRecurrenceExtension on AlarmRecurrence {
   String get displayName {
@@ -302,6 +322,8 @@ extension AlarmRecurrenceExtension on AlarmRecurrence {
         return 'Monthly';
       case AlarmRecurrence.yearly:
         return 'Yearly';
+      case AlarmRecurrence.custom:
+        return 'Custom Days';
     }
   }
 
@@ -317,6 +339,8 @@ extension AlarmRecurrenceExtension on AlarmRecurrence {
         return '🗓️';
       case AlarmRecurrence.yearly:
         return '🎂';
+      case AlarmRecurrence.custom:
+        return '✓📅';
     }
   }
 }

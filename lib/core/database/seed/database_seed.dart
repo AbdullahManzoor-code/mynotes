@@ -116,37 +116,9 @@ class DatabaseSeed {
       await db.insert(TablesReference.activityTagsTable, tag);
     }
 
-    // 3. Insert Reflection Questions
-    final questions = [
-      {
-        'id': 'q_1',
-        'question': 'What are you grateful for today?',
-        'category': 'Gratitude',
-        'isActive': 1,
-        'createdAt': isoNow,
-        'updatedAt': isoNow,
-      },
-      {
-        'id': 'q_2',
-        'question': 'What did you accomplish today?',
-        'category': 'Achievement',
-        'isActive': 1,
-        'createdAt': isoNow,
-        'updatedAt': isoNow,
-      },
-      {
-        'id': 'q_3',
-        'question': 'How are you taking care of yourself?',
-        'category': 'Wellness',
-        'isActive': 1,
-        'createdAt': isoNow,
-        'updatedAt': isoNow,
-      },
-    ];
-
-    for (var question in questions) {
-      await db.insert(TablesReference.reflectionQuestionsTable, question);
-    }
+    // 3. Reflection Questions - Loaded from ReflectionDatabase at runtime by the app
+    // No seeding needed - built-in questions are provided by ReflectionDatabase class
+    // Users answer these questions and answers are saved to the database
 
     // 4. Insert Todos
     final todos = [
@@ -156,7 +128,7 @@ class DatabaseSeed {
         'title': 'Set up profile',
         'description': 'Complete your user profile.',
         'category': 'Personal',
-        'priority': 2,
+        'priority': 1,
         'isCompleted': 0,
         'isImportant': 1,
         'hasReminder': 0,
@@ -273,8 +245,14 @@ class DatabaseSeed {
       'mood': 'Happy',
       'moodValue': 5,
       'energyLevel': 4,
+      'sleepQuality': 3,
       'activityTags': 'Work,Coding',
-      'reflectionDate': isoNow,
+      'isPrivate': 0,
+      'linkedNoteId': null,
+      'linkedTodoId': null,
+      'draft': null,
+      'isDeleted': 0,
+      'reflectionDate': isoNow.split('T')[0],
       'createdAt': isoNow,
       'updatedAt': isoNow,
     });

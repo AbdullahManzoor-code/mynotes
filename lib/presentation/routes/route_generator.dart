@@ -6,6 +6,7 @@ import '../pages/focus_session_screen.dart';
 import '../pages/enhanced_global_search_screen.dart';
 import '../pages/quick_add_confirmation_screen.dart';
 import '../pages/enhanced_reminders_list_screen.dart';
+import '../pages/unified_settings_screen.dart';
 
 /// Route Generator
 /// Handles navigation and route generation for the entire app
@@ -55,11 +56,7 @@ class RouteGenerator {
         );
 
       case AppRoutes.settings:
-        return _buildRoute(
-          // TODO: Import and use SettingsScreen
-          const Placeholder(), // Replace with SettingsScreen()
-          settings: settings,
-        );
+        return _buildRoute(const UnifiedSettingsScreen(), settings: settings);
 
       // ==================== Notes Module ====================
       case AppRoutes.notesList:

@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
-import 'package:mynotes/domain/entities/alarm.dart';
+import 'package:mynotes/domain/entities/alarm.dart'
+    show Alarm, AlarmRecurrence, AlarmStatus, AlarmIndicator, AlarmStats;
 import 'package:uuid/uuid.dart';
 import 'dart:async';
 
@@ -982,6 +983,12 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       recurrence = AlarmRecurrence.none;
     } else if (params.repeatDays.length == 7) {
       recurrence = AlarmRecurrence.daily;
+    } else if (params.repeatDays.length == 1) {
+      // Single day selected = custom
+      recurrence = AlarmRecurrence.custom;
+    } else if (params.repeatDays.length > 1 && params.repeatDays.length < 7) {
+      // Multiple specific days selected = custom
+      recurrence = AlarmRecurrence.custom;
     } else {
       recurrence = AlarmRecurrence.weekly;
     }
@@ -1008,19 +1015,31 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
     );
   }
 
-  /// Convert AlarmRecurrence from notification service to domain entity
-  AlarmRecurrence _convertRecurrence(
-    notification_service.AlarmRecurrence notificationRecurrence,
-  ) {
-    switch (notificationRecurrence) {
-      case notification_service.AlarmRecurrence.none:
-        return AlarmRecurrence.none;
-      case notification_service.AlarmRecurrence.daily:
-        return AlarmRecurrence.daily;
-      case notification_service.AlarmRecurrence.weekly:
-        return AlarmRecurrence.weekly;
-      default:
-        return AlarmRecurrence.none;
+  /// Format custom selected days as readable string (e.g., "Mon, Wed, Fri")
+  String _formatCustomDays(List<int> repeatDays) {
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    if (repeatDays.isEmpty) return 'No days selected';
+    if (repeatDays.length == 7) return 'Every day';
+
+    final sortedDays = repeatDays.toList()..sort();
+    return sortedDays.map((day) => dayNames[day % 7]).join(', ');
+  }
+
+  /// Get description for alarm recurrence with custom days
+  String getRecurrenceDescription(AlarmParams alarm) {
+    switch (alarm.isRecurring ? true : false) {
+      case false:
+        return 'One-time alarm';
+      case true:
+        if (alarm.repeatDays.isEmpty) {
+          return 'No repeat';
+        } else if (alarm.repeatDays.length == 7) {
+          return 'Daily';
+        } else if (alarm.repeatDays.length < 7) {
+          return 'Custom - ${_formatCustomDays(alarm.repeatDays)}';
+        } else {
+          return 'Weekly';
+        }
     }
   }
 }

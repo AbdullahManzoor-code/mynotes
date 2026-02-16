@@ -166,7 +166,8 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
                   _buildDateTimePicker(),
                   SizedBox(height: 24.h),
                   _buildRecurrenceSelector(),
-                  if (_selectedRecurrence == AlarmRecurrence.weekly) ...[
+                  if (_selectedRecurrence == AlarmRecurrence.weekly ||
+                      _selectedRecurrence == AlarmRecurrence.custom) ...[
                     SizedBox(height: 16.h),
                     _buildWeekDaySelector(),
                   ],
@@ -371,7 +372,9 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Select Days',
+          _selectedRecurrence == AlarmRecurrence.custom
+              ? 'Select Custom Days'
+              : 'Select Days',
           style: AppTypography.body2(
             context,
           ).copyWith(fontWeight: FontWeight.w600, color: Colors.grey.shade700),
@@ -725,10 +728,11 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
   void _saveAlarm() {
     if (!_formKey.currentState!.validate()) return;
 
-    if (_selectedRecurrence == AlarmRecurrence.weekly &&
+    if ((_selectedRecurrence == AlarmRecurrence.weekly ||
+            _selectedRecurrence == AlarmRecurrence.custom) &&
         _selectedWeekDays.isEmpty) {
       getIt<GlobalUiService>().showWarning(
-        'Please select at least one day for weekly recurrence',
+        'Please select at least one day for ${_selectedRecurrence == AlarmRecurrence.custom ? 'custom' : 'weekly'} recurrence',
       );
       return;
     }
@@ -742,7 +746,9 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
       linkedNoteId: _linkedNoteId,
       soundPath: _soundPath,
       vibrate: _vibrate,
-      weekDays: _selectedRecurrence == AlarmRecurrence.weekly
+      weekDays:
+          (_selectedRecurrence == AlarmRecurrence.weekly ||
+              _selectedRecurrence == AlarmRecurrence.custom)
           ? _selectedWeekDays
           : null,
       createdAt: widget.alarm?.createdAt ?? DateTime.now(),
@@ -809,6 +815,9 @@ class _CreateAlarmBottomSheetState extends State<CreateAlarmBottomSheet> {
         return List.generate(7, (index) => index);
       case AlarmRecurrence.weekly:
         return [alarm.scheduledTime.weekday % 7];
+      case AlarmRecurrence.custom:
+        // Custom days are passed in weekDays field
+        return weekDays;
       case AlarmRecurrence.monthly:
       case AlarmRecurrence.yearly:
       case AlarmRecurrence.none:
