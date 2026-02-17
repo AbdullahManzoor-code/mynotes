@@ -2,7 +2,6 @@
 
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
-import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:mynotes/core/notifications/alarm_service.dart';
 import 'package:mynotes/domain/entities/alarm.dart' show AlarmRecurrence;
@@ -233,12 +232,26 @@ class LocalNotificationService implements NotificationService {
 
       // Initialize AlarmService if needed
       try {
+        AppLogger.i('[NOTIFICATION-SERVICE] Initializing AlarmService...');
         await _alarmService.init();
+        AppLogger.i('[NOTIFICATION-SERVICE] ✅ AlarmService initialized');
       } catch (e) {
         AppLogger.w('[NOTIFICATION-SERVICE] AlarmService init error: $e');
       }
 
+      // Request permissions
+      try {
+        AppLogger.i('[NOTIFICATION-SERVICE] Requesting alarm permissions...');
+        await _alarmService.requestPermissions();
+        AppLogger.i('[NOTIFICATION-SERVICE] ✅ Permissions granted');
+      } catch (e) {
+        AppLogger.w('[NOTIFICATION-SERVICE] Permission request failed: $e');
+      }
+
       // Delegate to AlarmService for background-capable scheduling
+      AppLogger.i(
+        '[NOTIFICATION-SERVICE] Scheduling: $title at ${scheduledTime.toIso8601String()}',
+      );
       await _alarmService.scheduleAlarm(
         id: 'notification_$id',
         dateTime: scheduledTime,

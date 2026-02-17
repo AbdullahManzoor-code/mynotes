@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/utils/app_logger.dart';
 import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
-import 'package:mynotes/core/design_system/app_spacing.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_state.dart';
 import 'package:mynotes/presentation/bloc/note/note_event.dart';

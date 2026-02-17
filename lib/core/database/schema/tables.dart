@@ -109,7 +109,16 @@ class DatabaseSchema {
         label TEXT,
         linkedNoteId TEXT,
         createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL
+        updatedAt TEXT NOT NULL,
+        status TEXT DEFAULT 'scheduled',
+        linkedTodoId TEXT,
+        completedAt TEXT,
+        lastTriggered TEXT,
+        snoozedUntil TEXT,
+        weekDays TEXT,
+        soundPath TEXT,
+        isEnabled INTEGER DEFAULT 1,
+        vibrate INTEGER DEFAULT 1
       )
     ''');
   }

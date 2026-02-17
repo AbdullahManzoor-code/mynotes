@@ -5,8 +5,6 @@ library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/bloc/pomodoro/pomodoro_bloc.dart';
-import '../presentation/widgets/pomodoro_timer.dart';
 import '../presentation/widgets/task_notes_widget.dart';
 import '../presentation/widgets/subtask_widget.dart';
 import '../presentation/widgets/recurrence_widget.dart';
@@ -173,6 +171,9 @@ class FeatureCategoryStatus {
 /// Usage Examples
 
 /// Example: Using Pomodoro Timer in a screen
+/// [F009/F010] DISABLED - PomodoroScreenExample uses disabled Pomodoro BLoCs
+/// Use FocusSessionScreen + FocusBloc instead (includes stats integration)
+/*
 class PomodoroScreenExample extends StatelessWidget {
   const PomodoroScreenExample({super.key});
 
@@ -194,6 +195,7 @@ class PomodoroScreenExample extends StatelessWidget {
     );
   }
 }
+*/
 
 /// Example: Using task notes in todo detail screen
 class TodoDetailScreenExample extends StatelessWidget {

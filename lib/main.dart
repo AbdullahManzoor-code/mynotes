@@ -19,6 +19,8 @@ import 'package:mynotes/core/notifications/notification_service.dart';
 import 'package:mynotes/core/services/clipboard_service.dart';
 import 'package:mynotes/core/constants/app_constants.dart';
 import 'package:mynotes/core/themes/app_theme.dart';
+import 'package:mynotes/presentation/widgets/alarm_popup_listener.dart';
+import 'package:mynotes/presentation/widgets/upcoming_alarms_notification_widget.dart';
 
 import 'package:mynotes/domain/repositories/note_repository.dart';
 import 'package:mynotes/domain/repositories/media_repository.dart';
@@ -55,6 +57,7 @@ import 'package:mynotes/presentation/bloc/accessibility_features/accessibility_f
 import 'package:mynotes/core/notifications/alarm_service.dart' as notifications;
 import 'package:mynotes/presentation/widgets/global_error_handler_listener.dart';
 import 'package:mynotes/presentation/widgets/global_overlay.dart';
+import 'package:mynotes/presentation/widgets/focus/focus_lock_overlay.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
 import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/injection_container.dart'
@@ -161,16 +164,34 @@ Future<void> _onNotificationActionReceived(
   AppLogger.i('═' * 60);
   AppLogger.i('Button Key: ${receivedAction.buttonKeyPressed}');
   AppLogger.i('Notification ID: ${receivedAction.id}');
+  AppLogger.i('Payload: ${receivedAction.payload}');
   AppLogger.i('═' * 60);
 
   try {
-    if (receivedAction.buttonKeyPressed == 'STOP_ALARM') {
-      AppLogger.i('🛑 [ALARM-ACTION] Stopping alarm...');
+    // Parse payload to get reminder details
+    Map<String, dynamic> payloadData = {};
+    if (receivedAction.payload != null && receivedAction.payload!.isNotEmpty) {
+      try {
+        payloadData = Map<String, dynamic>.from(receivedAction.payload!);
+        AppLogger.i('[ACTION-HANDLER] Payload parsed: $payloadData');
+      } catch (e) {
+        AppLogger.w('[ACTION-HANDLER] Could not parse payload: $e');
+      }
+    }
+
+    final String? reminderType = payloadData['type'];
+    final String? linkedNoteId = payloadData['linkedNoteId'];
+    final String? linkedTodoId = payloadData['linkedTodoId'];
+
+    if (receivedAction.buttonKeyPressed == 'STOP_ALARM' ||
+        receivedAction.buttonKeyPressed == 'DISMISS') {
+      AppLogger.i('🛑 [ALARM-ACTION] Dismissing alarm...');
       FlutterRingtonePlayer().stop();
       Vibration.cancel();
       AwesomeNotifications().dismiss(receivedAction.id ?? 10);
-      AppLogger.i('✅ [ALARM-ACTION] Alarm stopped successfully');
-    } else if (receivedAction.buttonKeyPressed == 'SNOOZE_ALARM') {
+      AppLogger.i('✅ [ALARM-ACTION] Alarm dismissed successfully');
+    } else if (receivedAction.buttonKeyPressed == 'SNOOZE_10' ||
+        receivedAction.buttonKeyPressed == 'SNOOZE_ALARM') {
       AppLogger.i('💤 [ALARM-ACTION] Snoozing alarm for 10 minutes...');
       FlutterRingtonePlayer().stop();
       Vibration.cancel();
@@ -184,6 +205,50 @@ Future<void> _onNotificationActionReceived(
       );
       AwesomeNotifications().dismiss(receivedAction.id ?? 10);
       AppLogger.i('✅ [ALARM-ACTION] Alarm snoozed for 10 minutes');
+    } else if (receivedAction.buttonKeyPressed == 'RESCHEDULE') {
+      AppLogger.i('📅 [ALARM-ACTION] Opening reschedule dialog...');
+      FlutterRingtonePlayer().stop();
+      Vibration.cancel();
+      AwesomeNotifications().dismiss(receivedAction.id ?? 10);
+
+      // Navigate to appropriate screen based on reminder type
+      if (reminderType == 'note' && linkedNoteId != null) {
+        AppLogger.i(
+          '[ACTION-HANDLER] Navigating to note editor for note: $linkedNoteId',
+        );
+        AppRouter.navigatorKey.currentState?.pushNamed(
+          AppRoutes.noteEditor,
+          arguments: {'noteId': linkedNoteId},
+        );
+      } else if (reminderType == 'todo' && linkedTodoId != null) {
+        AppLogger.i(
+          '[ACTION-HANDLER] Navigating to todos list for todo: $linkedTodoId',
+        );
+        AppRouter.navigatorKey.currentState?.pushNamed(AppRoutes.todosList);
+      } else {
+        AppLogger.w('[ACTION-HANDLER] No valid reminder type or ID found');
+      }
+      AppLogger.i('✅ [ALARM-ACTION] Reschedule dialog opened');
+    } else if (receivedAction.id != null && receivedAction.id == 10) {
+      // Tap on notification body (not an action button)
+      AppLogger.i(
+        '🎯 [ALARM-ACTION] Notification body tapped - navigating to reminder...',
+      );
+      FlutterRingtonePlayer().stop();
+      Vibration.cancel();
+      AwesomeNotifications().dismiss(receivedAction.id!);
+
+      if (reminderType == 'note' && linkedNoteId != null) {
+        AppLogger.i('[ACTION-HANDLER] Navigating to note: $linkedNoteId');
+        AppRouter.navigatorKey.currentState?.pushNamed(
+          AppRoutes.noteEditor,
+          arguments: {'noteId': linkedNoteId},
+        );
+      } else if (reminderType == 'todo' && linkedTodoId != null) {
+        AppLogger.i('[ACTION-HANDLER] Navigating to todos list');
+        AppRouter.navigatorKey.currentState?.pushNamed(AppRoutes.todosList);
+      }
+      AppLogger.i('✅ [ALARM-ACTION] Navigation completed');
     }
   } catch (e, stack) {
     AppLogger.e('[ALARM-ACTION-ERROR] Failed to handle action: $e');
@@ -254,7 +319,9 @@ void main() async {
   // Get notificationservice from locator (already initialized with AlarmService)
   AppLogger.i('Retrieving NotificationService from locator...');
   final notificationService = getIt<NotificationService>();
-  AppLogger.i('✅ NotificationService retrieved (includes AlarmService support)');
+  AppLogger.i(
+    '✅ NotificationService retrieved (includes AlarmService support)',
+  );
 
   // Get AlarmService from locator (already initialized)
   AppLogger.i('Retrieving AlarmService from locator...');
@@ -303,6 +370,19 @@ void main() async {
   };
   AppLogger.i('✅ Alarm action handler registered');
 
+  // Reschedule all active alarms from database (ensures alarms work after app restart/reboot)
+  AppLogger.i('═' * 60);
+  AppLogger.i('[STARTUP] Rescheduling active alarms...');
+  try {
+    final alarmRepository = getIt<AlarmRepository>();
+    await alarmNotificationService.rescheduleAllActiveAlarms(alarmRepository);
+    AppLogger.i('[STARTUP] ✅ Active alarms rescheduled');
+  } catch (e, stack) {
+    AppLogger.e('[STARTUP] ❌ Failed to reschedule alarms: $e');
+    AppLogger.e('Stack: $stack');
+  }
+  AppLogger.i('═' * 60);
+
   // AlarmsBloc is now registered via injection_container
   AppLogger.i('Loading initial alarms...');
   getIt<AlarmsBloc>().add(const LoadAlarms());
@@ -322,7 +402,7 @@ class MyNotesApp extends StatelessWidget {
   final NotificationService notificationService;
   final notifications.AlarmService alarmNotificationService;
 
-  MyNotesApp({
+  const MyNotesApp({
     super.key,
     required this.database,
     required this.notificationService,
@@ -370,7 +450,10 @@ class MyNotesApp extends StatelessWidget {
           create: (context) =>
               getIt<ReflectionBloc>()..add(const InitializeReflectionEvent()),
         ),
-        BlocProvider<AlarmsBloc>(create: (context) => getIt<AlarmsBloc>()),
+        BlocProvider<AlarmsBloc>(
+          create: (context) =>
+              getIt<AlarmsBloc>()..add(const LoadAlarmsEvent()),
+        ),
         BlocProvider<TodoBloc>(create: (context) => getIt<TodoBloc>()),
         BlocProvider<TodosBloc>(
           create: (context) => getIt<TodosBloc>()..add(LoadTodos()),
@@ -391,8 +474,9 @@ class MyNotesApp extends StatelessWidget {
           create: (context) => getIt<SmartRemindersBloc>(),
         ),
         BlocProvider<FocusBloc>(
-          create: (context) =>
-              getIt<FocusBloc>()..add(const LoadFocusHistoryEvent()),
+          create: (context) => getIt<FocusBloc>()
+            ..add(const LoadFocusHistoryEvent())
+            ..add(const LoadFocusLockSettingsEvent()),
         ),
         BlocProvider<NavigationBloc>(
           create: (context) => getIt<NavigationBloc>(),
@@ -419,32 +503,41 @@ class MyNotesApp extends StatelessWidget {
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {
-          return ScreenUtilInit(
-            designSize: const Size(375, 812),
-            minTextAdapt: true,
-            splitScreenMode: true,
-            builder: (context, child) {
-              return MaterialApp(
-                title: AppConstants.appName,
-                debugShowCheckedModeBanner: false,
-                theme: AppTheme.lightTheme,
-                darkTheme: AppTheme.darkTheme,
-                themeMode: _parseThemeMode(themeState.themeMode),
-                navigatorKey: AppRouter.navigatorKey,
-                scaffoldMessengerKey: getIt<GlobalUiService>().messengerKey,
-                initialRoute: AppRoutes.splash,
-                onGenerateRoute: AppRouter.onGenerateRoute,
-                // Accessibility features
-                showSemanticsDebugger: false,
-                builder: (context, materialAppChild) {
-                  return _TextScalingWrapper(
-                    child: GlobalErrorHandlerListener(
-                      child: GlobalOverlay(child: materialAppChild!),
-                    ),
-                  );
-                },
-              );
-            },
+          return AlarmPopupListener(
+            child: ScreenUtilInit(
+              designSize: const Size(375, 812),
+              minTextAdapt: true,
+              splitScreenMode: true,
+              builder: (context, child) {
+                return MaterialApp(
+                  title: AppConstants.appName,
+                  debugShowCheckedModeBanner: false,
+                  theme: AppTheme.lightTheme,
+                  darkTheme: AppTheme.darkTheme,
+                  themeMode: _parseThemeMode(themeState.themeMode),
+                  navigatorKey: AppRouter.navigatorKey,
+                  scaffoldMessengerKey: getIt<GlobalUiService>().messengerKey,
+                  initialRoute: AppRoutes.splash,
+                  onGenerateRoute: AppRouter.onGenerateRoute,
+                  // Accessibility features
+                  showSemanticsDebugger: false,
+                  builder: (context, materialAppChild) {
+                    return _TextScalingWrapper(
+                      child: UpcomingAlarmsNotificationWidget(
+                        child: GlobalErrorHandlerListener(
+                          child: Stack(
+                            children: [
+                              GlobalOverlay(child: materialAppChild!),
+                              const FocusLockOverlay(),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           );
         },
       ),

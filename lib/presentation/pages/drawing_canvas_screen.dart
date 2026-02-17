@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
-import 'package:mynotes/core/services/app_logger.dart';
 import '../bloc/drawing_canvas/drawing_canvas_bloc.dart';
 import '../design_system/design_system.dart';
 

@@ -105,8 +105,9 @@ class BiometricAuthBloc extends Bloc<BiometricAuthEvent, BiometricAuthState> {
     Emitter<BiometricAuthState> emit,
   ) async {
     if (state is BiometricAuthReady &&
-        (state as BiometricAuthReady).isAuthenticating)
+        (state as BiometricAuthReady).isAuthenticating) {
       return;
+    }
 
     final currentAvailable = _availableBiometrics;
 

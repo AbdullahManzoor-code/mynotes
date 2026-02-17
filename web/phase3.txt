@@ -1,0 +1,2044 @@
+═══════════════════════════════════════════════════════════════════════════════════════
+                    PHASE 3: COMPLETE FUNCTIONALITY EXTRACTION
+═══════════════════════════════════════════════════════════════════════════════════════
+
+# 3.1 - COMPLETE SCREEN/PAGE EXTRACTION
+
+## NAVIGATION MAP
+
+The app uses route-based navigation with 60+ defined routes. All routes defined in:
+📄 lib/core/routes/app_routes.dart (145 lines)
+📄 lib/core/routes/app_router.dart (645 lines)
+
+---
+
+## SCREENS BY CATEGORY (100+ screens)
+
+### 🎯 ONBOARDING & AUTHENTICATION
+
+#### Screen 1: Splash Screen
+File Path: lib/presentation/pages/splash_screen.dart (244 lines)
+Route: AppRoutes.splash = '/'
+Purpose: App initialization, service setup, animation display before navigation
+State Management:
+  - Uses StatefulWidget with AnimationController
+  - Manages initialization progress with _initStatus and _progress
+  - No BLoC (initialization screen)
+Dependencies:
+  - SharedPreferences (stored preferences check)
+  - BiometricAuthService (biometric availability check)
+  - ClipboardService (clipboard monitoring setup)
+Business Logic:
+  - _initializeApp() method:
+    ✓ Load app settings from SharedPreferences
+    ✓ Check if first launch (biometric setup)
+    ✓ Initialize notification services
+    ✓ Set up background services
+    ✓ Determine navigation destination (onboarding vs home)
+User Interactions:
+  - Passive animation during loading
+  - Auto-navigate to onboarding OR home after initialization
+Key Widgets:
+  - FutureBuilder for async initialization
+  - AnimatedBuilder for fade + scale animations
+  - Lottie animation display
+Issues Found: None critical
+
+#### Screen 2: Onboarding Screen
+File Path: lib/presentation/pages/onboarding_screen.dart
+Route: AppRoutes.onboarding = '/onboarding'
+Purpose: First-time user tutorial and setup
+State Management: StatelessWidget, SharedPreferences for completion flag
+Key Features:
+  - Step-by-step introduction
+  - Feature overview
+  - Permission requests
+  - "Get Started" button navigates to home
+User Interactions: Swipe/tap to advance, dismiss to skip
+Issues Found: None critical
+
+---
+
+### 🏠 MAIN NAVIGATION & DASHBOARD
+
+#### Screen 3: Main Home Screen (Central Hub)
+File Path: lib/presentation/pages/main_home_screen.dart (224 lines)
+Route: AppRoutes.home = '/home' | AppRoutes.mainHome = '/main-home'
+Purpose: Bottom-tabbed navigation hub for 7 main sections
+State Management: BLocBuilder<NavigationBloc, NavigationState>
+BLoCs Used: NavigationBloc (manages current tab index)
+Architecture:
+  - Uses PageView for swipeable navigation
+  - BottomNavigationBar with 7 tabs
+  - Tab structure:
+    0️⃣ Today Dashboard
+    1️⃣ Notes List
+    2️⃣ Todos List
+    3️⃣ Reminders/Alarms
+    4️⃣ Reflections/Journal
+    5️⃣ Location Reminders
+    6️⃣ Integrated Features
+Business Logic:
+  - NavigationBloc.add(TabChanged(index)) on tab tap
+  - PageController.animateToPage() with 300ms animation
+  - _openCommandPalette() for Cmd+K functionality
+  - _onNewNote() navigates to NoteEditor
+  - _onNewTodo() navigates to TodosList
+User Interactions:
+  - Swipe between tabs
+  - Tap bottom nav buttons
+  - Command palette (Ctrl/Cmd + K)
+FAB Actions:
+  - Create new note
+  - Create new todo
+  - Voice quick add
+Key Widgets:
+  - AppScaffold (custom wrapper)
+  - GlassBottomNavBar (frosted glass effect)
+  - PageView (swipeable container)
+Dependencies:
+  - All 7 child screens loaded simultaneously
+  - NavigationBloc for state coordination
+Issues Found:
+  - All screens loaded at once (performance: consider using IndexedStack)
+  - No lazy loading of tabs
+
+#### Screen 4: Today Dashboard Screen
+File Path: lib/presentation/pages/today_dashboard_screen.dart
+Route: AppRoutes.todayDashboard = '/today'
+Purpose: Daily overview - highlights, upcoming items, stats
+State Management: Multiple BLoCs (ThemeBloc, DashboardWidgetsBloc, AnalyticsBloc)
+Features:
+  - Daily highlight summary (editable)
+  - Today's notes/todos preview
+  - Upcoming alarms/reminders
+  - Quick statistics (notes written, todos completed, etc.)
+  - Carousel of inspiring quotes/tips
+User Interactions:
+  - Edit daily highlight
+  - Quick preview of items
+  - Tap to open full screen
+Key Widgets: carousel_slider, fl_chart (charts), custom stat cards
+
+---
+
+### 📝 NOTES MODULE (15+ screens)
+
+#### Screen 5: Enhanced Notes List Screen
+File Path: lib/presentation/pages/enhanced_notes_list_screen_refactored.dart (429 lines)
+Route: AppRoutes.notesList = '/notes'
+Purpose: Display all notes with filtering, sorting, and view modes
+State Management: BLocBuilder<NotesBloc, NoteState>
+BLoCs Used: NotesBloc (1058 lines - handles all note operations)
+Features:
+  ✓ Pinned notes section
+  ✓ Note search
+  ✓ Filter by: color, tags, media type, reminders, todos
+  ✓ Sort options: date created/modified, title A-Z, color, oldest, alphabetical, priority, manual
+  ✓ View modes: list or grid
+  ✓ Empty state with help screen
+Events Dispatched by Screen:
+  - LoadNotesEvent() → Load all notes on init
+  - SearchNotesEvent(query) → Filter notes
+  - DeleteNoteEvent(id) → Delete note
+  - TogglePinNoteEvent(id) → Pin/unpin
+  - ToggleArchiveNoteEvent(id) → Archive/restore
+  - SortNotesEvent(option) → Change sort order
+  - UpdateNoteViewConfigEvent → Save view preference
+Business Logic:
+  - _filterAndSortNotes() method in BLoC
+  - Notes enriched with: todos, alarms, media
+  - Handles 8+ filter combinations
+User Interactions:
+  - Swipe left on note → delete/archive options
+  - Tap note → open editor
+  - Long press → multi-select
+  - Tap tag → filter by tag
+  - Tap color → filter by color
+Key Widgets:
+  - NotesList (displays notes in list/grid)
+  - NotesListHeader (search & filters)
+  - NoteCard (individual note UI)
+  - NotesTemplateSection (template picker)
+Dependencies:
+  - NotesBloc, SearchBloc, FilterBloc
+  - NoteRepository, MediaRepository
+  - NoteColor enum, NoteSortOption enum
+Issues Found:
+  - NotesBloc is 1058 lines (too large)
+  - 20+ state properties in NotesLoaded
+  - Complex filtering logic should be separate
+
+#### Screen 6: Enhanced Note Editor Screen
+File Path: lib/presentation/pages/enhanced_note_editor_screen.dart (2081 lines)
+Route: AppRoutes.noteEditor | AppRoutes.advancedNoteEditor | AppRoutes.markdownNoteEditor
+Purpose: Create/edit notes with rich text, media, reminders
+State Management: 
+  - BLocBuilder<NoteEditorBloc, NoteEditorState>
+  - BLocBuilder<NotesBloc, NoteState>
+  - Multiple local controllers (Quill, text)
+BLoCs Used:
+  - NoteEditorBloc (editing operations)
+  - NotesBloc (parent list updates)
+  - DrawingCanvasBloc (if drawing)
+  - AudioRecorderBloc (if recording)
+Rich Text Editor:
+  - Uses Flutter Quill v11.5.0
+  - Formats: bold, italic, underline, heading, list, quote, code
+  - Embedded content: images, videos, audio, drawings
+Media Features:
+  ✓ Image picker & editor (crop, filter, rotate)
+  ✓ Audio recorder & player
+  ✓ Video picker & trimmer
+  ✓ Drawing canvas
+  ✓ Document scanner with OCR
+  ✓ PDF annotation
+Events Dispatched:
+  - UpdateNoteEvent(params) → Save note changes
+  - CreateNoteEvent(params) → Create new note
+  - AddAlarmToNoteEvent() → Attach reminder
+  - AddTagEvent() → Add tag
+  - ExportNoteToPdfEvent() → Export as PDF
+Business Logic:
+  - _loadContentIntoQuill() → Restore editor state
+  - _captureEditingState() → Save draft
+  - _enrichNoteWithMedia() → Process attachments
+  - Voice command integration (real-time transcription)
+  - Link parsing for smart suggestions
+User Interactions:
+  - Text editing
+  - Format toolbar (Quill controls)
+  - Long press on word → suggestions
+  - Media buttons → open pickers
+  - Reminder button → set alarm
+  - Voice input → toggle STT
+  - Save/discard buttons
+Advanced Features:
+  - Auto-save (on blur)
+  - Undo/redo (Quill built-in)
+  - Voice-to-text transcription
+  - Smart link insertion from URLs
+  - AI suggestions (context-aware)
+Key Widgets:
+  - QuillEditor (Quill rich text)
+  - Media gallery in editor
+  - CustomToolbar (Quill toolbar wrapper)
+  - SuggestionBar (AI suggestions)
+Dependencies:
+  - flutter_quill, flutter_quill_extensions
+  - SpeechService, VoiceCommandService
+  - MediaProcessingService
+  - LinkParserService
+Issues Found:
+  ⚠️ MASSIVE FILE: 2081 lines (should split into multiple BLoCs + widgets)
+  ⚠️ Too many responsibilities in one screen
+  ⚠️ Complex editor state (consider separate EditorBLoC)
+  ⚠️ Voice transcription logic should be in service
+
+#### Screen 7: Archived Notes Screen
+File Path: lib/presentation/pages/archived_notes_screen.dart
+Route: AppRoutes.archivedNotes = '/notes/archived'
+Purpose: View and restore archived notes
+State Management: BLocBuilder<NotesBloc, NoteState>
+Events: LoadArchivedNotesEvent(), RestoreArchivedNoteEvent(id)
+Features: Same as Notes List but filtered to archived only
+
+#### Screen 8: Global Search Screen
+File Path: lib/presentation/pages/global_search_screen.dart (949 lines)
+Route: AppRoutes.globalSearch = '/global-search'
+Purpose: Universal search across all data types with voice input
+State Management:
+  - BLocBuilder<GlobalSearchBloc, GlobalSearchState>
+  - BLocBuilder<CommandPaletteBloc, CommandPaletteState>
+Features:
+  ✓ Real-time search via SearchBloc
+  ✓ Voice search (STT integration)
+  ✓ Command mode (start with '!')
+  ✓ Advanced filters (date, type, tags)
+  ✓ Search history
+  ✓ Keyboard shortcuts
+Voice Search Flow:
+  1. User taps microphone button
+  2. Requests RECORD_AUDIO permission
+  3. Initializes speech_to_text service
+  4. Records user speech
+  5. Transcribes to text
+  6. Dispatches SearchNotesEvent(transcribedText)
+  7. Updates results in real-time
+Command Palette Mode:
+  - Start query with '!' to activate command mode
+  - Shows available commands
+  - Execute command with Enter
+Commands Available:
+  - !note - create note
+  - !todo - create todo
+  - !search - open search
+  - !settings - open settings
+  - !focus - start focus session
+User Interactions:
+  - Type to search
+  - Voice button → start recording
+  - ESC → close
+  - Arrow keys → navigate results
+  - Enter → open result
+Advanced Features:
+  - Search operators (from, date:, type:, tag:)
+  - Fuzzy matching
+  - Debounced search (300ms)
+  - Search history dropdown
+Key Widgets:
+  - SearchFilterModal (advanced filters)
+  - UniversalItemCard (search results)
+Dependencies:
+  - GlobalSearchBloc, SearchBloc
+  - SpeechService
+  - AdvancedSearchRankingService
+Issues Found:
+  ⚠️ File is 949 lines (should split UI from logic)
+  ⚠️ Voice initialization logic complex
+
+#### Screen 9: Advanced Search Screen
+File Path: lib/presentation/pages/batch_8_advanced_search_screen.dart
+Route: AppRoutes.advancedSearch = '/search/advanced'
+Purpose: Detailed search with multiple filter criteria
+Features:
+  - Date range filter
+  - Item type selector (notes/todos/alarms/reflections)
+  - Tag multi-select
+  - Color filter
+  - Keyword combination (AND, OR, NOT)
+  - Save search as smart collection
+
+#### Screen 10: Search Results Screen
+File Path: lib/presentation/pages/batch_8_search_results_screen.dart
+Route: AppRoutes.searchResults = '/search/results'
+Purpose: Display search results with options
+Features:
+  - Grouped results by type
+  - Sort results by relevance
+  - Save search
+  - Refine search
+
+#### Screen 11: Advanced Filters Screen
+File Path: lib/presentation/pages/advanced_filters_screen.dart
+Route: AppRoutes.advancedFilters = '/filters/advanced'
+Purpose: Complex filtering interface
+Features:
+  - Multi-criteria filter builder
+  - Date range picker
+  - Tag selector
+  - Save filter preset
+
+#### Screen 12: Sort Customization Screen
+File Path: lib/presentation/pages/sort_customization_screen.dart
+Route: AppRoutes.sortCustomization = '/sort'
+Purpose: Configure sort preferences
+Features:
+  - Select primary + secondary sort
+  - Sort direction (ascending/descending)
+  - Save preference
+
+#### More Note-Related Screens:
+- advanced_note_editor_screen.dart (markdown support)
+- search_operators_screen.dart (guide for search syntax)
+- search_filter_screen.dart (simple filter UI)
+
+---
+
+### ✅ TODOS MODULE (8+ screens)
+
+#### Screen 13: Enhanced Todos List Screen
+File Path: lib/presentation/pages/enhanced_todos_list_screen_refactored.dart
+Route: AppRoutes.todosList = '/todos'
+Purpose: List all todos with status, filtering, and organization
+State Management: BLocBuilder<TodosBloc, TodosState>
+BLoCs Used: TodosBloc (manages multiple todos)
+Features:
+  ✓ Pinned todos at top
+  ✓ Group by: priority, due date, status, project
+  ✓ Filter: completed/pending, by tag, by priority
+  ✓ Quick complete toggle (checkbox)
+  ✓ Kanban board view option
+  ✓ Recurring todo support
+Events:
+  - LoadTodosEvent() → Load all todos
+  - AddTodoEvent(params) → Create new todo
+  - ToggleTodoEvent(id) → Mark complete
+  - DeleteTodoEvent(id) → Delete todo
+  - UpdateTodoEvent(params) → Edit todo
+  - SortTodosEvent(option) → Change sort
+User Interactions:
+  - Checkbox to mark complete
+  - Swipe → delete/archive
+  - Tap to edit
+  - Long press → multi-select
+  - Tap due date → jump to calendar
+Key Widgets:
+  - TodosList (listview of todos)
+  - TodoCard (individual todo)
+  - Todo metadata (due date, priority, tags)
+
+#### Screen 14: Todo Focus Screen
+File Path: lib/presentation/pages/todo_focus_screen.dart
+Route: AppRoutes.todoFocus = '/todos/focus'
+Purpose: Focus on single todo with related subtasks
+Features:
+  - Subtask management
+  - Time tracking
+  - Notes attachment
+  - Related todos
+
+#### Screen 15: Advanced Todo Screen
+File Path: lib/presentation/pages/advanced_todo_screen.dart
+Route: AppRoutes.advancedTodo = '/todos/advanced'
+Purpose: Detailed todo editor with all properties
+Features:
+  - Title, description, priority
+  - Due date & time
+  - Recurring schedule
+  - Subtasks
+  - Tags, project
+  - Attachments
+
+#### Screen 16: Recurring Todo Schedule Screen
+File Path: lib/presentation/pages/recurring_todo_schedule_screen.dart
+Route: AppRoutes.recurringTodoSchedule = '/todos/recurring-schedule'
+Purpose: Configure recurrence patterns
+Features:
+  - Daily, weekly, monthly, yearly
+  - Custom patterns (rrule)
+  - End date
+  - Exceptions
+
+---
+
+### ⏰ ALARMS & REMINDERS MODULE (10+ screens)
+
+#### Screen 17: Alarms List Screen
+File Path: lib/presentation/pages/alarms_screen.dart
+Route: AppRoutes.alarms = '/alarms'
+Purpose: List all alarms/reminders
+State Management: BLocBuilder<AlarmsBloc, AlarmState>
+BLoCs Used: AlarmsBloc (1178 lines)
+Features:
+  ✓ Upcoming alarms at top
+  ✓ Status indicator (active, snoozed, dismissed)
+  ✓ Quick toggle (enable/disable)
+  ✓ Sound preview
+  ✓ Recurrence display
+Events:
+  - LoadAlarmsEvent()
+  - AddAlarmEvent(params)
+  - UpdateAlarmEvent(params)
+  - DeleteAlarmEvent(id)
+  - ToggleAlarmEvent(id)
+  - RefreshAlarmsEvent()
+User Interactions:
+  - Toggle alarm switch
+  - Tap to edit
+  - Swipe for quick actions
+  - Sound preview
+
+#### Screen 18: Active Alarms Screen
+File Path: lib/presentation/pages/active_alarms_screen.dart
+Route: AppRoutes.activeAlarms = '/alarms/active'
+Purpose: Show only active (ringing) alarms
+Live Updates: Streams from AlarmService
+
+#### Screen 19: Alarm Reschedule Screen
+File Path: lib/presentation/pages/alarm_reschedule_screen.dart
+Route: AppRoutes.rescheduleAlarm = '/alarms/reschedule'
+Purpose: Change alarm time while ringing
+
+#### Screen 20: Snooze Confirmation Screen
+File Path: lib/presentation/pages/snooze_confirmation_screen.dart
+Route: AppRoutes.snoozeConfirmation = '/alarms/snooze-confirmation'
+Purpose: Confirm snooze action (5m, 10m, 15m, etc.)
+
+#### Screen 21: Dismiss Confirmation Screen
+File Path: lib/presentation/pages/dismiss_confirmation_screen.dart
+Route: AppRoutes.dismissConfirmation = '/alarms/dismiss-confirmation'
+Purpose: Confirm alarm dismissal
+
+#### Screen 22: Reminder Templates Screen
+File Path: lib/presentation/pages/reminder_templates_screen.dart
+Route: AppRoutes.reminderTemplates = '/reminders/templates'
+Purpose: View and manage reminder templates
+Features:
+  - Predefined reminder templates
+  - Create custom template
+  - Delete/edit template
+
+#### Screen 23: Smart Reminders Screen
+File Path: lib/presentation/pages/smart_reminders_screen.dart
+Route: AppRoutes.smartReminders = '/reminders/smart'
+Purpose: AI-suggested reminders based on habits
+Features:
+  - ML-powered suggestions
+  - Accept/dismiss suggestion
+  - Add to smart reminder
+
+#### Screen 24: Enhanced Reminders List Screen
+File Path: lib/presentation/pages/enhanced_reminders_list_screen.dart
+Route: AppRoutes.remindersList = '/reminders'
+Purpose: Consolidated reminder view
+Features:
+  - All upcoming reminders
+  - Group by type
+  - Quick snooze
+
+---
+
+### 📍 LOCATION & MAPPING (5+ screens)
+
+#### Screen 25: Location Reminder Screen
+File Path: lib/presentation/pages/location_reminder_screen.dart (615 lines)
+Route: AppRoutes.locationReminder = '/reminders/location'
+Purpose: Geofence-based reminders setup and management
+State Management: BLocBuilder<LocationReminderBloc, LocationReminderState>
+BLoCs Used: LocationReminderBloc
+Features:
+  ✓ List all location reminders
+  ✓ Geofence circles on map
+  ✓ Add new location reminder
+  ✓ Edit trigger radius
+  ✓ Set reminder message
+  ✓ Test notification
+Backend Integration:
+  - Uses LocationService for location tracking
+  - GeofenceService monitors location
+  - Triggers reminders based on proximity
+  - Background execution via flutter_background_service
+Events:
+  - LoadLocationRemindersEvent()
+  - AddLocationReminderEvent(location, radius, message)
+  - UpdateLocationReminderEvent(params)
+  - DeleteLocationReminderEvent(id)
+  - TestLocationReminderEvent(id)
+User Interactions:
+  - Swipe on reminder → delete
+  - Tap → edit
+  - FAB → add new
+  - Map interaction to set location
+Key Widgets:
+  - GoogleMap (location selection)
+  - LocationReminderCard (displays reminder)
+Issues Found:
+  ⚠️ Background location tracking drains battery
+  ⚠️ Needs aggressive permission management
+
+#### Screen 26: Location Picker Screen
+File Path: lib/presentation/pages/location_picker_screen.dart
+Route: AppRoutes.locationPicker (custom route when adding location)
+Purpose: Select location on Google Maps
+Features:
+  - Current location marker
+  - Search by address
+  - Drag to select
+  - Save location preset
+
+#### Screen 27: Saved Locations Screen
+File Path: lib/presentation/pages/saved_locations_screen.dart
+Route: AppRoutes.savedLocations = '/locations/saved'
+Purpose: Manage saved location presets
+Features:
+  - List saved locations
+  - Quick add reminder to location
+  - Edit location details
+  - Delete location
+
+---
+
+### 🎬 MEDIA MODULE (15+ screens)
+
+#### Screen 28: Full Media Gallery Screen
+File Path: lib/presentation/pages/full_media_gallery_screen.dart
+Route: AppRoutes.fullMediaGallery = '/media/gallery'
+Purpose: Full-screen media gallery view
+State Management: BLocBuilder<MediaBloc, MediaState>
+BLoCs Used: MediaBloc
+Features:
+  ✓ All attached media
+  ✓ Group by type (images/videos/audio)
+  ✓ Swipeable preview
+  ✓ Download/share options
+  ✓ Delete media
+User Interactions:
+  - Swipe to navigate
+  - Tap info → show metadata
+  - Share button
+  - Delete button
+
+#### Screen 29: Media Picker Screen
+File Path: lib/presentation/pages/media_picker_screen.dart
+Route: AppRoutes.mediaPicker = '/media/picker'
+Purpose: Select photos/videos from gallery
+Dependencies:
+  - image_picker package
+  - photo_manager for gallery access
+Features:
+  - Photo library access
+  - Multi-select
+  - Camera shortcut
+  - Recent files
+User Selections trigger parent screen to:
+  - Download selected media
+  - Display in editor
+  - Attach to item
+
+#### Screen 30: Audio Recorder Screen
+File Path: lib/presentation/pages/audio_recorder_screen.dart
+Route: AppRoutes.audioRecorder = '/audio/recorder'
+Purpose: Record audio with playback
+State Management: BLocBuilder<AudioRecorderBloc, AudioRecorderState>
+BLoCs Used: AudioRecorderBloc
+Features:
+  ✓ Start/pause/stop recording
+  ✓ Waveform visualization
+  ✓ Real-time level meter
+  ✓ Playback controls
+  ✓ Save to note
+Initialization Flow:
+  - Call _initializeRecorder()
+  - Request RECORD_AUDIO permission
+  - Initialize RecordService
+  - Start listening to audio levels
+User Interactions:
+  - Record button → start recording
+  - Pause button → pause
+  - Stop button → save
+  - Play button → playback
+  - Delete button → discard
+
+#### Screen 31: Video Trimming Screen
+File Path: lib/presentation/pages/video_trimming_screen.dart
+Route: AppRoutes.videoTrimming = '/media/trim'
+Purpose: Trim video length
+Features:
+  - Slider for trim points
+  - Preview trimmed range
+  - Export trimmed video
+
+#### Screen 32: Media Filter Screen
+File Path: lib/presentation/pages/media_filter_screen.dart
+Route: AppRoutes.mediaFilter = '/media/filter'
+Purpose: Filter media by criteria
+Features:
+  - Date range
+  - File size
+  - Media type
+  - Resolution
+
+#### Screen 33-35: Batch Media Screens
+- batch_4_media_organization_view.dart (organize media into folders)
+- batch_4_media_search_results.dart (search media results)
+- media_analytics_dashboard.dart (stats about media)
+
+#### Screen 36: Media Viewer Screen
+File Path: lib/presentation/pages/media_viewer_screen.dart
+Route: AppRoutes.mediaViewer = '/media/viewer'
+Purpose: View single media item with metadata
+Features:
+  - Image/video display
+  - Metadata (size, date, camera)
+  - Share, download
+  - Delete option
+
+---
+
+### 🧘 FOCUS & PRODUCTIVITY (7+ screens)
+
+#### Screen 37: Focus Session Screen
+File Path: lib/presentation/pages/focus_session_screen.dart (946 lines)
+Route: AppRoutes.focusSession = '/focus-session'
+Purpose: Pomodoro timer with immersive UI
+State Management: BLocBuilder<FocusBloc, FocusState>
+BLoCs Used: FocusBloc
+Timer Features:
+  ✓ Configurable work/break durations
+  ✓ Visual countdown (minutes:seconds)
+  ✓ Play/pause/reset controls
+  ✓ Session tracking
+  ✓ Auto-start breaks
+  ✓ Sound notification
+Lifecycle:
+  1. User taps "Start Focus"
+  2. Shows task selection UI
+  3. Selected task displayed
+  4. Timer counts down
+  5. Work session ends → break starts
+  6. Complete → celebration screen
+Features:
+  - Task selection before starting
+  - Work time customization (15m, 25m, 45m, custom)
+  - Break duration (5m, 10m, 15m)
+  - Session stats tracking
+  - Focus lock (prevent app switching)
+  - Do Not Disturb mode
+  - Optional background music
+Advanced Features:
+  - Streak counter
+  - Daily focus stats
+  - Focus history
+  - Pomodoro settings
+Key Widgets:
+  - Circular progress indicator
+  - Gradient background (animated)
+  - Task display
+  - Control buttons (play, pause, skip)
+Dependencies:
+  - FocusBloc for timer logic
+  - wakelock_plus to keep screen on
+  - NotificationService for break alerts
+Events:
+  - StartFocusEvent(duration, task)
+  - PauseFocusEvent()
+  - ResumeFocusEvent()
+  - SkipSessionEvent()
+  - CompleteFocusSessionEvent()
+User Interactions:
+  - Select task
+  - Start button
+  - Pause/resume
+  - Skip session
+Issues Found:
+  ⚠️ Large screen (946 lines), complex animations
+  ⚠️ Timer state complexity
+
+#### Screen 38: Focus Celebration Screen
+File Path: lib/presentation/pages/focus_celebration_screen.dart
+Route: AppRoutes.focusCelebration = '/focus-celebration'
+Purpose: Celebrate completed focus session
+Features:
+  - Confetti animation
+  - Stats display
+  - Share result
+  - Start new session button
+Key Widgets: confetti package
+
+#### Screen 39: Daily Highlight Screen
+File Path: lib/presentation/pages/daily_focus_highlight_screen.dart
+Route: AppRoutes.dailyHighlight = '/daily-highlight'
+Purpose: Set daily focus goal/highlight
+Features:
+  - Text input
+  - Character counter
+  - Save to today dashboard
+  - View history
+
+#### Screen 40: Edit Daily Highlight Screen
+File Path: lib/presentation/pages/edit_daily_highlight_screen_new.dart
+Route: AppRoutes.editDailyHighlight = '/edit-daily-highlight'
+Purpose: Modify saved highlight entry
+
+#### Screen 41: Daily Highlight Summary Screen
+File Path: lib/presentation/pages/daily_highlight_summary_screen.dart
+Route: AppRoutes.dailyHighlightSummary = '/daily-highlight-summary'
+Purpose: Review highlights with reflection
+
+---
+
+### 📚 REFLECTIONS/JOURNALING (8+ screens)
+
+#### Screen 42: Reflection Home Screen
+File Path: lib/presentation/screens/reflection_home_screen.dart (949 lines)
+Route: AppRoutes.reflectionHome = '/reflection/home'
+Purpose: Central hub for reflection/journaling
+State Management: BLocBuilder<ReflectionBloc, ReflectionState>
+BLoCs Used: ReflectionBloc
+Features:
+  ✓ Privacy mode with biometric lock
+  ✓ Question carousel
+  ✓ Recent reflections list
+  ✓ Reflection history
+  ✓ Statistics
+Privacy Features:
+  - Face ID / Fingerprint required
+  - Fallback to PIN if biometrics unavailable
+  - Encrypts reflection content at rest
+Lifecycle:
+  1. User opens reflections
+  2. BiometricAuth request
+  3. Unlock successful → show content
+  4. Dashboard with questions & history
+  5. Tap question → show reflection prompt
+  6. Answer → save to database
+Events:
+  - InitializeReflectionEvent()
+  - LoadAllAnswersEvent()
+  - UnlockReflectionsEvent()
+User Interactions:
+  - Biometric unlock
+  - Tap question → view
+  - Tap history → detail view
+  - Tap stats → analytics
+Key Widgets:
+  - Question carousel
+  - ReflectionCard (past reflections)
+Dependencies:
+  - ReflectionBloc
+  - BiometricAuthService
+  - ReflectionRepository
+Issues Found:
+  ⚠️ Large file (949 lines)
+  ⚠️ Biometric logic should be in separate service/BLoC
+
+#### Screen 43: Question List Screen
+File Path: lib/presentation/screens/question_list_screen.dart
+Route: (Not explicitly in AppRoutes, used internally)
+Purpose: Display available reflection questions
+Features:
+  - Question preview
+  - Tap to answer
+  - Mark as favorite
+  - View previous answers
+
+#### Screen 44: Answer Screen
+File Path: lib/presentation/screens/answer_screen.dart
+Route: AppRoutes.reflectionAnswer = '/reflection/answer'
+Purpose: Answer a reflection question
+Features:
+  - Question display
+  - Text input for answer
+  - Save answer
+  - View date answered
+  - Edit previous answer
+
+#### Screen 45: Reflection History Screen
+File Path: lib/presentation/screens/reflection_history_screen.dart
+Route: AppRoutes.reflectionHistory = '/reflection/history'
+Purpose: View all past reflections
+Features:
+  - Timeline view
+  - Filter by date range
+  - Search reflections
+  - View/edit past answers
+
+#### Screen 46: Carousel Reflection Screen
+File Path: lib/presentation/screens/carousel_reflection_screen.dart
+Route: AppRoutes.reflectionCarousel = '/reflection/carousel'
+Purpose: Swipeable question view (like Tinder for questions)
+Features:
+  - Swipe left/right
+  - Quick answer or skip
+  - Gestures for UX
+
+---
+
+### 📊 DOCUMENT & SCANNING (5+ screens)
+
+#### Screen 47: Document Scan Screen
+File Path: lib/presentation/pages/document_scan_screen.dart
+Route: AppRoutes.documentScan = '/document-scan'
+Purpose: Scan documents using camera + OCR
+State Management: BLocBuilder<DocumentScanBloc, DocumentScanState>
+BLoCs Used: DocumentScanBloc
+Features:
+  ✓ Live preview with document boundary detection
+  ✓ Auto-capture with good focus
+  ✓ Manual capture button
+  ✓ Perspective correction/document cropping
+  ✓ Save as image
+Lifecycle:
+  1. Open camera permission
+  2. Display live preview
+  3. Document outline detection
+  4. Auto or manual capture
+  5. Perspective transform
+  6. Show OCR confirmation
+  7. Save to note
+User Interactions:
+  - Tap to focus
+  - Capture button
+  - Retake button
+  - Confirm button
+
+#### Screen 48: OCR Text Extraction Screen
+File Path: lib/presentation/pages/ocr_text_extraction_screen.dart
+Route: AppRoutes.ocrExtraction = '/ocr-extraction'
+Purpose: Display extracted text from scanned document
+Features:
+  - Preview of extracted text
+  - Edit extracted text
+  - Copy to clipboard
+  - Add to note
+  - Save as separate note
+Backend Service: google_mlkit_text_recognition
+
+#### Screen 49: Drawing Canvas Screen
+File Path: lib/presentation/pages/drawing_canvas_screen.dart
+Route: AppRoutes.drawingCanvas = '/drawing'
+Purpose: Freeform drawing/sketching
+State Management: BLocBuilder<DrawingCanvasBloc, DrawingCanvasState>
+BLoCs Used: DrawingCanvasBloc
+Features:
+  ✓ Freeform drawing
+  ✓ Color picker
+  ✓ Brush size control
+  ✓ Undo/redo
+  ✓ Eraser tool
+  ✓ Fill tool
+  ✓ Save as image
+User Interactions:
+  - Draw on canvas
+  - Pick color
+  - Adjust brush size
+  - Undo/redo
+  - Clear canvas
+  - Save drawing
+
+#### Screen 50: PDF Annotation Screen
+File Path: lib/presentation/pages/pdf_annotation_screen.dart
+Route: AppRoutes.pdfAnnotation = '/pdf/annotate'
+Purpose: View and annotate PDF files
+Features:
+  - PDF viewer
+  - Drawing overlay
+  - Text annotation
+  - Highlight text
+  - Add notes
+  - Export annotated PDF
+
+#### Screen 51: PDF Preview Screen
+File Path: lib/presentation/pages/pdf_preview_screen.dart
+Route: AppRoutes.pdfPreview = '/pdf/preview'
+Purpose: Quick PDF preview without editing
+Features:
+  - Page navigation
+  - Zoom in/out
+  - Share PDF
+  - Download PDF
+  - Print PDF (via printing service)
+
+---
+
+### 🔐 SECURITY & SETTINGS (10+ screens)
+
+#### Screen 52: Biometric Lock Screen
+File Path: lib/presentation/pages/biometric_lock_screen.dart
+Route: AppRoutes.biometricLock = '/security/lock'
+Purpose: Biometric authentication for reflection privacy
+Features:
+  - Face ID / Fingerprint
+  - PIN fallback
+  - Unlock attempts counter
+  - Lock screen UI
+
+#### Screen 53: PIN Setup Screen
+File Path: lib/presentation/pages/pin_setup_screen.dart (290 lines)
+Route: AppRoutes.pinSetup = '/security/pin-setup'
+Purpose: Configure PIN code for app security
+State Management:
+  - Local state for PIN input
+  - SharedPreferences for storage
+  - BlocBuilder<PinSetupBloc, PinSetupState>
+Features:
+  ✓ PIN entry with numeric keypad
+  ✓ Confirm PIN re-entry
+  ✓ Visual feedback (dots for digits)
+  ✓ Delete/clear buttons
+  ✓ Save to SharedPreferences
+  ✓ Option to enable/disable
+user Interactions:
+  - Tap numbers
+  - Backspace to delete
+  - Confirm button when complete
+
+#### Screen 54: Unified Settings Screen
+File Path: lib/presentation/pages/unified_settings_screen.dart
+Route: AppRoutes.appSettings = '/app-settings'
+Purpose: Comprehensive settings hub (replaces old SettingsScreen)
+State Management: BLocBuilder<SettingsBloc, SettingsState>
+BLoCs Used: SettingsBloc
+Features:
+  📱 App Behavior:
+    - Auto-save interval
+    - Notification settings
+    - Default view mode
+    - Quick add options
+  🎨 Appearance:
+    - Dark/light mode
+    - Font size scaling
+    - Theme color
+    - Accent color
+  🔔 Notifications:
+    - Enable/disable
+    - Sound & vibration
+    - Quiet hours
+    - Notification content
+  🔐 Security:
+    - Biometric enable/disable
+    - PIN setup
+    - Auto-lock timeout
+    - Clear history
+  🌍 Language & Regional:
+    - Language selector
+    - Date format
+    - Time format
+    - First day of week
+  📊 Data:
+    - Backup/restore
+    - Export data
+    - Clear cache
+  🐛 Developer:
+    - Debug logs
+    - Performance metrics
+    - Test mode
+    - Reset app
+Events from Screen:
+  - LoadSettingsEvent()
+  - UpdateSettingEvent(key, value)
+  - ResetSettingsEvent()
+  - ExportSettingsEvent()
+
+#### Screen 55: Advanced Settings Screen
+File Path: lib/presentation/pages/advanced_settings_screen.dart
+Route: AppRoutes.advancedSettings = '/settings/advanced'
+Purpose: Expert-level settings
+Features:
+  - Database tuning
+  - Cache strategy
+  - Sync frequency
+  - Backup encryption
+  - Beta features
+
+#### Screen 56: Voice Settings Screen
+File Path: lib/presentation/pages/voice_settings_screen.dart
+Route: AppRoutes.voiceSettings = '/voice-settings'
+Purpose: Configure voice recognition settings
+Features:
+  ✓ Language selection
+  ✓ Voice model selection
+  ✓ Confidence threshold
+  ✓ Voice input feedback
+  ✓ Test voice input
+User Interactions:
+  - Select language
+  - Speak test phrase
+  - Review transcription
+
+#### Screen 57: Font Settings Screen
+File Path: lib/presentation/pages/font_settings_screen.dart
+Route: AppRoutes.fontSettings = '/font-settings'
+Purpose: Customize font size and family
+Features:
+  - Font size slider (0.8x - 1.5x)
+  - Font family selector
+  - Line height control
+  - Letter spacing
+  - Preview text
+Real-time Update:
+  - ThemeBloc.add(UpdateThemeEvent) triggers rebuild
+  - All text resizes immediately
+
+#### Screen 58: Tag Management Screen
+File Path: lib/presentation/pages/tag_management_screen.dart
+Route: AppRoutes.tagManagement = '/tags'
+Purpose: Organize and manage tags
+Features:
+  - List all tags
+  - Create new tag
+  - Rename tag
+  - Delete tag
+  - Assign colors
+  - View items by tag
+
+#### Screen 59: Privacy Policy Screen
+File Path: lib/presentation/pages/privacy_policy_screen.dart
+Route: AppRoutes.privacy = '/privacy'
+Purpose: Display privacy policy
+Features:
+  - Legal text display
+  - Scrollable
+
+---
+
+### 💾 BACKUP & EXPORT (3+ screens)
+
+#### Screen 60: Backup/Export Screen
+File Path: lib/presentation/pages/backup_export_screen.dart
+Route: AppRoutes.backupExport = '/backup-export'
+Purpose: Create data backups and exports
+State Management: BLocBuilder<BackupBloc, BackupState>
+BLoCs Used: BackupBloc
+Features:
+  ✓ Full backup (notes + media)
+  ✓ Data-only backup
+  ✓ Media-only backup
+  ✓ Selective backup
+  ✓ Scheduled backups
+  ✓ Cloud backup (integration ready)
+  ✓ Local storage backup
+Backup Types:
+  1. **Full Backup** → .zip with database + media
+  2. **Data-Only** → Database export (SQLite, JSON)
+  3. **Media-Only** → All attached images/videos/audio
+Formats Supported:
+  - ZIP (compressed)
+  - JSON (human-readable)
+  - CSV (spreadsheet import)
+  - PDF (archive as pages)
+User Interactions:
+  - Select backup type
+  - Choose destination (local/cloud)
+  - Start backup
+  - Download/restore
+Events:
+  - CreateBackupEvent(BackupType)
+  - RestoreBackupEvent(filePath)
+  - DeleteBackupEvent(id)
+  - ScheduleBackupEvent(frequency)
+
+#### Screen 61: Analytics Dashboard Screen
+File Path: lib/presentation/pages/analytics_dashboard_screen.dart
+Route: AppRoutes.analytics = '/analytics'
+Purpose: View usage statistics and insights
+State Management: BLocBuilder<AnalyticsBloc, AnalyticsState>
+BLoCs Used: AnalyticsBloc
+Features:
+  📊 Charts:
+    - Notes written (over time)
+    - Todos completed (daily/weekly)
+    - Focus sessions (productivity)
+    - Reflection streak
+  📈 Statistics:
+    - Total notes
+    - Average note length
+    - Most active day
+    - Favorite tag
+    - Writing frequency
+Key Widgets: fl_chart for visualizations
+
+---
+
+### 🎯 ADVANCED FEATURES (10+ screens)
+
+#### Screen 62: Smart Collections Screen
+File Path: lib/presentation/pages/smart_collections_screen.dart
+Route: AppRoutes.smartCollections = '/collections'
+Purpose: View and manage smart filters/folders
+State Management: BLocBuilder<SmartCollectionsBloc, SmartCollectionsState>
+BLoCs Used: SmartCollectionsBloc
+Features:
+  ✓ Create smart collection via UI wizard
+  ✓ Rule-based filtering
+  ✓ Automatic grouping
+  ✓ Save/edit/delete
+  ✓ Smart folders (Today, This Week, etc.)
+
+#### Screen 63: Create Collection Wizard
+File Path: lib/presentation/pages/batch_5_create_collection_wizard.dart
+Route: AppRoutes.createCollection = '/collections/create'
+Purpose: Step-by-step smart collection builder
+Features:
+  - Step 1: Name & icon
+  - Step 2: Rule builder
+  - Step 3: Filter options
+  - Step 4: Review & save
+
+#### Screen 64: Rule Builder Screen
+File Path: lib/presentation/pages/batch_5_rule_builder_screen.dart
+Route: AppRoutes.ruleBuilder = '/collections/rule-builder'
+Purpose: Visual rule builder for smart collections
+Features:
+  - Add rules (AND, OR, NOT)
+  - Condition selectors
+  - Value input
+  - Rule preview
+
+#### Screen 65: Collection Management Screen
+File Path: lib/presentation/pages/batch_5_collection_management_screen.dart
+Route: AppRoutes.collectionManagement = '/collections/manage'
+Purpose: Manage existing smart collections
+Features:
+  - List collections
+  - Reorder via drag
+  - Edit rules
+  - Delete collection
+  - Rename
+
+#### Screen 66: Collection Details Screen
+File Path: lib/presentation/pages/batch_5_collection_details_screen.dart
+Route: AppRoutes.collectionDetails = '/collections/details'
+Purpose: View items in smart collection
+Features:
+  - Items list
+  - Filter same way as main notes
+  - Edit collection
+
+#### Screen 67: Template Gallery Screen
+File Path: lib/presentation/pages/batch_7_template_gallery_screen.dart
+Route: AppRoutes.templateGallery = '/templates/gallery'
+Purpose: Browse available note templates
+Features:
+  - Template previews
+  - Search templates
+  - Category filter
+  - Create from template
+
+#### Screen 68: Template Editor Screen
+File Path: lib/presentation/pages/batch_7_template_editor_screen.dart
+Route: AppRoutes.templateEditor = '/templates/editor'
+Purpose: Create/edit custom templates
+Features:
+  - Setup template structure
+  - Add placeholders
+  - Set default content
+  - Preview
+
+#### Screen 69: Integrated Features Screen
+File Path: lib/presentation/pages/integrated_features_screen.dart
+Route: AppRoutes.integratedFeatures = '/integrated-features'
+Purpose: Showcase cross-feature integration
+Features:
+  - Multi-feature workflows
+  - Feature combinations
+  - Demo scenarios
+
+#### Screen 70: Calendar Integration Screen
+File Path: lib/presentation/pages/calendar_integration_screen.dart
+Route: AppRoutes.calendarIntegration = '/calendar-integration'
+Purpose: Sync with device calendar
+State Management: BLocBuilder<CalendarIntegrationBloc, CalendarIntegrationState>
+BLoCs Used: CalendarIntegrationBloc
+Features:
+  ✓ Device calendar access
+  ✓ Event creation from todos
+  ✓ Reminder sync
+  ✓ Two-way sync option
+  ✓ Select calendar for sync
+Backend: device_calendar package
+
+---
+
+### 🧭 UTILITY SCREENS (10+ screens)
+
+#### Screen 71: Empty State Notes Help
+File Path: lib/presentation/pages/empty_state_notes_help_screen.dart
+Route: AppRoutes.emptyStateNotesHelp = '/help/empty-notes'
+Purpose: Guide when no notes exist
+Features:
+  - Feature overview
+  - Quick start buttons
+  - Tips
+
+#### Screen 72: Empty State Todos Help
+File Path: lib/presentation/pages/empty_state_todos_help_screen.dart
+Route: AppRoutes.emptyStateTodosHelp = '/help/empty-todos'
+Purpose: Guide for new users with no todos
+
+#### Screen 73: Quick Add Confirmation
+File Path: lib/presentation/pages/quick_add_confirmation_screen.dart
+Route: AppRoutes.quickAddConfirmation = '/quick-add-confirmation'
+Purpose: Confirm quick-add item before saving
+
+#### Screen 74: Fixed Universal Quick Add
+File Path: lib/presentation/pages/fixed_universal_quick_add_screen.dart
+Route: AppRoutes.universalQuickAdd = '/universal-quick-add'
+Purpose: Voice-first quick add for all item types
+Features:
+  ✓ Voice input (speech-to-text)
+  ✓ Type selector (note/todo/alarm)
+  ✓ Confirmation before save
+  ✓ Cancel option
+Voice Flow:
+  1. User taps voice button
+  2. Requests RECORD_AUDIO permission
+  3. Initializes speech service
+  4. Records speech
+  5. Transcribes to text
+  6. Shows confirmation UI
+  7. User confirms or re-record
+  8. Dispatches appropriate Create event
+
+#### Screen 75: Unified Items
+File Path: lib/presentation/pages/unified_items_screen.dart
+Route: AppRoutes.unifiedItems = '/unified-items'
+Purpose: View all items in unified format
+Features:
+  - Mixed type list (notes, todos, reminders)
+  - Sort across types
+  - Filter
+
+#### Screen 76: Command Palette
+File Path: (Modal dialog, not full screen)
+Purpose: Quick command access (Ctrl+K)
+
+#### Screen 77: Home Widgets Screen
+File Path: lib/presentation/pages/home_widgets_screen.dart
+Route: AppRoutes.homeWidgets = '/widgets'
+Purpose: Configure home screen widgets
+Features:
+  - Widget selector
+  - Widget preview
+  - Reorder widgets
+
+---
+
+## FEATURES BY CATEGORY
+
+### ✨ CORE FEATURES
+
+#### 1. NOTE-TAKING
+📄 **Files**: /lib/domain/entities/note.dart, /lib/data/repositories/note_repository_impl.dart
+**Service**: NoteRepositoryImpl, NoteBloc
+**Database**: SQLite (notes table)
+**UI**: EnhancedNoteEditorScreen, EnhancedNotesListScreen
+
+Flow:
+```
+User Action                   → BLoC Event              → Repository       → Database
+──────────────────────────────────────────────────────────────────────────────────
+Create Note Button            CreateNoteEvent           NoteRepository:    INSERT
+                                                        createNote()
+                                                        
+Edit Note                     UpdateNoteEvent           NoteRepository:    UPDATE
+                                                        updateNote()
+
+Delete Note                   DeleteNoteEvent           NoteRepository:    DELETE
+                                                        deleteNote()
+
+Search Notes       SearchNotesEvent                     NoteRepository:    SELECT
+                                                        searchNotes()
+                                                        
+Filter Notes       ApplyFilterEvent                     In-memory filter   notesLoaded +
+                  (search, tags, colors)               logic in BLoC      displayedNotes
+```
+
+Features:
+- ✅ Rich text editing (Quill)
+- ✅ Media attachments
+- ✅ Tags & colors
+- ✅ Pinning
+- ✅ Archiving
+- ✅ Search & filtering
+- ✅ PDF export
+- ✅ Voice transcription
+- ✅ Auto-save
+- ✅ Undo/redo
+- ✅ Link suggestions
+- ⚠️ Not implemented: Note linking (mentioned but unused)
+
+#### 2. TODO MANAGEMENT
+📄 **Files**: /lib/domain/entities/todo_item.dart, /lib/presentation/bloc/todos/todos_bloc.dart
+**Service**: TodoRepositoryImpl
+**Database**: SQLite (todos table)
+**UI**: EnhancedTodosListScreenRefactored, AdvancedTodoScreen
+
+Features:
+- ✅ Create, edit, delete todos
+- ✅ Mark complete/incomplete
+- ✅ Due date & time
+- ✅ Priority levels
+- ✅ Recurring todos (with rrule)
+- ✅ Subtasks
+- ✅ Filter by status/priority
+- ✅ Group by category
+- ✅ Tags
+- ✅ Time tracking
+- ⚠️ Kanban view (mentioned, unclear if implemented)
+
+#### 3. ALARMS & REMINDERS
+📄 **Files**: /lib/domain/entities/alarm.dart, /lib/presentation/bloc/alarm/alarm_bloc.dart
+**Service**: AlarmService, NotificationService, AndroidAlarmManagerPlus
+**Database**: SQLite (alarms/reminders tables)
+**UI**: AlarmsScreen, ActiveAlarmsScreen, ReminderTemplatesScreen
+
+Flow:
+```
+Create Alarm UI               AddAlarmEvent             AlarmRepository    INSERT
+                                                        scheduleAlarm()
+   │
+   └─> AlarmService.scheduleAlarm()
+       │
+       └─> android_alarm_manager_plus
+           (registers with Android)
+           │
+           └─> At defined time:
+               alarmCallback() runs in background isolate
+               │
+               ├─> Initialize AwesomeNotifications
+               ├─> Show notification
+               ├─> Play alarm sound (flutter_ringtone_player)
+               ├─> Vibrate device
+               └─> Update database status
+```
+
+Background Alarm Flow:
+- User sets alarm for 7:00 AM
+- AlarmService.scheduleAlarm() calls AndroidAlarmManager.oneShot()
+- At 7:00 AM, system triggers alarmCallback() (even if app is killed!)
+- alarmCallback() runs in separate isolate
+- Initializes AwesomeNotifications in isolate
+- Shows notification with sound/vibration
+- User can snooze/dismiss from notification
+- App foreground: AlarmTriggerPopup widget shows
+
+Features:
+- ✅ One-time & recurring alarms
+- ✅ Background notification (app killed)
+- ✅ Snooze (5, 10, 15, 30 mins)
+- ✅ Custom sounds
+- ✅ Vibration feedback
+- ✅ Do Not Disturb support
+- ✅ Smart reminders (AI suggestions)
+- ✅ Location-based reminders (geofencing)
+- ✅ Smart reminder templates
+- ⚠️ Complex state management (AlarmsBloc @ 1178 lines)
+
+#### 4. SEARCH & FILTERING
+📄 **Files**: /lib/presentation/bloc/global_search/global_search_bloc.dart, /lib/core/utils/nl_filter_parser.dart
+**Service**: AdvancedSearchRankingService
+**Database**: SQLite FTS (disabled due to device compatibility)
+**UI**: GlobalSearchScreen, AdvancedSearchScreen
+
+Features:
+- ✅ Real-time search
+- ✅ Voice search (speech-to-text)
+- ✅ Advanced filters (date, type, tags)
+- ✅ Search operators (from:, date:, type:, tag:)
+- ✅ Command palette mode (start with '!')
+- ✅ Search history
+- ✅ Fuzzy matching
+- ✅ Debounced search
+- ✅ Ranking by relevance
+- ⚠️ FTS5 disabled (causes issues on some devices)
+
+#### 5. REFLECTIONS/JOURNALING
+📄 **Files**: /lib/domain/entities/reflection.dart, /lib/presentation/bloc/reflection/reflection_bloc.dart
+**Service**: ReflectionRepositoryImpl
+**Database**: SQLite (reflections, reflection_answers, reflection_questions tables)
+**UI**: ReflectionHomeScreen, AnswerScreen, ReflectionHistoryScreen
+
+Privacy Features:
+- 🔒 Biometric lock (Face ID, Fingerprint)
+- 🔐 PIN fallback
+- 🔐 Encrypted storage at rest
+
+Features:
+- ✅ Daily reflection questions
+- ✅ Answer history
+- ✅ Privacy mode with biometric lock
+- ✅ Reflection statistics
+- ✅ Timeline view
+- ✅ Reflection carousel (swipeable)
+- ✅ Edit past answers
+- ✅ Search reflections
+- ⚠️ Encryption not fully verified in code
+
+#### 6. FOCUS & PRODUCTIVITY (POMODORO)
+📄 **Files**: /lib/presentation/bloc/pomodoro/pomodoro_bloc.dart, /lib/presentation/pages/focus_session_screen.dart
+**Service**: FocusBloc
+**Database**: SQLite (focus_sessions table for history)
+**UI**: FocusSessionScreen, FocusCelebrationScreen, TodayDashboardScreen
+
+Flow:
+```
+User taps "Start Focus"
+  │
+  └─> Shows task selection UI
+  │   (selects note/todo or free-form)
+  │
+  └─> Dispatches StartFocusEvent(duration, task)
+  │
+  ├─> FocusBloc:
+  │   - initialMinutes = 25 (default)
+  │   - secondsRemaining = 1500
+  │   - status = FocusStatus.active
+  │
+  ├─> Timer countdown starts (every 1 second)
+  │   - FocusBloc emits state with updated secondsRemaining
+  │   - UI rebuilds with new time
+  │
+  ├─> Optional: Play background music
+  ├─> Optional: Enable Do Not Disturb
+  ├─> Optional: Lock focus (prevent app switching)
+  │
+  └─> When timer reaches 0:
+      - status = FocusStatus.breakTime
+      - Show break duration
+      - Auto-start break timer (5 mins)
+      - Notification sound
+      
+  └─> Break timer reaches 0:
+      - status = FocusStatus.completed
+      - Navigate to FocusCelebrationScreen
+      - Show confetti animation
+      - Display stats (time focused, sessions, streak)
+      - Save session to database
+```
+
+Features:
+- ✅ Configurable work/break duration
+- ✅ Session tracking & history
+- ✅ Streak counter
+- ✅ Focus lock (prevent app background)
+- ✅ Do Not Disturb mode
+- ✅ Background music option
+- ✅ Celebration animation (confetti)
+- ✅ Task focus (linked to note/todo)
+- ✅ Daily focus goal
+- ⚠️ Breaking focus (pause/resume) complex state
+- ⚠️ Screen is 946 lines (refactoring needed)
+
+#### 7. LOCATION REMINDERS (GEOFENCING)
+📄 **Files**: /lib/presentation/pages/location_reminder_screen.dart, /lib/core/services/geofence_service.dart
+**Service**: LocationService, GeofenceService, LocationBackgroundService
+**Database**: SQLite (location_reminders, saved_locations tables)
+**UI**: LocationReminderScreen, LocationPickerScreen, SavedLocationsScreen
+
+Geofencing Flow:
+```
+User sets location reminder:
+  1. Opens LocationReminderScreen
+  2. Taps location picker
+  3. Selects on Google Maps (or uses saved location)
+  4. Sets radius (50m-500m default)
+  5. Sets message/action
+  6. Saves
+
+Background Location Tracking:
+  │
+  ├─> LocationBackgroundService starts
+  ├─> Requests location permission (Always)
+  ├─> Geolocator.getPositionStream() ongoing
+  │
+  ├─> For each new location:
+  │   ├─> GeofenceService checks proximity
+  │   └─> For each location reminder:
+  │       ├─> Calculate distance
+  │       ├─> If distance < radius:
+  │       │   └─> Trigger reminder!
+  │       │       ├─> Show notification
+  │       │       ├─> Update UI
+  │       │       └─> Log event
+  │       └─> If distance >= radius:
+  │           └─> Do nothing (yet)
+```
+
+Features:
+- ✅ Geofence-based triggers
+- ✅ Configurable radius
+- ✅ Saved location presets
+- ✅ Google Maps integration
+- ✅ Background location tracking
+- ✅ Test reminder functionality
+- ⚠️ High battery drain
+- ⚠️ Background execution requires Android-specific permissions
+- ⚠️ Privacy concerns (continuous location tracking)
+
+#### 8. MEDIA MANAGEMENT
+📄 **Files**: /lib/domain/entities/media_item.dart, /lib/presentation/bloc/media/media_bloc.dart
+**Service**: MediaRepositoryImpl_v2, MediaCapturService, MediaProcessingService
+**Database**: SQLite (media table)
+**UI**: FullMediaGalleryScreen, MediaPickerScreen, AudioRecorderScreen, VideoTrimmer
+
+Media Types Supported:
+- 📷 Images (JPEG, PNG)
+- 🎬 Videos (MP4, MOV)
+- 🎵 Audio (MP3, M4A, AAC)
+- 📄 PDFs (imported)
+- 🎨 Drawings (vectors)
+- 📄 Scanned docs (PNG)
+
+Features:
+- ✅ Multi-media attachment to notes
+- ✅ Image compression & processing
+- ✅ Video compression & trimming
+- ✅ Audio recording & playback
+- ✅ Document scanning (camera + OCR)
+- ✅ Image editing (crop, filter, rotate)
+- ✅ Video editing
+- ✅ Audio waveform visualization
+- ✅ Image gallery with metadata
+- ✅ File picker for native files
+- ✅ Cached network images
+- ✅ Media expiration cleanup
+- ⚠️ Performance: Processing videos/images can freeze UI
+- ⚠️ Storage management: No automatic cleanup
+
+#### 9. VOICE & SPEECH-TO-TEXT
+📄 **Files**: /lib/core/services/speech_service.dart, /lib/core/services/voice_command_service.dart
+**Service**: SpeechService, VoiceCommandService, SmartVoiceParser
+**UI**: GlobalSearchScreen (voice search), FixedUniversalQuickAdd, AudioRecorderScreen
+
+Features:
+- ✅ Speech-to-text transcription
+- ✅ Real-time transcription
+- ✅ Language selection
+- ✅ Confidence scoring
+- ✅ Voice command parsing (!command syntax)
+- ✅ Natural language parsing
+- ⚠️ Accuracy depends on speech clarity
+- ⚠️ Internet required for STT (Google Cloud)
+- ⚠️ Permission handling complex
+
+#### 10. BACKUP & EXPORT
+📄 **Files**: /lib/core/services/backup_service.dart, /lib/core/pdf/pdf_export_service.dart
+**Service**: BackupService, ExportService
+**Format**: ZIP (compressed), JSON, CSV, PDF
+**UI**: BackupExportScreen
+
+Features:
+- ✅ Full backup (DB + media)
+- ✅ Data-only backup
+- ✅ Media-only backup
+- ✅ Export to JSON
+- ✅ Export to CSV
+- ✅ Export notes to PDF
+- ✅ Backup scheduling (planned)
+- ✅ Cloud backup (architecture ready, not implemented)
+- ✅ Restore from backup
+- ⚠️ No cloud integration yet
+- ⚠️ Scheduled backups not working
+
+#### 11. NOTIFICATIONS
+📄 **Files**: /lib/core/notifications/notification_service.dart, /lib/core/notifications/alarm_service.dart
+**Packages**: awesome_notifications, flutter_local_notifications, android_alarm_manager_plus
+**Delivery**: Local only (no push)
+
+Features:
+- ✅ Local notifications (foreground)
+- ✅ Scheduled notifications
+- ✅ Background alarms (even when app killed)
+- ✅ Custom notification actions
+- ✅ Notification channels (Android)
+- ✅ Sound & vibration control
+- ✅ Notification UI customization
+- ⚠️ No push notifications (cloud messaging)
+- ⚠️ Complex background execution (needs multiple services)
+
+#### 12. SECURITY & PRIVACY
+📄 **Files**: /lib/presentation/bloc/biometric_auth/biometric_auth_bloc.dart, /lib/core/services/biometric_auth_service.dart
+**Packages**: local_auth, flutter_secure_storage, encrypt
+
+Features:
+- ✅ Biometric authentication (Face ID, Fingerprint)
+- ✅ PIN setup & verification
+- ✅ Reflection privacy mode
+- ✅ Auto-lock timeout
+- ⚠️ Encryption at rest not verified
+- ⚠️ No full app encryption
+- ⚠️ PIN storage may not be secure
+
+#### 13. THEME & CUSTOMIZATION
+📄 **Files**: /lib/presentation/bloc/theme/theme_bloc.dart, /lib/core/services/theme_customization_service.dart
+**Service**: ThemeBloc, SettingsBloc, AccentColorBloc, LocalizationBloc
+**Database**: SharedPreferences
+
+Features:
+- ✅ Light/dark mode
+- ✅ Font size scaling (0.8x - 1.5x)
+- ✅ Font family selection
+- ✅ Theme color customization
+- ✅ Accent color override
+- ✅ Per-screen theme override
+- ✅ Persistent theme preference
+
+#### 14. LOCALIZATION & LANGUAGE
+📄 **Files**: /lib/presentation/bloc/localization/localization_bloc.dart, /lib/core/services/language_service.dart
+**Packages**: intl, flutter_localizations
+**Supported**: English (default), others TBD
+
+Features:
+- ✅ Language selection
+- ✅ Date/time format localization
+- ✅ Number formatting
+- ⚠️ Translations incomplete (only English)
+- ⚠️ More languages not implemented
+
+#### 15. OFFLINE SUPPORT
+**Status**: ⚠️ PARTIAL
+- ✅ All data in SQLite (app works offline)
+- ✅ Alarm scheduling works offline
+- ✅ STT requires internet
+- ✅ OpenAI/LML features need API
+- ⚠️ Sync not implemented (no cloud backend)
+
+---
+
+### 🔄 ADVANCED FEATURES
+
+#### 16. SMART COLLECTIONS
+**Flow**: Rule-based filtering & smart grouping
+**Files**: /lib/presentation/bloc/smart_collections/smart_collections_bloc.dart
+**Service**: SmartCollectionsService, RuleEvaluationEngine
+
+Example Smart Collection:
+```
+Name: "High Priority Tasks"
+Rules:
+  - Type = TODO
+  - Priority >= HIGH
+  - Status = PENDING
+  - Due date < 3 days
+Auto-update: Yes (real-time re-filtering)
+Items shown: Todos matching above rule
+```
+
+#### 17. SMART REMINDERS
+**Flow**: AI-powered reminder suggestions
+**Files**: /lib/presentation/bloc/smart_reminders/smart_reminders_bloc.dart
+**Service**: SmartRemindersService, AdvancedSearchRankingService
+
+Features:
+- Pattern detection (user habits)
+- Suggest reminders based on past behavior
+- ML-powered (placeholder in code)
+
+#### 18. ACTIVITY TRACKING
+**Files**: /lib/presentation/bloc/activitytag/activity_tag_bloc.dart
+**Service**: ActivityTagRepository
+**Database**: activity_tags table
+
+Features:
+- Tag activities (reading, writing, coding, etc.)
+- Track activity frequency
+- Suggest activity tags
+
+---
+
+## 3.2 - COMPLETE FEATURE LIST
+
+### ✅ IMPLEMENTED FEATURES (Verified)
+
+**Note-Taking System**
+- Create, edit, delete notes
+- Rich text editing (Quill)
+- Media attachments (images, videos, audio)
+- Note colors & tags
+- Pinning & archiving
+- Full-text search
+- Advanced filtering
+- PDF export
+- Voice transcription
+- Auto-save
+- Undo/redo
+- Smart link suggestions
+
+**Todo Management**
+- Create, edit, delete todos
+- Mark complete/incomplete
+- Due dates & times
+- Priority levels
+- Recurring todos (rrule support)
+- Subtasks
+- Category/project grouping
+- Time tracking
+
+**Alarms & Reminders**
+- One-time & recurring alarms
+- Background notifications (app killed)
+- Snooze options
+- Custom sounds
+- Vibration feedback
+- Smart reminder suggestions
+- Reminder templates
+- Location-based reminders
+- Do Not Disturb integration
+
+**Search & Discovery**
+- Real-time full-text search
+- Voice search (STT)
+- Advanced filters (date, type, tags)
+- Search operators
+- Command palette (Ctrl+K, !)
+- Search history
+- Fuzzy matching
+- Relevance ranking
+
+**Focus & Productivity**
+- Pomodoro timer (configurable)
+- Focus lock (prevent background)
+- Do Not Disturb mode
+- Session tracking
+- Daily focus goal
+- Celebration animations
+- Streak tracking
+
+**Reflections & Journaling**
+- Daily reflection questions
+- Answer history & editing
+- Timeline view
+- Privacy mode (biometric lock)
+- Reflection statistics
+- Carousel view (swipeable)
+- Reflection search
+
+**Media Management**
+- Image compression & editing
+- Video compression & trimming
+- Audio recording & playback
+- Document scanning (OCR)
+- Image gallery with metadata
+- Waveform visualization
+- File picker integration
+- Media caching
+
+**Voice & Speech**
+- Speech-to-text transcription
+- Real-time transcription
+- Language selection
+- Voice command parsing
+- Natural language processing
+
+**Security & Privacy**
+- Biometric authentication (Face ID, Fingerprint)
+- PIN setup & verification
+- Reflection privacy mode
+- Auto-lock timeout
+- Secure storage (partial)
+
+**Backup & Export**
+- Full database backup
+- Selective backup
+- Export to JSON, CSV, PDF
+- Restore from backup
+- Backup compression
+
+**Notifications**
+- Local notifications
+- Scheduled notifications
+- Background alarms
+- Custom notification actions
+- Sound & vibration control
+
+**Theme & Customization**
+- Light/dark mode
+- Font size scaling
+- Theme color selection
+- Accent color customization
+
+**Localization**
+- English (default)
+- Date/time formatting
+- Number formatting
+- Language selection (UI only)
+
+**Analytics & Insights**
+- Usage statistics
+- Charts (time-based)
+- Note writing frequency
+- Todo completion rate
+- Focus session history
+- Activity patterns
+
+---
+
+### ⚠️ PARTIALLY IMPLEMENTED FEATURES
+
+**Cloud Sync**
+- Architecture ready
+- No cloud backend
+- Local-only current
+
+**Smart Collections**
+- Rule builder UI
+- Filtering logic
+- No persistence beyond app session
+
+**Smart Reminders**
+- Architecture ready
+- Placeholder ML algorithms
+- Pattern detection simple
+
+**Offline Support**
+- SQLite works offline
+- STT requires internet
+- No cloud sync
+
+**Note Linking**
+- Code mentioned
+- Not fully functional
+- No UI
+
+---
+
+### ❌ NOT IMPLEMENTED FEATURES
+
+**Push Notifications** - Firebase Cloud Messaging not integrated
+**Cloud Backup** - Remote storage not connected
+**Social Sharing** - Share notes with users
+**Real-time Collaboration** - Multiple users editing
+**Full-Text Search Index** - FTS5 disabled
+**Mobile Web Sync** - Not implemented
+**Desktop App** - Only mobile (but framework supports)
+**AI Assistant** - Placeholder only
+**Translation** - Beyond English
+
+---
+
+## ARCHITECTURE NOTES
+
+### Data Flow Examples
+
+#### Example 1: Create Note with Voice Input
+```
+Voice button tap
+└─> _initializeVoiceSearch()
+    ├─ Request RECORD_AUDIO permission
+    ├─ SpeechService.initialize()
+    └─ Start listening
+        │
+        └─> User speaks
+            └─ SpeechToText.listen()
+                │
+                └─> "Remember to call mom"
+                    └─> _onSpeechResult(result)
+                        │
+                        └─> emit(SpeechRecognized(text))
+                            │
+                            └─ NoteEditor receives text
+                               ├─ Quill editor.insert(text)
+                               ├─ Show in editor
+                               └─ Auto-save to draft
+
+                                   User taps Save
+                                   └─> CreateNoteEvent(params)
+                                       └─ NoteBloc._onCreateNote()
+                                           ├─ emit(NoteLoading())
+                                           ├─ repository.createNote()
+                                           │  └─ database.createNote()
+                                           │     └─ INSERT INTO notes...
+                                           └─ emit(NotesLoaded with new note)
+                                               └─ UI updates
+```
+
+#### Example 2: Location Reminder Trigger
+```
+User sets location reminder (lat: 37.7749, lng: -122.4194, radius: 100m)
+└─> LocationReminder saved to DB
+    └─ GeofenceService.addGeofence()
+       └─ LocationService.getPositionStream()
+           │
+           └─> Background service monitors location every 10 seconds
+               │
+               ├─ Get current location (lat, lng)
+               ├─ For each saved geofence:
+               │  ├─ Calculate distance = sqrt((lat-refLat)² + (lng-refLng)²)
+               │  └─ If distance < 100m:
+               │      └─ NotificationService.show()
+               │          ├─ Create notification
+               │          ├─ Show title: "You're near [location]"
+               │          ├─ Show message: "Reminder: call mom"
+               │          └─ User taps → opens note
+```
+
+---
+
+## KNOWN ISSUES & BUGS
+
+### 🔴 Critical Issues
+
+1. **NotesBloc Size** (1058 lines)
+   - Too many responsibilities
+   - Recommendation: Split into:
+     * NotesCrudBloc
+     * NotesFilterBloc
+     * NotesViewBloc
+
+2. **AlarmsBloc Size** (1178 lines)
+   - Similar problem
+   - Recommendation: Split into:
+     * AlarmsCrudBloc
+     * AlarmsSchedulingBloc
+     * AlarmsNotificationBloc
+
+3. **EnhancedNoteEditorScreen** (2081 lines)
+   - Massive file
+   - Recommendation: Create sub-components:
+     * NoteEditorContent (text editing)
+     * NoteEditorToolbar (formatting)
+     * NoteMediaPanel (attachments)
+     * NoteSidePanel (metadata)
+
+4. **ReflectionHomeScreen** (949 lines)
+   - Large and complex
+   - Recommendation: Extract biometric auth to separate BLoC
+
+5. **GlobalSearchScreen** (949 lines)
+   - Too much logic
+   - Recommendation: Create separate SearchResultsWidget
+
+6. **FocusSessionScreen** (946 lines)
+   - Animation + animation complexity
+   - Recommend: Extract animations to separate service
+
+### 🟠 Moderate Issues
+
+1. **BLoC Communication**
+   - Limited cross-BLoC coordination
+   - Recommendation: Implement StreamSubscription for related BLoCs
+
+2. **Background Location Tracking**
+   - Battery intensive
+   - Recommendation: Use geofencing library instead of continuous polling
+
+3. **No Cloud Backend**
+   - All features local-only
+   - Recommendation: Implement Firebase Firestore for sync
+
+4. **FTS5 Disabled**
+   - Full-text search disabled
+   - Using in-memory filtering instead
+   - Recommendation: Re-enable with compatibility testing
+
+5. **Not Using GetIt Effectively**
+   - Some places directly instantiate services
+   - Recommendation: Consistent DI throughout
+
+### 🟡 Minor Issues
+
+1. **Deprecated Files Not Removed**
+   - settings_screen.dart (DEPRECATED)
+   - todo_bloc.dart (DEPRECATED)
+   - Recommendation: Delete or move to archive
+
+2. **Duplicate Screen Locations**
+   - /screens/ folder (5 files)
+   - /pages/ folder (100+ files)
+   - Recommendation: Consolidate into /pages/
+
+3. **Batch Files**
+   - batch_4_*, batch_5_*, batch_6_*, batch_7_*, batch_8_*
+   - Indicates experimental/staged features
+   - Recommendation: Either finalize or archive
+
+4. **Testing Files Incomplete**
+   - Some _test.dart files
+   - Coverage unclear
+   - Recommendation: Comprehensive test suite
+
+---
+
+## SUMMARY
+
+This is a comprehensive, feature-rich notes app with:
+
+✅ **Strengths**:
+- Multiple content types (notes, todos, reflections)
+- Voice input support
+- Media-rich editor
+- Focus/productivity features
+- Strong security mindset
+- Clean architecture
+
+⚠️ **Areas for Improvement**:
+- Code cleanup (remove deprecated)
+- BLoC sizing
+- Performance optimization
+- Complete UI/UX polish
+- Cloud backend integration
+- Test coverage
+
+🎯 **Next Steps for Development**:
+1. Refactor giant BLoCs
+2. Remove deprecated code
+3. Implement cloud backend
+4. Complete test suite
+5. Performance profiling
+6. UI/UX polish for release
+
+═══════════════════════════════════════════════════════════════════════════════════════
+END OF PHASE 3
+═══════════════════════════════════════════════════════════════════════════════════════

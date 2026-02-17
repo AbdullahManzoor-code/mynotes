@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:json_annotation/json_annotation.dart';
+import '../../core/utils/url_validator_util.dart';
 
 part 'link.g.dart';
 
@@ -46,22 +47,10 @@ class Link extends Equatable {
   Map<String, dynamic> toJson() => _$LinkToJson(this);
 
   /// Validate URL format
-  static bool isValidUrl(String url) {
-    try {
-      Uri.parse(url);
-      return url.startsWith('http://') || url.startsWith('https://');
-    } catch (e) {
-      return false;
-    }
-  }
+  static bool isValidUrl(String url) => UrlValidatorUtil.isValidUrl(url);
 
   /// Ensure URL has scheme
-  static String ensureScheme(String url) {
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
-      return 'https://$url';
-    }
-    return url;
-  }
+  static String ensureScheme(String url) => UrlValidatorUtil.normalizeUrl(url);
 
   @override
   List<Object?> get props => [id, url, title, description, iconUrl, createdAt];

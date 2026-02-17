@@ -24,7 +24,7 @@ class AdvancedFiltersScreen extends StatelessWidget {
 }
 
 class _AdvancedFiltersScreenContent extends StatefulWidget {
-  const _AdvancedFiltersScreenContent({super.key});
+  const _AdvancedFiltersScreenContent();
 
   @override
   State<_AdvancedFiltersScreenContent> createState() =>

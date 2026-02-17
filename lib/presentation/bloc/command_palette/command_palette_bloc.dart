@@ -188,7 +188,6 @@ class CommandPaletteBloc
       _customCommands[event.id] = event.onExecute;
 
       // Save to preferences
-      final prefs = await SharedPreferences.getInstance();
       // Serialize and save
 
       emit(CommandPaletteOpen(commands: _allCommands));
@@ -206,7 +205,6 @@ class CommandPaletteBloc
       _customCommands.remove(event.commandId);
 
       // Save to preferences
-      final prefs = await SharedPreferences.getInstance();
       // Serialize and save
       emit(CommandPaletteOpen(commands: _allCommands));
     } catch (e) {

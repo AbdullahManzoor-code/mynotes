@@ -27,7 +27,7 @@ class MediaOrganizationView extends StatelessWidget {
 }
 
 class _MediaOrganizationViewContent extends StatelessWidget {
-  const _MediaOrganizationViewContent({super.key});
+  const _MediaOrganizationViewContent();
 
   @override
   Widget build(BuildContext context) {

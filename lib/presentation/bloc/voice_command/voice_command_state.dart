@@ -55,19 +55,19 @@ class VoiceCommandParser {
 
     switch (command) {
       case VoiceCommandType.createNote:
-        return _extractAfterKeyword(input, [
+        return _extractAfterKeyword(normalized, [
           'create note',
           'new note',
           'write note',
         ]);
       case VoiceCommandType.createTodo:
-        return _extractAfterKeyword(input, [
+        return _extractAfterKeyword(normalized, [
           'create todo',
           'add task',
           'new task',
         ]);
       case VoiceCommandType.search:
-        return _extractAfterKeyword(input, ['search']);
+        return _extractAfterKeyword(normalized, ['search']);
       default:
         return null;
     }

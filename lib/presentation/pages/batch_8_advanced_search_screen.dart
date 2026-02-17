@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_event.dart';
 import 'package:mynotes/presentation/bloc/advanced_search/advanced_search_bloc.dart';
-import 'package:mynotes/domain/services/advanced_search_ranking_service.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
@@ -47,7 +46,7 @@ class AdvancedSearchScreen extends StatelessWidget {
 }
 
 class _AdvancedSearchBody extends StatefulWidget {
-  const _AdvancedSearchBody({super.key});
+  const _AdvancedSearchBody();
 
   @override
   State<_AdvancedSearchBody> createState() => _AdvancedSearchBodyState();

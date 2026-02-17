@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/core/services/app_logger.dart';
 import 'package:graphview/GraphView.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter/services.dart';
 import '../../domain/entities/note.dart';
 import '../../domain/entities/todo_item.dart';
@@ -10,7 +8,6 @@ import '../../domain/entities/alarm.dart';
 import '../bloc/graph/graph_bloc.dart';
 import '../../injection_container.dart' show getIt;
 import '../design_system/design_system.dart';
-import '../design_system/components/layouts/glass_container.dart';
 
 /// Universal Graph View (ORG-009)
 /// Visualizes relationships between notes, todos, and reminders with a high-end neural network aesthetic.

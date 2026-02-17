@@ -8,7 +8,6 @@ import '../../domain/entities/media_item.dart';
 import '../widgets/voice_message_widget.dart';
 import '../widgets/video_player_widget.dart';
 import '../widgets/note_overlay_widget.dart';
-import '../../domain/entities/annotation_stroke.dart';
 import '../bloc/media_viewer/media_viewer_bloc.dart';
 import '../bloc/media_viewer/media_viewer_event.dart';
 import '../bloc/media_viewer/media_viewer_state.dart';

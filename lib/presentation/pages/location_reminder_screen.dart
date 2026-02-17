@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bloc.dart';
 import 'package:mynotes/presentation/widgets/lottie_animation_widget.dart';
 import 'package:mynotes/presentation/widgets/location/location_reminder_card.dart';
@@ -13,7 +12,6 @@ import 'package:mynotes/presentation/pages/location_picker_screen.dart';
 import 'package:mynotes/presentation/pages/saved_locations_screen.dart';
 import 'package:mynotes/core/services/location_reminders_manager.dart';
 import '../design_system/design_system.dart';
-import 'package:mynotes/core/services/app_logger.dart';
 import 'dart:ui' as ui;
 
 /// Location Reminder Screen - Polished & Functional

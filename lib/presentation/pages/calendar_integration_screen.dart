@@ -27,8 +27,9 @@ class CalendarIntegrationScreen extends StatefulWidget {
 }
 
 class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
-  DateTime _selectedDay = DateTime.now();
-  Map<DateTime, List<Note>> _notesMap = {};
+  // All state is now managed by BLoCs - no local state
+  // CalendarIntegrationBloc manages: selectedDay, focusedDay, calendarFormat
+  // NotesBloc manages: notes list
 
   @override
   void initState() {
@@ -50,14 +51,14 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
       create: (context) => getIt<CalendarIntegrationBloc>(),
       child: BlocBuilder<NotesBloc, NoteState>(
         builder: (context, noteState) {
-          if (noteState is NotesLoaded) {
-            _updateNotesMap(noteState.notes);
-          }
+          // Get notes from NotesBloc for eventLoader
+          final allNotes = (noteState is NotesLoaded) ? noteState.notes : <Note>[];
 
           return BlocBuilder<CalendarIntegrationBloc, CalendarIntegrationState>(
             builder: (context, calendarState) {
+              // Extract calendar state values from BLoC
               CalendarFormat calendarFormat = CalendarFormat.month;
-              DateTime selectedDay = _selectedDay;
+              DateTime selectedDay = DateTime.now();
               DateTime focusedDay = DateTime.now();
 
               if (calendarState is CalendarIntegrationInitial) {
@@ -74,8 +75,8 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
                 focusedDay = calendarState.focusedDay;
               }
 
-              _selectedDay = selectedDay;
-              final notesForSelectedDay = _getNotesForDay(selectedDay);
+              // Get notes for selected day without storing in local state
+              final notesForSelectedDay = _getNotesForDay(selectedDay, allNotes);
 
               return Scaffold(
                 backgroundColor: isDark
@@ -146,7 +147,7 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
                         focusedDay: focusedDay,
                         selectedDayPredicate: (day) =>
                             isSameDay(selectedDay, day),
-                        eventLoader: (day) => _getNotesForDay(day),
+                        eventLoader: (day) => _getNotesForDay(day, allNotes),
                         startingDayOfWeek: StartingDayOfWeek.monday,
                         calendarFormat: calendarFormat,
                         onFormatChanged: (format) {
@@ -337,29 +338,23 @@ class _CalendarIntegrationScreenState extends State<CalendarIntegrationScreen> {
     );
   }
 
-  void _updateNotesMap(List<Note> notes) {
-    _notesMap = {};
-    for (final note in notes) {
+  List<Note> _getNotesForDay(DateTime day, List<Note> allNotes) {
+    // Calculate notes for day from allNotes without relying on local _notesMap
+    final notesForDay = <Note>[];
+    for (final note in allNotes) {
       if (note.alarms != null) {
         for (final alarm in note.alarms!) {
-          final date = DateTime(
-            alarm.scheduledTime.year,
-            alarm.scheduledTime.month,
-            alarm.scheduledTime.day,
-          );
-          if (_notesMap[date] == null) {
-            _notesMap[date] = [];
-          }
-          if (!_notesMap[date]!.contains(note)) {
-            _notesMap[date]!.add(note);
+          final alarmDate =
+              DateTime(alarm.scheduledTime.year, alarm.scheduledTime.month, alarm.scheduledTime.day);
+          final selectedDate = DateTime(day.year, day.month, day.day);
+          if (alarmDate == selectedDate && !notesForDay.contains(note)) {
+            notesForDay.add(note);
           }
         }
       }
     }
-  }
+    return notesForDay;
 
-  List<Note> _getNotesForDay(DateTime day) {
-    return _notesMap[DateTime(day.year, day.month, day.day)] ?? [];
   }
 
   String _formatSelectedDay(DateTime selectedDay) {

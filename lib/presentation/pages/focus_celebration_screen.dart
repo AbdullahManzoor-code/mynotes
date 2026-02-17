@@ -2,7 +2,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
-import 'package:mynotes/core/services/app_logger.dart';
 import '../design_system/design_system.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/focus/focus_bloc.dart';

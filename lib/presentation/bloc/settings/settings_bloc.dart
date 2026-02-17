@@ -3,10 +3,8 @@ import 'package:equatable/equatable.dart';
 import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/presentation/bloc/params/settings_params.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../core/services/settings_service.dart';
 import '../../../core/services/biometric_auth_service.dart';
 import '../../../core/services/backup_service.dart';
-import '../../../core/services/theme_customization_service.dart';
 import '../../../domain/repositories/stats_repository.dart';
 
 import 'package:mynotes/core/services/app_logger.dart';
@@ -31,8 +29,6 @@ class SettingsBloc extends Bloc<SettingsEvent, SettingsState> {
   static const String _fontScaleKey = 'font_scale';
 
   final BiometricAuthService _biometricService = BiometricAuthService();
-
-  final SettingsService _settingsService = SettingsService();
 
   SettingsBloc() : super(const SettingsInitial()) {
     on<LoadSettingsEvent>(_onLoadSettings);

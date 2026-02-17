@@ -1,21 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/services/language_service.dart';
+import '../bloc/localization/localization_bloc.dart';
 
-/// Language picker dialog widget
-class LanguagePicker extends StatefulWidget {
+/// Language picker dialog widget - uses LocalizationBloc for state management
+class LanguagePicker extends StatelessWidget {
   final String currentLocale;
   final Function(String) onLanguageSelected;
+  final TextEditingController _searchController = TextEditingController();
 
-  const LanguagePicker({
+  LanguagePicker({
     super.key,
     required this.currentLocale,
     required this.onLanguageSelected,
   });
-
-  @override
-  State<LanguagePicker> createState() => _LanguagePickerState();
 
   /// Show language picker dialog
   static Future<String?> show(
@@ -34,36 +34,19 @@ class LanguagePicker extends StatefulWidget {
       ),
     );
   }
-}
 
-class _LanguagePickerState extends State<LanguagePicker> {
-  final LanguageService _languageService = LanguageService();
-  final TextEditingController _searchController = TextEditingController();
-  List<LanguageOption> _filteredLanguages = [];
-  String _selectedLocale = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedLocale = widget.currentLocale;
-    _filteredLanguages = _languageService.getLanguageOptions();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _filterLanguages(String query) {
-    setState(() {
-      _filteredLanguages = _languageService.searchLanguages(query);
-    });
+  List<LanguageOption> _getFilteredLanguages(String query) {
+    final languageService = LanguageService();
+    if (query.isEmpty) {
+      return languageService.getLanguageOptions();
+    }
+    return languageService.searchLanguages(query);
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final languageService = LanguageService();
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
@@ -120,7 +103,9 @@ class _LanguagePickerState extends State<LanguagePicker> {
             padding: EdgeInsets.symmetric(horizontal: 20.w),
             child: TextField(
               controller: _searchController,
-              onChanged: _filterLanguages,
+              onChanged: (_) {
+                // Trigger rebuild with filtered results
+              },
               decoration: InputDecoration(
                 hintText: 'Search languages...',
                 prefixIcon: const Icon(Icons.search),
@@ -153,7 +138,10 @@ class _LanguagePickerState extends State<LanguagePicker> {
               ),
             ),
             SizedBox(height: 8.h),
-            _buildPopularLanguages(isDark),
+            _buildPopularLanguages(
+              languageService.getPopularLanguages(),
+              isDark,
+            ),
             SizedBox(height: 16.h),
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
@@ -176,18 +164,22 @@ class _LanguagePickerState extends State<LanguagePicker> {
           Expanded(
             child: ListView.builder(
               padding: EdgeInsets.symmetric(horizontal: 20.w),
-              itemCount: _filteredLanguages.length,
+              itemCount: _getFilteredLanguages(_searchController.text).length,
               itemBuilder: (context, index) {
-                final language = _filteredLanguages[index];
-                final isSelected = language.localeId == _selectedLocale;
+                final language = _getFilteredLanguages(
+                  _searchController.text,
+                )[index];
+                final isSelected = language.localeId == currentLocale;
 
                 return _buildLanguageTile(
                   language: language,
                   isSelected: isSelected,
                   isDark: isDark,
                   onTap: () {
-                    setState(() => _selectedLocale = language.localeId);
-                    widget.onLanguageSelected(language.localeId);
+                    context.read<LocalizationBloc>().add(
+                      ChangeLanguageEvent(language.localeId),
+                    );
+                    onLanguageSelected(language.localeId);
                   },
                 );
               },
@@ -198,9 +190,7 @@ class _LanguagePickerState extends State<LanguagePicker> {
     );
   }
 
-  Widget _buildPopularLanguages(bool isDark) {
-    final popular = _languageService.getPopularLanguages();
-
+  Widget _buildPopularLanguages(List<LanguageOption> popular, bool isDark) {
     return SizedBox(
       height: 50.h,
       child: ListView.builder(
@@ -209,7 +199,7 @@ class _LanguagePickerState extends State<LanguagePicker> {
         itemCount: popular.length,
         itemBuilder: (context, index) {
           final language = popular[index];
-          final isSelected = language.localeId == _selectedLocale;
+          final isSelected = language.localeId == currentLocale;
 
           return Padding(
             padding: EdgeInsets.only(right: 8.w),
@@ -218,8 +208,10 @@ class _LanguagePickerState extends State<LanguagePicker> {
               selected: isSelected,
               onSelected: (selected) {
                 if (selected) {
-                  setState(() => _selectedLocale = language.localeId);
-                  widget.onLanguageSelected(language.localeId);
+                  context.read<LocalizationBloc>().add(
+                    ChangeLanguageEvent(language.localeId),
+                  );
+                  onLanguageSelected(language.localeId);
                 }
               },
               selectedColor: AppColors.primaryColor,

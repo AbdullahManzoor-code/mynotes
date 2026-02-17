@@ -83,4 +83,20 @@ class MediaProcessingService {
       return null;
     }
   }
+
+  /// Delete media file from disk
+  /// ISSUE-009 FIX: Cleanup orphaned media files
+  Future<void> deleteFile(String filePath) async {
+    try {
+      if (filePath.isEmpty) return;
+      final file = File(filePath);
+      if (await file.exists()) {
+        await file.delete();
+        print('Deleted media file: $filePath');
+      }
+    } catch (e) {
+      print('Error deleting media file: $e');
+      // Don't throw - allow cleanup to continue even if file deletion fails
+    }
+  }
 }

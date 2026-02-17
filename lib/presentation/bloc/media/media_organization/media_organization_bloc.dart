@@ -3,6 +3,24 @@ import 'package:equatable/equatable.dart';
 import '../../../../domain/services/media_filtering_service.dart';
 import '../../../../domain/repositories/media_repository.dart';
 
+/* ════════════════════════════════════════════════════════════════════════════
+   POTENTIAL CONSOLIDATION (SESSION 15 FIX M013): Media Organization
+   
+   ANALYSIS:
+   This BLoC groups media by category (date, type, etc.).
+   Different from other media BLoCs but could extend MediaGalleryBloc.
+   
+   STATUS: Kept active but flagged for potential consolidation
+          Not presently causing UI/functionality issues
+          
+   FUTURE CONSIDERATION:
+   If MediaGalleryBloc is extended to support grouping, this could be
+   consolidated. Currently it works independently which is acceptable.
+   
+   KEEP: This BLoC is functional and used
+   REVIEW: Consider if grouping is better as feature of MediaGalleryBloc
+══════════════════════════════════════════════════════════════════════════════ */
+
 // Events
 abstract class MediaOrganizationEvent extends Equatable {
   const MediaOrganizationEvent();

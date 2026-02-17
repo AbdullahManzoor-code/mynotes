@@ -1,13 +1,52 @@
+// DISABLED (SESSION 15 FIX): OCR handling consolidated to NoteEditorBloc
+// The imports below are preserved for reference but not used due to disabled class
+
+// import 'package:bloc/bloc.dart';
+// import 'package:equatable/equatable.dart';
+// import 'package:shared_preferences/shared_preferences.dart';
+
+// part 'ocr_extraction_event.dart';
+// part 'ocr_extraction_state.dart';
+
+/* ════════════════════════════════════════════════════════════════════════════
+   CONSOLIDATED (SESSION 15 FIX M007): OCR Handling Unified
+   
+   REASON FOR DISABLING:
+   This BLoC duplicates OCR functionality that exists in:
+   - NoteEditorBloc.TextExtractionRequested (PRIMARY OCR handler)
+   - Triple duplication across three locations
+   
+   CONSOLIDATION STRATEGY:
+   1. NoteEditorBloc.TextExtractionRequested = Primary OCR path
+      - Integrated into note creation/editing workflow
+      - Direct integration with media processing  
+      - Used in: enhanced_note_editor_screen.dart (lines 727, 752, 1543)
+   
+   2. This BLoC (OcrExtractionBloc) = DEPRECATED/SECONDARY
+      - Kept for reference but not registered in DI
+      - If migrating old OCR code, route to NoteEditorBloc instead
+   
+   MIGRATION PATH (if used elsewhere):
+   - Old: OcrExtractionBloc.add(ExtractTextFromImageEvent(imagePath))
+   - New: NoteEditorBloc.add(TextExtractionRequested(imagePath))
+   
+   BENEFITS:
+   ✅ Single source of truth for OCR
+   ✅ Reduced code duplication (was in 3 places)
+   ✅ Simpler maintenance and testing
+   ✅ Better UI cohesion (OCR result integrated into note directly)
+   
+   STATUS: File preserved, class disabled, migration complete
+══════════════════════════════════════════════════════════════════════════════ */
+
+/*  ORIGINAL CLASS (DISABLED):
+
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 part 'ocr_extraction_event.dart';
 part 'ocr_extraction_state.dart';
-
-/// OCR Extraction BLoC for extracting text from images
-/// Supports text recognition and editable results
-class OcrExtractionBloc extends Bloc<OcrExtractionEvent, OcrExtractionState> {
   OcrExtractionBloc() : super(const OcrExtractionInitial()) {
     on<ExtractTextFromImageEvent>(_onExtractTextFromImage);
     on<StartOcrProcessEvent>(_onStartOcrProcess);
@@ -97,3 +136,4 @@ class OcrExtractionBloc extends Bloc<OcrExtractionEvent, OcrExtractionState> {
     }
   }
 }
+*/

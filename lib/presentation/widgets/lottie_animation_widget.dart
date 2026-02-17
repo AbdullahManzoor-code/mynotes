@@ -14,7 +14,7 @@ class LottieAnimationWidget extends StatelessWidget {
 
   const LottieAnimationWidget(
     this.animationName, {
-    Key? key,
+    super.key,
     this.width,
     this.height,
     this.repeat = true,
@@ -22,7 +22,7 @@ class LottieAnimationWidget extends StatelessWidget {
     this.duration,
     this.onLoaded,
     this.animationDuration = const Duration(milliseconds: 2000),
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

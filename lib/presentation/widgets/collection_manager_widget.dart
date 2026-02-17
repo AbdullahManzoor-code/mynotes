@@ -21,7 +21,6 @@ class CollectionManagerWidget extends StatefulWidget {
 class _CollectionManagerWidgetState extends State<CollectionManagerWidget> {
   final List<NoteCollection> _collections = [];
   late TextEditingController _collectionNameController;
-  NoteCollection? _selectedCollection;
 
   @override
   void initState() {

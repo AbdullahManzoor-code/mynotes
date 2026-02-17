@@ -455,7 +455,7 @@ class _TemplateCard extends StatelessWidget {
   final NoteTemplate template;
   final VoidCallback onTap;
 
-  const _TemplateCard({super.key, required this.template, required this.onTap});
+  const _TemplateCard({required this.template, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

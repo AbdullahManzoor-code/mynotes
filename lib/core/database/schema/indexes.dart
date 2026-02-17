@@ -63,6 +63,18 @@ class DatabaseIndexes {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_reminders_note ON reminders(linkedNoteId)',
     );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_todo ON reminders(linkedTodoId)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_status ON reminders(status)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_enabled ON reminders(isEnabled)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_reminders_snoozed ON reminders(snoozedUntil)',
+    );
 
     // Media indexes
     await db.execute(

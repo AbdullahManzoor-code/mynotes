@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/presentation/pages/enhanced_notes_list_screen.dart';
 import 'app_routes.dart';
 import '../pages/fixed_universal_quick_add_screen.dart';
-import '../pages/enhanced_notes_list_screen.dart';
+// import '../pages/enhanced_notes_list_screen.dart';
 import '../pages/focus_session_screen.dart';
-import '../pages/enhanced_global_search_screen.dart';
+import '../pages/global_search_screen.dart';
 import '../pages/quick_add_confirmation_screen.dart';
 import '../pages/enhanced_reminders_list_screen.dart';
 import '../pages/unified_settings_screen.dart';
@@ -177,13 +178,13 @@ class RouteGenerator {
       case AppRoutes.globalSearch:
         if (args is Map<String, dynamic>) {
           return _buildRoute(
-            EnhancedGlobalSearchScreen(initialQuery: args['query'] as String?),
+            GlobalSearchScreen(initialQuery: args['query'] as String?),
             settings: settings,
             fullscreenDialog: true,
           );
         }
         return _buildRoute(
-          const EnhancedGlobalSearchScreen(),
+          const GlobalSearchScreen(),
           settings: settings,
           fullscreenDialog: true,
         );

@@ -39,9 +39,6 @@ class AlarmCardWidget extends StatelessWidget {
   DateTime? get _snoozedUntil => alarm is Alarm
       ? (alarm as Alarm).snoozedUntil
       : (alarm as AlarmParams).snoozedUntil;
-  bool get _isOverdue => alarm is Alarm
-      ? (alarm as Alarm).isOverdue
-      : (alarm as AlarmParams).isOverdue;
   String get _timeRemaining => alarm is Alarm
       ? (alarm as Alarm).timeRemaining
       : _calculateTimeRemaining();
@@ -52,9 +49,6 @@ class AlarmCardWidget extends StatelessWidget {
       : (alarm as AlarmParams).isRecurring
       ? AlarmRecurrence.daily
       : AlarmRecurrence.none;
-  List<int> get _weekDays => alarm is Alarm
-      ? (alarm as Alarm).weekDays ?? []
-      : (alarm as AlarmParams).repeatDays;
 
   String _calculateTimeRemaining() {
     final params = alarm as AlarmParams;

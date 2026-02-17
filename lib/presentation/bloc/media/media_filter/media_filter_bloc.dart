@@ -2,6 +2,38 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'package:mynotes/presentation/bloc/params/media_filter_params.dart';
 
+/* ════════════════════════════════════════════════════════════════════════════
+   CONSOLIDATED (SESSION 15 FIX M013): Media Filter Consolidated
+   
+   REASON FOR CONSOLIDATION:
+   This BLoC duplicates filter functionality that exists in:
+   - MediaGalleryBloc.FilterMediaEvent (PRIMARY filter handler)
+   - MediaFiltersBloc (near-identical duplicate with different naming)
+   - MediaSearchBloc (search as separate BLoC)
+   
+   CONSOLIDATION STRATEGY:
+   1. MediaGalleryBloc = Primary handler for:
+      - LoadAllMediaEvent → load gallery
+      - FilterMediaEvent → apply filters by type/date/size/tags
+      - SearchMediaEvent → search functionality
+      - DeleteMediaEvent, SelectMediaEvent → selection/deletion
+   
+   2. MediaFilterBloc = DEPRECATED/SECONDARY
+      - Standalone filter management (no integration with gallery)
+      - Kept for reference but not registered in DI
+      - If used, migrate to MediaGalleryBloc.FilterMediaEvent
+   
+   MIGRATION PATH:
+   - Old: MediaFilterBloc.add(UpdateMediaTypeEvent('image'))
+   - New: MediaGalleryBloc.add(FilterMediaEvent(filterType: 'image'))
+   
+   BENEFITS:
+   ✅ Single media gallery management source
+   ✅ Reduced duplicate BLoCs (was 5+ separate)
+   ✅ Cleaner UI: one BLoC per major feature
+   ✅ Better state consistency
+══════════════════════════════════════════════════════════════════════════════ */
+
 // --- Events ---
 abstract class MediaFilterEvent extends Equatable {
   const MediaFilterEvent();

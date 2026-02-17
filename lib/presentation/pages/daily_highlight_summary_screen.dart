@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
-import 'package:mynotes/core/services/app_logger.dart';
 import '../bloc/analytics/analytics_bloc.dart';
 import 'edit_daily_highlight_screen_new.dart';
 import '../design_system/design_system.dart';

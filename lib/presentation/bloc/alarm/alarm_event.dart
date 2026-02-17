@@ -131,7 +131,7 @@ class UpdateAlarmEvent extends AlarmEvent {
 
 /// 🗑️ Delete alarm
 class DeleteAlarm extends DeleteAlarmEvent {
-  const DeleteAlarm(String id, {required super.alarmId, super.noteId});
+  const DeleteAlarm(String id, {required super.alarmId});
 }
 
 class DeleteAlarmEvent extends AlarmEvent {
@@ -265,4 +265,14 @@ class FilterAlarmsByDateEvent extends AlarmEvent {
 
   @override
   List<Object?> get props => [startDate, endDate];
+}
+
+/// 🔇 Dismiss/Stop alarm (stop sound and vibration)
+class DismissAlarmEvent extends AlarmEvent {
+  final String alarmId;
+
+  const DismissAlarmEvent({required this.alarmId});
+
+  @override
+  List<Object?> get props => [alarmId];
 }

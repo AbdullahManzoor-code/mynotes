@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/core/services/app_logger.dart';
-import 'package:mynotes/domain/entities/universal_item.dart';
 import '../design_system/design_system.dart';
 import '../widgets/universal_item_card.dart';
-import '../../core/utils/smart_voice_parser.dart';
 import '../bloc/cross_feature/cross_feature_bloc.dart';
 
 /// Cross-Feature Integration Demo
@@ -77,18 +74,6 @@ class _CrossFeatureDemoState extends State<CrossFeatureDemo>
       _bloc.add(CompleteTransformation());
       _transformController.reverse();
     });
-  }
-
-  void _completeDemoScenario() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'Demo complete! This is the power of unified integration.',
-        ),
-        backgroundColor: AppColors.primary,
-        duration: const Duration(seconds: 3),
-      ),
-    );
   }
 
   @override

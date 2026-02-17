@@ -265,7 +265,6 @@ class CoreDatabase {
 
   // Testing & Seed Data
   Future<void> seedDummyData() async {
-    final db = await database;
     // Seed data is already inserted in _onCreate
   }
 

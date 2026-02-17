@@ -40,7 +40,7 @@ class PomodoroSession {
 
 class PomodoroStatsBloc extends Bloc<PomodoroStatsEvent, PomodoroStatsState> {
   late SharedPreferences _prefs;
-  static const String _statsKey = 'pomodoro_stats';
+
   int _totalSessions = 0;
   int _totalFocusTime = 0;
   int _longestStreak = 0;

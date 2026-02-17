@@ -1,0 +1,828 @@
+═══════════════════════════════════════════════════════════════════════════════════════
+                    PHASE 4: DATABASE & DATA LAYER EXTRACTION
+═══════════════════════════════════════════════════════════════════════════════════════
+
+## 4.1 - LOCAL DATABASE (SQLite via sqflite)
+
+### Database Configuration
+**Type**: SQLite
+**Package**: sqflite ^2.0.0+
+**Database File**: mynotes.db (stored in system database directory)
+**Version**: 1 (Flat schema, no migrations)
+**Architecture**: DAO (Data Access Object) pattern with singlet CoreDatabase
+
+### Database Initialization
+**File**: lib/core/database/core_database.dart (277 lines)
+
+Flow:
+```
+App Start
+  └─> CoreDatabase.database (getter)
+      ├─> Check if _database is null
+      └─> If null:
+          └─> _initDatabase()
+              ├─> Get database path (getDatabasesPath)
+              ├─> Join with 'mynotes.db'
+              └─> openDatabase(onCreateCallback: _onCreate)
+                  ├─> DatabaseSchema.createAll(db) - create all 18 tables
+                  ├─> DatabaseIndexes.createAll(db) - create indexes
+                  ├─> DatabaseFTS.createFullTextSearch(db) - DISABLED
+                  └─> DatabaseSeed.insertTestData(db) - seed data
+```
+
+### Complete Database Schema (18 Tables)
+
+#### TABLE 01: NOTES
+**File**: lib/core/database/schema/tables.dart
+**Purpose**: Primary note storage
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- title (TEXT, NOT NULL)
+- content (TEXT, NOT NULL) - Rich text / Quill JSON
+- color (INTEGER) - NoteColor enum index
+- category (TEXT) - General, Work, Personal, etc.
+- isPinned (INTEGER) - 0/1 boolean
+- isArchived (INTEGER) - 0/1 boolean
+- isFavorite (INTEGER) - 0/1 boolean
+- isDeleted (INTEGER) - 0/1 boolean (soft delete)
+- tags (TEXT) - JSON array of tag strings
+- priority (INTEGER) - 1-5 or enum
+- linkedReflectionId (TEXT, NULLABLE) - FK relationship to reflection
+- linkedTodoId (TEXT, NULLABLE) - FK relationship to todo
+- createdAt (TEXT) - ISO 8601 timestamp
+- updatedAt (TEXT) - ISO 8601 timestamp
+**Indexes**: (isPinned DESC, updatedAt DESC) for sorting
+**Typical Rows**: ~100-500 notes per user
+
+#### TABLE 02: TODOS
+**Purpose**: Todo items with properties
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- noteId (TEXT, NULLABLE, FOREIGN KEY to notes.id)
+- title (TEXT, NOT NULL)
+- description (TEXT, NULLABLE)
+- category (TEXT) - Personal, Work, Shopping, Health, Finance, Education, Home, Other
+- priority (INTEGER) - 1-4 (Low, Medium, High, Urgent)
+- isCompleted (INTEGER) - 0/1
+- isImportant (INTEGER) - 0/1
+- hasReminder (INTEGER) - 0/1
+- isDeleted (INTEGER) - 0/1 soft delete
+- reminderId (TEXT, NULLABLE) - FK to reminders.id
+- dueDate (TEXT, NULLABLE) - ISO 8601 date
+- completedAt (TEXT, NULLABLE) - ISO 8601 timestamp
+- subtasksJson (TEXT, NULLABLE) - JSON array [{"id","text","isCompleted"}]
+- attachmentsJson (TEXT, NULLABLE) - JSON array
+- createdAt (TEXT)
+- updatedAt (TEXT)
+**Relationships**: Optional link to note (noteId) for embedding todos in notes
+**Typical Rows**: ~50-200 todos per user
+
+#### TABLE 03: REMINDERS (Alarms)
+**Purpose**: One-time and recurring alarms/reminders
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- title (TEXT, NOT NULL)
+- message (TEXT, NOT NULL)
+- scheduledTime (TEXT, NOT NULL) - ISO 8601 datetime
+- recurrence (TEXT, NULLABLE) - Cron/rrule expression
+- snoozeCount (INTEGER) - 0+
+- isActive (INTEGER) - 0/1 (enabled)
+- isCompleted (INTEGER) - 0/1 (triggered)
+- isDeleted (INTEGER) - 0/1 soft delete
+- hasVibration (INTEGER) - 0/1
+- hasSound (INTEGER) - 0/1
+- label (TEXT, NULLABLE) - Category label
+- linkedNoteId (TEXT, NULLABLE) - FK to notes.id
+- linkedTodoId (TEXT, NULLABLE) - FK to todos.id
+- status (TEXT) - 'scheduled', 'triggered', 'snoozed'
+- createdAt (TEXT)
+- updatedAt (TEXT)
+- completedAt (TEXT, NULLABLE)
+- lastTriggered (TEXT, NULLABLE)
+- snoozedUntil (TEXT, NULLABLE)
+- weekDays (TEXT, NULLABLE) - JSON array [0-6] for recurring
+- soundPath (TEXT, NULLABLE) - Path to custom alarm sound
+- isEnabled (INTEGER) - 0/1
+- vibrate (INTEGER) - 0/1
+**Relationships**: Can link to note (linkedNoteId) or todo (linkedTodoId)
+**Typical Rows**: ~20-50 active reminders
+
+#### TABLE 04: MEDIA
+**Purpose**: Attachments to notes (images, videos, audio, documents)
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- noteId (TEXT, NOT NULL, FOREIGN KEY to notes.id)
+- type (TEXT) - 'image', 'video', 'audio', 'pdf', 'drawing', 'document'
+- name (TEXT, NOT NULL) - Filename
+- size (INTEGER, NULLABLE) - File size in bytes
+- filePath (TEXT, NOT NULL) - Full path to file
+- thumbnailPath (TEXT, NULLABLE) - Path to cached thumbnail
+- durationMs (INTEGER) - For audio/video
+- metadata (TEXT, NULLABLE) - JSON metadata (camera, dimensions, etc.)
+- createdAt (TEXT)
+**Relationships**: Many-to-one with notes table
+**Typical Rows**: ~200-1000+ media items
+
+#### TABLE 05: REFLECTIONS
+**Purpose**: Journal entry responses (deprecated structure, see reflection_answers)
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- questionId (TEXT, NULLABLE, FK to reflection_questions.id)
+- answerText (TEXT, NOT NULL)
+- mood (TEXT, NULLABLE) - Mood emoji or name
+- moodValue (INTEGER, NULLABLE) - 1-5 scale
+- energyLevel (INTEGER, NULLABLE) - 1-5 scale
+- sleepQuality (INTEGER, NULLABLE) - 1-5 scale
+- activityTags (TEXT, NULLABLE) - JSON array of activities
+- isPrivate (INTEGER) - 0/1 (biometric lock)
+- linkedNoteId (TEXT, NULLABLE)
+- linkedTodoId (TEXT, NULLABLE)
+- draft (TEXT, NULLABLE) - Work-in-progress
+- isDeleted (INTEGER)
+- reflectionDate (TEXT, NOT NULL) - Date answered
+- createdAt (TEXT)
+- updatedAt (TEXT)
+**Note**: This table structure is partially duplicated by reflection_answers
+**Typical Rows**: 7-365 entries (roughly daily reflections)
+
+#### TABLE 06: REFLECTION_ANSWERS
+**Purpose**: Individual answers to reflection questions
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- reflectionId (TEXT, NOT NULL, FK to reflections.id)
+- questionId (TEXT, NULLABLE, FK to reflection_questions.id)
+- answerText (TEXT, NOT NULL)
+- mood (TEXT, NULLABLE)
+- moodValue (INTEGER, NULLABLE) - 1-5
+- energyLevel (INTEGER, NULLABLE) - 1-5
+- sleepQuality (INTEGER, NULLABLE) - 1-5
+- activityTags (TEXT, NULLABLE) - JSON
+- isPrivate (INTEGER) - 0/1
+- reflectionDate (TEXT, NOT NULL)
+- linkedNoteId (TEXT, NULLABLE)
+- linkedTodoId (TEXT, NULLABLE)
+- draft (TEXT, NULLABLE)
+- isDeleted (INTEGER)
+- createdAt (TEXT)
+- updatedAt (TEXT)
+**Relationships**: Links answer to question and parent reflection
+**Typical Rows**: 7-365 answers per week
+
+#### TABLE 07: REFLECTION_DRAFTS
+**Purpose**: Unsaved draft answers
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- questionId (TEXT, NULLABLE, FK)
+- answerText (TEXT, NULLABLE) - Draft content
+- isDeleted (INTEGER)
+- lastEditedAt (TEXT, NOT NULL)
+- createdAt (TEXT)
+**Typical Rows**: 0-10 drafts at any time
+
+#### TABLE 08: REFLECTION_QUESTIONS
+**Purpose**: Available reflection questions (daily prompts)
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- questionText (TEXT, NOT NULL) - The prompt
+- category (TEXT) - 'General', 'Mental Health', 'Productivity', etc.
+- isCustom (INTEGER) - 0/1 (user-created)
+- isPinned (INTEGER) - 0/1 (favorite)
+- frequency (TEXT) - 'daily', 'weekly', 'custom'
+- question_order (INTEGER) - Display order
+- createdAt (TEXT)
+- updatedAt (TEXT)
+**Typical Rows**: 30-100 questions (mix of pre-defined + custom)
+
+#### TABLE 09: ACTIVITY_TAGS
+**Purpose**: Tags for reflections (running, reading, coding, etc.)
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- tagName (TEXT, NOT NULL, UNIQUE)
+- colorHex (TEXT, NULLABLE) - Display color
+- frequency (INTEGER) - How many times used
+- isDeleted (INTEGER)
+- createdAt (TEXT)
+**Typical Rows**: 10-30 tags
+
+#### TABLE 10: MOOD_ENTRIES
+**Purpose**: Mood tracking over time
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- reflectionId (TEXT, FK)
+- mood (TEXT, NOT NULL) - Mood name
+- moodValue (INTEGER, NOT NULL) - 1-5 scale
+- isDeleted (INTEGER)
+- recordedAt (TEXT, NOT NULL) - ISO timestamp
+**Typical Rows**: 7-365 entries (daily moods)
+
+#### TABLE 11: USER_SETTINGS
+**Purpose**: App-wide preferences and settings
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- settingKey (TEXT, NOT NULL, UNIQUE) - Key name
+- settingValue (TEXT, NOT NULL) - JSON-encoded value
+- updatedAt (TEXT, NOT NULL)
+**Example Settings**:
+- theme (dark/light/auto)
+- fontSizeMultiplier (0.8-1.5)
+- autoSaveInterval (seconds)
+- biometricEnabled (true/false)
+- notificationsEnabled (true/false)
+- quietHoursStart, quietHoursEnd
+- preferredLanguage
+- defaultNoteCategory
+**Typical Rows**: ~20-30 settings
+
+#### TABLE 12: LOCATION_REMINDERS
+**Purpose**: Geofence-based reminders
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- message (TEXT, NOT NULL)
+- latitude (REAL, NOT NULL) - GPS coordinate
+- longitude (REAL, NOT NULL) - GPS coordinate
+- radius (REAL) - Meters, default 100.0
+- trigger_type (TEXT) - 'enter', 'exit', 'proximity'
+- place_name (TEXT, NULLABLE) - Human-readable location
+- place_address (TEXT, NULLABLE)
+- linked_note_id (TEXT, NULLABLE, FK)
+- is_active (INTEGER) - 0/1
+- created_at (TEXT)
+- updated_at (TEXT)
+**Typical Rows**: 5-20 location reminders
+
+#### TABLE 13: SAVED_LOCATIONS
+**Purpose**: Preset locations for quick selection
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- name (TEXT, NOT NULL) - Home, Work, Gym, etc.
+- latitude (REAL, NOT NULL)
+- longitude (REAL, NOT NULL)
+- address (TEXT, NULLABLE)
+- created_at (TEXT)
+**Typical Rows**: 3-10 saved locations
+
+#### TABLE 14: FOCUS_SESSIONS
+**Purpose**: Pomodoro/focus session history
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- startTime (TEXT, NOT NULL) - ISO timestamp
+- endTime (TEXT, NOT NULL) - ISO timestamp
+- durationSeconds (INTEGER) - Actual duration
+- taskTitle (TEXT, NULLABLE) - What they focused on
+- category (TEXT, NULLABLE) - Category of task
+- isCompleted (INTEGER) - 0/1 (finished vs interrupted)
+- isDeleted (INTEGER)
+- rating (INTEGER, NULLABLE) - 1-5 user rating
+- createdAt (TEXT)
+- updatedAt (TEXT)
+**Typical Rows**: 3-20 sessions per week (if actively using)
+
+#### TABLE 15: SMART_COLLECTIONS
+**Purpose**: Saved filtered views
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- name (TEXT, NOT NULL) - "High Priority", "This Week", etc.
+- description (TEXT, NULLABLE)
+- itemCount (INTEGER) - Cached count
+- lastUpdated (TEXT, NOT NULL)
+- isActive (INTEGER) - 0/1
+- logic (TEXT) - 'AND' or 'OR' for matching multiple rules
+**Typical Rows**: 3-10 smart collections
+
+#### TABLE 16: COLLECTION_RULES
+**Purpose**: Rules for smart collections
+**Fields**:
+- id (INTEGER, PRIMARY KEY AUTOINCREMENT)
+- collectionId (TEXT, NOT NULL, FK to smart_collections.id)
+- type (TEXT) - 'priority', 'tag', 'date', 'category', 'status'
+- operator (TEXT) - 'equals', 'contains', 'greaterThan', 'lessThan'
+- value (TEXT) - Rule value (JSON for complex)
+**Typical Rows**: 30-50 rules across all collections
+
+#### TABLE 17: REMINDER_TEMPLATES
+**Purpose**: Re-usable reminder templates
+**Fields**:
+- id (TEXT, PRIMARY KEY)
+- name (TEXT, NOT NULL) - Template name
+- description (TEXT, NULLABLE)
+- cronExpression (TEXT, NOT NULL) - Cron syntax for recurrence
+- isActive (INTEGER) - 0/1
+- createdAt (TEXT)
+- updatedAt (TEXT)
+**Typical Rows**: 5-15 templates
+
+#### TABLE 18: NOTE_LINKS (Optional, Unused)
+**Purpose**: Knowledge graph - note-to-note relationships
+**Fields**:
+- sourceId (TEXT, NOT NULL, FK to notes.id)
+- targetId (TEXT, NOT NULL, FK to notes.id)
+- type (TEXT) - 'manual', 'auto', 'ai_suggested'
+- createdAt (TEXT)
+**Primary Key**: (sourceId, targetId)
+**Status**: Schema defined but feature not fully implemented
+**Typical Rows**: 0-100 (rarely used)
+
+---
+
+## SUMMARY OF 18 TABLES
+
+**Core Data** (3 tables): notes, todos, reminders
+**Extended Content** (1 table): media
+**Reflections** (5 tables): reflections, reflection_answers, reflection_drafts, reflection_questions, mood_entries, activity_tags
+**Location** (2 tables): location_reminders, saved_locations
+**Productivity** (1 table): focus_sessions
+**Smart Filtering** (2 tables): smart_collections, collection_rules
+**Templates** (1 table): reminder_templates
+**Knowledge Graph** (1 table, unused): note_links
+**Settings** (1 table): user_settings
+**Total**: ~18 tables
+
+**Total Storage**: ~5-20 MB typical user (mostly media)
+
+---
+
+## 4.2 - DATA ACCESS OBJECTS (DAOs)
+
+### DAO Pattern Implementation
+**Location**: lib/core/database/dao/
+
+**Pattern**: Each DAO handles one major entity with CRUD operations
+
+#### NotesDAO (lib/core/database/dao/notes_dao.dart)
+**Methods**:
+- createNote(Note note) → Future<void>
+  - INSERT into notes table
+  - Conflict: REPLACE (update if exists)
+- getAllNotes() → Future<List<Note>>
+  - SELECT * WHERE isArchived = 0
+  - ORDER BY isPinned DESC, updatedAt DESC
+- getNoteById(String id) → Future<Note?>
+  - SELECT * WHERE id = ?
+  - Returns null if not found
+- updateNote(Note note) → Future<void>
+  - UPDATE notes SET ... WHERE id = ?
+- deleteNote(String id) → Future<void>
+  - DELETE FROM notes WHERE id = ?
+- getNotes({String? category, bool archived}) → Future<List<Note>>
+  - Filtered by category and archive status
+- getPinnedNotes() → Future<List<Note>>
+  - SELECT * WHERE isPinned = 1 AND isArchived = 0
+- searchNotes(String query) → Future<List<Note>>
+  - Uses FTS if enabled, else in-memory search
+  - Searches title and content
+- addMediaToNote(String noteId, MediaItem media) → Future<void>
+  - INSERT into media table
+  - Links to note via noteId FK
+- getMediaForNote(String noteId) → Future<List<MediaItem>>
+  - SELECT * FROM media WHERE noteId = ?
+- syncMediaForNote(String noteId, List<MediaItem> media) → Future<void>
+  - Delete all existing media for note
+  - Insert new media list
+- removeMediaFromNote(String noteId, String mediaId) → Future<void>
+  - DELETE FROM media WHERE noteId = ? AND id = ?
+
+#### TodosDAO (lib/core/database/dao/todos_dao.dart)
+**Methods**:
+- createTodo(TodoItem todo, [String? noteId]) → Future<void>
+- getAllTodos() → Future<List<TodoItem>>
+- getTodoById(String id) → Future<TodoItem?>
+- updateTodo(TodoItem todo, [String? noteId]) → Future<void>
+- deleteTodo(String id) → Future<void>
+- getTodos({String? noteId, bool? isCompleted, String? category}) → Future<List<TodoItem>>
+- searchTodos(String query) → Future<List<TodoItem>>
+- addTodos(List<TodoItem> todos, [String? noteId]) → Future<void>
+  - Batch insert multiple todos
+
+#### RemindersDAO (lib/core/database/dao/reminders_dao.dart)
+**Methods**:
+- createAlarm(Alarm alarm) → Future<void>
+- getAllAlarms() → Future<List<Alarm>>
+- getAlarmById(String id) → Future<Alarm?>
+- updateAlarm(Alarm alarm) → Future<void>
+- deleteAlarm(String id) → Future<void>
+- getAlarms() → Future<List<Alarm>>
+  - Gets active alarms (isActive = 1)
+- updateAlarms(List<Alarm> alarms) → Future<void>
+  - Batch update
+- searchAlarms(String query) → Future<List<Alarm>>
+
+#### LinksDAO (lib/core/database/dao/links_dao.dart)
+**Methods**:
+- addLink(String sourceId, String targetId, {String type = 'manual'}) → Future<void>
+  - INSERT into note_links
+- removeLink(String sourceId, String targetId) → Future<void>
+  - DELETE from note_links
+- getBacklinks(String noteId) → Future<List<String>>
+  - SELECT sourceId FROM note_links WHERE targetId = ?
+- getOutlinks(String noteId) → Future<List<String>>
+  - SELECT targetId FROM note_links WHERE sourceId = ?
+
+---
+
+## 4.3 - REPOSITORY PATTERN
+
+### NoteRepository Interface
+**File**: lib/domain/repositories/note_repository.dart
+**Purpose**: Abstract contract for note data access
+
+**Methods**:
+```dart
+Future<void> createNote(Note note)
+Future<Note?> getNoteById(String id)
+Future<List<Note>> getNotes({String? category, bool archived})
+Future<List<Note>> getAllNotes()
+Future<void> updateNote(Note note)
+Future<void> deleteNote(String id)
+Future<List<Note>> searchNotes(String query)
+Future<List<Note>> getPinnedNotes()
+Future<void> exportNotePdf(Note note)
+Future<void> scheduleReminder(Note note, DateTime when)
+Future<void> updateNoteLinks(String noteId, List<String> linkedIds)
+```
+
+### NoteRepositoryImpl
+**File**: lib/data/repositories/note_repository_impl.dart (265 lines)
+**Purpose**: SQLite implementation of NoteRepository
+
+**Key Methods**:
+- createNote(Note note)
+  - Delegates to NotesDAO.createNote()
+- getNotes({String? category, bool archived})
+  - Gets notes from DB
+  - **Enrichment**: Loads related todos, alarms, media for each note
+  - Calls: TodosDAO.getTodos(noteId), RemindersDAO for alarms, MediaDAO for media
+  - Attaches to note.todos, note.alarms, note.media
+- searchNotes(String query)
+  - Full-text search
+  - Searches note title and content
+  - Returns top results by relevance
+
+**Pattern**: 
+```dart
+// Enrichment logic example:
+Future<List<Note>> getNotes(...) async {
+  List<Note> notes = await dao.getNotes();
+  
+  for (var note in notes) {
+    note.todos = await todosDao.getTodos(noteId: note.id);
+    note.alarms = await remindersDao.getAlarmsForNote(note.id);
+    note.media = await mediaDao.getMediaForNote(note.id);
+  }
+  
+  return notes;
+}
+```
+
+---
+
+## 4.4 - REMOTE DATABASE / BACKEND
+
+### Current Status: ❌ NOT IMPLEMENTED
+
+**Planned Backends** (Architecture Ready):
+1. **Firebase Firestore** (partially integrated)
+   - Collections: notes, todos, alarms, reflections
+   - Sync: Bi-directional (planned)
+   - Authentication: Firebase Auth (commented out)
+
+2. **Supabase** (alternative in consideration)
+   - PostgreSQL backend
+   - Realtime API
+   - Auth: Supabase Auth
+
+3. **Custom API** (scaffolding exists)
+   - HTTP client: Dio (^1.0.0)
+   - Serialization: json_serializable
+
+**Files Related to Backend**:
+- lib/core/network/dio_client.dart (HTTP client setup)
+- lib/data/datasources/ (Remote datasource interfaces)
+- main.dart (Firebase initialization commented out)
+
+**Issue**: No active backend connection in current version
+- All data stored locally in SQLite
+- Sync architecture ready for implementation
+- Would require: Backend setup, sync logic, conflict resolution
+
+---
+
+## 4.5 - API INTEGRATION
+
+### Current Status: ❌ NO ACTIVE API CALLS
+
+**Planned APIs** (not implemented):
+1. **Google Maps API**
+   - Package: google_maps_flutter
+   - Purpose: Location selection, place search
+   - Integration: Partial (UI implemented, API key in manifest)
+
+2. **Google ML Kit**
+   - Package: google_mlkit_text_recognition
+   - Purpose: OCR for document scanning
+   - Status: Integrated
+
+3. **Google Cloud Speech-to-Text**
+   - Package: speech_to_text
+   - Purpose: Voice transcription
+   - Status: Integrated
+
+4. **OpenAI API** (Commented Out)
+   - Purpose: AI features (write suggestions, summaries)
+   - Status: Not implemented
+
+5. **Web Search API** (Not Implemented)
+   - Purpose: Link suggestions, smart reminders
+   - Status: Architecture ready
+
+### Data Model Layer
+
+**Models**: Manual JSON serialization with json_serializable
+
+#### Core Entity Models with JSON Support:
+
+**Note Entity** (lib/domain/entities/note.dart)
+```dart
+@JsonSerializable()
+class Note extends Equatable {
+  final String id;
+  final String title;
+  final String content; // Quill JSON or plain text
+  final List<MediaItem> media;
+  final List<Link> links;
+  final List<TodoItem>? todos;
+  final List<Alarm>? alarms;
+  final NoteColor color;
+  final bool isPinned;
+  final bool isArchived;
+  final List<String> tags;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final int priority;
+  final String category;
+  final bool isFavorite;
+  final String? linkedReflectionId;
+  final String? linkedTodoId;
+
+  // JSON serialization
+  factory Note.fromJson(Map<String, dynamic> json) => _$NoteFromJson(json);
+  Map<String, dynamic> toJson() => _$NoteToJson(this);
+}
+```
+
+**TodoItem Entity** (lib/domain/entities/todo_item.dart)
+```dart
+@JsonSerializable()
+class TodoItem extends Equatable {
+  final String id;
+  final String text;
+  final bool isCompleted;
+  final DateTime? dueDate;
+  final int priority; // 1-4
+  final String category; // Personal, Work, etc.
+  final List<SubTask> subtasks;
+  final bool isImportant;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String? reminderId; // Linked to alarm
+  final String? linkedNoteId;
+
+  factory TodoItem.fromJson(Map<String, dynamic> json) => _$TodoItemFromJson(json);
+  Map<String, dynamic> toJson() => _$TodoItemToJson(this);
+}
+
+@JsonSerializable()
+class SubTask extends Equatable {
+  final String id;
+  final String text;
+  final bool isCompleted;
+
+  factory SubTask.fromJson(Map<String, dynamic> json) => _$SubTaskFromJson(json);
+  Map<String, dynamic> toJson() => _$SubTaskToJson(this);
+}
+```
+
+**Alarm Entity** (lib/domain/entities/alarm.dart)
+```dart
+@JsonSerializable()
+class Alarm extends Equatable {
+  final String id;
+  final String title;
+  final String message;
+  final DateTime scheduledTime;
+  final String? recurrence; // Cron expression
+  final bool isActive;
+  final bool hasSound;
+  final bool hasVibration;
+  final String? linkedNoteId;
+  final String? linkedTodoId;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory Alarm.fromJson(Map<String, dynamic> json) => _$AlarmFromJson(json);
+  Map<String, dynamic> toJson() => _$AlarmToJson(this);
+}
+```
+
+**MediaItem Entity** (lib/domain/entities/media_item.dart)
+```dart
+@JsonSerializable()
+class MediaItem extends Equatable {
+  final String id;
+  final String noteId;
+  final String type; // 'image', 'video', 'audio', 'pdf'
+  final String name;
+  final int? size;
+  final String filePath;
+  final String? thumbnailPath;
+  final int? durationMs;
+  final String? metadata; // JSON
+  final DateTime createdAt;
+
+  factory MediaItem.fromJson(Map<String, dynamic> json) => _$MediaItemFromJson(json);
+  Map<String, dynamic> toJson() => _$MediaItemToJson(this);
+}
+```
+
+**Other Entity Models**:
+- Reflection
+- ReflectionAnswer
+- ReflectionQuestion
+- LocationReminder
+- SavedLocation
+- FocusSession
+- SmartCollection
+- ReminderTemplate
+- Link
+- Mood
+- ActivityTag
+
+All follow same `@JsonSerializable()` pattern with fromJson/toJson.
+
+**Data Models** (in lib/data/models/):
+- Typically same as entities but sometimes with additional database fields
+- reflection_question_model.dart
+- reflection_answer_model.dart
+- (Others mostly use entities directly)
+
+---
+
+## DATA FLOW: LOCAL-ONLY ARCHITECTURE
+
+```
+UI (Widget) 
+  │
+  ├─ BLoC Event
+  │   │
+  │   └─> BLoC Handler
+  │       │
+  │       └─> Repository (Interface)
+  │           │
+  │           └─> RepositoryImpl
+  │               │
+  │               ├─> DAO Layer
+  │               │   │
+  │               │   └─> SQLite Database
+  │               │
+  │               └─> Enrichment Logic
+  │
+  └─ BLoC State
+      │
+      └─> BlocBuilder rebuild
+          │
+          └─ UI Update
+```
+
+**Example Flow: Create Note**:
+```
+EnhancedNoteEditor: Save button tapped
+  │
+  └─> context.read<NotesBloc>().add(
+        CreateNoteEvent(
+          title: "My Note",
+          content: "{quill json}",
+          color: NoteColor.blue,
+          ...
+        )
+      )
+      │
+      └─> NotesBloc._onCreateNoteEvent()
+          │
+          ├─> emit(NotesLoading())
+          │
+          ├─> repository.createNote(note)
+          │   │
+          │   └─> NoteRepositoryImpl.createNote()
+          │       │
+          │       └─> NotesDAO.createNote()
+          │           │
+          │           └─> db.insert('notes', noteMap)
+          │               │
+          │               └─> SQLite INSERT
+          │
+          ├─> Load updated notes list
+          │
+          └─> emit(NotesLoaded(notes: updatedNotes))
+              │
+              └─> UI rebuilds with new note in list
+```
+
+---
+
+## DATABASE PERSISTENCE MECHANISMS
+
+### Shared Preferences (for settings)
+**File**: lib/core/services/settings_service.dart
+**Usage**: App-wide settings, user preferences, feature flags
+**Keys**:
+- theme_mode (light/dark/auto)
+- font_scale (0.8-1.5)
+- biometric_enabled (true/false)
+- notification_enabled (true/false)
+- first_run_complete (true/false)
+- And others in SettingsBloc
+
+### SQLite (for data)
+All structured data: notes, todos, alarms, reflections, media, locations, sessions
+
+### Secure Storage (flutter_secure_storage)
+**Usage**: Sensitive data like tokens (if implemented)
+**Files**: lib/core/services/secure_file_storage_service.dart
+**Current**: Not widely used (local app, no login)
+
+---
+
+## PERFORMANCE CONSIDERATIONS
+
+### Current Issues:
+1. **Enrichment**: Loading all todos/alarms/media for every note is expensive
+   - Solution: Lazy load or pagination
+2. **Large queries**: No pagination on initial load
+   - Solution: Page load (20 items at a time)
+3. **FTS5 Disabled**: Full-text search using in-memory filtering
+   - Solution: Re-enable FTS5 with compatibility testing
+4. **No Caching layer**: Every query hits database
+   - Solution: Add Redis-like in-memory cache
+
+### Optimization Opportunities:
+- [ ] Implement pagination (offset/limit)
+- [ ] Cache frequently accessed notes in memory
+- [ ] Use FTS5 for full-text search
+- [ ] Batch operations for bulk updates
+- [ ] Lazy load media thumbnails
+- [ ] Archive old data (>1 year) for speed
+
+---
+
+## 4.6 - MIGRATION STRATEGY (Future)
+
+**Current**: Version 1, flat schema, no migrations
+**Issue**: No path to add/modify tables without losing data
+
+**Recommended**:
+```dart
+static const int _databaseVersion = 2; // Increment on schema change
+
+// Add migration logic:
+Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
+  if (oldVersion < 2) {
+    // Migration from v1 to v2
+    await db.execute('ALTER TABLE notes ADD COLUMN custom_field TEXT');
+  }
+  if (oldVersion < 3) {
+    // Migration from v2 to v3
+    // ...
+  }
+}
+
+// Call in openDatabase:
+openDatabase(path, version: _databaseVersion, onUpgrade: _onUpgrade);
+```
+
+═══════════════════════════════════════════════════════════════════════════════════════
+                        SUMMARY OF PHASE 4
+═══════════════════════════════════════════════════════════════════════════════════════
+
+✅ **Strengths**:
+- Clear SQLite schema (18 tables)
+- Proper DAO pattern implementation
+- Entity models with JSON serialization
+- Local-first architecture (no internet required)
+- Clean separation between domain/data layers
+
+⚠️ **Weaknesses**:
+- No remote backend / cloud sync
+- No migration strategy for schema changes
+- FTS5 disabled (performance issue)
+- Enrichment logic could be optimized
+- No caching layer
+- No pagination
+
+🎯 **Recommendations**:
+1. Implement cloud backend (Firebase or Supabase)
+2. Add migration system before adding new features
+3. Implement pagination for large datasets
+4. Cache frequently accessed notes
+5. Consider enabling FTS5 with compatibility fixes
+6. Add transaction support for bulk operations
+
+═══════════════════════════════════════════════════════════════════════════════════════

@@ -1,0 +1,953 @@
+═══════════════════════════════════════════════════════════════════════════════════════
+                    PHASE 2: ARCHITECTURE & DESIGN PATTERN ANALYSIS
+═══════════════════════════════════════════════════════════════════════════════════════
+
+---
+
+## 2.1 - ARCHITECTURE PATTERN
+
+### Architecture Used: CLEAN ARCHITECTURE (Layer-Based)
+
+**Status**: ✅ CORRECTLY IMPLEMENTED
+
+The project uses a textbook implementation of Clean Architecture with clear separation of concerns across three main layers:
+
+#### LAYER BREAKDOWN:
+
+1. **PRESENTATION LAYER** (lib/presentation/)
+   - BLoCs for state management (70+ BLoCs)
+   - UI Screens & Pages (100+ screens)
+   - Reusable Widgets (100+ widgets)
+   - Design System Components
+   - Routes & Navigation
+   - Purpose: UI logic, state representation, user interactions
+
+2. **DOMAIN LAYER** (lib/domain/)
+   - Entities (pure business models: Note, TodoItem, Alarm, Reflection, etc.)
+   - Repository Interfaces (abstract contracts)
+   - Service Interfaces (business logic services)
+   - Purpose: Core business logic, independent of frameworks
+
+3. **DATA LAYER** (lib/data/)
+   - Repository Implementations (concrete implementations)
+   - Data Models (DTOs for database/API)
+   - Local Data Sources (SQLite via DAOs)
+   - Remote Data Sources (API clients)
+   - Purpose: Data access and transformation
+
+4. **CORE LAYER** (lib/core/)
+   - Database Management (SQLite setup, DAOs, schema)
+   - Services (non-business logic utilities)
+   - Network/HTTP Client (Dio)
+   - Notifications (Awesome Notifications, Alarms)
+   - Security (Biometric, PIN, Encryption)
+   - Theme & App Configuration
+   - Utilities & Helpers
+   - Purpose: Cross-cutting concerns, infrastructure
+
+---
+
+### CLEAN ARCHITECTURE FLOW DIAGRAM:
+
+```
+                            PRESENTATION LAYER
+                            ═════════════════════════════════════════════
+                                          │
+                        ┌─────────────────┼─────────────────┐
+                        ▼                 ▼                 ▼
+                   SCREENS            BLOCs (70+)       WIDGETS
+                   (100+)         State Management    (100+ reusable)
+                                   & Event Handlers
+                        │                 │                 │
+                        └─────────────────┼─────────────────┘
+                                          │
+                                          │ (Repository & Service Injection)
+                                          ▼
+                            DOMAIN LAYER (Business Logic)
+                            ═════════════════════════════════════════════
+                        
+                  ┌──────────────────────────────────────┐
+                  │                                      │
+                  ▼                                      ▼
+              ENTITIES                          SERVICE INTERFACES
+          (Pure Business Models)              (Business Logic Rules)
+          • Note                              • AdvancedSearchRanking
+          • TodoItem                          • AIsuggestion
+          • Alarm                             • RuleEvaluation
+          • Reflection                        • MediaFiltering
+          • SmartCollection                   • TemplateConversion
+          • etc. (20+ entities)               • etc.
+                  │                                      │
+                  │         ┌──────────────────────────┐ │
+                  └─────────│ REPOSITORY INTERFACES ────┘
+                            │ (Abstract Contracts)      │
+                            • NoteRepository           │
+                            • TodoRepository           │
+                            • AlarmRepository          │
+                            • MediaRepository          │
+                            • ReflectionRepository     │
+                            • etc. (10+ repositories)  │
+                                          │
+                                          ▼
+                            DATA LAYER (Data Access)
+                            ═════════════════════════════════════════════
+                        
+                        ┌─────────────────────────────┐
+                        │  REPOSITORY IMPLEMENTATIONS │
+                        │ (NoteRepositoryImpl, etc.)   │
+                        │                             │
+                        │ Transforms Domain ↔ Data    │
+                        └─────────────────────────────┘
+                                          │
+                        ┌─────────────────┴─────────────────┐
+                        ▼                                   ▼
+                    LOCAL DATA SOURCES             REMOTE DATA SOURCES
+                    ═════════════════             ═════════════════════
+                                                  
+                    DAOs (Data Access):           API Service
+                    • NotesDAO                    (Retrofit Client)
+                    • TodosDAO                    
+                    • RemindersDAO                Transforms:
+                    • LinksDAO                    Domain Models ↔ JSON
+                                  │
+                                  ▼
+                        ┌─────────────────────────┐
+                        │   SQLite Database       │
+                        │ (CoreDatabase Singleton)│
+                        │                         │
+                        │ Tables:                 │
+                        │ • notes                 │
+                        │ • todos                 │
+                        │ • alarms/reminders      │
+                        │ • reflections           │
+                        │ • media                 │
+                        │ • settings              │
+                        │ • smart_collections    │
+                        │ • location_reminders   │
+                        │ • and 10+ more...       │
+                        └─────────────────────────┘
+                                  │
+                                  ▼
+                        ┌─────────────────────────┐
+                        │  Core Services          │
+                        │  (Non-Business Logic)   │
+                        │                         │
+                        │ • BackupService         │
+                        │ • LocationService       │
+                        │ • SpeechService         │
+                        │ • OCRService            │
+                        │ • PermissionService     │
+                        │ • BiometricService      │
+                        │ • MediaProcessing       │
+                        │ • ExportService         │
+                        │ • NotificationService   │
+                        │ • AlarmService          │
+                        │ • etc. (20+ services)   │
+                        └─────────────────────────┘
+```
+
+---
+
+#### DATA FLOW EXAMPLE: CREATING A NOTE
+
+```
+User Action (Presentation)
+    │
+    ▼
+Screen calls BLoC.add(CreateNoteEvent(params))
+    │
+    ▼
+NoteBloc.on<CreateNoteEvent>()
+    ├─ Validates input via business logic
+    ├─ Calls NoteRepository.createNote(note)
+    │
+    └─────────────────────────────────────────┐
+                                              │
+                                              ▼
+                            NoteRepositoryImpl.createNote(note)
+                              │
+                              ├─ Transforms Note to database format
+                              ├─ Calls CoreDatabase.createNote()
+                              │
+                              └─────────────────────────────┐
+                                                            │
+                                                            ▼
+                                          CoreDatabase.createNote()
+                                            (Delegates to NotesDAO)
+                                            │
+                                            ▼
+                                          NotesDAO.insert()
+                                            │
+                                            ▼
+                                          SQL INSERT
+                                            │
+                                            ▼
+                                          SQLite Database
+                                                │
+                                                │ (Success/Error returned)
+                                                ▼
+                                          NoteRepository handles result
+                                                │
+                                                ▼
+                                          BLoC emits NotesLoaded state
+                                                │
+                                                ▼
+                                          Presentation Layer rebuilds UI
+```
+
+---
+
+#### DEPENDENCY INJECTION FLOW:
+
+```
+main.dart
+    │
+    ▼
+setupServiceLocator() [injection_container.dart]
+    │
+    ├─ Register Services (BackupService, LocationService, etc.)
+    ├─ Register DataSources (Local & Remote)
+    ├─ Register Repositories (with implementations)
+    ├─ Register BLoCs (with injected dependencies)
+    ├─ Register Domain Services (BusinessLogic)
+    │
+    └─ GetIt ServiceLocator configured
+        │
+        ▼
+    BLoCs access dependencies via:
+        • Constructor injection
+        • Direct getIt<Type>() calls
+        • Service locator pattern
+```
+
+---
+
+### ARCHITECTURE QUALITY ASSESSMENT:
+
+✅ **Strengths:**
+1. Clear separation of concerns - each layer has distinct responsibility
+2. Dependency inversion - Presentation depends on Domain, not vice versa
+3. Testability - layers can be tested independently
+4. Maintainability - changes to one layer don't affect others
+5. Scalability - new features can be added without breaking existing code
+6. Repository pattern ensures data source abstraction
+7. Service locator pattern allows flexible dependency injection
+
+⚠️ **Potential Issues:**
+1. **Service Layer Saturation** - CoreDatabase does too much (handles DAOs, connection pooling, schema)
+   - Could split into DatabaseManager + ConnectionPool
+   - DAOs could be more independent
+
+2. **BLoC Complexity** - Some BLoCs are very large (NotesBloc: 1058 lines, AlarmsBloc: 1178 lines)
+   - Consider splitting into smaller, focused BLoCs
+   - Use composition or BLoC-to-BLoC communication
+
+3. **Circular Dependencies Risk** - Some services directly import from presentation
+   - Example: NotificationService uses presentation models
+   - Should use domain models exclusively in services
+
+4. **Missing Anti-Corruption Layer** - RemoteDataSource directly transforms to domain models
+   - Should have explicit DTO layer for API responses
+
+---
+
+## 2.2 - STATE MANAGEMENT
+
+### Solution Used: BLoC Pattern (flutter_bloc ^9.1.1)
+
+**Status**: ✅ CORRECTLY IMPLEMENTED
+
+The project uses a comprehensive, well-structured BLoC architecture with 70+ BLoCs managing different domains.
+
+---
+
+### BLOCS CATEGORIZED BY FEATURE:
+
+#### 1. CORE FUNCTIONALITY BLOCS:
+┌─────────────────────────────────────────────────────────────────┐
+│ NOTES MANAGEMENT                                                │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ NoteBloc               - Single note operations               │
+│ ✓ Note Folder Bloc       - Note organization                    │
+│ ✓ NoteEditor Bloc        - Rich text editing                    │
+│ ✓ NoteLinking Bloc       - Cross-note references                │
+│ ✓ NoteVersioning Bloc    - Note history & restoration           │
+│ ✓ AdvancedSearch Bloc    - Full-text search                     │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ TODO MANAGEMENT                                                  │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ TodoBloc               - Single todo (DEPRECATED)              │
+│ ✓ TodosBloc              - Multiple todos (active)               │
+│ ✓ Recurrence Bloc        - Recurring todos                       │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ ALARM/REMINDER MANAGEMENT                                       │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ Alarm Bloc             - Single alarm operations               │
+│ ✓ Alarms Bloc            - Multiple alarms management            │
+│ ✓ Reminder Actions Bloc  - Actions (snooze, dismiss, etc.)       │
+│ ✓ SmartReminders Bloc    - AI reminder suggestions               │
+│ ✓ ReminderTemplates Bloc - Reminder template management          │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ MEDIA MANAGEMENT                                                 │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ Media Bloc             - Main media state                      │
+│ ✓ MediaGallery Bloc      - Gallery view                          │
+│ ✓ MediaPicker Bloc       - Photo/video selection                 │
+│ ✓ MediaSearch Bloc       - Media search                          │
+│ ✓ MediaFilter Bloc       - Media filtering                       │
+│ ✓ MediaFilters Bloc      - Filter management                     │
+│ ✓ MediaViewer Bloc       - Media viewing/preview                 │
+│ ✓ MediaOrganization Bloc - Media organization                    │
+│ ✓ MediaAnalytics Bloc    - Media statistics                      │
+└─────────────────────────────────────────────────────────────────┘
+
+#### 2. ADVANCED FEATURES BLOCS:
+┌─────────────────────────────────────────────────────────────────┐
+│ SMART COLLECTIONS & RULES                                       │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ SmartCollections Bloc     - Smart folder management            │
+│ ✓ SmartCollectionWizard Bloc- Creation wizard                    │
+│ ✓ RuleBuilder Bloc          - Custom rule creation               │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ FOCUS & PRODUCTIVITY                                             │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ Focus Bloc             - Focus mode management                │
+│ ✓ Pomodoro Bloc          - Main timer logic                     │
+│ ✓ PomodoroTimer Bloc     - Timer display logic                  │
+│ ✓ PomodoroStats Bloc     - Session statistics                   │
+│ ✓ DashboardWidgets Bloc  - Home widget management               │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ LOCATION & MAPPING                                               │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ LocationReminder Bloc  - Geofence reminders                   │
+│ ✓ LocationPicker Bloc    - Map-based location selection         │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ MEDIA CAPTURE & PROCESSING                                       │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ AudioRecorder Bloc     - Audio recording                      │
+│ ✓ AudioPlayback Bloc     - Audio playback                       │
+│ ✓ VideoEditor Bloc       - Video editing                        │
+│ ✓ VideoPlayback Bloc     - Video playback                       │
+│ ✓ VideoTrimming Bloc     - Video trimming                       │
+│ ✓ DrawingCanvas Bloc     - Drawing/sketching                    │
+│ ✓ DocumentScan Bloc      - Document scanning & OCR              │
+│ ✓ OCRExtraction Bloc     - Text extraction results              │
+└─────────────────────────────────────────────────────────────────┘
+
+#### 3. PLATFORM & INTEGRATION BLOCS:
+┌─────────────────────────────────────────────────────────────────┐
+│ AUTHENTICATION & SECURITY                                        │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ BiometricAuth Bloc     - Fingerprint/Face ID                  │
+│ ✓ PinSetup Bloc          - PIN configuration                    │
+│ ✓ AccessibilityFeatures Bloc - Accessibility options            │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ INTEGRATIONS                                                     │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ Calendar Integration Bloc - Device calendar sync              │
+│ ✓ VoiceCommand Bloc         - Voice control                     │
+│ ✓ VoiceSettings Bloc        - Voice settings                    │
+│ ✓ LinkPreview Bloc          - URL preview generation            │
+│ ✓ DeepLinking Bloc          - App deep links                    │
+└─────────────────────────────────────────────────────────────────┘
+
+#### 4. PERSONALIZATION BLOCS:
+┌─────────────────────────────────────────────────────────────────┐
+│ CUSTOMIZATION                                                    │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ Theme Bloc             - Light/dark mode, fonts               │
+│ ✓ Settings Bloc          - User preferences                     │
+│ ✓ Localization Bloc      - Language selection                   │
+│ ✓ AccentColor Bloc       - Theme color customization            │
+│ ✓ Folders Bloc           - Folder management                    │
+│ ✓ TagManagement Bloc     - Tag organization                     │
+│ ✓ ActivityTag Bloc       - Activity tagging                     │
+└─────────────────────────────────────────────────────────────────┘
+
+#### 5. DATA & ANALYSIS BLOCS:
+┌─────────────────────────────────────────────────────────────────┐
+│ ANALYTICS & INSIGHTS                                             │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ Analytics Bloc         - General analytics                    │
+│ ✓ UsagePatterns Bloc     - Usage insights                       │
+│ ✓ Graph Bloc             - Data visualization                   │
+└─────────────────────────────────────────────────────────────────┘
+
+#### 6. UTILITY BLOCS:
+┌─────────────────────────────────────────────────────────────────┐
+│ HELPERS & MANAGEMENT                                             │
+├─────────────────────────────────────────────────────────────────┤
+│ ✓ Search Bloc            - Global search                        │
+│ ✓ Filters Bloc           - Filter management                    │
+│ ✓ Export Bloc            - Data export                          │
+│ ✓ Backup Bloc            - Data backup                          │
+│ ✓ Navigation Bloc        - Navigation state                     │
+│ ✓ QuickAdd Bloc          - Quick add feature                    │
+│ ✓ UnifiedItems Bloc      - Unified view                         │
+│ ✓ CommandPalette Bloc    - Command palette                      │
+│ ✓ Reflection Bloc        - Journaling/reflection                │
+│ ✓ CrossFeature Bloc      - Cross-feature coordination           │
+└─────────────────────────────────────────────────────────────────┘
+
+---
+
+### BLoC STATE FLOW PATTERN:
+
+```
+                    Event Triggered (User Action / System)
+                                    │
+                                    ▼
+                    BLoC receives Event (e.g., CreateNoteEvent)
+                                    │
+                                    ▼
+                    ┌──────────────────────────────────────┐
+                    │  Handler: on<CreateNoteEvent>()      │
+                    │                                      │
+                    │  1. Emit Loading/Processing state    │
+                    │  2. Call repository/service          │
+                    │  3. Handle success/failure           │
+                    │  4. Emit new state                   │
+                    └──────────────────────────────────────┘
+                                    │
+                        ┌───────────┴───────────┐
+                        │                       │
+                        ▼                       ▼
+                    SUCCESS                  ERROR
+                        │                       │
+                        ▼                       ▼
+              emit(NotesLoaded              emit(NoteError
+               state with data)             with message)
+                        │                       │
+                        └───────────┬───────────┘
+                                    │
+                                    ▼
+                        UI rebuilds with new state
+                        (via BlocBuilder/BlocListener)
+                                    │
+                                    ▼
+                        Display data or error message
+```
+
+---
+
+### STATE CLASSES EXAMPLE PATTERN:
+
+Each BLoC follows a consistent pattern:
+
+```dart
+// State Hierarchy:
+abstract class NoteState extends Equatable {
+  const NoteState();
+}
+
+class NoteInitial extends NoteState { ... }
+class NoteLoading extends NoteState { ... }
+class NotesLoaded extends NoteState {
+  final List<Note> allNotes;
+  final List<Note> displayedNotes;
+  final String searchQuery;
+  final List<String> selectedTags;
+  final NoteSortOption sortBy;
+  ... (20+ configuration properties)
+}
+class NoteEmpty extends NoteState { ... }
+class NoteError extends NoteState {
+  final String error;
+}
+class NoteCreated extends NoteState { ... }
+class NoteUpdated extends NoteState { ... }
+class NoteDeleted extends NoteState { ... }
+```
+
+---
+
+### BLoC PARAMETER OBJECTS (params/ folder):
+
+Each BLoC uses typed parameter objects for type-safe event creation:
+
+```dart
+NoteParams           - Title, content, color, tags, pin status
+TodoParams           - Description, completed, dueDate, priority
+AlarmParams          - Time, recurrence, message, sound
+RemoteParams         - Reminder settings
+SettingsParams       - User preferences
+ThemeParams          - Theme configuration
+MediaParams          - Media selection settings
+// ... 15+ more params
+```
+
+**Benefits:**
+- Type-safe event creation
+- Reduces boilerplate in event classes
+- Centralized validation logic
+- Easy refactoring when adding/removing fields
+
+---
+
+### STATE MANAGEMENT FLOW DIAGRAM:
+
+```
+                         PRESENTATION LAYER
+                         ══════════════════════
+    
+    Screen/Widget
+        │
+        ├─ on Button Tap ──────────────────────────────┐
+        │                                               │
+        │                                               ▼
+        │                                    BLoC.add(CreateNoteEvent(
+        │                                        params: NoteParams(...)
+        │                                    ))
+        │                                               │
+        └─ BlocBuilder<NoteBloc, NoteState> { ◄────────┤
+            (rebuild on state change)                  │
+        }                                               │
+                                                        │
+                                                        ▼
+                                          ┌─────────────────────────┐
+                                          │   NoteBloc Handler      │
+                                          │                         │
+                                          │ on<CreateNoteEvent>(  │
+                                          │   event, emit          │
+                                          │ ) async {              │
+                                          │   emit(NoteLoading()); │
+                                          │   try {                │
+                                          │     NOTE = repository  │
+                                          │       .createNote()    │
+                                          │     emit(NotesLoaded   │
+                                          │       (notes)          │
+                                          │     );                 │
+                                          │   } catch (e) {        │
+                                          │     emit(NoteError()); │
+                                          │   }                    │
+                                          │ }                      │
+                                          └─────────────────────────┘
+                                                        │
+                                                        ▼
+                                          Repository Layer
+                                          (createNote())
+                                                        │
+                                                        ▼
+                                          Database/Remote Update
+                                                        │
+                                                        ▼
+                                          Result back to BLoC
+```
+
+---
+
+### STATE MANAGEMENT BEST PRACTICES OBSERVED:
+
+✅ **Good Practices:**
+1. Event-driven architecture - all user actions mapped to events
+2. Immutable states using Equatable
+3. Consistent error handling with try-catch
+4. State composition - complex features use multiple BLoCs
+5. Parameter objects reduce boilerplate
+6. Clear event/state naming conventions
+7. Dependency injection for testability
+8. Proper async handling with future-based handlers
+
+⚠️ **Anti-patterns to Watch:**
+1. **GigaBloCs** - NotesBloc (1058 lines), AlarmsBloc (1178 lines)
+   - Contains 20+ event handlers in single class
+   - Handles state for filtering, sorting, searching, view modes
+   - Recommendation: Split into:
+     * NotesCrudBloc (create/update/delete)
+     * NotesFilterBloc (search/filter/sort)
+     * NotesViewBloc (view mode/configuration)
+
+2. **State Proliferation** - Some BLoCs have 15+ states
+   - More states = more code paths to test
+   - Harder to reason about state transitions
+
+3. **Shared BLoCs** - Some BLoCs used by multiple unrelated features
+   - Could cause unexpected state changes
+   - Example: Settings Bloc accessed from 10+ screens
+
+4. **Missing BLoC-to-BLoC Communication** - Some features require coordination
+   - Current: Each BLoC acts independently
+   - Better: Use StreamSubscription for cross-BLoC reactions
+
+---
+
+## 2.3 - FOLDER STRUCTURE PATTERN
+
+### Structure Type: HYBRID (Layer-Based + Feature-Based)
+
+**Primary**: Layer-Based Architecture
+**Secondary**: Feature-based within Presentation layer
+
+---
+
+### FOLDER ORGANIZATION:
+
+```
+lib/
+├── core/                          ← LAYER: Cross-cutting concerns
+│   ├── database/                  ← Feature: Database management
+│   ├── network/                   ← Feature: HTTP client
+│   ├── notifications/             ← Feature: Local notifications
+│   ├── routes/                    ← Feature: Routing
+│   ├── services/                  ← Feature: Utility services
+│   ├── themes/                    ← Feature: Theming
+│   └── utils/                     ← Feature: Helpers
+│
+├── data/                          ← LAYER: Data access
+│   ├── datasources/               ← Feature: Data source abstraction
+│   │   ├── local/                 ← Database access
+│   │   └── remote/                ← API access
+│   ├── models/                    ← Feature: DTOs
+│   └── repositories/              ← Feature: Repository implementations
+│
+├── domain/                        ← LAYER: Business logic
+│   ├── entities/                  ← Feature: Domain models
+│   ├── models/                    ← Feature: Domain-specific models
+│   ├── repositories/              ← Feature: Repository contracts
+│   └── services/                  ← Feature: Business logic services
+│
+└── presentation/                  ← LAYER: UI
+    ├── bloc/                      ← FEATURE-BASED: State management
+    │   ├── accessibility_features/
+    │   ├── activitytag/
+    │   ├── alarm/
+    │   ├── analytics/
+    │   ├── audio_playback/
+    │   ├── audio_recorder/
+    │   ├── backup/
+    │   ├── biometric_auth/
+    │   ├── calendar_integration/
+    │   ├── color/
+    │   ├── command_palette/
+    │   ├── cross_feature/
+    │   ├── dashboard_widgets/
+    │   ├── deep_linking/
+    │   ├── document_scan/
+    │   ├── drawing_canvas/
+    │   ├── export/
+    │   ├── filters/
+    │   ├── focus/
+    │   ├── folders/
+    │   ├── global_search/
+    │   ├── graph/
+    │   ├── link_preview/
+    │   ├── localization/
+    │   ├── location_picker/
+    │   ├── location_reminder/
+    │   ├── media/          ← Contains 9 sub-features
+    │   │   ├── media_analytics/
+    │   │   ├── media_filter/
+    │   │   ├── media_gallery/
+    │   │   ├── media_organization/
+    │   │   ├── media_picker/
+    │   │   ├── media_search/
+    │   │   └── media_bloc.dart
+    │   ├── media_filters/
+    │   ├── media_viewer/
+    │   ├── navigation/
+    │   ├── note/           ← Single note operations
+    │   ├── note_editor/
+    │   ├── note_folders/
+    │   ├── note_linking/
+    │   ├── note_versioning/
+    │   ├── params/         ← BLoC parameter objects (25+ files)
+    │   ├── pdf_annotation/
+    │   ├── pin_setup/
+    │   ├── pomodoro/       ← Contains 3 sub-features
+    │   │   └── pomodoro_stats/
+    │   ├── quick_add/
+    │   ├── recurrence/
+    │   ├── reflection/
+    │   ├── reminder_actions/
+    │   ├── reminder_templates/
+    │   ├── rule_builder/
+    │   ├── search/
+    │   ├── settings/
+    │   ├── smart_collections/
+    │   ├── smart_collection_wizard/
+    │   ├── smart_reminders/
+    │   ├── tag_management/
+    │   ├── template_management/
+    │   ├── text_editor/
+    │   ├── theme/
+    │   ├── todo/           ← Single todo (DEPRECATED)
+    │   ├── todos/          ← Multiple todos (active)
+    │   ├── unified_items/
+    │   ├── usage_patterns/
+    │   ├── video_editor/
+    │   ├── video_playback/
+    │   ├── video_trimming/
+    │   ├── voice_command/
+    │   ├── voice_settings/
+    │   ├── BLOC_ERROR_HANDLING_PATTERNS.dart
+    │   └── (60+ total bloc directories)
+    │
+    ├── design_system/             ← LAYER: Design components
+    │   ├── components/            ← FEATURE-BASED sub-folders
+    │   │   ├── buttons/
+    │   │   ├── cards/
+    │   │   ├── chips/
+    │   │   ├── empty_states.dart
+    │   │   ├── feedback.dart
+    │   │   ├── inputs/
+    │   │   └── layouts/
+    │   ├── app_colors.dart
+    │   ├── app_typography.dart
+    │   ├── app_spacing.dart
+    │   └── app_animations.dart
+    │
+    ├── pages/                     ← FEATURE-BASED: Main screens (100+ files)
+    │   ├── Main features:
+    │   ├── enhanced_notes_list_screen_refactored.dart
+    │   ├── enhanced_note_editor_screen.dart
+    │   ├── enhanced_todos_list_screen_refactored.dart
+    │   ├── enhanced_alarms_list_screen_refactored.dart
+    │   ├── enhanced_media_list_screen_refactored.dart
+    │   ├── enhanced_reflections_list_screen_refactored.dart
+    │   ├── ... (100+ total pages)
+    │
+    ├── routes/                    ← Routing configuration
+    ├── screens/                   ← Alternative/legacy screens
+    │   ├── answer_screen.dart
+    │   ├── carousel_reflection_screen.dart
+    │   ├── reflection_home_screen.dart
+    │   └── ... (5 total)
+    │
+    ├── widgets/                   ← FEATURE-BASED: Reusable components (100+ files)
+    │   ├── alarm/
+    │   ├── analytics/
+    │   ├── focus/
+    │   ├── location/
+    │   ├── media/
+    │   ├── note/
+    │   ├── pomodoro/
+    │   ├── reflection/
+    │   ├── todo/
+    │   ├── Miscellaneous:
+    │   ├── alarm_bottom_sheet.dart
+    │   ├── audio_recorder_widget.dart
+    │   ├── backup_restore_widget.dart
+    │   ├── drawing_canvas_widget.dart
+    │   ├── lottie_animation_widget.dart
+    │   ├── ... (100+ total)
+    │
+    └── utils/
+        └── accessibility_helper.dart
+```
+
+---
+
+### ORGANIZATION LOGIC:
+
+#### **Top Level (lib/):**
+Uses **LAYER-BASED** organization following Clean Architecture:
+
+| Layer | Responsibility | Contains |
+|-------|----------------|----------|
+| `core/` | Infrastructure & utilities | Database, Services, Network, Themes |
+| `data/` | Data access & persistence | Repositories, DataSources, Models |
+| `domain/` | Business logic | Entities, Services, Interfaces |
+| `presentation/` | UI & state management | BLoCs, Screens, Widgets |
+
+#### **Within Presentation (presentation/):**
+Uses **FEATURE-BASED** organization:
+
+1. **bloc/ folder** - 60+ feature BLoCs
+   - Each feature = its own folder
+   - Contains: bloc.dart, event.dart, state.dart
+   - Example: `note/` for note operations, `alarm/` for alarms
+   - Exceptions: Some complex features have sub-features (media/, pomodoro/)
+
+2. **pages/ folder** - 100+ main screens
+   - Organized by feature name
+   - Example: `enhanced_notes_list_screen.dart`, `audio_recorder_screen.dart`
+   - Naming convention reveals feature: `{feature}_{action}_screen.dart`
+
+3. **widgets/ folder** - 100+ reusable components
+   - Mixed: Both feature-specific folders + generic widgets
+   - Feature-specific: `note/`, `alarm/`, `media/`, `todo/`
+   - Generic: `lottie_animation_widget.dart`, `error_display_components.dart`
+
+4. **design_system/ folder** - Design library
+   - Layer-based within itself (components/, colors, typography)
+   - Components are feature-based (buttons/, cards/, layouts/)
+
+---
+
+### Organization Pattern Benefits & Trade-offs:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ LAYER-BASED (core, data, domain, presentation levels)          │
+├─────────────────────────────────────────────────────────────────┤
+│ Benefits:                      │ Trade-offs:                     │
+│ • Clear architectural layers   │ • Scattered related code        │
+│ • Easy to understand DDD       │ • More file navigation          │
+│ • Dependency flow clear        │ • Related code spread out       │
+│ • Data layer isolation         │                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────┐
+│ FEATURE-BASED (bloc/, pages/, widgets by feature)              │
+├─────────────────────────────────────────────────────────────────┤
+│ Benefits:                      │ Trade-offs:                     │
+│ • Related code together        │ • BLoC layer not isolated       │
+│ • Easy to add/remove feature   │ • More nested folders           │
+│ • Self-contained features      │ • Can grow large                │
+│ • Team collaboration clear     │ • UI layout conventions vary    │
+└─────────────────────────────────────────────────────────────────┘
+
+MYNOTES APPROACH: HYBRID
+Used layer-based at top, feature-based within presentation
+= Best of both worlds (mostly)
+```
+
+---
+
+### FOLDER STRUCTURE CONVENTION ANALYSIS:
+
+**Naming Patterns:**
+
+1. **Pages/Screens**: `{feature}_{action}_{screen/page}.dart`
+   - Example: `enhanced_notes_list_screen.dart`
+   - Example: `audio_recorder_screen.dart`
+   - Example: `calendar_integration_screen.dart`
+
+2. **BLOCs**: `{feature}/` folder containing:
+   - `{feature}_bloc.dart`
+   - `{feature}_event.dart`
+   - `{feature}_state.dart`
+   - Example: `note/note_bloc.dart`, `note/note_event.dart`, etc.
+
+3. **Widgets**: `{component}_widget.dart` or `{feature}/{component}.dart`
+   - Example: `audio_recorder_widget.dart`
+   - Example: `note/note_card.dart` (feature-specific)
+   - Example: `note/notes_list.dart`
+
+4. **Services**: `{service_name}_service.dart`
+   - Example: `backup_service.dart`, `location_service.dart`
+
+5. **Repositories**: `{entity}_repository_impl.dart` (data layer)
+   - Example: `note_repository_impl.dart`
+
+---
+
+### FOLDER STRUCTURE ASSESSMENT:
+
+✅ **Strengths:**
+1. Hybrid model combines benefits of both approaches
+2. Feature-based BLoCs make features self-contained and easy to add/remove
+3. Layer-based core/data/domain ensures clean boundaries
+4. Clear naming conventions enable quick navigation
+5. Design system is properly isolated
+6. Related UI components grouped by feature
+
+⚠️ **Areas for Improvement:**
+1. **BLoC folder size** - 60+ BLoCs in single directory
+   - Suggestion: Group by domain (notes/, media/, alarms/, productivity/)
+
+2. **Pages folder disorganization** - 100+ files in flat structure
+   - Some mixing of "batch" experimental pages with production
+   - Example: batch_4_*, batch_5_*, batch_6_*, batch_7_*, batch_8_*
+
+3. **Widgets folder structure** - Mixed feature/generic
+   - Could be more consistent
+   - Some widgets in feature subfolder, others at root level
+
+4. **Screens vs Pages** - Two different screen locations
+   - `presentation/screens/` (5 files - reflection screens)
+   - `presentation/pages/` (100+ files - main screens)
+   - Consolidation recommended
+
+5. **Legacy code** - Files marked DEPRECATED not removed
+   - Example: `todo_bloc.dart` marked as "DEPRECATED"
+   - Example: `todos_screen_fixed.dart` alternative version
+
+---
+
+### RECOMMENDED REFACTORING STRUCTURE:
+
+```
+presentation/
+├── bloc/
+│   ├── core/               ← Foundation BLoCs (theme, settings, nav)
+│   ├── note/               ← Note-related BLoCs (5-7 BLoCs)
+│   ├── todo/               ← Todo-related BLoCs (3-5 BLoCs)
+│   ├── media/              ← Media-related BLoCs (9 BLoCs)
+│   ├── alarm/              ← Alarm-related BLoCs (5 BLoCs)
+│   ├── productivity/       ← Focus, Pomodoro, Analytics
+│   ├── location/           ← Location-related BLoCs
+│   ├── integration/        ← Calendar, Voice, Links, etc.
+│   └── params/             ← Parameter objects (already good)
+│
+├── pages/
+│   ├── notes/              ← Note-related screens
+│   ├── todos/              ← Todo-related screens
+│   ├── media/              ← Media-related screens
+│   ├── alarms/             ← Alarm-related screens
+│   ├── settings/           ← Settings & customization
+│   ├── onboarding/         ← Onboarding & help
+│   └── misc/               ← Miscellaneous screens
+│
+├── widgets/
+│   ├── common/             ← Generic reusable widgets
+│   ├── note/               ← Note-specific widgets
+│   ├── media/              ← Media-specific widgets
+│   └── ...
+```
+
+---
+
+### CURRENT STATE SUMMARY:
+
+| Aspect | Rating | Notes |
+|--------|--------|-------|
+| Layer Separation | ⭐⭐⭐⭐⭐ | Clean architecture well-implemented |
+| Feature Organization | ⭐⭐⭐⭐ | Good but BLoC folder needs grouping |
+| Naming Conventions | ⭐⭐⭐⭐ | Clear and consistent |
+| Scalability | ⭐⭐⭐ | Starting to show signs of scale issues |
+| Testability | ⭐⭐⭐⭐⭐ | Well-structured for unit/widget testing |
+| Maintainability | ⭐⭐⭐⭐ | Generally good, some cleanup needed |
+
+---
+
+## SUMMARY
+
+### ✅ What's Done Well:
+1. **Clean Architecture** properly implemented with clear layers
+2. **BLoC pattern** correctly applied with 70+ state management blocks
+3. **Dependency injection** via GetIt service locator
+4. **Hybrid folder structure** balances layer and feature organization
+5. **Parameter objects** simplify BLoC event creation
+6. **Immutable states** using Equatable for predictability
+7. **Error handling** with typed exceptions and meaningful messages
+8. **Database abstraction** with DAO pattern
+
+### ⚠️ What Needs Attention:
+1. **Giant BLoCs** - Split into smaller, focused classes
+2. **Legacy code** - Remove deprecated files
+3. **BLoC organization** - Group 60+ BLoCs into categories
+4. **Duplicate screens** - Consolidate pages/ and screens/
+5. **State management communication** - Add BLoC-to-BLoC coordination
+6. **Testability improvements** - Document testing patterns
+
+### 🎯 Architecture Quality: 8.5/10
+The architecture is solid and follows industry best practices. The main improvements needed are related to scale management and code cleanup, not fundamental design issues.
+
+═══════════════════════════════════════════════════════════════════════════════════════
+END OF PHASE 2
+═══════════════════════════════════════════════════════════════════════════════════════

@@ -330,10 +330,16 @@ class VoiceSettingsPanel extends StatelessWidget {
       builder: (context, state) => ListView(
         children: [
           SwitchListTile(
-            title: Text('Voice Commands'),
-            subtitle: Text('Enable voice input'),
+            title: const Text('Voice Commands'),
+            subtitle: const Text('Enable voice input'),
             value: state is! VoiceCommandInitial,
-            onChanged: (_) {},
+            onChanged: (value) {
+              context.read<VoiceCommandBloc>().add(
+                value
+                    ? const StartListeningEvent()
+                    : const StopListeningEvent(),
+              );
+            },
           ),
           if (state is VoiceCommandFeedbackToggled) ...[
             SwitchListTile(
@@ -395,4 +401,3 @@ class VoiceSettingsPanel extends StatelessWidget {
     );
   }
 }
-

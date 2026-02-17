@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/note.dart';
-import '../../domain/entities/media_item.dart';
-import 'dart:io';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 /// Note Card Widget
 /// Displays individual note in list or grid view using the new Design System
@@ -37,9 +36,11 @@ class NoteCardWidget extends StatelessWidget {
       onTap: onTap,
       onLongPress: onLongPress,
       child: Container(
-        padding: EdgeInsets.all(isGridView ? 12.w : 16.w),
+        padding: EdgeInsets.zero,
         decoration: BoxDecoration(
-          color: isDark ? AppColors.darkCardBackground : AppColors.lightSurface,
+          color: isDark 
+              ? AppColors.getNoteCardBackgroundDark(note.color)
+              : AppColors.lightSurface,
           borderRadius: BorderRadius.circular(AppSpacing.radiusXL),
           border: Border.all(
             color: isSelected
@@ -59,9 +60,30 @@ class NoteCardWidget extends StatelessWidget {
             ),
           ],
         ),
-        child: isGridView
-            ? _buildGridContent(context, isDark)
-            : _buildListContent(context, isDark),
+        child: Row(
+          children: [
+            // Color bar on left edge (4px)
+            Container(
+              width: 4.w,
+              decoration: BoxDecoration(
+                color: _getNoteColorBar(),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(AppSpacing.radiusXL),
+                  bottomLeft: Radius.circular(AppSpacing.radiusXL),
+                ),
+              ),
+            ),
+            // Main content
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.all(isGridView ? 12.w : 16.w),
+                child: isGridView
+                    ? _buildGridContent(context, isDark)
+                    : _buildListContent(context, isDark),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -147,10 +169,10 @@ class NoteCardWidget extends StatelessWidget {
           ],
         ),
 
-        // Media Preview Strip
+        // Media Count Indicators
         if (note.hasMedia) ...[
-          SizedBox(height: 8.h),
-          _buildMediaStrip(context, isDark),
+          SizedBox(height: 6.h),
+          _buildMediaCountIndicators(context, isDark),
         ],
 
         // Content Preview
@@ -172,72 +194,31 @@ class NoteCardWidget extends StatelessWidget {
           Wrap(
             spacing: 8.w,
             runSpacing: 6.h,
-            children: note.tags
-                .take(3)
-                .map((tag) => _buildTag(tag, isDark))
-                .toList(),
+            children: [
+              ...note.tags
+                  .take(3)
+                  .map((tag) => _buildTag(tag, isDark))
+                  ,
+              if (note.tags.length > 3)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                  ),
+                  child: Text(
+                    '+${note.tags.length - 3} more',
+                    style: AppTypography.caption(
+                      AppColors.primary,
+                      null,
+                      FontWeight.w700,
+                    ).copyWith(fontSize: 10.sp),
+                  ),
+                ),
+            ],
           ),
         ],
       ],
-    );
-  }
-
-  Widget _buildMediaStrip(BuildContext context, bool isDark) {
-    return SizedBox(
-      height: 40.h,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const NeverScrollableScrollPhysics(),
-        shrinkWrap: true,
-        itemCount: note.media.length.clamp(0, 5),
-        separatorBuilder: (context, index) => SizedBox(width: 4.w),
-        itemBuilder: (context, index) {
-          final media = note.media[index];
-          return Container(
-            width: 40.w,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(4.r),
-              color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
-              image:
-                  (media.type == MediaType.image ||
-                      (media.type == MediaType.video &&
-                          media.thumbnailPath.isNotEmpty))
-                  ? DecorationImage(
-                      image: FileImage(
-                        File(
-                          media.type == MediaType.image
-                              ? media.filePath
-                              : media.thumbnailPath,
-                        ),
-                      ),
-                      fit: BoxFit.cover,
-                    )
-                  : null,
-            ),
-            child:
-                (media.type != MediaType.image && media.thumbnailPath.isEmpty)
-                ? Center(
-                    child: Icon(
-                      media.type == MediaType.video
-                          ? Icons.play_circle_outline
-                          : Icons.mic_outlined,
-                      size: 16.sp,
-                      color: AppColors.textMuted,
-                    ),
-                  )
-                : (media.type == MediaType.video &&
-                      media.thumbnailPath.isNotEmpty)
-                ? Center(
-                    child: Icon(
-                      Icons.play_circle_filled,
-                      size: 16.sp,
-                      color: Colors.white70,
-                    ),
-                  )
-                : null,
-          );
-        },
-      ),
     );
   }
 
@@ -295,10 +276,28 @@ class NoteCardWidget extends StatelessWidget {
           Wrap(
             spacing: 6.w,
             runSpacing: 4.h,
-            children: note.tags
-                .take(2) // Fewer tags in grid view
-                .map((tag) => _buildTag(tag, isDark, isCompact: true))
-                .toList(),
+            children: [
+              ...note.tags
+                  .take(2)
+                  .map((tag) => _buildTag(tag, isDark, isCompact: true))
+                  ,
+              if (note.tags.length > 2)
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 1.h),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(AppSpacing.radiusFull),
+                  ),
+                  child: Text(
+                    '+${note.tags.length - 2} more',
+                    style: AppTypography.caption(
+                      AppColors.primary,
+                      null,
+                      FontWeight.w700,
+                    ).copyWith(fontSize: 8.sp),
+                  ),
+                ),
+            ],
           ),
           SizedBox(height: 8.h),
         ],
@@ -360,6 +359,108 @@ class NoteCardWidget extends StatelessWidget {
         ).copyWith(fontSize: isCompact ? 8.sp : 10.sp),
       ),
     );
+  }
+
+  Widget _buildMediaCountIndicators(BuildContext context, bool isDark) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (note.imagesCount > 0) ...[
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.image_outlined,
+                  size: 12.sp,
+                  color: AppColors.accentBlue,
+                ),
+                SizedBox(width: 3.w),
+                Text(
+                  '${note.imagesCount}',
+                  style: AppTypography.caption(
+                    AppColors.accentBlue,
+                    null,
+                    FontWeight.w600,
+                  ).copyWith(fontSize: 10.sp),
+                ),
+              ],
+            ),
+            SizedBox(width: 12.w),
+          ],
+          if (note.audioCount > 0) ...[
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.mic_outlined,
+                  size: 12.sp,
+                  color: AppColors.accentPurple,
+                ),
+                SizedBox(width: 3.w),
+                Text(
+                  '${note.audioCount}',
+                  style: AppTypography.caption(
+                    AppColors.accentPurple,
+                    null,
+                    FontWeight.w600,
+                  ).copyWith(fontSize: 10.sp),
+                ),
+              ],
+            ),
+            SizedBox(width: 12.w),
+          ],
+          if (note.videoCount > 0) ...[
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.videocam_outlined,
+                  size: 12.sp,
+                  color: AppColors.accentOrange,
+                ),
+                SizedBox(width: 3.w),
+                Text(
+                  '${note.videoCount}',
+                  style: AppTypography.caption(
+                    AppColors.accentOrange,
+                    null,
+                    FontWeight.w600,
+                  ).copyWith(fontSize: 10.sp),
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Color _getNoteColorBar() {
+    switch (note.color) {
+      case NoteColor.red:
+        return Colors.red;
+      case NoteColor.pink:
+        return Colors.pink;
+      case NoteColor.purple:
+        return Colors.purple;
+      case NoteColor.blue:
+        return Colors.blue;
+      case NoteColor.green:
+        return Colors.green;
+      case NoteColor.yellow:
+        return Colors.amber;
+      case NoteColor.orange:
+        return Colors.orange;
+      case NoteColor.brown:
+        return Colors.brown;
+      case NoteColor.grey:
+        return Colors.grey;
+      default:
+        return Colors.grey.shade400;
+    }
   }
 
   Color _getTagColor(String tag) {

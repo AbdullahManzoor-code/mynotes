@@ -33,12 +33,8 @@ class MediaFiltersInitial extends MediaFiltersState {
 
 class MediaFiltersUpdated extends MediaFiltersState {
   const MediaFiltersUpdated({
-    required FilterType selectedFilter,
-    required double intensity,
-    required bool showPreview,
-  }) : super(
-         selectedFilter: selectedFilter,
-         intensity: intensity,
-         showPreview: showPreview,
-       );
+    required super.selectedFilter,
+    required super.intensity,
+    required super.showPreview,
+  });
 }

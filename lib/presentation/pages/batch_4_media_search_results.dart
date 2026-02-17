@@ -9,6 +9,7 @@ import '../design_system/app_typography.dart';
 import '../design_system/app_spacing.dart';
 import '../../core/services/global_ui_service.dart';
 import '../../core/utils/app_logger.dart';
+import '../widgets/search_results_scaffold.dart';
 
 /// Media Search Results - Batch 4, Screen 4
 /// Refactored to StatelessWidget with BLoC and Design System
@@ -31,148 +32,106 @@ class MediaSearchResultsScreen extends StatelessWidget {
 class _MediaSearchResultsView extends StatelessWidget {
   final String query;
 
-  const _MediaSearchResultsView({super.key, required this.query});
+  const _MediaSearchResultsView({required this.query});
 
   @override
   Widget build(BuildContext context) {
     AppLogger.i('MediaSearchResultsView: Building for query "$query"');
-    return Scaffold(
-      backgroundColor: AppColors.lightBackground,
-      appBar: AppBar(
-        title: Text(
-          'Search Results',
-          style: AppTypography.displayMedium(context, AppColors.darkText),
-        ),
-        centerTitle: true,
-        backgroundColor: AppColors.lightSurface,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.darkText),
-      ),
-      body: BlocBuilder<MediaSearchBloc, MediaSearchState>(
-        builder: (context, state) {
-          if (state is MediaSearchLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryColor),
-            );
-          }
+    return BlocBuilder<MediaSearchBloc, MediaSearchState>(
+      builder: (context, state) {
+        final isLoading = state is MediaSearchLoading;
+        final isError = state is MediaSearchError;
+        final errorMessage = isError ? (state).message : null;
+        final results = state is MediaSearchLoaded ? state.results : const [];
 
-          if (state is MediaSearchError) {
-            AppLogger.e(
-              'MediaSearchResultsView: Error loading results: ${state.message}',
-            );
-            return Center(
-              child: Padding(
-                padding: AppSpacing.paddingAllL,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48.sp,
-                      color: Colors.orangeAccent,
-                    ),
-                    AppSpacing.gapM,
-                    Text(
-                      state.message,
-                      style: AppTypography.bodyMedium(context),
-                    ),
-                  ],
-                ),
+        if (state is MediaSearchLoaded) {
+          AppLogger.i(
+            'MediaSearchResultsView: Loaded ${results.length} results',
+          );
+        }
+
+        return SearchResultsScaffold(
+          title: 'Search Results',
+          isLoading: isLoading,
+          errorMessage: errorMessage,
+          isEmpty: state is MediaSearchLoaded && results.isEmpty,
+          emptyState: _buildEmptyState(context),
+          resultsHeader: _buildResultsHeader(context, results.length),
+          resultsList: _buildResultsList(context, results),
+          backgroundColor: AppColors.lightBackground,
+          appBarColor: AppColors.lightSurface,
+          iconTheme: const IconThemeData(color: AppColors.darkText),
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: AppSpacing.paddingAllXL,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: AppSpacing.paddingAllL,
+              decoration: const BoxDecoration(
+                color: AppColors.primary10,
+                shape: BoxShape.circle,
               ),
-            );
-          }
-
-          if (state is MediaSearchLoaded) {
-            final results = state.results;
-            AppLogger.i(
-              'MediaSearchResultsView: Loaded ${results.length} results',
-            );
-
-            if (results.isEmpty) {
-              return Center(
-                child: Padding(
-                  padding: AppSpacing.paddingAllXL,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: AppSpacing.paddingAllL,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary10,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.search_off_outlined,
-                          size: 64.sp,
-                          color: AppColors.primaryColor,
-                        ),
-                      ),
-                      AppSpacing.gapL,
-                      Text(
-                        'No results found for "$query"',
-                        style: AppTypography.heading1(context),
-                        textAlign: TextAlign.center,
-                      ),
-                      AppSpacing.gapS,
-                      Text(
-                        'Try using different keywords or refine your search filters.',
-                        style: AppTypography.bodyMedium(
-                          context,
-                          AppColors.secondaryText,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }
-
-            return Column(
-              children: [
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: 16.w,
-                    vertical: 12.h,
-                  ),
-                  color: AppColors.lightSurface,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${results.length} result${results.length != 1 ? 's' : ''} found',
-                        style: AppTypography.bodySmall(
-                          context,
-                          AppColors.secondaryText,
-                          FontWeight.w600,
-                        ),
-                      ),
-                      _buildSortMenu(context),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: results.length,
-                    padding: EdgeInsets.symmetric(vertical: 8.h),
-                    itemBuilder: (context, index) {
-                      final result = results[index];
-                      return _buildResultCard(
-                        context,
-                        result.item,
-                        result.score,
-                        index + 1,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            );
-          }
-
-          return const SizedBox.shrink();
-        },
+              child: Icon(
+                Icons.search_off_outlined,
+                size: 64.sp,
+                color: AppColors.primaryColor,
+              ),
+            ),
+            AppSpacing.gapL,
+            Text(
+              'No results found for "$query"',
+              style: AppTypography.heading1(context),
+              textAlign: TextAlign.center,
+            ),
+            AppSpacing.gapS,
+            Text(
+              'Try using different keywords or refine your search filters.',
+              style: AppTypography.bodyMedium(context, AppColors.secondaryText),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
+    );
+  }
+
+  Widget _buildResultsHeader(BuildContext context, int count) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+      color: AppColors.lightSurface,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            '$count result${count != 1 ? 's' : ''} found',
+            style: AppTypography.bodySmall(
+              context,
+              AppColors.secondaryText,
+              FontWeight.w600,
+            ),
+          ),
+          _buildSortMenu(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResultsList(BuildContext context, List<dynamic> results) {
+    return ListView.builder(
+      itemCount: results.length,
+      padding: EdgeInsets.symmetric(vertical: 8.h),
+      itemBuilder: (context, index) {
+        final result = results[index];
+        return _buildResultCard(context, result.item, result.score, index + 1);
+      },
     );
   }
 

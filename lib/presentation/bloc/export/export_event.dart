@@ -33,6 +33,40 @@ class ExportMultipleNotesEvent extends ExportEvent {
   List<Object?> get props => [noteIds, format];
 }
 
+class ExportCustomContentEvent extends ExportEvent {
+  final String title;
+  final String content;
+  final List<String>? tags;
+  final DateTime createdDate;
+  final String format; // 'pdf', 'markdown', 'json'
+  final bool includeTags;
+  final bool includeTimestamps;
+  final bool includeMediaRefs;
+
+  const ExportCustomContentEvent({
+    required this.title,
+    required this.content,
+    required this.createdDate,
+    required this.format,
+    this.tags,
+    this.includeTags = true,
+    this.includeTimestamps = true,
+    this.includeMediaRefs = true,
+  });
+
+  @override
+  List<Object?> get props => [
+    title,
+    content,
+    tags,
+    createdDate,
+    format,
+    includeTags,
+    includeTimestamps,
+    includeMediaRefs,
+  ];
+}
+
 class CalculateExportSizeEvent extends ExportEvent {
   final List<String> noteIds;
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../design_system/design_system.dart';
 import '../../domain/entities/todo_item.dart';
-import '../../core/routes/app_routes.dart';
 import '../../injection_container.dart' show getIt;
 
 /// Todo Card Widget with completion animations (TD-002, TD-003, TD-004)

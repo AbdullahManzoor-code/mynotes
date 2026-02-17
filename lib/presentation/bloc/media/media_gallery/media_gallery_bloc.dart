@@ -4,6 +4,47 @@ import 'package:equatable/equatable.dart';
 import 'package:mynotes/domain/repositories/media_repository.dart';
 import '../../../../domain/entities/media_item.dart';
 
+/* ════════════════════════════════════════════════════════════════════════════
+   PRIMARY MEDIA MANAGEMENT (SESSION 15 CONSOLIDATION M013)
+   
+   This is the CONSOLIDATED primary BLoC for all media gallery operations:
+   
+   ✅ RESPONSIBILITIES:
+      - Load all media items
+      - Filter by type (image, audio, video)
+      - Search media by query
+      - Select/deselect for batch operations
+      - Delete media
+      - Archive media
+   
+   ✅ REPLACES/CONSOLIDATES:
+      - MediaFilterBloc → Use FilterMediaEvent instead
+      - MediaSearchBloc → Use SearchMediaEvent instead
+      - MediaFiltersBloc → Keep separate (visual effects, not gallery)
+      - MediaOrganizationBloc → Keep separate (grouping/organization)
+      - MediaPickerBloc → Keep separate (media selection UI)
+      - MediaViewerBloc → Keep separate (media display)
+   
+   ✅ UNIFIED INTERFACES:
+      Events: LoadAllMediaEvent, FilterMediaEvent, SearchMediaEvent,
+              DeleteMediaEvent, ArchiveMediaEvent, SelectMediaEvent, ClearSelectionEvent
+      States: MediaGalleryLoaded, MediaGalleryLoading, MediaGalleryError, etc.
+   
+   MIGRATION NOTES:
+   If any code still uses MediaFilterBloc or MediaSearchBloc, migrate to:
+   - MediaFilterBloc.FilterMediaEvent → MediaGalleryBloc.FilterMediaEvent
+   - MediaSearchBloc.PerformMediaSearchEvent → MediaGalleryBloc.SearchMediaEvent
+   
+   Related BLoCs (kept separate, not consolidated):
+   - AudioRecorderBloc: Recording management
+   - AudioPlaybackBloc: Playback control
+   - VideoEditorBloc: Video editing (minimal)
+   - MediaFiltersBloc: Visual effects (separate concern)
+   - MediaOrganizationBloc: Media grouping (feature extension)
+   - MediaViewerBloc: Media display
+   - MediaPickerBloc: Media selection UI
+════════════════════════════════════════════════════════════════════════════ */
+
 // Media Gallery BLoC - Events
 abstract class MediaGalleryEvent extends Equatable {
   const MediaGalleryEvent();

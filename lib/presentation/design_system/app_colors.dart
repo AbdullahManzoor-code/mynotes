@@ -425,6 +425,44 @@ class AppColors {
     final luminance = backgroundColor.computeLuminance();
     return luminance > 0.5 ? darkText : lightText;
   }
+
+  // ==================== Dark Mode Note Colors ====================
+
+  /// Get note card background color for dark mode with subtle color tint
+  /// Used to make colored notes visible in dark mode without being too jarring
+  static Color getNoteCardBackgroundDark(NoteColor? noteColor) {
+    switch (noteColor) {
+      case NoteColor.red:
+        return const Color(0xFF2C1515); // Dark red tint
+      case NoteColor.pink:
+        return const Color(0xFF2C1520); // Dark pink tint
+      case NoteColor.purple:
+        return const Color(0xFF1F152C); // Dark purple tint
+      case NoteColor.blue:
+        return const Color(0xFF151F2C); // Dark blue tint
+      case NoteColor.green:
+        return const Color(0xFF152C15); // Dark green tint
+      case NoteColor.yellow:
+        return const Color(0xFF2C2C15); // Dark yellow tint
+      case NoteColor.orange:
+        return const Color(0xFF2C1F15); // Dark orange tint
+      case NoteColor.brown:
+        return const Color(0xFF23180F); // Dark brown tint
+      case NoteColor.grey:
+        return const Color(0xFF1F1F1F); // Dark grey tint
+      default:
+        return darkCardBackground;
+    }
+  }
+
+  /// Get link preview color for dark mode
+  /// Uses lighter blue for better visibility
+  static const Color linkColorDark = Color(
+    0xFF64B5F6,
+  ); // Light blue for dark mode
+  static const Color linkColorLight = Color(
+    0xFF1976D2,
+  ); // Standard blue for light mode
 }
 
 /// Extension on Color for additional utilities

@@ -239,7 +239,7 @@ class SmartNotificationsService {
     if (notification.priority == NotificationPriority.high) {
       await AwesomeNotifications().createNotification(
         content: NotificationContent(
-          id: notification.id.hashCode,
+          id: notification.id.hashCode.abs(),
           channelKey: 'smart_reminders',
           title: notification.title,
           body: notification.body,

@@ -94,6 +94,16 @@ class DeleteMultipleNotesEvent extends NoteEvent {
   List<Object?> get props => [noteIds];
 }
 
+/// Undo the deletion of a note (within 5-second window)
+class UndoDeleteNoteEvent extends NoteEvent {
+  final String noteId;
+
+  const UndoDeleteNoteEvent(this.noteId);
+
+  @override
+  List<Object?> get props => [noteId];
+}
+
 /// Toggle pin status using Complete Param pattern
 /// 📦 Use NoteParams instead of separate event
 class TogglePinNoteEvent extends NoteEvent {

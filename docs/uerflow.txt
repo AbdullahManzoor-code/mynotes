@@ -1,0 +1,1671 @@
+
+
+# MyNotes App — Every User Screen Flow (Simple & Non-Technical)
+
+---
+
+## FLOW 1: Opening the App for the First Time
+
+**Purpose:** New user sees welcome and lands on home screen
+
+```
+Install App
+    ↓
+Tap App Icon
+    ↓
+┌─────────────────────┐
+│   Splash Screen     │ ← App logo, loading
+│   (2-3 seconds)     │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  Welcome / Tutorial │ ← Swipe through 3-4 pages
+│  "Here's what you   │    explaining the app
+│   can do..."        │
+└────────┬────────────┘
+         ↓
+   Tap "Get Started"
+         ↓
+┌─────────────────────┐
+│    Home Screen      │ ← Empty state
+│  "No notes yet.     │    Ready to create first note
+│   Tap + to start"   │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 2: Opening the App Daily (Returning User)
+
+**Purpose:** User opens app they use every day
+
+```
+Tap App Icon
+    ↓
+┌─────────────────────┐
+│   Splash Screen     │ ← Quick load (1 second)
+│                     │
+└────────┬────────────┘
+         ↓
+    ┌────┴────┐
+    │Biometric│ ← Only if fingerprint/face lock enabled
+    │ Lock?   │
+    └────┬────┘
+     YES ↓         NO ↓
+┌──────────────┐       │
+│ Fingerprint  │       │
+│ or Face Scan │       │
+└──────┬───────┘       │
+       ↓               ↓
+┌─────────────────────┐
+│    Home Screen      │ ← Shows all notes/todos
+│  with all your      │    exactly where you left off
+│  stuff              │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 3: Creating a New Note
+
+**Purpose:** User wants to write something down quickly
+
+```
+Home Screen
+    ↓
+Tap "+" Button (bottom right)
+    ↓
+┌─────────────────────┐
+│  Quick Add Sheet    │ ← Choose what to create
+│                     │
+│  📝 New Note        │
+│  ✅ New Todo        │
+│  ⏰ New Reminder    │
+└────────┬────────────┘
+         ↓
+   Tap "New Note"
+         ↓
+┌─────────────────────┐
+│   Note Editor       │
+│                     │
+│ Title: [________]   │ ← Type title
+│                     │
+│ Content:            │ ← Type content
+│ [________________]  │
+│ [________________]  │
+│ [________________]  │
+│                     │
+│ 🎨 📷 🎤 📎 ...    │ ← Toolbar at bottom
+└────────┬────────────┘
+         ↓
+   Tap Back or Save
+         ↓
+┌─────────────────────┐
+│    Home Screen      │ ← New note appears at top
+│                     │    of your notes list
+│ ┌─────────────────┐ │
+│ │ Shopping List    │ │ ← Your new note!
+│ │ Milk, Eggs...   │ │
+│ └─────────────────┘ │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 4: Editing an Existing Note
+
+**Purpose:** User wants to change or add to an old note
+
+```
+Home Screen
+    ↓
+Tap on a Note Card
+    ↓
+┌─────────────────────┐
+│   Note Editor       │ ← All previous content loaded
+│                     │
+│ Title: Shopping List│
+│                     │
+│ Content:            │
+│ Milk, Eggs, Bread   │ ← Edit anywhere
+│ [add Cheese here]   │
+│                     │
+└────────┬────────────┘
+         ↓
+   Tap Back or Save
+         ↓
+┌─────────────────────┐
+│    Home Screen      │ ← Note updated with changes
+│                     │    "Last modified" date updated
+└─────────────────────┘
+```
+
+---
+
+## FLOW 5: Deleting a Note
+
+**Purpose:** User wants to remove a note they don't need
+
+```
+Home Screen
+    ↓
+Long-press on a Note Card
+    ↓
+┌─────────────────────┐
+│  Selection Mode     │ ← Note highlighted
+│                     │
+│  🗑️ Delete          │ ← Tap delete icon
+│                     │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  "Are you sure?"    │ ← Confirmation
+│                     │
+│  [Cancel]  [Delete] │
+└────────┬────────────┘
+         ↓
+   Tap "Delete"
+         ↓
+┌─────────────────────┐
+│    Home Screen      │ ← Note gone
+│                     │
+│ ┌─────────────────┐ │
+│ │ Undo  [UNDO]    │ │ ← Snackbar at bottom
+│ └─────────────────┘ │    (tap to bring it back)
+└─────────────────────┘
+```
+
+---
+
+## FLOW 6: Deleting Multiple Notes
+
+**Purpose:** User wants to clean up many old notes at once
+
+```
+Home Screen
+    ↓
+Long-press on first Note
+    ↓
+┌─────────────────────┐
+│  Selection Mode     │
+│                     │
+│  ☑️ Note 1          │ ← Tap to select more
+│  ☑️ Note 2          │
+│  ☑️ Note 3          │
+│  ☐ Note 4          │
+│                     │
+│  3 selected    🗑️   │ ← Tap delete
+└────────┬────────────┘
+         ↓
+   Confirm Delete All
+         ↓
+   Notes removed from list
+```
+
+---
+
+## FLOW 7: Pinning a Note to Top
+
+**Purpose:** User wants an important note always visible at top
+
+```
+Home Screen
+    ↓
+Tap pin icon on Note Card
+(or open note → tap pin icon)
+    ↓
+┌─────────────────────┐
+│    Home Screen      │
+│                     │
+│ 📌 PINNED           │
+│ ┌─────────────────┐ │
+│ │ WiFi Password   │ │ ← Always at top now
+│ └─────────────────┘ │
+│                     │
+│ ALL NOTES           │
+│ ┌─────────────────┐ │
+│ │ Shopping List    │ │
+│ └─────────────────┘ │
+│ ┌─────────────────┐ │
+│ │ Meeting Notes   │ │
+│ └─────────────────┘ │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 8: Archiving Old Notes
+
+**Purpose:** User wants to hide old notes without deleting them
+
+```
+Home Screen
+    ↓
+Swipe note or tap archive icon
+    ↓
+┌─────────────────────┐
+│    Home Screen      │ ← Note disappears from here
+└─────────────────────┘
+
+Later...
+
+┌─────────────────────┐
+│  Menu / Drawer      │
+│                     │
+│  📦 Archive         │ ← Tap Archive
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│   Archive Screen    │
+│                     │
+│ ┌─────────────────┐ │
+│ │ Old Meeting Note│ │ ← Archived note is here
+│ │ [Restore]       │ │ ← Tap to bring back
+│ └─────────────────┘ │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 9: Adding Tags to Notes
+
+**Purpose:** User wants to label notes for easy filtering
+
+```
+Note Editor (while editing a note)
+    ↓
+Tap "Add Tag" button
+    ↓
+┌─────────────────────┐
+│  Add Tag            │
+│                     │
+│  Type: [work___]    │ ← Type tag name
+│                     │
+│  Existing Tags:     │
+│  [personal] [urgent]│ ← Or pick existing tag
+└────────┬────────────┘
+         ↓
+   Tag added to note
+         ↓
+┌─────────────────────┐
+│   Note Editor       │
+│                     │
+│ Title: Project Plan │
+│ Tags: [work] [urgent│ ← Tags shown on note
+│                     │
+└─────────────────────┘
+
+To FILTER by tag:
+
+Home Screen
+    ↓
+Tap on a tag
+    ↓
+┌─────────────────────┐
+│  Notes tagged "work"│ ← Only matching notes shown
+│                     │
+│ ┌─────────────────┐ │
+│ │ Project Plan     │ │
+│ │ Budget Report    │ │
+│ └─────────────────┘ │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 10: Changing Note Color
+
+**Purpose:** User wants to color-code notes visually
+
+```
+Note Editor
+    ↓
+Tap 🎨 Color Palette icon
+    ↓
+┌─────────────────────┐
+│  Pick a Color       │
+│                     │
+│  🔴 🟡 🟢 🔵 🟣 ⚪  │ ← Tap a color
+└────────┬────────────┘
+         ↓
+   Note card now shows that color
+         ↓
+┌─────────────────────┐
+│    Home Screen      │
+│                     │
+│ ┌─────────────────┐ │
+│ │ 🔵 Work Notes   │ │ ← Blue = work
+│ └─────────────────┘ │
+│ ┌─────────────────┐ │
+│ │ 🟢 Personal     │ │ ← Green = personal
+│ └─────────────────┘ │
+│ ┌─────────────────┐ │
+│ │ 🔴 Urgent       │ │ ← Red = urgent
+│ └─────────────────┘ │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 11: Searching for Notes
+
+**Purpose:** User has many notes and wants to find one quickly
+
+```
+Home Screen
+    ↓
+Tap 🔍 Search icon
+    ↓
+┌─────────────────────┐
+│  Search             │
+│                     │
+│  [birthday____]     │ ← Type search word
+│                     │
+│  Results:           │
+│  📝 Mom's Birthday  │ ← Matching notes
+│  📝 Birthday Ideas  │
+│  ✅ Buy Birthday Gift│ ← Matching todos too
+│  ⏰ Birthday Party  │ ← Matching reminders
+│     at 3 PM         │
+└─────────────────────┘
+
+   Tap any result → opens that item
+```
+
+---
+
+## FLOW 12: Switching List View ↔ Grid View
+
+**Purpose:** User prefers to see notes differently
+
+```
+Home Screen (List View)
+    ↓
+Tap view toggle icon (☰ ↔ ⊞)
+    ↓
+┌─────────────────────┐
+│  Home Screen (Grid) │
+│                     │
+│ ┌────────┐┌────────┐│
+│ │Shopping││Meeting ││ ← Same notes
+│ │List    ││Notes   ││    grid layout
+│ └────────┘└────────┘│
+│ ┌────────┐┌────────┐│
+│ │Ideas   ││Journal ││
+│ └────────┘└────────┘│
+└─────────────────────┘
+
+   Tap again → switches back to list
+```
+
+---
+
+## FLOW 13: Sorting Notes
+
+**Purpose:** User wants notes in a specific order
+
+```
+Home Screen
+    ↓
+Tap Sort icon
+    ↓
+┌─────────────────────┐
+│  Sort By            │
+│                     │
+│  ○ Date Created     │
+│  ● Date Modified    │ ← Select sort option
+│  ○ Title (A-Z)      │
+│  ○ Color            │
+└────────┬────────────┘
+         ↓
+   Notes rearrange in chosen order
+   (Pinned notes always stay at top)
+```
+
+---
+
+## FLOW 14: Creating a Todo
+
+**Purpose:** User wants to make a task checklist
+
+```
+Home Screen
+    ↓
+Tap Bottom Tab "Todos" (or "+" → New Todo)
+    ↓
+┌─────────────────────┐
+│   Todos Screen      │
+│                     │
+│   Tap "+" to add    │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│   Add Todo          │
+│                     │
+│ Title: [Buy present]│ ← Type task name
+│ Due: [Saturday___]  │ ← Pick due date
+│ Category: [Personal]│ ← Pick category
+│ Important: [⭐]     │ ← Mark important
+│                     │
+│ Subtasks:           │
+│ + Add subtask       │ ← Optional subtasks
+│                     │
+│ [Save]              │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│   Todos Screen      │
+│                     │
+│ ○ Buy present       │ ← New todo in list
+│   Due: Saturday ⭐  │
+│                     │
+│ ○ Submit report     │
+│   Due: Friday       │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 15: Completing a Todo
+
+**Purpose:** User finished a task and wants to check it off
+
+```
+Todos Screen
+    ↓
+Tap the circle ○ next to a todo
+    ↓
+┌─────────────────────┐
+│   Todos Screen      │
+│                     │
+│ ACTIVE              │
+│ ○ Submit report     │
+│                     │
+│ COMPLETED ──────    │
+│ ✅ Buy present      │ ← Checked off!
+│   ̶B̶u̶y̶ ̶p̶r̶e̶s̶e̶n̶t̶      │    Strikethrough
+└─────────────────────┘
+
+   Any reminder for this todo → auto-cancelled
+   
+   Tap ✅ again → un-completes it
+```
+
+---
+
+## FLOW 16: Todo with Subtasks
+
+**Purpose:** User has a big task with smaller steps
+
+```
+Todo Detail Screen
+    ↓
+┌─────────────────────┐
+│ Plan Birthday Party │
+│                     │
+│ Subtasks:           │
+│ ✅ Book venue       │ ← Done
+│ ✅ Order cake       │ ← Done
+│ ○  Send invitations │ ← Not done
+│ ○  Buy decorations  │ ← Not done
+│                     │
+│ Progress: 2/4 (50%) │ ← Progress bar
+└─────────────────────┘
+```
+
+---
+
+## FLOW 17: Filtering Todos by Category
+
+**Purpose:** User wants to see only work tasks or only personal
+
+```
+Todos Screen
+    ↓
+Tap category tabs at top
+    ↓
+┌─────────────────────┐
+│  [All][Work][Personal│[Shopping]
+│                     │
+│ Showing: Work       │
+│                     │
+│ ○ Submit report     │ ← Only work todos
+│ ○ Update slides     │
+│ ○ Email client      │
+└─────────────────────┘
+
+   Tap "All" → shows everything again
+```
+
+---
+
+## FLOW 18: Deleting a Todo (with Undo)
+
+**Purpose:** User removes a task they don't need
+
+```
+Todos Screen
+    ↓
+Swipe todo to the left
+    ↓
+┌─────────────────────┐
+│   Todos Screen      │ ← Todo disappears
+│                     │
+│ ┌─────────────────┐ │
+│ │ Deleted. [UNDO] │ │ ← Quick! Tap to undo
+│ └─────────────────┘ │
+└─────────────────────┘
+
+   Tap UNDO → todo comes back
+   Wait 5 seconds → todo gone permanently
+```
+
+---
+
+## FLOW 19: Setting a Reminder
+
+**Purpose:** User wants to be notified at a specific time
+
+```
+Home Screen
+    ↓
+Tap "+" → New Reminder
+(or from Reminders tab)
+    ↓
+┌─────────────────────┐
+│  Create Reminder    │
+│                     │
+│ Title: [Take medicine│
+│ Date: [Today_____]  │ ← Pick date
+│ Time: [8:00 PM___]  │ ← Pick time
+│                     │
+│ [Save]              │
+└────────┬────────────┘
+         ↓
+   Reminder saved and scheduled
+         ↓
+   At 8:00 PM...
+         ↓
+┌─────────────────────┐
+│  📱 NOTIFICATION    │
+│                     │
+│  🔔 Take medicine   │ ← Phone buzzes
+│  MyNotes            │
+│                     │
+│  [Snooze] [Dismiss] │
+└─────────────────────┘
+
+   Tap notification → opens the reminder
+   Tap Snooze → reminds again in 15 min
+   Tap Dismiss → notification goes away
+```
+
+---
+
+## FLOW 20: Adding Reminder to a Note
+
+**Purpose:** User wants to be reminded about a specific note
+
+```
+Note Editor (editing a note)
+    ↓
+Tap ⏰ Alarm icon in toolbar
+    ↓
+┌─────────────────────┐
+│  Set Reminder       │
+│                     │
+│ Date: [Tomorrow___] │
+│ Time: [9:00 AM___]  │
+│                     │
+│ [Set Reminder]      │
+└────────┬────────────┘
+         ↓
+   Note now shows ⏰ icon
+         ↓
+   At 9:00 AM tomorrow...
+         ↓
+┌─────────────────────┐
+│  📱 NOTIFICATION    │
+│                     │
+│  🔔 Meeting Notes   │ ← Notification shows note title
+│                     │
+└────────┬────────────┘
+         ↓
+   Tap notification → opens THAT note
+```
+
+---
+
+## FLOW 21: Adding Reminder to a Todo
+
+**Purpose:** User wants to be reminded about a task before deadline
+
+```
+Todo Detail Screen
+    ↓
+Tap ⏰ Add Reminder
+    ↓
+┌─────────────────────┐
+│  Set Reminder       │
+│                     │
+│ Date: [Thursday___] │ ← Day before deadline
+│ Time: [6:00 PM___]  │
+│                     │
+│ [Set Reminder]      │
+└────────┬────────────┘
+         ↓
+   At 6:00 PM Thursday...
+         ↓
+   📱 "Submit report" notification
+         ↓
+   Tap notification → opens THAT todo
+   
+   If user completes the todo before Thursday:
+   → Reminder auto-cancels (no notification)
+```
+
+---
+
+## FLOW 22: Snoozing a Reminder
+
+**Purpose:** User is busy when reminder fires, wants it later
+
+```
+📱 Notification appears: "Take medicine"
+    ↓
+Tap [Snooze]
+    ↓
+   Notification disappears
+    ↓
+   15 minutes later...
+    ↓
+📱 Same notification appears again: "Take medicine"
+    ↓
+   User can snooze again or dismiss
+```
+
+---
+
+## FLOW 23: Toggling Reminder On/Off
+
+**Purpose:** User temporarily disables a reminder
+
+```
+Reminders Screen
+    ↓
+┌─────────────────────┐
+│   My Reminders      │
+│                     │
+│ 🔔 Take medicine    │ ← Toggle switch
+│    8:00 PM  [ON/OFF]│
+│                     │
+│ 🔕 Call dentist     │ ← Grayed out = OFF
+│    Tomorrow  [OFF]  │
+└─────────────────────┘
+
+   Toggle OFF → notification cancelled
+   Toggle ON → notification rescheduled
+```
+
+---
+
+## FLOW 24: Managing Reminders List
+
+**Purpose:** User views, searches, and cleans up reminders
+
+```
+Bottom Tab: Reminders
+    ↓
+┌─────────────────────┐
+│   Reminders         │
+│                     │
+│ 🔍 [Search...]      │ ← Search reminders
+│                     │
+│ UPCOMING            │
+│ ⏰ Meeting - 3 PM   │
+│ ⏰ Medicine - 8 PM  │
+│                     │
+│ COMPLETED           │
+│ ✅ Call mom          │
+│ ✅ Pay rent          │
+│                     │
+│ [Clear Completed]   │ ← Remove old ones
+└─────────────────────┘
+```
+
+---
+
+## FLOW 25: Starting a Focus Session
+
+**Purpose:** User wants to concentrate for 25 minutes
+
+```
+Bottom Tab: Focus
+    ↓
+┌─────────────────────┐
+│   Focus Timer       │
+│                     │
+│      25:00          │ ← Timer display
+│                     │
+│   [Start Focus]     │ ← Big start button
+└────────┬────────────┘
+         ↓
+   Tap "Start Focus"
+         ↓
+┌─────────────────────┐
+│   Focus Active      │
+│                     │
+│      23:47          │ ← Counting down
+│                     │
+│   ●●●●●○○○○○       │ ← Progress bar
+│                     │
+│  [Pause]  [Stop]    │
+│                     │
+│  📵 Do Not Disturb  │ ← Phone on DND
+│     is ON           │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 26: Focus Session Completes
+
+**Purpose:** Timer reaches zero
+
+```
+Timer hits 0:00
+    ↓
+🔔 Sound / Vibration
+    ↓
+┌─────────────────────┐
+│  Session Complete!  │
+│                     │
+│  🎉 Great job!      │
+│  25 minutes focused │
+│                     │
+│  Rate your focus:   │
+│  ⭐⭐⭐⭐☆            │ ← Tap 1-5 stars
+│                     │
+│ [Take Break] [Skip] │
+└────────┬────────────┘
+         ↓
+   Tap "Take Break"
+         ↓
+┌─────────────────────┐
+│   Break Time        │
+│                     │
+│      5:00           │ ← 5-minute break
+│                     │
+│   Relax...          │
+│                     │
+│   [Skip Break]      │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 27: Pausing / Stopping Focus
+
+**Purpose:** User needs to interrupt focus session
+
+```
+During focus session...
+    ↓
+Tap [Pause]
+    ↓
+┌─────────────────────┐
+│   Focus Paused      │
+│                     │
+│      18:32          │ ← Timer frozen
+│                     │
+│  [Resume]  [Stop]   │
+└─────────────────────┘
+
+   Tap [Resume] → continues from 18:32
+   Tap [Stop] → ends session early
+```
+
+---
+
+## FLOW 28: Viewing Focus History
+
+**Purpose:** User wants to see how much they've focused
+
+```
+Focus Screen
+    ↓
+Tap "History" or "Stats"
+    ↓
+┌─────────────────────┐
+│  Focus Statistics   │
+│                     │
+│  This Week: 5 hrs   │
+│  Today: 2 sessions  │
+│  Streak: 7 days 🔥  │
+│                     │
+│  📊 Daily Chart     │
+│  Mon ████           │
+│  Tue ██████         │
+│  Wed ████████       │
+│  Thu ██████         │
+│  Fri ████           │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 29: Daily Reflection
+
+**Purpose:** User reflects on their day before bed
+
+```
+Bottom Tab: Reflection
+(or notification at 9 PM)
+    ↓
+┌─────────────────────┐
+│  Daily Reflection   │
+│                     │
+│  Today's Question:  │
+│  "What are you      │
+│   grateful for      │
+│   today?"           │
+│                     │
+│  Your Answer:       │
+│  [________________] │ ← Write answer
+│  [________________] │
+│                     │
+│  [Submit]           │
+└────────┬────────────┘
+         ↓
+   Tap Submit
+         ↓
+┌─────────────────────┐
+│  ✅ Answer Saved    │
+│                     │
+│  Your mood today?   │
+│                     │
+│  😊 😐 😔 😰 😡    │ ← Pick mood
+└────────┬────────────┘
+         ↓
+   Mood logged for today
+```
+
+---
+
+## FLOW 30: Viewing Reflection History
+
+**Purpose:** User looks back at past reflections and mood
+
+```
+Reflection Screen
+    ↓
+Tap "History"
+    ↓
+┌─────────────────────┐
+│  My Reflections     │
+│                     │
+│ Dec 15 - 😊         │
+│ "Grateful for family│
+│  dinner together"   │
+│                     │
+│ Dec 14 - 😐         │
+│ "Busy day at work,  │
+│  but got things done│
+│                     │
+│ Dec 13 - 😊         │
+│ "Finished my book!" │
+│                     │
+│ 📊 Mood Trend       │
+│ 😊😐😊😊😔😊😊       │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 31: Taking a Photo for a Note
+
+**Purpose:** User wants to attach a picture to a note
+
+```
+Note Editor
+    ↓
+Tap 📷 Camera icon in toolbar
+    ↓
+┌─────────────────────┐
+│  Choose             │
+│                     │
+│  📷 Take Photo      │
+│  🖼️ From Gallery    │
+└────────┬────────────┘
+         ↓
+   "Allow camera access?" → Allow
+         ↓
+┌─────────────────────┐
+│   Camera            │
+│                     │
+│   [viewfinder]      │
+│                     │
+│      📸             │ ← Take photo
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│   Note Editor       │
+│                     │
+│ Title: Meeting Notes│
+│                     │
+│ ┌─────────────────┐ │
+│ │  📸 whiteboard  │ │ ← Photo attached!
+│ │  photo          │ │
+│ └─────────────────┘ │
+│                     │
+│ Content: ...        │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 32: Recording Voice Memo
+
+**Purpose:** User wants to record audio and attach to note
+
+```
+Note Editor
+    ↓
+Tap 🎤 Microphone icon in toolbar
+    ↓
+   "Allow microphone?" → Allow
+    ↓
+┌─────────────────────┐
+│   Recording...      │
+│                     │
+│   ⏺ 0:00:15        │ ← Timer counting up
+│   ∿∿∿∿∿∿∿∿∿         │ ← Waveform visual
+│                     │
+│ [Pause] [Stop]      │
+└────────┬────────────┘
+         ↓
+   Tap [Stop]
+         ↓
+┌─────────────────────┐
+│   Recording Saved   │
+│                     │
+│   🎵 Voice memo     │
+│   Duration: 0:32    │
+│                     │
+│   [▶ Play] [🗑 Del] │ ← Listen back or delete
+└────────┬────────────┘
+         ↓
+   Audio attached to note
+```
+
+---
+
+## FLOW 33: Using Voice to Type
+
+**Purpose:** User speaks instead of typing
+
+```
+Note Editor
+    ↓
+Tap 🗣️ Voice Input button
+    ↓
+   "Allow microphone?" → Allow
+    ↓
+┌─────────────────────┐
+│   Listening...      │
+│                     │
+│ "I need to buy milk │ ← Words appear as
+│  and eggs and also  │   user speaks
+│  pick up the..."    │
+│                     │
+│   🔴 Listening      │
+│   [Stop]            │
+└────────┬────────────┘
+         ↓
+   Tap [Stop]
+         ↓
+   Spoken words are now text in the note
+```
+
+---
+
+## FLOW 34: Scanning a Document
+
+**Purpose:** User photographs a receipt/document and extracts text
+
+```
+Note Editor (or dedicated scan button)
+    ↓
+Tap 📄 Scan Document
+    ↓
+┌─────────────────────┐
+│   Camera (Scan Mode)│
+│                     │
+│   Point at document │
+│   ┌───────────────┐ │
+│   │ RECEIPT       │ │ ← Document detected
+│   │ Item 1: $5    │ │
+│   │ Item 2: $10   │ │
+│   └───────────────┘ │
+│                     │
+│      📸 Capture     │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  Processing...      │ ← OCR extracting text
+│  ⏳                  │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  Extracted Text:    │
+│                     │
+│  "RECEIPT           │
+│   Item 1: $5        │ ← Text from image
+│   Item 2: $10       │
+│   Total: $15"       │
+│                     │
+│ [Save as Note]      │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 35: Viewing Media Gallery
+
+**Purpose:** User wants to see all photos/audio across all notes
+
+```
+Menu / Drawer
+    ↓
+Tap "Media Gallery"
+    ↓
+┌─────────────────────┐
+│  Media Gallery      │
+│                     │
+│ [All][Photos][Audio]│[Video]
+│                     │
+│ ┌────┐┌────┐┌────┐ │
+│ │ 📷 ││ 📷 ││ 📷 │ │ ← All media
+│ └────┘└────┘└────┘ │
+│ ┌────┐┌────┐┌────┐ │
+│ │ 🎵 ││ 📷 ││ 🎥 │ │
+│ └────┘└────┘└────┘ │
+└─────────────────────┘
+
+   Tap any item → opens viewer
+   Long-press → select and delete
+```
+
+---
+
+## FLOW 36: Exporting Note as PDF
+
+**Purpose:** User wants to share a note as a professional document
+
+```
+Note Editor (or note list long-press)
+    ↓
+Tap Share / Export icon
+    ↓
+┌─────────────────────┐
+│  Export As           │
+│                     │
+│  📄 PDF             │
+│  📊 CSV             │
+│  📝 Text File       │
+│  🌐 HTML            │
+│  📋 JSON            │
+└────────┬────────────┘
+         ↓
+   Tap "PDF"
+         ↓
+┌─────────────────────┐
+│  Generating PDF...  │
+│  ⏳                  │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  Share              │
+│                     │
+│  📧 Email           │
+│  💬 WhatsApp        │
+│  📁 Save to Files   │
+│  ...                │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 37: Creating Folders
+
+**Purpose:** User organizes notes into folders
+
+```
+Home Screen
+    ↓
+Tap Folder icon / Manage Folders
+    ↓
+┌─────────────────────┐
+│  My Folders         │
+│                     │
+│  📁 Work (5 notes)  │
+│  📁 Personal (3)    │
+│  📁 Recipes (8)     │
+│                     │
+│  [+ New Folder]     │
+└────────┬────────────┘
+         ↓
+   Tap "+ New Folder"
+         ↓
+┌─────────────────────┐
+│  Folder Name:       │
+│  [Travel_______]    │
+│                     │
+│  [Create]           │
+└────────┬────────────┘
+         ↓
+   New folder created
+         ↓
+   Long-press notes → "Move to Folder"
+   → Select folder → Notes moved
+```
+
+---
+
+## FLOW 38: Converting Note to Todo
+
+**Purpose:** User realizes their note should be a task
+
+```
+Note Editor
+    ↓
+Tap ⋮ Menu → "Convert to Todo"
+    ↓
+┌─────────────────────┐
+│  Convert to Todo?   │
+│                     │
+│  Note: "Buy groceries│
+│  will become a todo │
+│  item.              │
+│                     │
+│  Original note will │
+│  be kept.           │
+│                     │
+│ [Cancel] [Convert]  │
+└────────┬────────────┘
+         ↓
+   Todo created from note content
+   Note preserved
+   Both linked together
+```
+
+---
+
+## FLOW 39: Setting Up Fingerprint Lock
+
+**Purpose:** User wants to protect their notes from others
+
+```
+Settings Screen
+    ↓
+┌─────────────────────┐
+│  Security           │
+│                     │
+│  Fingerprint Lock   │
+│  [OFF → ON]         │ ← Toggle on
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  Verify Identity    │
+│                     │
+│  Touch fingerprint  │
+│  sensor to confirm  │
+│                     │
+│      👆             │
+└────────┬────────────┘
+         ↓
+   Fingerprint confirmed
+         ↓
+   From now on, every app open asks for fingerprint
+
+   If fingerprint fails:
+   → Enter PIN as backup
+```
+
+---
+
+## FLOW 40: Switching to Dark Mode
+
+**Purpose:** User prefers dark theme
+
+```
+Settings Screen
+    ↓
+┌─────────────────────┐
+│  Appearance         │
+│                     │
+│  Theme: [Light → Dark│ ← Toggle
+│                     │
+│  Accent Color:      │
+│  🔵🟣🟢🟠🔴          │ ← Pick accent color
+└────────┬────────────┘
+         ↓
+   Entire app switches to dark theme instantly
+   Every screen is dark
+   Note colors still visible
+   Preference saved for next time
+```
+
+---
+
+## FLOW 41: Changing App Language
+
+**Purpose:** User wants app in their language
+
+```
+Settings Screen
+    ↓
+┌─────────────────────┐
+│  Language           │
+│                     │
+│  ○ English          │
+│  ● العربية          │ ← Select language
+│  ○ Español          │
+│  ○ Français         │
+└────────┬────────────┘
+         ↓
+   App text changes to selected language
+   Layout flips to RTL for Arabic
+   User's notes stay in whatever language they wrote
+```
+
+---
+
+## FLOW 42: Creating a Backup
+
+**Purpose:** User wants to save all data before switching phones
+
+```
+Settings Screen
+    ↓
+Tap "Backup & Restore"
+    ↓
+┌─────────────────────┐
+│  Backup & Restore   │
+│                     │
+│  [Create Backup]    │ ← Tap
+│  [Restore Backup]   │
+│                     │
+│  Last backup: Never │
+└────────┬────────────┘
+         ↓
+   Tap "Create Backup"
+         ↓
+┌─────────────────────┐
+│  Creating Backup... │
+│                     │
+│  ████████░░ 80%     │ ← Progress bar
+│                     │
+│  Notes: ✅          │
+│  Todos: ✅          │
+│  Reminders: ✅      │
+│  Media: ⏳          │
+│  Settings: ⏳       │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  Backup Complete!   │
+│                     │
+│  📁 MyNotes_backup  │
+│  Size: 45 MB        │
+│  Saved to: Downloads│
+│                     │
+│  [Share] [Done]     │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 43: Restoring from Backup
+
+**Purpose:** User sets up new phone and wants all data back
+
+```
+Settings → Backup & Restore
+    ↓
+Tap "Restore Backup"
+    ↓
+┌─────────────────────┐
+│  ⚠️ Warning          │
+│                     │
+│  Restoring will     │
+│  REPLACE all current│
+│  data. This cannot  │
+│  be undone.         │
+│                     │
+│ [Cancel] [Restore]  │
+└────────┬────────────┘
+         ↓
+   Pick backup file
+         ↓
+┌─────────────────────┐
+│  Restoring...       │
+│                     │
+│  ████████░░ 80%     │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  Restore Complete!  │
+│                     │
+│  All your notes,    │
+│  todos, reminders   │
+│  and settings are   │
+│  back.              │
+│                     │
+│  [OK]               │
+└────────┬────────────┘
+         ↓
+   App refreshes with all restored data
+   Reminders rescheduled
+```
+
+---
+
+## FLOW 44: Viewing Dashboard / Analytics
+
+**Purpose:** User wants an overview of their productivity
+
+```
+Home Screen (or Dashboard tab)
+    ↓
+┌─────────────────────┐
+│  Dashboard          │
+│                     │
+│ 📝 Notes: 47        │
+│ ✅ Todos: 12 active │
+│ ⏰ Reminders: 5     │
+│ 🔥 Focus streak: 7d │
+│                     │
+│ Today:              │
+│ ○ Submit report     │
+│ ○ Call dentist      │
+│ ⏰ Meeting at 3 PM  │
+│                     │
+│ 📊 Weekly Activity  │
+│ Mon ████            │
+│ Tue ██████          │
+│ Wed ████████        │
+│ Thu ██████          │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 45: Location-Based Reminder
+
+**Purpose:** User wants reminder when they arrive somewhere
+
+```
+Create Reminder
+    ↓
+Tap "Location Reminder"
+    ↓
+┌─────────────────────┐
+│  Pick Location      │
+│                     │
+│  🔍 [Search place]  │
+│                     │
+│  🗺️ ┌─────────────┐│
+│     │    MAP       ││ ← Google Maps
+│     │              ││
+│     │   📍         ││ ← Tap to place pin
+│     └─────────────┘│
+│                     │
+│  [Set Reminder Here]│
+└────────┬────────────┘
+         ↓
+   "Remind me: Buy groceries"
+   "When I arrive at: Supermarket"
+         ↓
+   Later, when user is near supermarket:
+         ↓
+   📱 "Buy groceries" notification
+```
+
+---
+
+## FLOW 46: Smart Collections
+
+**Purpose:** User creates auto-grouping based on rules
+
+```
+Menu → Smart Collections
+    ↓
+Tap "+ New Collection"
+    ↓
+┌─────────────────────┐
+│  Create Collection  │
+│                     │
+│ Name: [Work This Week│
+│                     │
+│ Rules:              │
+│ Tag = "work"        │
+│ AND                 │
+│ Created = Last 7 days│
+│                     │
+│ [+ Add Rule]        │
+│                     │
+│ [Create]            │
+└────────┬────────────┘
+         ↓
+┌─────────────────────┐
+│  Work This Week     │
+│                     │
+│ 📝 Monday standup   │ ← Auto-populated
+│ 📝 Client proposal  │   based on rules
+│ 📝 Budget review    │
+│                     │
+│ New notes tagged    │
+│ "work" auto-appear  │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 47: Accessibility Settings
+
+**Purpose:** User needs larger text or reduced animations
+
+```
+Settings → Accessibility
+    ↓
+┌─────────────────────┐
+│  Accessibility      │
+│                     │
+│  Large Text    [ON] │ ← Text gets bigger
+│  High Contrast [ON] │ ← Colors more visible
+│  Reduce Motion [ON] │ ← Less animation
+│  Screen Reader [ON] │ ← Works with TalkBack
+│  Keyboard Nav  [ON] │ ← Navigate with keyboard
+└─────────────────────┘
+```
+
+---
+
+## FLOW 48: Notification Tap Actions
+
+**Purpose:** User taps different types of notifications
+
+```
+SCENARIO A: Note reminder notification
+📱 Tap → Opens that specific note
+
+SCENARIO B: Todo reminder notification
+📱 Tap → Opens that specific todo
+
+SCENARIO C: Reflection reminder notification
+📱 Tap → Opens reflection screen
+
+SCENARIO D: Focus complete notification
+📱 Tap → Opens focus summary screen
+```
+
+---
+
+## FLOW 49: Bottom Navigation
+
+**Purpose:** User switches between main sections
+
+```
+┌─────────────────────────────────────┐
+│                                     │
+│         [Current Screen]            │
+│                                     │
+├─────┬───────┬────────┬──────┬──────┤
+│ 📝  │  ✅   │   ⏰   │  🎯  │  💭  │
+│Notes│ Todos │Remind  │Focus │Reflect│
+│     │       │  ers   │      │ ion   │
+└─────┴───────┴────────┴──────┴──────┘
+
+   Tap any tab → switches to that section
+   Each tab remembers its state
+   Back button from any tab → goes to Notes (home)
+   Back button from Notes → exits app
+```
+
+---
+
+## FLOW 50: Quick Add (from anywhere)
+
+**Purpose:** User quickly captures an idea without navigating
+
+```
+Any Screen
+    ↓
+Tap floating "+" button
+    ↓
+┌─────────────────────┐
+│  Quick Add          │
+│                     │
+│  Type something:    │
+│  [Buy milk tomorrow]│ ← Type naturally
+│                     │
+│  Detected:          │
+│  ✅ Todo            │ ← App detects type
+│  📅 Due: Tomorrow   │ ← App detects date
+│                     │
+│  [Save as Todo]     │
+│  [Save as Note]     │
+│  [Save as Reminder] │
+└─────────────────────┘
+```
+
+---
+
+## FLOW 51: Clipboard Auto-Detect
+
+**Purpose:** App offers to save copied text as a note
+
+```
+User copies text from a website/app
+    ↓
+User opens MyNotes
+    ↓
+┌─────────────────────┐
+│  📋 Clipboard        │
+│                     │
+│  We noticed you     │
+│  copied some text:  │
+│                     │
+│  "The recipe calls  │
+│   for 2 cups of..." │
+│                     │
+│ [Save as Note] [No] │
+└─────────────────────┘
+
+   Tap "Save as Note" → new note created
+   Tap "No" → goes away
+```
+
+---
+
+## FLOW 52: Link Preview in Notes
+
+**Purpose:** User pastes a URL and sees a preview
+
+```
+Note Editor
+    ↓
+User types or pastes: https://example.com/article
+    ↓
+┌─────────────────────┐
+│   Note Editor       │
+│                     │
+│ Check this article: │
+│ https://example.com │
+│                     │
+│ ┌─────────────────┐ │
+│ │ 🔗 Article Title│ │ ← Auto-preview
+│ │ Description of  │ │    shows title
+│ │ the article...  │ │    and description
+│ │ 🖼️ thumbnail    │ │
+│ └─────────────────┘ │
+└─────────────────────┘
+```
+
+---
+
+## COMPLETE NAVIGATION MAP
+
+```
+App Open
+   ↓
+Splash Screen
+   ↓
+┌──────────────┬──────────────┐
+│ First Time?  │ Returning?   │
+│ → Onboarding │ → Biometric? │
+│   → Home     │   → Home     │
+└──────┬───────┴──────┬───────┘
+       ↓              ↓
+┌─────────────────────────────────────────────┐
+│              HOME SCREEN                     │
+│                                             │
+│  Top: Search, View Toggle, Sort, Menu        │
+│  Body: Notes List or Grid                    │
+│  FAB: + Quick Add                            │
+│  Bottom: [Notes][Todos][Reminders][Focus][Reflect]│
+└──┬──────┬──────────┬────────┬────────┬──────┘
+   ↓      ↓          ↓        ↓        ↓
+┌──────┐┌──────┐┌─────────┐┌──────┐┌─────────┐
+│Notes ││Todos ││Reminders││Focus ││Reflection│
+│List  ││List  ││List     ││Timer ││Questions │
+└──┬───┘└──┬───┘└──┬──────┘└──┬───┘└──┬──────┘
+   ↓       ↓       ↓          ↓       ↓
+┌──────┐┌──────┐┌─────────┐┌──────┐┌─────────┐
+│Note  ││Todo  ││Alarm    ││Focus ││Answer   │
+│Editor││Detail││Detail   ││Active││Screen   │
+└──────┘└──────┘└─────────┘└──────┘└─────────┘
+
+SIDE SCREENS (from Menu/Drawer):
+├── 📦 Archive
+├── 📁 Folders
+├── 🏷️ Tags
+├── 🖼️ Media Gallery
+├── 📊 Analytics / Dashboard
+├── 🔍 Global Search
+├── 📂 Smart Collections
+├── ⚙️ Settings
+│    ├── Theme (Dark/Light)
+│    ├── Accent Color
+│    ├── Language
+│    ├── Security (Fingerprint/PIN)
+│    ├── Accessibility
+│    ├── Backup & Restore
+│    └── About
+└── 📤 Export
+```
+
+---
+
+**Total Flows: 52 user scenarios covering every screen and interaction in MyNotes**

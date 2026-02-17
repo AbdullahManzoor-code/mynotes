@@ -4,6 +4,8 @@ import 'package:mynotes/domain/entities/note.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart' show NotesBloc;
 import 'package:mynotes/presentation/bloc/note/note_event.dart'
     show LoadArchivedNotesEvent;
+import 'package:mynotes/presentation/pages/enhanced_notes_list_screen.dart';
+import 'package:mynotes/presentation/pages/enhanced_todos_list_screen_refactored.dart';
 import 'package:mynotes/presentation/pages/search_filter_screen.dart'
     show SearchFilterScreen;
 import 'package:mynotes/presentation/widgets/create_alarm_bottom_sheet.dart';
@@ -12,15 +14,15 @@ import 'package:mynotes/presentation/pages/splash_screen.dart';
 import 'package:mynotes/presentation/pages/onboarding_screen.dart';
 import 'package:mynotes/presentation/pages/today_dashboard_screen.dart';
 import 'package:mynotes/presentation/pages/main_home_screen.dart';
-import 'package:mynotes/presentation/pages/enhanced_notes_list_screen.dart';
+// import 'package:mynotes/presentation/pages/enhanced_notes_list_screen.dart';
 import 'package:mynotes/presentation/pages/enhanced_note_editor_screen.dart';
-// import 'package:mynotes/presentation/pages/enhanced_reminders_list_screen.dart';
-import 'package:mynotes/presentation/screens/todos_screen_fixed.dart';
+import 'package:mynotes/presentation/pages/enhanced_reminders_list_screen.dart';
+// import 'package:mynotes/presentation/screens/todos_screen_fixed.dart';
 import 'package:mynotes/presentation/pages/todo_focus_screen.dart';
 import 'package:mynotes/presentation/pages/advanced_todo_screen.dart';
 import 'package:mynotes/presentation/pages/settings_screen.dart';
 import 'package:mynotes/presentation/pages/analytics_dashboard_screen.dart';
-import 'package:mynotes/presentation/pages/enhanced_global_search_screen.dart';
+import 'package:mynotes/presentation/pages/global_search_screen.dart';
 // import 'package:mynotes/presentation/pages/search_filter_screen.dart';
 import 'package:mynotes/presentation/pages/media_viewer_screen.dart';
 import 'package:mynotes/presentation/pages/media_picker_screen.dart';
@@ -53,10 +55,8 @@ import 'package:mynotes/presentation/pages/media_filter_screen.dart';
 import 'package:mynotes/presentation/pages/batch_4_media_organization_view.dart';
 import 'package:mynotes/presentation/pages/batch_4_media_search_results.dart';
 import 'package:mynotes/presentation/pages/media_analytics_dashboard.dart';
-import 'package:mynotes/presentation/pages/batch_5_create_collection_wizard.dart'
-    hide Center;
-import 'package:mynotes/presentation/pages/batch_5_rule_builder_screen.dart'
-    hide SizedBox;
+import 'package:mynotes/presentation/pages/batch_5_create_collection_wizard.dart';
+import 'package:mynotes/presentation/pages/batch_5_rule_builder_screen.dart';
 import 'package:mynotes/presentation/pages/batch_5_collection_details_screen.dart';
 import 'package:mynotes/presentation/pages/batch_5_collection_management_screen.dart';
 import 'package:mynotes/presentation/pages/batch_6_suggestion_recommendations_screen.dart';
@@ -74,7 +74,10 @@ import 'package:mynotes/presentation/pages/smart_collections_screen.dart';
 import 'package:mynotes/presentation/pages/smart_reminders_screen.dart';
 import 'package:mynotes/presentation/pages/location_reminder_screen.dart';
 import 'package:mynotes/presentation/pages/saved_locations_screen.dart';
-import 'package:mynotes/presentation/pages/alarms_screen.dart';
+import 'package:mynotes/presentation/pages/active_alarms_screen.dart';
+import 'package:mynotes/presentation/pages/alarm_reschedule_screen.dart';
+import 'package:mynotes/presentation/pages/snooze_confirmation_screen.dart';
+import 'package:mynotes/presentation/pages/dismiss_confirmation_screen.dart';
 import 'package:mynotes/presentation/pages/reminder_templates_screen.dart';
 import 'package:mynotes/presentation/pages/full_media_gallery_screen.dart';
 import 'package:mynotes/presentation/pages/video_trimming_screen.dart';
@@ -249,7 +252,9 @@ class AppRouter {
 
       // ==================== Reminders Module ====================
       case AppRoutes.remindersList:
-        return MaterialPageRoute(builder: (_) => const AlarmsScreen());
+        return MaterialPageRoute(
+          builder: (_) => const EnhancedRemindersListScreen(),
+        );
 
       case AppRoutes.createReminder:
         return PageRouteBuilder(
@@ -305,7 +310,34 @@ class AppRouter {
         return MaterialPageRoute(builder: (_) => const SavedLocationsScreen());
 
       case AppRoutes.alarms:
-        return MaterialPageRoute(builder: (_) => const AlarmsScreen());
+        return MaterialPageRoute(
+          builder: (_) => const EnhancedRemindersListScreen(),
+        );
+
+      case AppRoutes.activeAlarms:
+        return MaterialPageRoute(builder: (_) => const ActiveAlarmsScreen());
+
+      case AppRoutes.rescheduleAlarm:
+        final alarm = settings.arguments;
+        return MaterialPageRoute(
+          builder: (_) => AlarmRescheduleScreen(alarm: alarm),
+        );
+
+      case AppRoutes.snoozeConfirmation:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => SnoozeConfirmationScreen(
+            alarm: args['alarm'],
+            snoozeUntil: args['snoozeUntil'],
+            snoozeMinutes: args['snoozeMinutes'],
+          ),
+        );
+
+      case AppRoutes.dismissConfirmation:
+        final alarm = settings.arguments;
+        return MaterialPageRoute(
+          builder: (_) => DismissConfirmationScreen(alarm: alarm),
+        );
 
       case AppRoutes.reminderTemplates:
         return MaterialPageRoute(
@@ -339,7 +371,19 @@ class AppRouter {
 
       // ==================== Todos Module ====================
       case AppRoutes.todosList:
-        return MaterialPageRoute(builder: (_) => const TodosScreen());
+        return MaterialPageRoute(
+          builder: (_) => const EnhancedTodosListScreenRefactored(),
+        );
+      case AppRoutes.todoEditor:
+        final args = settings.arguments;
+        if (args is TodoItem) {
+          return MaterialPageRoute(
+            builder: (_) => AdvancedTodoScreen(todo: args),
+          );
+        }
+        // For creating a new todo, use the route_generator's placeholder
+        // This will be handled by route_generator.dart
+        return MaterialPageRoute(builder: (_) => const Placeholder());
 
       case AppRoutes.todoFocus:
         final args = settings.arguments;
@@ -442,9 +486,7 @@ class AppRouter {
       // ==================== Search Module ====================
       case AppRoutes.search:
       case AppRoutes.globalSearch:
-        return MaterialPageRoute(
-          builder: (_) => const EnhancedGlobalSearchScreen(),
-        );
+        return MaterialPageRoute(builder: (_) => const GlobalSearchScreen());
 
       case AppRoutes.searchFilter:
         return MaterialPageRoute(builder: (_) => const SearchFilterScreen());

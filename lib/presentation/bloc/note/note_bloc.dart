@@ -29,6 +29,10 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
   final AdvancedSearchRankingService _rankingService =
       AdvancedSearchRankingService();
 
+  /// Stores recently deleted notes for undo functionality
+  /// Maps noteId -> (Note, deleteTime)
+  final Map<String, (Note, DateTime)> _recentlyDeletedNotes = {};
+
   NotesBloc({
     required NoteRepository noteRepository,
     AlarmService? alarmService,
@@ -45,6 +49,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     on<CreateNoteEvent>(_onCreateNote);
     on<UpdateNoteEvent>(_onUpdateNote);
     on<DeleteNoteEvent>(_onDeleteNote);
+    on<UndoDeleteNoteEvent>(_onUndoDeleteNote);
     on<DeleteMultipleNotesEvent>(_onDeleteMultipleNotes);
     on<TogglePinNoteEvent>(_onTogglePinNote);
     on<ToggleArchiveNoteEvent>(_onToggleArchiveNote);
@@ -242,8 +247,46 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     Emitter<NoteState> emit,
   ) async {
     try {
+      // Store deleted note for undo (5-second window)
+      final deletedNote = await _noteRepository.getNoteById(event.noteId);
+      if (deletedNote != null) {
+        _recentlyDeletedNotes[event.noteId] = (deletedNote, DateTime.now());
+      }
+
+      // Clean up associated resources BEFORE deleting the note
+      try {
+        // Cancel any alarms for this note
+        final alarms = deletedNote?.alarms ?? [];
+        for (final alarm in alarms) {
+          // Cancel the alarm via AlarmRepository
+          await _alarmRepository.deleteAlarm(alarm.id);
+          AppLogger.i('Note deletion: Cancelled alarm ${alarm.id}');
+        }
+      } catch (e) {
+        AppLogger.w('Failed to cleanup alarms for deleted note: $e');
+      }
+
+      try {
+        // Delete associated media files from disk
+        // This would need MediaService integration
+        AppLogger.i('Note deletion: Media cleanup would occur here');
+      } catch (e) {
+        AppLogger.w('Failed to cleanup media for deleted note: $e');
+      }
+
+      try {
+        // Clean up link associations
+        await _noteRepository.updateNoteLinks(event.noteId, []);
+      } catch (e) {
+        AppLogger.w('Failed to cleanup links for deleted note: $e');
+      }
+
+      // Now delete the note itself
       await _noteRepository.deleteNote(event.noteId);
       emit(NoteDeleted(event.noteId));
+
+      // Show undo snackbar
+      emit(const NoteDeletedWithUndo());
 
       // Refresh notes list with current configuration
       await _onLoadNotes(const LoadNotesEvent(), emit);
@@ -251,6 +294,11 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
       // Also refresh archived list just in case we were there
       final archivedNotes = await _noteRepository.getArchivedNotes();
       emit(ArchivedNotesLoaded(archivedNotes));
+
+      // Auto-remove from undo history after 5 seconds
+      Future.delayed(const Duration(seconds: 5), () {
+        _recentlyDeletedNotes.remove(event.noteId);
+      });
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
@@ -262,21 +310,109 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
     }
   }
 
+  /// Undo the last delete (within 5-second window)
+  Future<void> _onUndoDeleteNote(
+    UndoDeleteNoteEvent event,
+    Emitter<NoteState> emit,
+  ) async {
+    try {
+      final deletedData = _recentlyDeletedNotes[event.noteId];
+      if (deletedData == null) {
+        emit(
+          NoteError(
+            'Cannot undo: note was deleted more than 5 seconds ago',
+            exception: Exception('UNDO_EXPIRED'),
+          ),
+        );
+        return;
+      }
+
+      final (deletedNote, _) = deletedData;
+
+      // Re-insert the note
+      await _noteRepository.createNote(deletedNote);
+      emit(NoteRestored(deletedNote));
+
+      // Remove from undo history
+      _recentlyDeletedNotes.remove(event.noteId);
+
+      // Refresh notes list
+      await _onLoadNotes(const LoadNotesEvent(), emit);
+    } catch (e) {
+      emit(
+        NoteError(
+          'Failed to undo delete: ${e.toString()}',
+          exception: e as Exception,
+        ),
+      );
+    }
+  }
+
   /// Delete multiple notes
   Future<void> _onDeleteMultipleNotes(
     DeleteMultipleNotesEvent event,
     Emitter<NoteState> emit,
   ) async {
     try {
+      emit(const NoteLoading()); // Show loading while deleting
+
       int deletedCount = 0;
+      final deletedNotes = <String, (Note, DateTime)>{};
+
       for (final noteId in event.noteIds) {
-        await _noteRepository.deleteNote(noteId);
-        deletedCount++;
+        try {
+          // Get note for undo history
+          final noteToDelete = await _noteRepository.getNoteById(noteId);
+          if (noteToDelete != null) {
+            deletedNotes[noteId] = (noteToDelete, DateTime.now());
+            // Store in undo map
+            _recentlyDeletedNotes[noteId] = (noteToDelete, DateTime.now());
+          }
+
+          // Clean up associated resources
+          try {
+            // Cancel alarms
+            final alarms = noteToDelete?.alarms ?? [];
+            for (final alarm in alarms) {
+              await _alarmRepository.deleteAlarm(alarm.id);
+              AppLogger.i('Batch delete: Cancelled alarm ${alarm.id}');
+            }
+          } catch (e) {
+            AppLogger.w('Failed to cleanup alarms: $e');
+          }
+
+          try {
+            // Clean up links
+            await _noteRepository.updateNoteLinks(noteId, []);
+          } catch (e) {
+            AppLogger.w('Failed to cleanup links: $e');
+          }
+
+          // Delete the note
+          await _noteRepository.deleteNote(noteId);
+          deletedCount++;
+        } catch (e) {
+          AppLogger.e('Error deleting note $noteId in batch delete: $e');
+          // Continue with next note instead of failing entire batch
+        }
       }
+
       emit(NotesDeleted(event.noteIds, deletedCount));
+
+      // Show undo snackbar for batch delete
+      if (deletedCount > 0) {
+        emit(const NoteDeletedWithUndo());
+      }
 
       // Refresh notes list with current configuration
       await _onLoadNotes(const LoadNotesEvent(), emit);
+
+      // Auto-remove from undo after 5 seconds
+      Future.delayed(const Duration(seconds: 5), () {
+        for (final noteId in deletedNotes.keys) {
+          _recentlyDeletedNotes.remove(noteId);
+        }
+      });
     } catch (e) {
       final errorMsg = e.toString().replaceAll('Exception: ', '');
       emit(
@@ -576,6 +712,16 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
 
         final updatedNote = note.addAlarm(alarm);
         await _noteRepository.updateNote(updatedNote);
+
+        // Initialize AlarmService before scheduling
+        AppLogger.i('[NOTE-ALARM] Initializing AlarmService...');
+        try {
+          await _alarmService.init();
+          await _alarmService.requestPermissions();
+          AppLogger.i('[NOTE-ALARM] ✅ AlarmService ready for scheduling');
+        } catch (e) {
+          AppLogger.w('[NOTE-ALARM] ⚠️ AlarmService init warning: $e');
+        }
 
         // Schedule the actual alarm notification
         await _alarmService.scheduleAlarm(
@@ -976,7 +1122,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
 
     // Apply sorting
     filtered.sort((a, b) {
-      int _compare(Note n1, Note n2, NoteSortOption option, bool isDesc) {
+      int compare(Note n1, Note n2, NoteSortOption option, bool isDesc) {
         int cmp;
         switch (option) {
           case NoteSortOption.dateCreated:
@@ -1024,15 +1170,13 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
             if (idx2 == -1) idx2 = 999;
             cmp = idx1.compareTo(idx2);
             break;
-          default:
-            cmp = n1.updatedAt.compareTo(n2.updatedAt);
         }
         return isDesc ? -cmp : cmp;
       }
 
-      int res = _compare(a, b, sortOption, descending);
+      int res = compare(a, b, sortOption, descending);
       if (res == 0 && secondarySortBy != null) {
-        res = _compare(
+        res = compare(
           a,
           b,
           secondarySortBy,

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../design_system/design_system.dart';
-import '../design_system/components/layouts/glass_container.dart';
 
 enum MediaOption {
   photo,

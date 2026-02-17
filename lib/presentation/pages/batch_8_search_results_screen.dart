@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart'; // Added
 import 'package:mynotes/domain/entities/note.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_state.dart';
-import 'package:mynotes/domain/services/advanced_search_ranking_service.dart';
 import 'package:mynotes/core/design_system/app_colors.dart'; // Added
 import 'package:mynotes/core/design_system/app_typography.dart'; // Added
 import 'package:mynotes/core/design_system/app_spacing.dart';
@@ -12,6 +11,7 @@ import 'package:mynotes/core/services/global_ui_service.dart';
 import 'package:mynotes/core/utils/app_logger.dart';
 import 'package:mynotes/injection_container.dart';
 import 'package:mynotes/presentation/bloc/note/note_event.dart';
+import '../widgets/search_results_scaffold.dart';
 
 /// Search Results with Ranking - Batch 8, Screen 2
 /// Refactored to use Design System and converted to StatelessWidget
@@ -23,80 +23,38 @@ class SearchResultsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.lightBackground,
-      appBar: AppBar(
-        title: Text(
-          'Results for "$searchQuery"',
-          style: AppTypography.displayMedium(context, AppColors.darkText),
-        ),
-        centerTitle: true,
-        backgroundColor: AppColors.lightSurface,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.darkText),
-      ),
-      body: BlocBuilder<NotesBloc, NoteState>(
-        builder: (context, state) {
-          if (state is NoteLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.primaryColor),
-            );
-          }
-
-          if (state is NoteError) {
-            AppLogger.e('SearchResultsScreen: Error: ${state.message}');
-            return Center(
-              child: Padding(
-                padding: AppSpacing.paddingAllL,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline_rounded,
-                      color: AppColors.error,
-                      size: 48,
-                    ),
-                    AppSpacing.gapM,
-                    Text(
-                      'Error: ${state.message}',
-                      style: AppTypography.bodyMedium(context),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }
-
-          if (state is SearchResultsLoaded) {
-            final results = state.results;
-
-            if (results.isEmpty) {
-              return _buildEmptyState(context);
-            }
-
-            return Column(
-              children: [
-                // Results Summary and Sorting
-                Padding(
-                  padding: AppSpacing.paddingAllM,
-                  child: _buildResultsHeader(context, state),
-                ),
-
-                // Results List
-                Expanded(child: _buildResultsList(context, state)),
-              ],
-            );
-          }
-
-          // Initial load
+    return BlocBuilder<NotesBloc, NoteState>(
+      builder: (context, state) {
+        if (state is! SearchResultsLoaded && state is! NoteLoading) {
           AppLogger.i('SearchResultsScreen: Initial load for "$searchQuery"');
           context.read<NotesBloc>().add(SearchNotesEvent(searchQuery));
-          return const Center(
-            child: CircularProgressIndicator(color: AppColors.primaryColor),
-          );
-        },
-      ),
+        }
+
+        final isLoading = state is NoteLoading;
+        final errorMessage = state is NoteError ? state.message : null;
+        final results = state is SearchResultsLoaded ? state.results : const [];
+        final loadedState = state is SearchResultsLoaded ? state : null;
+
+        return SearchResultsScaffold(
+          title: 'Results for "$searchQuery"',
+          isLoading: isLoading,
+          errorMessage: errorMessage,
+          isEmpty: state is SearchResultsLoaded && results.isEmpty,
+          emptyState: _buildEmptyState(context),
+          resultsHeader: loadedState == null
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: AppSpacing.paddingAllM,
+                  child: _buildResultsHeader(context, loadedState),
+                ),
+          resultsList: loadedState == null
+              ? const SizedBox.shrink()
+              : _buildResultsList(context, loadedState),
+          backgroundColor: AppColors.lightBackground,
+          appBarColor: AppColors.lightSurface,
+          iconTheme: const IconThemeData(color: AppColors.darkText),
+        );
+      },
     );
   }
 

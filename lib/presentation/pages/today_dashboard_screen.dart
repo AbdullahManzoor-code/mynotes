@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -282,32 +281,6 @@ class TodayDashboardScreen extends StatelessWidget {
     if (hour < 12) return 'Good Morning';
     if (hour < 17) return 'Good Afternoon';
     return 'Good Evening';
-  }
-}
-
-String _getGreeting(int hour) {
-  if (hour < 12) return 'Good morning';
-  if (hour < 17) return 'Good afternoon';
-  return 'Good evening';
-}
-
-void _handleTodayMenu(BuildContext context, String value) {
-  switch (value) {
-    case 'analytics':
-      // Navigate to analytics
-      break;
-    case 'reminders':
-      Navigator.pushNamed(context, AppRoutes.remindersList);
-      break;
-    case 'highlights':
-      Navigator.pushNamed(context, AppRoutes.dailyHighlightSummary);
-      break;
-    case 'reflection':
-      Navigator.pushNamed(context, AppRoutes.reflectionHome);
-      break;
-    case 'settings':
-      Navigator.pushNamed(context, AppRoutes.settings);
-      break;
   }
 }
 
@@ -641,6 +614,13 @@ class DashboardQuickActions extends StatelessWidget {
             label: 'Note',
             color: const Color(0xFF60A5FA),
             onTap: () => Navigator.pushNamed(context, AppRoutes.noteEditor),
+          ),
+          SizedBox(width: 16.w),
+          _QuickActionButton(
+            icon: Icons.search_rounded,
+            label: 'Search',
+            color: const Color(0xFF818CF8),
+            onTap: () => Navigator.pushNamed(context, AppRoutes.globalSearch),
           ),
           SizedBox(width: 16.w),
           _QuickActionButton(
@@ -1669,9 +1649,4 @@ class _ReminderItem extends StatelessWidget {
 
 class _ShowCommandPaletteIntent extends Intent {
   const _ShowCommandPaletteIntent();
-}
-
-extension on Widget {
-  Widget get paddingAll =>
-      Padding(padding: const EdgeInsets.all(4), child: this);
 }

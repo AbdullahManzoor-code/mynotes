@@ -357,19 +357,6 @@ class LocationNotificationService {
       return [];
     }
   }
-
-  // Callback for when notification is received while app is in foreground
-  static void _onDidReceiveLocalNotification(
-    int id,
-    String? title,
-    String? body,
-    String? payload,
-  ) {
-    debugPrint(
-      'onDidReceiveLocalNotification: id=$id, title=$title, body=$body, payload=$payload',
-    );
-  }
-
   // Callback for when user taps notification
   static void _onDidReceiveNotificationResponse(
     NotificationResponse notificationResponse,

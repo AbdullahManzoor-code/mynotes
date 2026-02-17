@@ -1,0 +1,1585 @@
+
+
+# MyNotes App — Complete Verification Checklist Based on Real User Stories
+
+## Tailored to YOUR actual 57+ BLoCs, screens, services, and database
+
+---
+
+```markdown
+=============================================================
+ROLE: Senior QA Engineer verifying the MyNotes Flutter app.
+You have the COMPLETE project analysis with 57+ BLoCs.
+=============================================================
+
+CRITICAL RULES:
+1. DO NOT add new features
+2. ONLY verify and fix what ALREADY EXISTS
+3. Check ACTUAL code for each item
+4. Think as a REAL USER downloading this app
+5. Reference exact file paths and BLoC names
+
+=============================================================
+APP IDENTITY (Based on analysis):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name: MyNotes
+Purpose: All-in-one productivity app — notes, todos,
+         reminders, focus timer, reflection, media
+Target User: Someone who wants ONE app for:
+  writing notes, managing tasks, setting reminders,
+  focusing on work, daily reflection, and organizing life
+Database: SQLite (sqflite) + SharedPreferences
+State: flutter_bloc (57+ BLoCs, 0 Cubits)
+DI: get_it
+Notifications: AwesomeNotifications + AndroidAlarmManager
+Auth: Local biometric only (local_auth) — no cloud auth
+Backend: None active (URLs exist but no Firebase/API)
+=============================================================
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 1: APP STARTUP & FIRST EXPERIENCE
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I just downloaded MyNotes and opened it
+for the first time."
+
+┌─────────────────────────────────────────────────────────────┐
+│ The user expects: fast launch, welcome tour, land on        │
+│ home screen, no crashes, no errors, ready to create         │
+│ their first note within 30 seconds of install.              │
+└─────────────────────────────────────────────────────────────┘
+
+Check Code: main.dart (520 lines), splash_screen.dart,
+            onboarding_screen.dart, injection_container.dart
+
+ID      | Check                                              | File Reference                          | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+L001    | WidgetsFlutterBinding.ensureInitialized()           | main.dart:260-280                       | ⬜
+        | runs BEFORE any plugin initialization               |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L002    | AndroidAlarmManager.initialize() wrapped in          | main.dart:282-300                       | ⬜
+        | try-catch — what if it fails on Huawei/Xiaomi       |                                         |
+        | devices that restrict background services?          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L003    | AwesomeNotifications.initialize() handles            | main.dart:304-340                       | ⬜
+        | permission denied gracefully — user denied           |                                         |
+        | notification permission at OS level                 |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L004    | sqflite FFI init for desktop platforms               | main.dart:342-350                       | ⬜
+        | — does it crash on mobile if this runs?             |                                         |
+        | — is platform check correct?                        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L005    | setupServiceLocator() in injection_container.dart    | main.dart:352-360                       | ⬜
+        | — registers ALL 57+ BLoCs, services, repos          | injection_container.dart:1-200          |
+        | — what if SQLite DB creation fails?                 |                                         |
+        | — what if SharedPreferences fails?                  |                                         |
+        | — is there try-catch around the whole setup?        |                                         |
+        | — are dependencies registered in correct order?     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L006    | CoreDatabase created successfully                   | main.dart:362-390                       | ⬜
+        | — what if DB file is corrupted from previous crash? |                                         |
+        | — is there migration handling for DB version?       |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L007    | NotificationService and AlarmService retrieved       | main.dart:362-390                       | ⬜
+        | from get_it — what if not registered yet?           |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L008    | Alarm action handler registered                      | main.dart:392-456                       | ⬜
+        | — does background alarm handler work when app       |                                         |
+        |   is killed?                                        |                                         |
+        | — does it crash if referenced note/todo is deleted? |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L009    | Alarms rescheduled on startup                        | main.dart:458-468                       | ⬜
+        | — are ALL pending alarms rescheduled?               |                                         |
+        | — are past alarms skipped or marked missed?         |                                         |
+        | — what if there are 200+ alarms? Performance?       |                                         |
+        | — does this run on main thread? (UI freeze?)        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L010    | Initial LoadAlarms event dispatched                  | main.dart:458-468                       | ⬜
+        | — is AlarmsBloc available at this point?            |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L011    | runApp(MyNotesApp) called                            | main.dart:470-485                       | ⬜
+        | — does MyNotesApp build successfully?               |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L012    | MultiBlocProvider wraps ALL needed BLoCs             | main.dart:486-620                       | ⬜
+        | — are all 57+ BLoCs provided here?                  |                                         |
+        | — or only a subset? Which ones are missing?         |                                         |
+        | — are BLoCs created lazily or ALL at once?          |                                         |
+        | — does creating 57+ BLoCs at once cause             |                                         |
+        |   slow startup (2+ seconds)?                        |                                         |
+        | — what if get_it.get<SomeBloc>() fails?             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L013    | MaterialApp initialRoute = AppRoutes.splash          | main.dart:560-600                       | ⬜
+        | — does splash route exist in AppRouter?             | app_router.dart:23-60                   |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L014    | SplashScreen checks first launch                     | splash_screen.dart:20-140               | ⬜
+        | — reads 'first_launch' from SharedPreferences       |                                         |
+        | — if true → navigates to OnboardingScreen           |                                         |
+        | — if false → checks biometric                       |                                         |
+        | — what if SharedPreferences read fails?             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L015    | OnboardingScreen completes correctly                 | onboarding_screen.dart:10-35            | ⬜
+        | — sets first_launch = false                         |                                         |
+        | — navigates to MainHomeScreen                       |                                         |
+        | — what if user kills app during onboarding?         |                                         |
+        |   Will they see onboarding again? (correct)         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L016    | Biometric check on returning user                    | splash_screen.dart:100-120              | ⬜
+        | — reads biometric preference from SharedPrefs       |                                         |
+        | — if enabled → navigate to biometric lock screen    |                                         |
+        | — if disabled → navigate directly to home           |                                         |
+        | — what if biometric hardware removed/unavailable?   |                                         |
+        | — what if user cancels biometric prompt?            |                                         |
+        | — is there fallback to PIN? (PinSetupBloc exists)   |                                         |
+        | — what if biometric fails 3 times?                  |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L017    | App opens with NO internet                           | main.dart → all init steps              | ⬜
+        | — DioClient is initialized but no network call      |                                         |
+        |   should happen at startup                          |                                         |
+        | — PlacesService should not crash at init            |                                         |
+        | — ALL data is local (SQLite) so app MUST work       |                                         |
+        |   fully offline                                     |                                         |
+        | — is there any network-dependent init step?         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L018    | App opens after phone restart                        | AndroidManifest.xml                     | ⬜
+        | — is there BOOT_COMPLETED receiver to               |                                         |
+        |   reschedule alarms after device boot?              |                                         |
+        | — does main.dart rescheduling handle this?          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L019    | App opens after app update (new version)             | CoreDatabase migration                  | ⬜
+        | — does SQLite onUpgrade handle schema changes?      |                                         |
+        | — are SharedPreferences keys backward compatible?   |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+L020    | Error during init shows user-friendly message        | splash_screen.dart:130-150              | ⬜
+        | — does catch block show error text?                 |                                         |
+        | — can user retry or is app stuck?                   |                                         |
+        | — does it log the error for debugging?              |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 2: CREATING & MANAGING NOTES
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I want to write down my thoughts, meeting
+notes, shopping lists, and ideas. I want them saved safely
+and organized the way I like."
+
+┌─────────────────────────────────────────────────────────────┐
+│ User expects: tap "+" → write → save → find it later       │
+│ Notes should persist across app restarts, never lose data   │
+└─────────────────────────────────────────────────────────────┘
+
+Check Code: NotesBloc (note_bloc.dart, 1058 lines),
+            NoteEditorBloc (note_editor_bloc.dart),
+            EnhancedNoteEditorScreen (2081 lines),
+            NoteRepository
+
+--- CREATING A NOTE ---
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+N001    | User taps FAB/+ button on MainHomeScreen            | main_home_screen.dart:70-120            | ⬜
+        | → QuickAddBottomSheet appears OR                    |                                         |
+        | → Navigates to note editor directly                 |                                         |
+        | → Which one happens? Is it consistent?              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N002    | Navigation to EnhancedNoteEditorScreen works         | app_router.dart:70-110                  | ⬜
+        | → Route arguments passed correctly (null for new)   | app_routes.dart:20-40                   |
+        | → Editor opens in "create" mode                     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N003    | NoteEditorBloc initializes for NEW note              | NoteEditorBloc → NoteEditorInitialized  | ⬜
+        | → NoteEditorLoaded state emits with empty fields    |                                         |
+        | → UUID generated for new note ID                    |                                         |
+        | → createdAt set to DateTime.now()                   |                                         |
+        | → What timezone? UTC or local?                      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N004    | User types title "Shopping List"                     | NoteEditorBloc → TitleChanged           | ⬜
+        | → State updates with new title                      |                                         |
+        | → Is title validated? Max length?                   |                                         |
+        | → Does empty title create "Untitled" or allow empty?|                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N005    | User types content "Milk, Eggs, Bread"              | NoteEditorBloc → ContentChanged         | ⬜
+        | → State updates with new content                    |                                         |
+        | → Does LinkParserService run on every keystroke?    |                                         |
+        |   If yes → PERFORMANCE ISSUE on long notes          |                                         |
+        | → Is content change debounced?                      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N006    | User taps Save button                                | NoteEditorBloc → SaveNoteRequested      | ⬜
+        | → NoteParams created with all fields                |                                         |
+        | → NoteRepository.insert() called                    |                                         |
+        | → SQLite INSERT executes                            |                                         |
+        | → Success: NotesAdded state emits                   |                                         |
+        | → Failure: NoteEditorError state emits              |                                         |
+        | → Is save button disabled during save? (no double)  |                                         |
+        | → What if SQLite INSERT fails (storage full)?       |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N007    | After save, user returns to notes list               | NotesBloc → LoadNotesEvent              | ⬜
+        | → Does NotesBloc automatically reload?              |                                         |
+        | → Or does user need to pull-to-refresh?             |                                         |
+        | → New note appears at top (newest first)            |                                         |
+        | → Note shows correct title, preview, date           |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N008    | User saves note with EMPTY title AND content         | NoteEditorBloc → SaveNoteRequested      | ⬜
+        | → Is empty note saved? Should it be?                |                                         |
+        | → Is there validation preventing empty saves?       |                                         |
+        | → If saved, how does it show in list? Blank card?   |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N009    | User taps back WITHOUT saving                        | EnhancedNoteEditorScreen (2081 lines)   | ⬜
+        | → Is there auto-save? On every change? Periodic?    |                                         |
+        | → Is there "Discard changes?" dialog?               |                                         |
+        | → What if user wrote 500 words and hit back?        |                                         |
+        | → Is draft preserved somewhere?                     |                                         |
+        | → EnhancedNoteEditorScreen is 2081 lines —          |                                         |
+        |   is back-press handling in there somewhere?        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N010    | User force-kills app while typing note               | NoteEditorBloc / AppLifecycleObserver   | ⬜
+        | → Is AppLifecycleObserver implemented?              |                                         |
+        | → Does it auto-save on app pause/inactive?          |                                         |
+        | → If not, user LOSES all typed content              |                                         |
+        | → THIS IS CRITICAL FOR USER TRUST                   |                                         |
+
+--- EDITING AN EXISTING NOTE ---
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+N011    | User taps on existing note in list                  | NotesBloc → NotesLoaded (contains list) | ⬜
+        | → Navigates to editor with note ID argument         | app_router.dart:70-110                  |
+        | → NoteEditorBloc → NoteEditorInitialized with ID    |                                         |
+        | → Note loaded from NoteRepository by ID             |                                         |
+        | → ALL fields populated:                             |                                         |
+        |   title, content, tags, color, pinStatus,           |                                         |
+        |   media attachments, createdAt, updatedAt           |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N012    | User edits content and saves                         | NoteEditorBloc → SaveNoteRequested      | ⬜
+        | → UPDATE (not INSERT) called in repository          |                                         |
+        | → updatedAt changes to now                          |                                         |
+        | → createdAt stays the SAME (not overwritten)        |                                         |
+        | → NotesUpdated state emits                          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N013    | User opens note that was DELETED while they          | NoteEditorBloc → NoteEditorInitialized  | ⬜
+        | were in another screen (alarm cleanup deleted it)   |                                         |
+        | → Does repository return null?                      |                                         |
+        | → Does editor show error or crash?                  |                                         |
+        | → Is there null check for the loaded note?          |                                         |
+
+--- DELETING NOTES ---
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+N014    | User deletes single note                             | NotesBloc → DeleteNoteEvent             | ⬜
+        | → Note removed from SQLite                          | NoteRepository.delete()                 |
+        | → Associated ALARMS deleted?                        | AlarmRepository                         |
+        |   (DeleteAlarmsForNoteEvent or manual cleanup)      |                                         |
+        | → Associated MEDIA FILES deleted from disk?         | Media file system                       |
+        | → Tag associations cleaned up?                      | Tags table/column                       |
+        | → Cross-feature links removed?                      | CrossFeatureBloc                        |
+        | → Note versions cleaned?                            | NoteVersioningBloc                      |
+        | → Note links removed (bi-directional)?              | NoteLinkingBloc                         |
+        | → Smart collection references updated?              | SmartCollectionsBloc                    |
+        | → NotesDeleted state emits                          |                                         |
+        | → List refreshes without the deleted note           |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N015    | UNDO delete — does it exist for notes?               | NotesBloc                               | ⬜
+        | → TodosBloc has UndoDeleteTodo                      |                                         |
+        | → Does NotesBloc have equivalent? (check code)      |                                         |
+        | → If NO undo: user accidentally deletes a note      |                                         |
+        |   with 3 months of journal entries — GONE FOREVER   |                                         |
+        | → THIS IS A MAJOR USER RISK                         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N016    | User deletes 10 notes at once                        | NotesBloc → DeleteMultipleNotesEvent    | ⬜
+        | → Is confirmation dialog shown?                     |                                         |
+        | → Does batch delete clean up ALL associated         |                                         |
+        |   resources for ALL 10 notes?                       |                                         |
+        | → Is it atomic? (all or nothing?)                   |                                         |
+        | → What if delete #5 fails? Are 1-4 already gone?    |                                         |
+        | → Is loading indicator shown?                       |                                         |
+        | → What if user has 10 notes with 50 media files?    |                                         |
+        |   Does it take long? Is UI frozen?                  |                                         |
+
+--- ORGANIZING NOTES ---
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+N017    | User pins a note to top                              | NotesBloc → TogglePinNoteEvent          | ⬜
+        | → Pin status saved to database                      |                                         |
+        | → Pinned notes appear in separate section at top    |                                         |
+        | → Pin icon visible on note card                     |                                         |
+        | → Unpin works (toggle back)                         |                                         |
+        | → Pin persists after app restart                    |                                         |
+        | → Can pin from LIST view?                           |                                         |
+        | → Can pin from EDITOR? (NoteEditorBloc → PinToggled)|                                         |
+        | → Both paths use same DB field?                     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N018    | User archives old notes                              | NotesBloc → ToggleArchiveNoteEvent      | ⬜
+        | → Note disappears from main notes list              |                                         |
+        | → Note appears in LoadArchivedNotesEvent results    |                                         |
+        | → RestoreArchivedNoteEvent brings it back           |                                         |
+        | → Are alarms preserved when archiving?              |                                         |
+        | → Can archived note still fire alarm notification?  |                                         |
+        | → Does search find archived notes?                  |                                         |
+        | → If pinned note is archived, what happens?         |                                         |
+        |   Is pin removed? Or is it pinned in archive?       |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N019    | User adds tags "work", "urgent" to a note            | NotesBloc → AddTagEvent                 | ⬜
+        | → Tag saved to database                             | NoteEditorBloc → TagAdded               |
+        | → Duplicate tag check (can't add "work" twice)      |                                         |
+        | → Tags visible on note card in list                 |                                         |
+        | → RemoveTagEvent removes correctly                  |                                         |
+        | → LoadNotesByTagEvent filters correctly             |                                         |
+        | → Are tags in note record (JSON array) or           |                                         |
+        |   separate tags table?                              |                                         |
+        | → ActivityTagBloc → does it sync with note tags?    |                                         |
+        |   Or is it a SEPARATE system? (check code)          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N020    | User changes note color to blue                      | NoteEditorBloc → ColorChanged           | ⬜
+        | → Color persists after save                         |                                         |
+        | → Color shows on note card in list view             |                                         |
+        | → Color shows on note card in grid view             |                                         |
+        | → BatchUpdateNotesColorEvent works for multiple     |                                         |
+        | → Colors visible in dark mode too                   |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N021    | User sorts notes by date                             | NotesBloc → SortNotesEvent              | ⬜
+        | → Sort by created date works                        |                                         |
+        | → Sort by modified date works                       |                                         |
+        | → Sort by title (alphabetical) works                |                                         |
+        | → Pinned notes STAY at top regardless of sort       |                                         |
+        | → Sort preference saved for next session            |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N022    | User switches list ↔ grid view                      | NotesBloc → UpdateNoteViewConfigEvent   | ⬜
+        | → View switches smoothly                            |                                         |
+        | → Same notes, same order, different layout           |                                         |
+        | → Preference persisted in SharedPreferences         |                                         |
+        | → Both views show: title, preview, color, pin, tags |                                         |
+
+--- SEARCHING NOTES ---
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+N023    | User searches "birthday" in notes                    | NotesBloc → SearchNotesEvent            | ⬜
+        | → Searches title AND content                        |                                         |
+        | → Results appear as user types                      |                                         |
+        | → Is debounce implemented?                          |                                         |
+        | → AdvancedSearchRankingService used? What does      |                                         |
+        |   it rank by?                                       |                                         |
+        | → Empty query shows all notes                       |                                         |
+        | → Special characters handled (don't crash)          |                                         |
+        | → ToggleSearchExpandedEvent toggles search bar      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N024    | User searches but there are NO results               | NotesBloc → NotesLoaded with empty list | ⬜
+        | → NoteEmpty state emits?                            |                                         |
+        | → Or NotesLoaded with empty list?                   |                                         |
+        | → UI shows "No notes found" message                 |                                         |
+        | → NOT showing loading spinner forever               |                                         |
+        | → NOT showing blank screen                          |                                         |
+
+--- SPECIAL NOTE FEATURES ---
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+N025    | User adds alarm to note                              | NotesBloc → AddAlarmToNoteEvent         | ⬜
+        | → Alarm created in AlarmRepository                  |                                         |
+        | → Notification scheduled via AlarmService           |                                         |
+        | → Alarm references note ID                          |                                         |
+        | → Note shows alarm indicator in list                |                                         |
+        | → RemoveAlarmFromNoteEvent cancels notification     |                                         |
+        | → What if alarm time set to PAST?                   |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N026    | Clipboard text auto-detected                          | NotesBloc → ClipboardTextDetectedEvent  | ⬜
+        | → ClipboardService via MethodChannel                |                                         |
+        | → Only monitored when app is in foreground?         |                                         |
+        | → SaveClipboardAsNoteEvent creates valid note       |                                         |
+        | → Android 12+ clipboard toast considered?           |                                         |
+        | → Very large clipboard text handled?                |                                         |
+        | → Is this feature actually working? (test it)       |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N027    | Export note to PDF                                    | NotesBloc → ExportNoteToPdfEvent        | ⬜
+        | → PDF file generated with title + content           |                                         |
+        | → ExportMultipleNotesToPdfEvent for batch           |                                         |
+        | → File saved to accessible location                 |                                         |
+        | → Storage permission requested                      |                                         |
+        | → Does PDF include media? (images)                  |                                         |
+        | → What if storage full?                             |                                         |
+        | → Share sheet appears after export?                 |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+N028    | ClearOldNotesEvent                                    | NotesBloc → ClearOldNotesEvent          | ⬜
+        | → What criteria defines "old"?                      |                                         |
+        | → Is user warned before auto-deletion?              |                                         |
+        | → Are associated resources cleaned?                 |                                         |
+        | → Is this triggered automatically or manually?      |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 3: NOTE EDITOR ADVANCED FEATURES
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I'm writing a note and I want to use voice,
+attach photos, scan documents, and use templates."
+
+┌─────────────────────────────────────────────────────────────┐
+│ User expects: all editor buttons actually WORK.             │
+│ If there's a microphone button, voice input should work.    │
+│ If there's a camera button, photos should attach.           │
+│ If there's a template button, templates should appear.      │
+└─────────────────────────────────────────────────────────────┘
+
+Check Code: NoteEditorBloc (note_editor_bloc.dart),
+            EnhancedNoteEditorScreen (2081 lines),
+            SpeechService, OCRService, MediaProcessingService
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE001   | Voice input — user taps mic icon                    | NoteEditorBloc → VoiceInputToggled      | ⬜
+        | → SpeechService initialized?                        | SpeechService (speech_to_text pkg)       |
+        | → Microphone permission requested?                  |                                         |
+        | → What if permission DENIED?                        |                                         |
+        |   Error message shown? Or silent fail?              |                                         |
+        | → What if device has no speech recognition?         |                                         |
+        | → SpeechResultReceived: does text APPEND or REPLACE?|                                         |
+        | → Is cursor position considered?                    |                                         |
+        | → StopVoiceInputRequested cleans up?                |                                         |
+        | → Both SpeechService AND VoiceCommandService used   |                                         |
+        |   in NoteEditorBloc — what's the difference?        |                                         |
+        | → AudioFeedbackService — does it play sounds?       |                                         |
+        | → Are ALL three services disposed on editor close?  |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE002   | Voice COMMAND vs voice INPUT                         | VoiceCommandBloc vs NoteEditorBloc      | ⬜
+        | → VoiceCommandBloc has StartListeningEvent          |                                         |
+        | → NoteEditorBloc has VoiceInputToggled              |                                         |
+        | → BOTH use SpeechService                            |                                         |
+        | → Can they CONFLICT if both listening?              |                                         |
+        | → Which one is for dictation vs commands?           |                                         |
+        | → Is this clearly separated in UI?                  |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE003   | Attach photo from camera                             | NoteEditorBloc → MediaAdded             | ⬜
+        | → Camera permission requested                       | MediaBloc → CapturePhotoEvent?          |
+        | → Which BLoC handles camera in editor?              | Or NoteEditorBloc directly?             |
+        |   NoteEditorBloc or MediaBloc?                      |                                         |
+        | → MediaProcessingService compresses image?          |                                         |
+        | → Photo saved to app directory?                     |                                         |
+        | → Photo path stored in note record?                 |                                         |
+        | → Photo thumbnail visible in editor?                |                                         |
+        | → What if camera unavailable (tablet)?              |                                         |
+        | → What if storage full?                             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE004   | Attach photo from gallery                             | NoteEditorBloc → MediaAdded             | ⬜
+        | → Gallery permission requested                      |                                         |
+        | → Photo COPIED to app storage?                      |                                         |
+        |   Or just reference to gallery path?                |                                         |
+        |   (If reference: photo lost when user deletes       |                                         |
+        |    from gallery = BAD)                              |                                         |
+        | → What if permission denied?                        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE005   | Remove photo from note                                | NoteEditorBloc → MediaRemoved           | ⬜
+        | → Photo reference removed from note record          |                                         |
+        | → Physical file deleted from disk?                  |                                         |
+        |   (If not: storage fills up over time)              |                                         |
+        | → MediaUpdated handles photo replacement?           |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE006   | OCR text extraction from image                        | NoteEditorBloc → TextExtractionRequested| ⬜
+        | → OCRService initialized                            | OCRService (google_mlkit_text_recognition)|
+        | → Image processed for text                          |                                         |
+        | → Extracted text APPENDED to note content?          |                                         |
+        | → What if image has NO text? (empty result)         |                                         |
+        | → What if OCR fails? Error shown?                   |                                         |
+        | → Loading state shown during processing?            |                                         |
+        | → Is this a real implementation or placeholder?     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE007   | Generate summary of note                              | NoteEditorBloc → GenerateSummaryRequested| ⬜
+        | → WHAT generates the summary?                       |                                         |
+        |   Local algorithm? API call? ML model?              |                                         |
+        | → No backend API configured (analysis confirmed)    |                                         |
+        | → Is this a PLACEHOLDER that does nothing?          |                                         |
+        | → What if content is too short?                     |                                         |
+        | → Where does summary appear?                        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE008   | Apply template to note                                | NoteEditorBloc → TemplateApplied        | ⬜
+        | → Where do templates come from?                     |                                         |
+        | → TemplateManagementBloc → LoadTemplatesEvent       |                                         |
+        | → Does template OVERWRITE existing content?         |                                         |
+        | → Is user WARNED before overwrite?                  |                                         |
+        | → Are there DEFAULT templates or only user-created? |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE009   | Promote note to todo                                  | NoteEditorBloc → PromoteToTodoRequested | ⬜
+        | → Creates todo from note content                    |                                         |
+        | → Uses TodoRepository to create todo                |                                         |
+        | → Links note and todo via CrossFeatureBloc?         |                                         |
+        | → Is original note PRESERVED?                       |                                         |
+        | → Does user see confirmation?                       |                                         |
+        | → Does TodosBloc refresh to show new todo?          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE010   | Context scanner                                       | NoteEditorBloc → ContextScannerTriggered| ⬜
+        | → WHAT does context scanner do?                     |                                         |
+        | → SuggestionActionAccepted — what suggestions?      |                                         |
+        | → Is this implemented or PLACEHOLDER?               |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE011   | Add todo from within note editor                      | NoteEditorBloc → TodoAdded              | ⬜
+        | → Creates todo via TodoRepository?                  |                                         |
+        | → Links to current note?                            |                                         |
+        | → Different from PromoteToTodoRequested?            |                                         |
+        | → TodoAdded creates one todo item                   |                                         |
+        | → PromoteToTodo converts entire note                |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE012   | Link detection in note content                        | NoteEditorBloc → LinkParserService      | ⬜
+        | → URLs detected in content text                     |                                         |
+        | → Link preview shown for detected URLs              |                                         |
+        | → LinkPreviewBloc → FetchLinkPreviewEvent           |                                         |
+        | → URL validation: 4 DIFFERENT implementations       |                                         |
+        |   exist in the codebase:                            |                                         |
+        |   1. link_preview_widget.dart:23-74 (UrlValidator)  |                                         |
+        |   2. link_preview_bloc.dart:120-175                 |                                         |
+        |   3. string_extensions.dart:18-40 (isValidUrl)      |                                         |
+        |   4. link.dart:40-80 (Link entity)                  |                                         |
+        | → Are they consistent? Or do they disagree?         |                                         |
+        | → What if URL is malformed? Does app crash?         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+NE013   | ErrorOccurred event in editor                         | NoteEditorBloc → ErrorOccurred          | ⬜
+        | → NoteEditorError state shows message               |                                         |
+        | → User can recover (not stuck on error screen)      |                                         |
+        | → Entered data PRESERVED in error state             |                                         |
+        |   (user doesn't lose their typed content)           |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 4: TODO MANAGEMENT
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I make to-do lists for work and personal life.
+I check things off when done. I need categories, due dates,
+and subtasks."
+
+┌─────────────────────────────────────────────────────────────┐
+│ User expects: add task → set due date → complete it →       │
+│ see progress. Overdue items visible. Categories filter.     │
+└─────────────────────────────────────────────────────────────┘
+
+Check Code: TodosBloc (todos_bloc.dart), TodoBloc (todo_bloc.dart),
+            TodoRepository, AlarmRepository, AlarmService
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+T001    | Create todo "Buy groceries"                          | TodosBloc → AddTodo (TodoParams)        | ⬜
+        | → TodoParams validated (empty title?)               |                                         |
+        | → UUID generated for todo ID                        |                                         |
+        | → Due date stored correctly (timezone?)             |                                         |
+        | → Category assigned                                 |                                         |
+        | → TodosLoaded state refreshes list                  |                                         |
+        | → What if SQLite insert fails?                      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T002    | Complete todo (tap checkbox)                          | TodosBloc → ToggleTodo                  | ⬜
+        | → isCompleted toggles                               |                                         |
+        | → completedAt timestamp set                         |                                         |
+        | → Visual feedback (strikethrough, checkmark)        |                                         |
+        | → Completed todo moves to completed section         |                                         |
+        | → Can UN-complete (toggle back)                     |                                         |
+        | → Associated alarm AUTO-CANCELLED on complete       |                                         |
+        |   Check: does ToggleTodo call AlarmService.cancel?  |                                         |
+        | → If un-completed, is alarm rescheduled?            |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T003    | Delete todo with undo                                 | TodosBloc → DeleteTodo                  | ⬜
+        | → Todo removed from list immediately                |                                         |
+        | → Snackbar shows with "Undo" button                 |                                         |
+        | → UndoDeleteTodo restores the todo                  |                                         |
+        | → Undo restores alarm too?                          |                                         |
+        | → After undo timeout, todo permanently deleted      |                                         |
+        | → Associated alarms cancelled on final delete       |                                         |
+        | → What if user navigates away before undo timeout?  |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T004    | Filter by category                                    | TodosBloc → FilterTodos, ChangeCategory | ⬜
+        | → What categories exist? Hardcoded or user-created? |                                         |
+        | → "All" shows everything                            |                                         |
+        | → Each category shows correct subset                |                                         |
+        | → ToggleFilters shows/hides filter panel            |                                         |
+        | → Filter persists after navigation?                 |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T005    | Sort todos                                            | TodosBloc → SortTodos                   | ⬜
+        | → Sort by due date (earliest first)                 |                                         |
+        | → Sort by importance                                |                                         |
+        | → Sort by creation date                             |                                         |
+        | → Completed todos separate from active              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T006    | Search todos                                          | TodosBloc → SearchTodos                 | ⬜
+        | → Searches title and description                    |                                         |
+        | → Empty search shows all                            |                                         |
+        | → Results appear as user types                      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T007    | Mark todo as important                                | TodosBloc → ToggleImportantTodo         | ⬜
+        | → Important flag toggles                            |                                         |
+        | → Visual indicator (star, flag, etc.)               |                                         |
+        | → Important todos can be filtered/sorted            |                                         |
+        | → Importance persists                               |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T008    | Subtasks management                                   | TodosBloc → UpdateSubtasks              | ⬜
+        | → Add subtask to parent todo                        |                                         |
+        | → Check off individual subtask                      |                                         |
+        | → Subtasks stored with parent (JSON array?)         |                                         |
+        | → Progress shown: "2/4 done"                        |                                         |
+        | → What if all subtasks checked? Parent auto-done?   |                                         |
+        | → Very long subtask list handled?                   |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T009    | Add alarm to todo                                     | TodosBloc → AddAlarmToTodo              | ⬜
+        | → Alarm created via AlarmRepository                 |                                         |
+        | → Notification scheduled via AlarmService           |                                         |
+        | → Alarm references todo ID                          |                                         |
+        | → RemoveAlarmFromTodo cancels notification           |                                         |
+        | → When todo completed → alarm auto-cancelled        |                                         |
+        | → When notification tapped → opens TODO (not note)  |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T010    | SetListening event                                    | TodosBloc → SetListening                | ⬜
+        | → WHAT does this do? Database listener?             |                                         |
+        | → Is listener properly disposed?                    |                                         |
+        | → Can multiple listeners stack accidentally?        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T011    | Overdue todo handling                                 | TodosBloc date comparison logic         | ⬜
+        | → Todo with past due date shows as "overdue"        |                                         |
+        | → Overdue indicator (red text, icon, etc.)          |                                         |
+        | → Overdue doesn't auto-delete                       |                                         |
+        | → AnalyticsBloc → overdueItems counts these         |                                         |
+        | → Timezone handling for date comparison             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+T012    | TodoBloc vs TodosBloc                                 | Both blocs                              | ⬜
+        | → TodoBloc = single todo operations                 |                                         |
+        | → TodosBloc = list operations                       |                                         |
+        | → Are they properly separated?                      |                                         |
+        | → Do they share TodoRepository?                     |                                         |
+        | → Can they create conflicting states?               |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 5: REMINDERS & ALARMS
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I set reminders so I don't forget things.
+The most important thing is: THE REMINDER MUST ACTUALLY FIRE.
+Even if my phone restarted. Even if the app is closed."
+
+┌─────────────────────────────────────────────────────────────┐
+│ User expects: set time → reminder fires at EXACTLY that     │
+│ time → notification appears → tap opens the right item.     │
+│ THIS IS THE #1 FEATURE USERS COMPLAIN ABOUT IN NOTE APPS.  │
+└─────────────────────────────────────────────────────────────┘
+
+Check Code: AlarmsBloc (alarm_bloc.dart, 1178 lines),
+            AlarmService, NotificationService, AlarmRepository,
+            main.dart (alarm handlers), AndroidManifest.xml
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+A001    | Create alarm "Take medicine" at 8:00 PM              | AlarmsBloc → _onAddAlarm                | ⬜
+        | → Time validated: must be in FUTURE                 |                                         |
+        | → If past time → error shown? Or fires immediately? |                                         |
+        | → Alarm saved to AlarmRepository (SQLite)           |                                         |
+        | → Notification scheduled via:                       |                                         |
+        |   AwesomeNotifications? AndroidAlarmManager? BOTH?  |                                         |
+        |   → Which is primary? Do they conflict?             |                                         |
+        | → AlarmAdded state emits                            |                                         |
+        | → Alarm appears in list                             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A002    | Alarm fires when app is KILLED (closed)               | main.dart:200-260                       | ⬜
+        | → AndroidAlarmManager triggers background handler   |                                         |
+        | → Handler creates AwesomeNotification               |                                         |
+        | → Notification appears with correct title/body      |                                         |
+        | → Sound plays (or vibration)                        |                                         |
+        | → THIS IS THE MOST CRITICAL CHECK                   |                                         |
+        | → Test on: Samsung, Xiaomi, Huawei, OnePlus         |                                         |
+        |   (these brands kill background processes)          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A003    | Alarm fires when app is in FOREGROUND                 | main.dart notification handler          | ⬜
+        | → In-app notification shown?                        |                                         |
+        | → Does it ALSO show system notification? (double?)  |                                         |
+        | → Can user dismiss/snooze from in-app?              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A004    | Alarm fires when app is in BACKGROUND                 | main.dart notification handler          | ⬜
+        | → System notification shown                         |                                         |
+        | → Correct icon, title, body                         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A005    | Notification TAP opens correct screen                 | main.dart:392-456 action handler        | ⬜
+        | → If alarm linked to NOTE → opens that note         |                                         |
+        | → If alarm linked to TODO → opens that todo         |                                         |
+        | → If standalone alarm → opens alarm detail          |                                         |
+        | → Route arguments passed correctly?                 |                                         |
+        | → What if linked note/todo was DELETED?             |                                         |
+        |   → Does it crash or show "Item not found"?         |                                         |
+        | → Does it work when app was killed?                 |                                         |
+        | → Does it work from lock screen?                    |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A006    | Snooze alarm for 15 minutes                           | AlarmsBloc → SnoozeAlarmEvent           | ⬜
+        | → New time = now + 15 minutes                       |                                         |
+        | → Old notification cancelled                        |                                         |
+        | → New notification scheduled at new time            |                                         |
+        | → Can snooze infinitely? Is there limit?            |                                         |
+        | → Original alarm time preserved for display?        |                                         |
+        | → Alarm in DB updated with snooze info              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A007    | Dismiss alarm                                         | AlarmsBloc → DismissAlarmEvent          | ⬜
+        | → Notification cancelled                            |                                         |
+        | → Alarm status updated in DB to "dismissed"         |                                         |
+        | → How does this differ from CompleteAlarmEvent?      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A008    | Toggle alarm on/off                                   | AlarmsBloc → ToggleAlarmEvent           | ⬜
+        | → Disable: cancels scheduled notification           |                                         |
+        | → Enable: reschedules notification                  |                                         |
+        | → What if alarm time has PASSED while disabled?     |                                         |
+        |   → Error? Schedule for next day? Ignore?           |                                         |
+        | → Visual indicator: grayed out when disabled        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A009    | Delete alarm                                          | AlarmsBloc → DeleteAlarmEvent           | ⬜
+        | → Notification cancelled                            |                                         |
+        | → Alarm removed from DB                             |                                         |
+        | → Reference removed from linked note/todo           |                                         |
+        | → DeleteAlarmsForNoteEvent deletes all for one note |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A010    | Reschedule alarm to new time                          | AlarmsBloc → RescheduleAlarmEvent       | ⬜
+        | → Old notification cancelled                        |                                         |
+        | → New notification scheduled                        |                                         |
+        | → DB updated with new time                          |                                         |
+        | → New time validated (must be future)               |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A011    | Periodic refresh timer                                | AlarmsBloc → StartPeriodicRefreshEvent  | ⬜
+        | → 1-minute Timer started                            |                                         |
+        | → StopPeriodicRefreshEvent stops it                 |                                         |
+        | → Timer cancelled in BLoC close()?                  |                                         |
+        |   → If NOT: MEMORY LEAK                             |                                         |
+        | → Can multiple timers be started? (tap rapidly)     |                                         |
+        |   → If YES: multiple timers leak                    |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A012    | Alarms rescheduled on app startup                     | main.dart:458-468                       | ⬜
+        | → All future alarms rescheduled                     |                                         |
+        | → Past alarms marked as missed (not rescheduled)    |                                         |
+        | → 100+ alarms: performance on main thread?          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A013    | Search and filter alarms                              | AlarmsBloc → SearchAlarmsEvent          | ⬜
+        |                                                     | AlarmsBloc → FilterAlarms               |
+        | → Search by title/description                       |                                         |
+        | → Filter by status (active/completed/dismissed)     |                                         |
+        | → Filter by date range                              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A014    | Clear completed alarms                                | AlarmsBloc → ClearCompletedAlarmsEvent  | ⬜
+        | → Only removes completed, not active                |                                         |
+        | → Cleans up associated notifications (should be     |                                         |
+        |   none for completed, but verify)                   |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+A015    | AlarmsBloc is 1178 lines — side effects check         | alarm_bloc.dart                         | ⬜
+        | → Is _timer field properly disposed in close()?     |                                         |
+        | → Are all StreamSubscriptions cancelled?            |                                         |
+        | → Does close() call super.close()?                  |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 6: FOCUS & POMODORO TIMER
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I want to focus for 25 minutes without
+distractions. The timer counts down. DND turns on.
+When done, I take a break. I can see my focus history."
+
+┌─────────────────────────────────────────────────────────────┐
+│ CRITICAL: THREE separate timer BLoCs exist:                 │
+│ FocusBloc, PomodoroBloc, PomodoroTimerBloc                  │
+│ Plus PomodoroStatsBloc for statistics.                      │
+│ This MUST be checked for overlap and conflicts.             │
+└─────────────────────────────────────────────────────────────┘
+
+Check Code: FocusBloc (focus_bloc.dart, 680 lines),
+            PomodoroBloc (pomodoro_bloc.dart),
+            PomodoroTimerBloc (pomodoro_timer_bloc.dart),
+            PomodoroStatsBloc, FocusSessionScreen (946 lines),
+            DndService, StatsRepository
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+F001    | Start 25-min focus session                            | FocusBloc → StartFocusSessionEvent      | ⬜
+        | → Timer starts counting 25:00 → 24:59 → ...        |                                         |
+        | → TickFocusEvent fires every 1 second               |                                         |
+        | → DndService enables Do Not Disturb                 |                                         |
+        | → What if DND permission NOT granted?               |                                         |
+        |   Does it crash or gracefully skip DND?             |                                         |
+        | → FocusActive state emits                           |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F002    | Timer disposal                                        | FocusBloc → close()                     | ⬜
+        | → Is dart:async Timer stored as field?              |                                         |
+        | → Is Timer.cancel() called in close()?              |                                         |
+        | → If NOT: MEMORY LEAK + timer keeps running         |                                         |
+        |   after screen is left                              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F003    | FocusSessionScreen SIDE EFFECT in build()             | focus_session_screen.dart:18-40         | ⬜
+        | → _initFocusScreen called inside build() method     |                                         |
+        | → This is CONFIRMED BUG from analysis               |                                         |
+        | → Causes RE-INITIALIZATION on every rebuild         |                                         |
+        | → Timer may restart when keyboard opens,            |                                         |
+        |   screen rotates, or theme changes                  |                                         |
+        | → Should be in initState()                          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F004    | Pause and resume focus                                | FocusBloc → Pause/ResumeEvent           | ⬜
+        | → Timer actually pauses (not just UI hidden)        |                                         |
+        | → Remaining time preserved correctly                |                                         |
+        | → Resume continues from paused time                 |                                         |
+        | → DND toggled during pause?                         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F005    | Stop session early                                    | FocusBloc → StopFocusSessionEvent       | ⬜
+        | → Timer cancelled                                   |                                         |
+        | → DND disabled                                      |                                         |
+        | → Partial session saved to StatsRepository?         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F006    | Session completes (timer hits 0)                      | FocusBloc → FocusCompleted state        | ⬜
+        | → Sound/vibration notification                      |                                         |
+        | → DND disabled                                      |                                         |
+        | → RateFocusSessionEvent (1-5 rating) works          |                                         |
+        | → Session saved to StatsRepository                  |                                         |
+        | → Break option offered (StartBreakSessionEvent)     |                                         |
+        | → SkipBreakEvent works                              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F007    | Break session                                         | FocusBloc → StartBreakSessionEvent      | ⬜
+        | → Short break: 5 min timer                          |                                         |
+        | → Break completion triggers next work option        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F008    | Timer in BACKGROUND (phone locked)                    | FocusBloc timer mechanism               | ⬜
+        | → Is timer based on dart:async Timer?               |                                         |
+        | → If yes: Timer PAUSES when app is backgrounded     |                                         |
+        | → User locks phone for 25 min, opens app:           |                                         |
+        |   sees timer at 24:50 still counting (WRONG)        |                                         |
+        | → Should use DateTime.difference() approach          |                                         |
+        | → Should schedule notification for completion        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F009    | DUPLICATE CHECK: FocusBloc vs PomodoroBloc            | Both blocs                              | ⬜
+        |                  vs PomodoroTimerBloc                |                                         |
+        | → FocusBloc: StartFocusSession, Pause, Resume, Stop |                                         |
+        | → PomodoroBloc: StartWorkSession, Pause, Resume,    |                                         |
+        |   Stop, StartShortBreak, StartLongBreak             |                                         |
+        | → PomodoroTimerBloc: StartTimer, Pause, Resume,     |                                         |
+        |   Reset, Tick, SwitchPhase, SkipPhase               |                                         |
+        | → ALL THREE manage countdown timers                 |                                         |
+        | → Which screen uses which?                          |                                         |
+        | → Can user accidentally start all three?            |                                         |
+        | → Are stats from each saved to same repository?     |                                         |
+        | → Are stats DOUBLE-COUNTED?                         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F010    | Focus statistics                                      | PomodoroStatsBloc → LoadStatsEvent      | ⬜
+        | → RecordSessionEvent saves to StatsRepository       |                                         |
+        | → Is this SAME StatsRepository as FocusBloc?        |                                         |
+        | → ClearStatsEvent clears all stats                  |                                         |
+        | → Do FocusBloc AND PomodoroBloc both write stats?   |                                         |
+        |   → If yes: same session counted twice              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+F011    | Focus settings                                        | FocusBloc → UpdateFocusSettingsEvent     | ⬜
+        | → Change work duration (e.g., 30 min instead of 25) |                                         |
+        | → Change break duration                             |                                         |
+        | → Settings persisted for next session               |                                         |
+        | → Settings apply to NEXT session, not current       |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 7: DAILY REFLECTION & MOOD
+████████████████████████████████████████████████████████████████
+
+USER STORY: "Every night before bed, I answer a reflection
+question and log my mood. I can look back at my entries
+over time."
+
+Check Code: ReflectionBloc (reflection_bloc.dart),
+            ReflectionHomeScreen (949 lines),
+            ReflectionRepository, ReflectionDatabase
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+R001    | Load reflection questions                             | ReflectionBloc → LoadQuestionsEvent     | ⬜
+        | → TWO data sources: ReflectionRepository AND        |                                         |
+        |   ReflectionDatabase — which is primary?            |                                         |
+        | → Are they in sync?                                 |                                         |
+        | → First use: are DEFAULT questions seeded?          |                                         |
+        | → If no questions exist: empty state shown?         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+R002    | Submit answer to question                             | ReflectionBloc → SubmitAnswerEvent      | ⬜
+        | → _validateAnswerInput called                       |                                         |
+        | → What validation rules? (min length? empty check?) |                                         |
+        | → Answer saved linked to correct question           |                                         |
+        | → Timestamp recorded                                |                                         |
+        | → Draft cleared after submit                        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+R003    | Draft save and load                                   | ReflectionBloc → SaveDraft/LoadDraft    | ⬜
+        | → Draft stored in SharedPrefs or DB?                |                                         |
+        | → Per-question or global draft?                     |                                         |
+        | → Draft loads when returning to question            |                                         |
+        | → Draft cleared after submit                        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+R004    | Log mood                                              | ReflectionBloc → LogMoodEvent           | ⬜
+        | → What mood values? (emoji? number? enum?)          |                                         |
+        | → Saved with timestamp                              |                                         |
+        | → Multiple moods per day allowed?                   |                                         |
+        | → AnalyticsBloc → LoadMoodAnalyticsEvent reads this |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+R005    | Random daily question                                 | ReflectionBloc → LoadRandomQuestionEvent| ⬜
+        | → Returns different question each time              |                                         |
+        | → What if only 1 question? (always same)            |                                         |
+        | → What if 0 questions? (crash? empty state?)        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+R006    | Pin/unpin question                                    | ReflectionBloc → PinQuestionEvent       | ⬜
+        | → Pinned question appears in daily rotation         |                                         |
+        | → UnpinQuestionEvent works                          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+R007    | Schedule daily reflection notification                | ReflectionBloc → ScheduleReflectionNotif| ⬜
+        | → NotificationService schedules recurring notif     |                                         |
+        | → CancelReflectionNotificationEvent cancels         |                                         |
+        | → Notification tap opens reflection screen          |                                         |
+        | → Survives device restart?                          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+R008    | BIOMETRIC AUTH in ReflectionHomeScreen                | ReflectionHomeScreen:26-74              | ⬜
+        | → Biometric check logic is IN THE UI CODE           |                                         |
+        | → This should be in a BLoC                          |                                         |
+        | → Does it run on every build()? (side effect bug?)  |                                         |
+        | → Is it guarded to run only once?                   |                                         |
+        | → Why does reflection need separate biometric?      |                                         |
+        |   App already has biometric at startup              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+R009    | Reflection templates                                  | ReflectionBloc → LoadTemplatesEvent     | ⬜
+        | → SelectTemplateEvent populates form?               |                                         |
+        | → CreateFromTemplateEvent creates new question      |                                         |
+        | → Are templates in DB or hardcoded?                 |                                         |
+        | → Different from TemplateManagementBloc templates?  |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 8: MEDIA — PHOTOS, AUDIO, VIDEO
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I attach photos to notes, record voice memos,
+and sometimes scan documents."
+
+┌─────────────────────────────────────────────────────────────┐
+│ CRITICAL: 11+ Media-related BLoCs exist:                    │
+│ MediaBloc, MediaGalleryBloc, MediaPickerBloc,               │
+│ MediaFilterBloc, MediaFiltersBloc, MediaSearchBloc,         │
+│ MediaViewerBloc, MediaOrganizationBloc,                     │
+│ MediaAnalyticsBloc, AudioRecorderBloc,                      │
+│ AudioPlaybackBloc, VideoPlaybackBloc,                       │
+│ VideoTrimmingBloc, VideoEditorBloc                          │
+│ MANY of these may be duplicates or placeholders.            │
+└─────────────────────────────────────────────────────────────┘
+
+Check Code: MediaBloc (media_bloc.dart), AudioRecorderBloc
+            (audio_recorder_bloc.dart, 285 lines),
+            DocumentScanBloc (document_scan_bloc.dart, 142 lines),
+            OcrExtractionBloc, all media sub-blocs
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+M001    | Take photo with camera                                | MediaBloc → CapturePhotoEvent           | ⬜
+        | → Camera permission requested                       |                                         |
+        | → Permission denied: error shown, not crash         |                                         |
+        | → Photo saved to app directory                      |                                         |
+        | → Compressed via MediaProcessingService             |                                         |
+        | → Photo path stored in note/media DB                |                                         |
+        | → Camera unavailable (emulator): graceful error     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M002    | Pick photo from gallery                               | MediaBloc → PickPhotoFromGalleryEvent   | ⬜
+        | → Gallery permission requested                      |                                         |
+        | → Photo COPIED to app storage (not reference)       |                                         |
+        | → Original deleted by user → app photo still exists |                                         |
+        | → Permission denied: error shown                    |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M003    | Record audio (voice memo)                             | AudioRecorderBloc → StartRecording      | ⬜
+        | → Microphone permission requested                   |                                         |
+        | → AudioRecorderService initialized                  |                                         |
+        | → UpdateRecordingDuration updates every second      |                                         |
+        | → UpdateWaveform shows real-time visualization      |                                         |
+        | → PauseRecording pauses (not creates new file)      |                                         |
+        | → ResumeRecording continues same file               |                                         |
+        | → StopRecording saves file correctly                |                                         |
+        | → hasRecording flag set                             |                                         |
+        | → ResetRecording cleans up file                     |                                         |
+        | → Very long recording (60 min): file size?          |                                         |
+        | → Audio format: WAV? AAC? MP3?                      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M004    | Play back recorded audio                              | AudioRecorderBloc → PlayRecording       | ⬜
+        | → Starts from beginning                             |                                         |
+        | → PausePlayback pauses correctly                    |                                         |
+        | → UpdatePlaybackPosition updates progress slider    |                                         |
+        | → PlaybackCompleted resets player state              |                                         |
+        | → What if audio file deleted/missing?               |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M005    | DUPLICATE: AudioPlaybackBloc vs AudioRecorderBloc     | Both blocs                              | ⬜
+        | → AudioRecorderBloc has: PlayRecording,             |                                         |
+        |   PausePlayback, UpdatePlaybackPosition,            |                                         |
+        |   PlaybackCompleted                                 |                                         |
+        | → AudioPlaybackBloc has: PlayAudioEvent,            |                                         |
+        |   PauseAudioEvent, ResumeAudioEvent,                |                                         |
+        |   StopAudioEvent, SeekAudioEvent,                   |                                         |
+        |   UpdateVolumeEvent                                 |                                         |
+        | → SAME functionality in TWO BLoCs                   |                                         |
+        | → Which screen uses which?                          |                                         |
+        | → Can both be active at same time? (audio conflict) |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M006    | Document scanning                                     | DocumentScanBloc → CaptureImage         | ⬜
+        |                                                     | (142 lines, simpler)                    |
+        | → Camera opens for document                         |                                         |
+        | → cunning_document_scanner package used?            |                                         |
+        | → After capture: processing status shown            |                                         |
+        | → Extracted text available                          |                                         |
+        | → Is this connected to OcrExtractionBloc?           |                                         |
+        |   Or does DocumentScanBloc do OCR too?              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M007    | OCR text extraction                                   | OcrExtractionBloc → ExtractTextEvent    | ⬜
+        | → google_mlkit_text_recognition used                |                                         |
+        | → Image processed for text                          |                                         |
+        | → OcrSuccess state with extractedText               |                                         |
+        | → OcrError if fails                                 |                                         |
+        | → Loading state during processing                   |                                         |
+        | → vs DocumentScanBloc: which handles OCR?           |                                         |
+        | → vs NoteEditorBloc TextExtractionRequested:        |                                         |
+        |   THREE places that do OCR?                         |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M008    | Video recording                                       | MediaBloc → CaptureVideoEvent           | ⬜
+        | → Camera + microphone permission                    |                                         |
+        | → CompressVideoEvent reduces file size              |                                         |
+        | → AddVideoToNoteEvent attaches to note              |                                         |
+        | → RemoveVideoFromNoteEvent detaches                 |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M009    | Video playback                                        | VideoPlaybackBloc → PlayVideoEvent      | ⬜
+        | → Video plays correctly                             |                                         |
+        | → SeekVideoEvent seeks                              |                                         |
+        | → Video player disposed on screen exit              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M010    | Video trimming                                        | VideoTrimmingBloc → TrimVideoEvent      | ⬜
+        | → Set start/end time                                |                                         |
+        | → Trim creates new file                             |                                         |
+        | → Original preserved                                |                                         |
+        | → Is this actually implemented? Or placeholder?     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M011    | Video editing (filters, text overlay)                 | VideoEditorBloc → all events            | ⬜
+        | → ApplyFilterEvent applies visual effect            |                                         |
+        | → AddTextEvent adds text overlay                    |                                         |
+        | → AdjustBrightnessEvent works                       |                                         |
+        | → ExportVideoEvent creates new file                 |                                         |
+        | → IS THIS ACTUALLY IMPLEMENTED?                     |                                         |
+        | → This sounds like a full video editor — very       |                                         |
+        |   complex. Likely PLACEHOLDER.                      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M012    | Media gallery                                         | MediaGalleryBloc → LoadGalleryEvent     | ⬜
+        | → Shows all media across all notes                  |                                         |
+        | → Filter by type (photo, audio, video)              |                                         |
+        | → Sort gallery                                      |                                         |
+        | → Select and delete media                           |                                         |
+        | → Delete updates parent note too                    |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+M013    | DUPLICATE CHECK: 6+ media organization BLoCs          | Multiple blocs                          | ⬜
+        | → MediaGalleryBloc (gallery + filter + sort)        |                                         |
+        | → MediaFilterBloc (apply/clear filter)              |                                         |
+        | → MediaFiltersBloc (apply/remove filter)            |                                         |
+        |   → MediaFilterBloc vs MediaFiltersBloc:            |                                         |
+        |     NEARLY IDENTICAL NAMES. Same thing?             |                                         |
+        | → MediaSearchBloc (search media)                    |                                         |
+        | → MediaOrganizationBloc (albums)                    |                                         |
+        | → MediaAnalyticsBloc (stats)                        |                                         |
+        | → MediaPickerBloc (pick/capture)                    |                                         |
+        | → MediaViewerBloc (view/rotate/zoom)                |                                         |
+        | → That's 8 media BLoCs. How many are USED?          |                                         |
+        | → How many are PLACEHOLDER?                         |                                         |
+        | → How many should be MERGED?                        |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 9: SEARCH ACROSS EVERYTHING
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I type 'birthday' and I want to find ALL
+notes, todos, and reminders about birthdays. ONE search."
+
+┌─────────────────────────────────────────────────────────────┐
+│ CRITICAL: 4+ search BLoCs exist + inline search in         │
+│ NotesBloc, TodosBloc, AlarmsBloc, SmartCollectionsBloc.    │
+│ That's 7+ search implementations.                           │
+└─────────────────────────────────────────────────────────────┘
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+S001    | Global search works                                   | GlobalSearchBloc                        | ⬜
+        | → Searches notes + todos + alarms                   |                                         |
+        | → UnifiedRepository combines results                |                                         |
+        | → Debounce implemented                              |                                         |
+        | → Empty query clears results                        |                                         |
+        | → GlobalSearchScreen (949 lines) renders all        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+S002    | DUPLICATE CHECK: How many search systems?             | Multiple blocs                          | ⬜
+        | 1. GlobalSearchBloc (search everything)             |                                         |
+        | 2. SearchBloc (search notes only)                   |                                         |
+        | 3. AdvancedSearchBloc (syntax search)               |                                         |
+        | 4. MediaSearchBloc (search media)                   |                                         |
+        | 5. NotesBloc → SearchNotesEvent (inline)            |                                         |
+        | 6. TodosBloc → SearchTodos (inline)                 |                                         |
+        | 7. AlarmsBloc → SearchAlarmsEvent (inline)          |                                         |
+        | 8. SmartCollectionsBloc → SearchSmartCollections     |                                         |
+        | → EIGHT search implementations!                     |                                         |
+        | → Are all necessary?                                |                                         |
+        | → Are they consistent (same search algorithm)?      |                                         |
+        | → Does user see 8 different search UIs?             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+S003    | DUPLICATE CHECK: Filter BLoCs                          | Multiple blocs                          | ⬜
+        | 1. SearchFiltersBloc (in global_search folder)      |                                         |
+        | 2. FiltersBloc (in filters folder)                  |                                         |
+        | 3. MediaFilterBloc                                  |                                         |
+        | 4. MediaFiltersBloc (different from #3?)            |                                         |
+        | → Are these all different or duplicates?            |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 10: FOLDERS, SMART COLLECTIONS, ORGANIZATION
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I organize notes into folders like Work and
+Personal. I create smart collections that auto-group notes."
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+O001    | DUPLICATE: Two folder BLoCs                           | NoteFoldersBloc vs FoldersBloc           | ⬜
+        | → Do they share same DB table?                      |                                         |
+        | → Which screens use which?                          |                                         |
+        | → Can they create conflicting data?                 |                                         |
+        | → One should be removed                             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+O002    | Create folder, move notes, delete folder              | NoteFoldersBloc → all events            | ⬜
+        | → Folder name validated                             |                                         |
+        | → Duplicate name checked                            |                                         |
+        | → MovesNotesEvent updates note's folder ID          |                                         |
+        | → DeleteFolderEvent: notes inside → orphaned?       |                                         |
+        |   moved to root? deleted?                           |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+O003    | Smart collections with rules                          | SmartCollectionsBloc + WizardBloc        | ⬜
+        | → CreateSmartCollectionEvent with AND/OR rules      |                                         |
+        | → Collection auto-populates based on rules          |                                         |
+        | → RuleBuilderBloc validates rules                   |                                         |
+        | → Is this fully functional or placeholder?          |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 11: SETTINGS, THEME, SECURITY
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I set dark mode, fingerprint lock, and
+customize the app to my liking."
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+SET001  | Dark mode toggle                                     | ThemeBloc → ChangeThemeVariantEvent      | ⬜
+        | → Theme changes immediately                         |                                         |
+        | → ALL screens respect theme (no hardcoded colors)   |                                         |
+        | → Persists in SharedPreferences                     |                                         |
+        | → Note colors visible in dark mode                  |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+SET002  | Accent color change                                   | AccentColorBloc → ChangeAccentColorEvent | ⬜
+        | → Affects buttons, icons, highlights                |                                         |
+        | → Coordinates with ThemeBloc (no conflict)          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+SET003  | Settings loading                                      | SettingsBloc → LoadSettingsEvent         | ⬜
+        | → ALL SharedPreferences keys loaded with defaults   | settings_bloc.dart (196 lines)          |
+        | → Missing keys don't crash (first launch)           |                                         |
+        | → notifications_enabled, sound_enabled,             |                                         |
+        |   vibration_enabled, dark_mode_enabled,             |                                         |
+        |   font_size_preference, language_code,              |                                         |
+        |   cloud_sync_enabled, led_enabled,                  |                                         |
+        |   quiet_hours settings, font_family, font_scale     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+SET004  | Biometric toggle in settings                          | SettingsBloc → ToggleBiometricEvent      | ⬜
+        | → Checks device capability first                    |                                         |
+        | → BiometricAuthService verifies hardware            |                                         |
+        | → Preference saved securely                         |                                         |
+        | → PinSetupBloc → PIN as fallback                    |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+SET005  | Accessibility features ACTUALLY work                  | AccessibilityFeaturesBloc               | ⬜
+        | → ToggleReduceMotionEvent: animations actually stop |                                         |
+        | → ToggleHighContrastEvent: colors actually change   |                                         |
+        | → ToggleScreenReaderEvent: semantics added          |                                         |
+        | → ToggleKeyboardNavigationEvent: focus works        |                                         |
+        | → OR are these just checkboxes that save a boolean  |                                         |
+        |   but NOTHING actually changes in the UI?           |                                         |
+        | → PLACEHOLDER CHECK — very important                |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+SET006  | Localization / language change                         | LocalizationBloc → ChangeLocaleEvent    | ⬜
+        | → Locale actually changes app language              |                                         |
+        | → Translation files (.arb) exist?                   |                                         |
+        | → How many languages supported?                     |                                         |
+        | → Hardcoded English strings exist?                  |                                         |
+        | → RTL layout for Arabic/Hebrew?                     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+SET007  | Deprecated SettingsScreen                              | settings_screen.dart (deprecated)        | ⬜
+        | → Old screen with large commented-out code          |                                         |
+        | → Routes to UnifiedSettingsScreen instead           |                                         |
+        | → Should be removed entirely                        |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 12: BACKUP & DATA SAFETY
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I have a year of notes. If I lose my phone,
+I need to restore everything on a new phone."
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+BK001   | Create backup                                        | BackupBloc → CreateBackupEvent          | ⬜
+        | → BackupService includes ALL data types:            |                                         |
+        |   notes, todos, alarms, reflections, media,         |                                         |
+        |   settings, tags, folders, smart collections        |                                         |
+        | → Progress shown via UpdateBackupProgressEvent      |                                         |
+        | → File format (JSON? ZIP? SQLite copy?)             |                                         |
+        | → Saved to accessible location                      |                                         |
+        | → Storage permission requested                      |                                         |
+        | → What if storage full?                             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+BK002   | Restore from backup                                  | BackupBloc → RestoreBackupEvent         | ⬜
+        | → User warned: "This replaces all current data"     |                                         |
+        | → Handles version differences in backup format      |                                         |
+        | → Corrupted backup file: error shown                |                                         |
+        | → After restore: app refreshes all BLoC states      |                                         |
+        | → After restore: alarms rescheduled                 |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+BK003   | Cache management                                     | BackupBloc → ClearCacheEvent            | ⬜
+        | → CalculateCacheSizeEvent accurate                  |                                         |
+        | → ClearCacheEvent frees space                       |                                         |
+        | → Clearing cache doesn't break functionality       |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 13: CROSS-FEATURE & NAVIGATION
+████████████████████████████████████████████████████████████████
+
+USER STORY: "I link my meeting note to my 'prepare slides'
+todo. I switch between tabs. Deep links work."
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+CF001   | Note-to-Todo linking                                 | CrossFeatureBloc → LinkNoteToTodoEvent  | ⬜
+        | → Link persists in DB                               |                                         |
+        | → GetLinkedItemsEvent returns correct items         |                                         |
+        | → Delete note → todo link cleaned                   |                                         |
+        | → Delete todo → note link cleaned                   |                                         |
+        | → UnlinkEvent removes relationship                  |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+CF002   | Tab navigation                                       | NavigationBloc → TabChanged             | ⬜
+        | → Tab switching preserves state                     | navigation_bloc.dart (35 lines)         |
+        | → Back button from non-home tab → home tab          |                                         |
+        | → Back button from home tab → exit app              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+CF003   | AppRouter completeness                                | app_router.dart (645 lines)             | ⬜
+        | → Every AppRoutes constant has a case                |                                         |
+        | → Default case for unknown routes                   |                                         |
+        | → Route arguments null-checked                      |                                         |
+        | → 645 lines is very long — maintainability issue    |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+CF004   | Deep linking                                         | DeepLinkingBloc → HandleDeepLinkEvent   | ⬜
+        | → Is this actually implemented?                     |                                         |
+        | → Does it navigate to correct item?                 |                                         |
+        | → What if item doesn't exist?                       |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+CF005   | Command palette                                      | CommandPaletteBloc → all events         | ⬜
+        | → Is this actually functional or placeholder?       |                                         |
+        | → What commands are available?                      |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+CF006   | UnifiedItemsBloc                                     | UnifiedItemsBloc → LoadUnifiedItemsEvent| ⬜
+        | → Combines notes + todos + alarms                   |                                         |
+        | → Is this used on any screen?                       |                                         |
+        | → Or is it dead code?                               |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+CF007   | Dashboard widgets                                    | DashboardWidgetsBloc → all events       | ⬜
+        | → Reorder, hide, show widgets                       |                                         |
+        | → Is this functional or placeholder?                |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 14: ANALYTICS & EXPORT
+████████████████████████████████████████████████████████████████
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+AE001   | Analytics data accuracy                              | AnalyticsBloc → LoadAnalyticsEvent      | ⬜
+        | → itemCounts correct                                |                                         |
+        | → weeklyActivity calculation correct                |                                         |
+        | → currentStreak calculation correct                 |                                         |
+        | → overdueItems count correct                        |                                         |
+        | → New user (no data): shows zeros, not error        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AE002   | Export formats                                        | ExportBloc → PerformExportEvent         | ⬜
+        | → PDF export: valid PDF generated                   |                                         |
+        | → CSV export: valid CSV                             |                                         |
+        | → JSON export: valid JSON                           |                                         |
+        | → TXT export: valid text file                       |                                         |
+        | → HTML export: valid HTML                           |                                         |
+        | → Are ALL formats actually implemented?             |                                         |
+        | → Or are some placeholder?                          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AE003   | UsagePatternsBloc                                    | UsagePatternsBloc → all events          | ⬜
+        | → Is this functional or placeholder?                |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AE004   | GraphBloc                                            | GraphBloc → all events                  | ⬜
+        | → Does graph actually render?                       |                                         |
+        | → Is this functional or placeholder?                |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 15: LOCATION & CALENDAR
+████████████████████████████████████████████████████████████████
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+LC001   | Location reminder                                    | LocationReminderBloc + LocationPickerBloc| ⬜
+        | → Google Maps API key: PLACEHOLDER or real?         | AndroidManifest:53-92                   |
+        | → PlacesService API key: PLACEHOLDER or real?       | places_service.dart:1-20                |
+        | → If placeholder: feature doesn't work AT ALL       |                                         |
+        | → Is geofencing implemented?                        |                                         |
+        | → Background location permission?                   |                                         |
+        | → Battery drain from location monitoring?           |                                         |
+        | → Is this feature functional or BROKEN by default?  |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+LC002   | Calendar sync                                        | CalendarIntegrationBloc → all events    | ⬜
+        | → device_calendar package used                      |                                         |
+        | → Calendar permission requested                     |                                         |
+        | → Is this functional or placeholder?                |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 16: ADVANCED NOTE FEATURES
+████████████████████████████████████████████████████████████████
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN001   | Note linking (bi-directional wiki-links)              | NoteLinkingBloc → all events            | ⬜
+        | → Is this actually implemented?                     |                                         |
+        | → Does graph view work?                             |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN002   | Note versioning (history/diff)                        | NoteVersioningBloc → all events         | ⬜
+        | → Are snapshots actually created?                   |                                         |
+        | → Does diff view work?                              |                                         |
+        | → Is this placeholder?                              |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN003   | Link preview (URL metadata)                          | LinkPreviewBloc → FetchLinkPreviewEvent | ⬜
+        | → Fetches title, image, description                 |                                         |
+        | → Cached?                                           |                                         |
+        | → Unreachable URL handled?                          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN004   | Recurrence for reminders                             | RecurrenceBloc → all events             | ⬜
+        | → Daily/weekly/monthly recurrence                   |                                         |
+        | → Next occurrence auto-scheduled                    |                                         |
+        | → Integrated with AlarmsBloc?                       |                                         |
+        | → Is this functional or placeholder?                |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN005   | Quick add (natural language)                          | QuickAddBloc → all events               | ⬜
+        | → "Buy milk tomorrow" → creates todo with due date  |                                         |
+        | → Is NLP parsing implemented?                       |                                         |
+        | → Or just plain text to note?                       |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN006   | PDF annotation                                       | PdfAnnotationBloc → all events          | ⬜
+        | → This is a COMPLEX feature                         |                                         |
+        | → Is this actually implemented?                     |                                         |
+        | → Very likely PLACEHOLDER                           |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN007   | Rich text editor                                     | TextEditorBloc → all events             | ⬜
+        | → Bold, italic, color formatting                    |                                         |
+        | → Undo/redo                                         |                                         |
+        | → Is this used in NoteEditor or separate?           |                                         |
+        | → Conflicts with NoteEditorBloc?                    |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN008   | Smart reminders                                       | SmartRemindersBloc → all events         | ⬜
+        | → What makes them "smart"?                          |                                         |
+        | → Different from regular AlarmsBloc?                |                                         |
+        | → Is this functional or placeholder?                |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+AN009   | DND controls                                         | DoNotDisturbBloc → all events           | ⬜
+        | → DndService uses MethodChannel to OS               | dnd_service.dart:1-80                   |
+        | → Permission required on Android                    |                                         |
+        | → SetDndScheduleEvent for auto-DND                  |                                         |
+        | → Integrated with FocusBloc?                        |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 17: DEPENDENCY INJECTION & ARCHITECTURE
+████████████████████████████████████████████████████████████████
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+DI001   | All 57+ BLoCs registered in get_it                   | injection_container.dart:1-200          | ⬜
+        | → Factory vs Singleton: which is which?             |                                         |
+        | → BLoCs should be FACTORY (new per screen)          |                                         |
+        | → Services should be SINGLETON                      |                                         |
+        | → Repositories should be SINGLETON                  |                                         |
+        | → Check if any BLoC is incorrectly singleton        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+DI002   | Dependency order correct                              | injection_container.dart                | ⬜
+        | → Services registered before repos                  |                                         |
+        | → Repos registered before BLoCs                     |                                         |
+        | → DB registered before repos                        |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+DI003   | No circular dependencies                              | injection_container.dart                | ⬜
+        | → Service A depends on Service B which depends on A |                                         |
+        | → get_it will throw if circular                     |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+DI004   | Error handling for missing registration               | injection_container.dart                | ⬜
+        | → What if get_it.get<X>() called for unregistered X?|                                         |
+        | → Does it crash with unclear error?                 |                                         |
+        | → Should have try-catch or assert                   |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 18: COMPREHENSIVE DUPLICATE BLOC AUDIT
+████████████████████████████████████████████████████████████████
+
+This is the FINAL check on the 57+ BLoCs:
+
+ID      | Potential Duplicate Pair                             | Action Needed                           | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+DUP001  | FocusBloc + PomodoroBloc + PomodoroTimerBloc          | Merge into ONE timer BLoC               | ⬜
+DUP002  | NoteFoldersBloc + FoldersBloc                          | Merge into ONE folder BLoC              | ⬜
+DUP003  | GlobalSearchBloc + SearchBloc + AdvancedSearchBloc    | Keep GlobalSearch, remove others?       | ⬜
+DUP004  | SearchFiltersBloc + FiltersBloc                        | Merge into ONE filter BLoC              | ⬜
+DUP005  | MediaFilterBloc + MediaFiltersBloc                     | SAME NAME — merge or clarify            | ⬜
+DUP006  | AudioRecorderBloc + AudioPlaybackBloc                  | Separate record vs play? Or merge?      | ⬜
+DUP007  | TemplateManagementBloc + ReminderTemplatesBloc         | Merge or differentiate clearly          | ⬜
+DUP008  | VoiceCommandBloc + NoteEditorBloc voice                | Both use SpeechService                  | ⬜
+DUP009  | 8 media BLoCs total                                    | How many actually needed? 2-3 max?      | ⬜
+DUP010  | DocumentScanBloc + OcrExtractionBloc +                 | THREE OCR paths — merge into ONE        | ⬜
+        | NoteEditorBloc.TextExtractionRequested                |                                         |
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 19: PLACEHOLDER / DEAD CODE IDENTIFICATION
+████████████████████████████████████████████████████████████████
+
+For EACH of these, determine: FUNCTIONAL or PLACEHOLDER?
+
+ID      | Feature / BLoC                                      | Likely Status                            | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+PH001   | VideoEditorBloc (filters, text overlay, brightness)  | Very likely PLACEHOLDER                 | ⬜
+PH002   | PdfAnnotationBloc (annotate PDFs)                    | Very likely PLACEHOLDER                 | ⬜
+PH003   | CommandPaletteBloc (command palette)                 | Likely PLACEHOLDER                      | ⬜
+PH004   | UsagePatternsBloc (usage analysis)                   | Likely PLACEHOLDER                      | ⬜
+PH005   | CalendarIntegrationBloc (calendar sync)              | Possibly PLACEHOLDER                    | ⬜
+PH006   | SmartRemindersBloc (smart reminders)                 | Possibly PLACEHOLDER                    | ⬜
+PH007   | NoteVersioningBloc (version history + diff)          | Possibly PLACEHOLDER                    | ⬜
+PH008   | NoteLinkingBloc (wiki-style linking)                 | Possibly PLACEHOLDER                    | ⬜
+PH009   | DeepLinkingBloc (deep link handling)                 | Possibly PLACEHOLDER                    | ⬜
+PH010   | MediaOrganizationBloc (albums)                       | Possibly PLACEHOLDER                    | ⬜
+PH011   | MediaAnalyticsBloc (media stats)                     | Possibly PLACEHOLDER                    | ⬜
+PH012   | GenerateSummaryRequested in NoteEditorBloc           | No backend API → likely PLACEHOLDER     | ⬜
+PH013   | ContextScannerTriggered in NoteEditorBloc            | Likely PLACEHOLDER                      | ⬜
+PH014   | AccessibilityFeaturesBloc (toggles save but          | Toggles save but may not change UI      | ⬜
+        | do they actually change the UI?)                    |                                         |
+PH015   | QuickAddBloc (natural language parsing)              | NLP is complex → likely basic only      | ⬜
+PH016   | Deprecated SettingsScreen (commented-out code)       | DEAD CODE — should remove               | ⬜
+PH017   | GraphBloc (chart rendering)                          | Depends on chart package — verify       | ⬜
+PH018   | DashboardWidgetsBloc (widget reorder)                | May be PLACEHOLDER                      | ⬜
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 20: MEMORY LEAKS & RESOURCE DISPOSAL
+████████████████████████████████████████████████████████████████
+
+ID      | Check                                              | BLoC/File                               | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+ML001   | FocusBloc Timer disposed in close()                   | focus_bloc.dart → close()               | ⬜
+ML002   | PomodoroBloc Timer disposed in close()                | pomodoro_bloc.dart → close()            | ⬜
+ML003   | PomodoroTimerBloc Timer disposed in close()           | pomodoro_timer_bloc.dart → close()      | ⬜
+ML004   | AlarmsBloc periodic refresh Timer disposed             | alarm_bloc.dart → close()               | ⬜
+ML005   | AudioRecorderBloc audio resources disposed             | audio_recorder_bloc.dart → close()      | ⬜
+ML006   | AudioPlaybackBloc player disposed                      | audio_playback_bloc.dart → close()      | ⬜
+ML007   | VideoPlaybackBloc player disposed                      | video_playback_bloc.dart → close()      | ⬜
+ML008   | SpeechService listener disposed (NoteEditorBloc)       | NoteEditorBloc → close()                | ⬜
+ML009   | VoiceCommandService listener disposed                   | VoiceCommandBloc → close()              | ⬜
+ML010   | All StreamSubscriptions cancelled                       | All BLoCs with streams → close()        | ⬜
+ML011   | All TextEditingControllers disposed (screens)           | All StatefulWidgets → dispose()         | ⬜
+ML012   | All AnimationControllers disposed (screens)             | All StatefulWidgets → dispose()         | ⬜
+ML013   | All ScrollControllers disposed (screens)                | All StatefulWidgets → dispose()         | ⬜
+ML014   | EnhancedNoteEditorScreen (2081 lines)                   | dispose() method exists and complete?   | ⬜
+ML015   | FocusSessionScreen (946 lines)                           | dispose() method exists and complete?   | ⬜
+ML016   | GlobalSearchScreen (949 lines)                           | dispose() method exists and complete?   | ⬜
+ML017   | ReflectionHomeScreen (949 lines)                         | dispose() method exists and complete?   | ⬜
+ML018   | EnhancedRemindersListScreen (1076 lines)                 | dispose() method exists and complete?   | ⬜
+
+
+████████████████████████████████████████████████████████████████
+CHECKLIST GROUP 21: SIDE EFFECTS IN BUILD METHODS
+████████████████████████████████████████████████████████████████
+
+(Confirmed bugs from analysis)
+
+ID      | Check                                              | File                                    | Status
+--------|----------------------------------------------------|-----------------------------------------|-------
+SE001   | FocusSessionScreen calls _initFocusScreen            | focus_session_screen.dart:18-40          | ⬜
+        | inside build() — CAUSES TIMER RESTART ON REBUILD   |                                         |
+        | → Must move to initState()                          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+SE002   | EnhancedRemindersListScreen calls _initScreen         | enhanced_reminders_list_screen.dart:12-32| ⬜
+        | inside build() — CAUSES RE-INITIALIZATION          |                                         |
+        | → Must move to initState()                          |                                         |
+--------|----------------------------------------------------|-----------------------------------------|-------
+SE003   | ReflectionHomeScreen biometric logic in UI            | reflection_home_screen.dart:26-74       | ⬜
+        | → Business logic in screen widget                   |                                         |
+        | → Should be in BLoC                                 |                                         |
+        | → May run on every build                            |                                         |
+
+
+████████████████████████████████████████████████████████████████
+FINAL SECTION: COMPILE, FIX, VERIFY
+████████████████████████████████████████████████████████████████
+
+After completing ALL checklists above:
+
+STEP 1: Count results
+```
+Total checks: [number]
+✅ PASS:       [number] ([%])
+❌ FAIL:       [number] ([%])
+🔵 DUPLICATE:  [number]
+👻 PLACEHOLDER:[number]
+⚪ DEAD CODE:  [number]
+🟣 LEAK:       [number]
+⚠️ SIDE EFFECT:[number]
+```
+
+STEP 2: For every ❌ FAIL, provide exact fix with code
+
+STEP 3: For every 🔵 DUPLICATE, recommend merge plan
+
+STEP 4: For every 👻 PLACEHOLDER, recommend: complete or remove
+
+STEP 5: For every 🟣 LEAK, provide dispose() fix
+
+STEP 6: For every ⚠️ SIDE EFFECT, provide initState() fix
+
+STEP 7: Re-verify after all fixes applied
+
+STEP 8: Final scorecard:
+```
+╔══════════════════════════════════════════════╗
+║  MYNOTES HEALTH SCORE                        ║
+╠════════════════════════╦═══════╦═════════════╣
+║ Category               ║Before ║ After Fixes ║
+╠════════════════════════╬═══════╬═════════════╣
+║ Notes CRUD             ║  ?/10 ║    ?/10     ║
+║ Note Editor            ║  ?/10 ║    ?/10     ║
+║ Todos                  ║  ?/10 ║    ?/10     ║
+║ Alarms/Reminders       ║  ?/10 ║    ?/10     ║
+║ Focus/Pomodoro         ║  ?/10 ║    ?/10     ║
+║ Reflection/Mood        ║  ?/10 ║    ?/10     ║
+║ Media Management       ║  ?/10 ║    ?/10     ║
+║ Search                 ║  ?/10 ║    ?/10     ║
+║ Organization           ║  ?/10 ║    ?/10     ║
+║ Settings/Theme         ║  ?/10 ║    ?/10     ║
+║ Backup/Restore         ║  ?/10 ║    ?/10     ║
+║ Security (Biometric)   ║  ?/10 ║    ?/10     ║
+║ Cross-Feature          ║  ?/10 ║    ?/10     ║
+║ Analytics/Export        ║  ?/10 ║    ?/10     ║
+║ Resource Disposal      ║  ?/10 ║    ?/10     ║
+║ Code Quality           ║  ?/10 ║    ?/10     ║
+╠════════════════════════╬═══════╬═════════════╣
+║ OVERALL                ║  ?/10 ║    ?/10     ║
+╚════════════════════════╩═══════╩═════════════╝
+
+Actual BLoCs needed: [?] out of 57+
+BLoCs to merge: [list]
+BLoCs to remove (placeholder): [list]
+BLoCs to remove (dead code): [list]
+BLoCs working correctly: [list]
+```
+
+=============================================================
+NOW START. CHECK EVERY ITEM. READ ACTUAL CODE.
+DO NOT GUESS. MARK EVERY STATUS. MISS NOTHING.
+=============================================================
+```

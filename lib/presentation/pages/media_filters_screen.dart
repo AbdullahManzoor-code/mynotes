@@ -4,7 +4,6 @@ import '../bloc/media_filters/media_filters_bloc.dart';
 import '../bloc/media_filters/media_filters_event.dart';
 import '../bloc/media_filters/media_filters_state.dart';
 import '../design_system/design_system.dart';
-import '../../core/services/app_logger.dart';
 
 /// Media Filters & Effects Screen
 /// Apply filters to images: Grayscale, Sepia, Blur, Brightness, etc.

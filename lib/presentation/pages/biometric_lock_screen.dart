@@ -6,7 +6,7 @@ import 'package:mynotes/core/utils/app_logger.dart';
 import '../../core/constants/app_colors.dart';
 import '../../injection_container.dart';
 import '../bloc/biometric_auth/biometric_auth_bloc.dart';
-import 'main_home_screen.dart' hide Icon;
+import 'main_home_screen.dart';
 
 class BiometricLockScreen extends StatefulWidget {
   final VoidCallback? onAuthenticated;

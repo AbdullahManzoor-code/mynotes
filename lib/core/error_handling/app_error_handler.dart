@@ -163,11 +163,6 @@ class AppErrorHandler {
     return error.message;
   }
 
-  void _showUserMessage(String message) {
-    debugPrint('[USER MESSAGE] $message');
-    // This will be intercepted by UI layer via listener
-  }
-
   /// Show snackbar via BuildContext
   static void showErrorSnackbar(
     BuildContext context,

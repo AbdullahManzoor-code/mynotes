@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/bloc/rule_builder/rule_builder_bloc.dart';
-import 'package:mynotes/domain/services/rule_evaluation_engine.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
 import 'package:mynotes/presentation/design_system/app_spacing.dart';

@@ -434,6 +434,45 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
         );
 
         final updatedTodo = todo.toggleComplete();
+        
+        // ISSUE-011 FIX: Cancel or reschedule associated alarms based on completion status
+        if (updatedTodo.isCompleted && !todo.isCompleted) {
+          // Todo was just marked as complete - cancel its alarms
+          AppLogger.i('Todo marked complete, cancelling associated alarms');
+          try {
+            final allAlarms = await _alarmRepository.getAlarms();
+            final linkedAlarms = allAlarms.where((alarm) => alarm.linkedTodoId == todo.id).toList();
+            for (final alarm in linkedAlarms) {
+              await _alarmNotificationService.cancelAlarm(alarm.id);
+              AppLogger.i('Cancelled alarm ${alarm.id} for completed todo (kept in DB for potential un-complete)');
+            }
+          } catch (e) {
+            // Log but don't fail - alarm cancellation is not critical
+            AppLogger.w('Warning: Failed to cancel alarms for completed todo: $e');
+          }
+        } else if (!updatedTodo.isCompleted && todo.isCompleted) {
+          // Todo was just marked as incomplete - reschedule its alarms
+          AppLogger.i('Todo marked incomplete, rescheduling associated alarms');
+          try {
+            final allAlarms = await _alarmRepository.getAlarms();
+            final linkedAlarms = allAlarms.where((alarm) => alarm.linkedTodoId == todo.id).toList();
+            for (final alarm in linkedAlarms) {
+              if (alarm.scheduledTime.isAfter(DateTime.now())) {
+                // Only reschedule if the alarm is still in the future
+                await _alarmNotificationService.scheduleAlarm(
+                  id: alarm.id,
+                  dateTime: alarm.scheduledTime,
+                  title: alarm.message,
+                );
+                AppLogger.i('Rescheduled alarm ${alarm.id} for un-completed todo');
+              }
+            }
+          } catch (e) {
+            // Log but don't fail - alarm rescheduling is not critical
+            AppLogger.w('Warning: Failed to reschedule alarms for un-completed todo: $e');
+          }
+        }
+        
         await _todoRepository.updateTodo(updatedTodo);
         final allTodos = await _todoRepository.getTodos();
         final stats = allTodos.stats;
@@ -471,6 +510,22 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
         final todoToDelete = currentState.allTodos.firstWhere(
           (todo) => todo.id == event.todoId,
         );
+
+        // ISSUE-011 FIX: Cancel associated alarms when todo is deleted
+        // NOTE: We cancel notifications but do NOT delete alarms from DB
+        // This allows alarms to be restored if todo is restored via undo
+        AppLogger.i('Cancelling alarms for deleted todo');
+        try {
+          final allAlarms = await _alarmRepository.getAlarms();
+          final linkedAlarms = allAlarms.where((alarm) => alarm.linkedTodoId == event.todoId).toList();
+          for (final alarm in linkedAlarms) {
+            await _alarmNotificationService.cancelAlarm(alarm.id);
+            AppLogger.i('Cancelled alarm ${alarm.id} for deleted todo (kept in DB for undo)');
+          }
+        } catch (e) {
+          // Log but don't fail - alarm cancellation is not critical
+          AppLogger.w('Warning: Failed to cancel alarms for deleted todo: $e');
+        }
 
         await _todoRepository.deleteTodo(event.todoId);
         final allTodos = await _todoRepository.getTodos();
@@ -660,6 +715,29 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
       try {
         final currentState = state as TodosLoaded;
         await _todoRepository.createTodo(event.todo);
+        
+        // ISSUE-011 ENHANCEMENT: Reschedule alarms when todo is restored
+        // Alarms that were cancelled when the todo was deleted are now rescheduled
+        AppLogger.i('Rescheduling alarms for restored todo');
+        try {
+          final allAlarms = await _alarmRepository.getAlarms();
+          final linkedAlarms = allAlarms.where((alarm) => alarm.linkedTodoId == event.todo.id).toList();
+          for (final alarm in linkedAlarms) {
+            if (alarm.scheduledTime.isAfter(DateTime.now())) {
+              // Only reschedule if the alarm is still in the future
+              await _alarmNotificationService.scheduleAlarm(
+                id: alarm.id,
+                dateTime: alarm.scheduledTime,
+                title: alarm.message,
+              );
+              AppLogger.i('Rescheduled alarm ${alarm.id} when restoring todo');
+            }
+          }
+        } catch (e) {
+          // Log but don't fail - alarm rescheduling is not critical
+          AppLogger.w('Warning: Failed to reschedule alarms when restoring todo: $e');
+        }
+        
         final allTodos = await _todoRepository.getTodos();
         final stats = allTodos.stats;
 
@@ -704,6 +782,16 @@ class TodosBloc extends Bloc<TodosEvent, TodosState> {
 
         // Add to global reminders list (Persistence)
         await _alarmRepository.createAlarm(alarm);
+
+        // Initialize AlarmService before scheduling
+        AppLogger.i('[TODOS-ALARM] Initializing AlarmService...');
+        try {
+          await _alarmNotificationService.init();
+          await _alarmNotificationService.requestPermissions();
+          AppLogger.i('[TODOS-ALARM] ✅ AlarmService ready for scheduling');
+        } catch (e) {
+          AppLogger.w('[TODOS-ALARM] ⚠️ AlarmService init warning: $e');
+        }
 
         // Schedule notification
         await _alarmNotificationService.scheduleAlarm(

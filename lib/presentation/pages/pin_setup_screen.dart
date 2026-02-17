@@ -1,14 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:pin_code_fields/pin_code_fields.dart';
-import 'package:crypto/crypto.dart';
-import 'dart:convert';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../design_system/design_system.dart';
 import '../bloc/pin_setup/pin_setup_bloc.dart';
-import '../../core/services/app_logger.dart';
 
 /// PIN Setup Screen
 /// Allows users to create, change, or reset their PIN for fallback authentication
@@ -36,8 +31,6 @@ class _PinSetupScreenState extends State<PinSetupScreen>
 
   static const int minPinLength = 4;
   static const int maxPinLength = 6;
-  static const String _pinHashKey = 'pin_hash';
-  static const String _pinEnabledKey = 'pin_enabled';
 
   @override
   void initState() {
@@ -263,29 +256,5 @@ class _PinSetupScreenState extends State<PinSetupScreen>
   void _onPinEntered(String value) {
     HapticFeedback.lightImpact();
     _bloc.add(EnteredPin(value));
-  }
-
-  static Future<bool> isPinEnabled() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_pinEnabledKey) ?? false;
-  }
-
-  static Future<bool> verifyPin(String pin) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final storedHash = prefs.getString(_pinHashKey);
-      if (storedHash == null) return false;
-
-      final inputHash = sha256.convert(utf8.encode(pin)).toString();
-      return inputHash == storedHash;
-    } catch (e) {
-      return false;
-    }
-  }
-
-  static Future<void> disablePin() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_pinHashKey);
-    await prefs.setBool(_pinEnabledKey, false);
   }
 }

@@ -66,7 +66,7 @@ class ReminderTemplatesService {
   Future<String> createReminderFromTemplate(String templateId) async {
     try {
       final templates = await loadTemplates();
-      final template = templates.firstWhere((t) => t['id'] == templateId);
+      templates.firstWhere((t) => t['id'] == templateId);
 
       // Implementation would create actual reminder
       return '${templateId}_${DateTime.now().millisecondsSinceEpoch}';

@@ -34,13 +34,6 @@ class DeepLinkingService {
     _listeners.remove(listener);
   }
 
-  /// Handle deep link
-  void _handleDeepLink(String link) {
-    for (var listener in _listeners) {
-      listener(link);
-    }
-  }
-
   /// Parse deep link and extract resource info
   Map<String, String> parseDeepLink(String link) {
     try {

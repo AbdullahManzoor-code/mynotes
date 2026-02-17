@@ -10,11 +10,11 @@ class PomodoroTimerDisplay extends StatefulWidget {
   final String? sessionLabel;
 
   const PomodoroTimerDisplay({
-    Key? key,
+    super.key,
     this.durationSeconds = 1500, // 25 minutes default
     this.onTimerComplete,
     this.sessionLabel,
-  }) : super(key: key);
+  });
 
   @override
   State<PomodoroTimerDisplay> createState() => _PomodoroTimerDisplayState();
@@ -82,7 +82,10 @@ class _PomodoroTimerDisplayState extends State<PomodoroTimerDisplay> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final progress = (_remainingSeconds / widget.durationSeconds).clamp(0.0, 1.0);
+    final progress = (_remainingSeconds / widget.durationSeconds).clamp(
+      0.0,
+      1.0,
+    );
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -93,9 +96,9 @@ class _PomodoroTimerDisplayState extends State<PomodoroTimerDisplay> {
             padding: const EdgeInsets.only(bottom: 24),
             child: Text(
               widget.sessionLabel!,
-              style: AppTypography.titleLarge(context).copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+              style: AppTypography.titleLarge(
+                context,
+              ).copyWith(fontWeight: FontWeight.bold),
             ),
           ),
 
@@ -125,18 +128,16 @@ class _PomodoroTimerDisplayState extends State<PomodoroTimerDisplay> {
                 Text(
                   _formatTime(_remainingSeconds),
                   style: Theme.of(context).textTheme.displayLarge!.copyWith(
-                        color: AppColors.primaryColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    color: AppColors.primaryColor,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   _isRunning ? 'Running...' : 'Paused',
                   style: AppTypography.bodySmall(
                     context,
-                    isDark
-                        ? Colors.grey.shade400
-                        : Colors.grey.shade600,
+                    isDark ? Colors.grey.shade400 : Colors.grey.shade600,
                   ),
                 ),
               ],

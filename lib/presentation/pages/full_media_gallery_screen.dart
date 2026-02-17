@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/core/services/app_logger.dart';
 
 import '../bloc/media/media_gallery/media_gallery_bloc.dart';
 import '../design_system/design_system.dart';

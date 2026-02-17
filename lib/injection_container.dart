@@ -51,6 +51,11 @@ import 'package:mynotes/presentation/bloc/smart_collection_wizard/smart_collecti
 import 'package:mynotes/presentation/bloc/rule_builder/rule_builder_bloc.dart';
 import 'package:mynotes/presentation/bloc/graph/graph_bloc.dart';
 import 'package:mynotes/presentation/bloc/pdf_annotation/pdf_annotation_bloc.dart';
+import 'package:mynotes/presentation/bloc/export/export_bloc.dart';
+import 'package:mynotes/presentation/bloc/text_editor/text_editor_bloc.dart';
+import 'package:mynotes/presentation/bloc/video_trimming/video_trimming_bloc.dart';
+import 'package:mynotes/presentation/bloc/video_editor/video_editor_bloc.dart';
+import 'package:mynotes/presentation/bloc/command_palette/command_palette_bloc.dart';
 import 'package:mynotes/domain/repositories/note_repository.dart';
 import 'package:mynotes/domain/repositories/reflection_repository.dart';
 import 'package:mynotes/domain/repositories/stats_repository.dart';
@@ -248,6 +253,23 @@ Future<void> setupServiceLocator() async {
 
   /// Audio Recorder BLoC
   getIt.registerFactory<AudioRecorderBloc>(() => AudioRecorderBloc());
+
+  /// Export BLoC
+  getIt.registerFactory<ExportBloc>(
+    () => ExportBloc(noteRepository: getIt<NoteRepository>()),
+  );
+
+  /// Text Editor BLoC
+  getIt.registerFactory<TextEditorBloc>(() => TextEditorBloc());
+
+  /// Video Trimming BLoC
+  getIt.registerFactory<VideoTrimmingBloc>(() => VideoTrimmingBloc());
+
+  /// Video Editor BLoC
+  getIt.registerFactory<VideoEditorBloc>(() => VideoEditorBloc());
+
+  /// Command Palette BLoC
+  getIt.registerFactory<CommandPaletteBloc>(() => CommandPaletteBloc());
 
   /// Media BLoC
   getIt.registerSingleton<MediaBloc>(

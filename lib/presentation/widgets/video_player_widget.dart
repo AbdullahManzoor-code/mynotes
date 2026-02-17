@@ -1,11 +1,9 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:video_player/video_player.dart';
 import 'package:chewie/chewie.dart';
 import 'dart:io';
 import '../design_system/design_system.dart';
-import '../design_system/components/layouts/glass_container.dart';
 
 /// Video metadata
 class VideoMetadata {

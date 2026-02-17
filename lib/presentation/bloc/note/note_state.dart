@@ -260,6 +260,15 @@ class NotesDeleted extends NoteState {
   List<Object?> get props => [noteIds, deletedCount];
 }
 
+/// Note(s) deleted with undo option available
+/// Shown with undo snackbar for 5 seconds
+class NoteDeletedWithUndo extends NoteState {
+  const NoteDeletedWithUndo();
+
+  @override
+  List<Object?> get props => [];
+}
+
 /// Note pin status toggled
 class NotePinToggled extends NoteState {
   final Note note;

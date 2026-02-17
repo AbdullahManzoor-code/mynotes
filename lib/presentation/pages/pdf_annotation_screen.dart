@@ -4,7 +4,6 @@ import '../design_system/design_system.dart';
 import '../bloc/pdf_annotation/pdf_annotation_bloc.dart';
 import '../bloc/pdf_annotation/pdf_annotation_state.dart';
 import '../bloc/pdf_annotation/pdf_annotation_event.dart';
-import '../../core/services/app_logger.dart';
 
 /// Annotation tools available in PDF editor
 enum AnnotationTool { pen, highlight, eraser, text }
@@ -98,10 +97,10 @@ class _PDFAnnotationView extends StatelessWidget {
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            AppLogger.i('PDFAnnotationScreen: Back pressed');
-            Navigator.pop(context);
-          },
+        onPressed: () {
+          AppLogger.i('PDFAnnotationScreen: Back pressed');
+          Navigator.pop(context);
+        },
       ),
       title: Text(
         pdfTitle,
@@ -268,7 +267,9 @@ class _PDFAnnotationView extends StatelessWidget {
                 final color = colors[index];
                 return GestureDetector(
                   onTap: () {
-                    AppLogger.i('PDFAnnotationScreen: Color changed to: $color');
+                    AppLogger.i(
+                      'PDFAnnotationScreen: Color changed to: $color',
+                    );
                     context.read<PdfAnnotationBloc>().add(
                       ChangeAnnotationColor(color),
                     );
@@ -322,7 +323,7 @@ class _PDFAnnotationView extends StatelessWidget {
         ],
       ),
       selected: isSelected,
-              onSelected: (selected) {
+      onSelected: (selected) {
         AppLogger.i('PDFAnnotationScreen: Tool selected: $tool');
         context.read<PdfAnnotationBloc>().add(SelectAnnotationTool(tool));
       },
@@ -344,10 +345,12 @@ class _PDFAnnotationView extends StatelessWidget {
             icon: const Icon(Icons.navigate_before),
             onPressed: state.currentPage > 1
                 ? () {
-                    AppLogger.i('PDFAnnotationScreen: Previous page pressed (${state.currentPage - 1})');
+                    AppLogger.i(
+                      'PDFAnnotationScreen: Previous page pressed (${state.currentPage - 1})',
+                    );
                     context.read<PdfAnnotationBloc>().add(
-                        ChangePdfPage(state.currentPage - 1),
-                      );
+                      ChangePdfPage(state.currentPage - 1),
+                    );
                   }
                 : null,
           ),
@@ -359,10 +362,12 @@ class _PDFAnnotationView extends StatelessWidget {
             icon: const Icon(Icons.navigate_next),
             onPressed: state.currentPage < state.totalPages
                 ? () {
-                    AppLogger.i('PDFAnnotationScreen: Next page pressed (${state.currentPage + 1})');
+                    AppLogger.i(
+                      'PDFAnnotationScreen: Next page pressed (${state.currentPage + 1})',
+                    );
                     context.read<PdfAnnotationBloc>().add(
-                        ChangePdfPage(state.currentPage + 1),
-                      );
+                      ChangePdfPage(state.currentPage + 1),
+                    );
                   }
                 : null,
           ),

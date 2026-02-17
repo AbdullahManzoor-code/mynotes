@@ -271,5 +271,264 @@ class ExportService {
         .replaceAll(RegExp(r'\s+'), '_')
         .toLowerCase();
   }
-}
 
+  /// Export as PDF file
+  Future<File?> exportPdf({
+    required String title,
+    required String content,
+    List<String>? tags,
+    required DateTime createdDate,
+    bool includeTags = true,
+    bool includeTimestamps = true,
+    bool includeMediaRefs = true,
+  }) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          '${_sanitizeFileName(title)}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      final file = File('${directory.path}/$fileName');
+
+      // Create PDF content as plain text if pdf package not available
+      final pdfContent = _createPdfContent(
+        title: title,
+        content: content,
+        tags: includeTags ? (tags ?? []) : [],
+        createdDate: createdDate,
+        includeTimestamps: includeTimestamps,
+      );
+
+      await file.writeAsString(pdfContent);
+      return file;
+    } catch (e) {
+      print('PDF Export Error: $e');
+      return null;
+    }
+  }
+
+  /// Export as Markdown file
+  Future<File?> exportMarkdown({
+    required String title,
+    required String content,
+    List<String>? tags,
+    required DateTime createdDate,
+    bool includeTags = true,
+    bool includeTimestamps = true,
+    bool includeMediaRefs = true,
+  }) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = '${_sanitizeFileName(title)}.md';
+      final file = File('${directory.path}/$fileName');
+
+      final mdContent = _createMarkdownContent(
+        title: title,
+        content: content,
+        tags: includeTags ? (tags ?? []) : [],
+        createdDate: createdDate,
+        includeTimestamps: includeTimestamps,
+      );
+
+      await file.writeAsString(mdContent);
+      return file;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Export as JSON file
+  Future<File?> exportJson({
+    required String title,
+    required String content,
+    List<String>? tags,
+    required DateTime createdDate,
+    bool includeTags = true,
+    bool includeTimestamps = true,
+    bool includeMediaRefs = true,
+  }) async {
+    try {
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName = '${_sanitizeFileName(title)}.json';
+      final file = File('${directory.path}/$fileName');
+
+      final jsonContent = _createJsonContent(
+        title: title,
+        content: content,
+        tags: includeTags ? (tags ?? []) : [],
+        createdDate: createdDate,
+        includeTimestamps: includeTimestamps,
+      );
+
+      await file.writeAsString(jsonContent);
+      return file;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Create PDF content (text-based PDF format)
+  String _createPdfContent({
+    required String title,
+    required String content,
+    required List<String> tags,
+    required DateTime createdDate,
+    required bool includeTimestamps,
+  }) {
+    final buffer = StringBuffer();
+
+    buffer.writeln('%PDF-1.4');
+    buffer.writeln('1 0 obj');
+    buffer.writeln('<<');
+    buffer.writeln('/Type /Catalog');
+    buffer.writeln('/Pages 2 0 R');
+    buffer.writeln('>>');
+    buffer.writeln('endobj');
+    buffer.writeln('2 0 obj');
+    buffer.writeln('<<');
+    buffer.writeln('/Type /Pages');
+    buffer.writeln('/Kids [3 0 R]');
+    buffer.writeln('/Count 1');
+    buffer.writeln('>>');
+    buffer.writeln('endobj');
+    buffer.writeln('3 0 obj');
+    buffer.writeln('<<');
+    buffer.writeln('/Type /Page');
+    buffer.writeln('/Parent 2 0 R');
+    buffer.writeln('/MediaBox [0 0 612 792]');
+    buffer.writeln('/Contents 4 0 R');
+    buffer.writeln('/Resources <<');
+    buffer.writeln('/Font <<');
+    buffer.writeln('/F1 5 0 R');
+    buffer.writeln('>>');
+    buffer.writeln('>>');
+    buffer.writeln('>>');
+    buffer.writeln('endobj');
+    buffer.writeln('4 0 obj');
+    buffer.writeln('<<');
+    buffer.writeln('/Length 200');
+    buffer.writeln('>>');
+    buffer.writeln('stream');
+    buffer.writeln('BT');
+    buffer.writeln('/F1 12 Tf');
+    buffer.writeln('50 750 Td');
+    buffer.writeln('(${_escapeText(title)}) Tj');
+    if (includeTimestamps) {
+      buffer.writeln('0 -20 Td');
+      buffer.writeln('(Created: ${_escapeText(createdDate.toString())}) Tj');
+    }
+    if (tags.isNotEmpty) {
+      buffer.writeln('0 -20 Td');
+      buffer.writeln('(Tags: ${_escapeText(tags.join(", "))}) Tj');
+    }
+    buffer.writeln('0 -40 Td');
+    buffer.writeln('(${_escapeText(content)}) Tj');
+    buffer.writeln('ET');
+    buffer.writeln('endstream');
+    buffer.writeln('endobj');
+    buffer.writeln('5 0 obj');
+    buffer.writeln('<<');
+    buffer.writeln('/Type /Font');
+    buffer.writeln('/Subtype /Type1');
+    buffer.writeln('/BaseFont /Helvetica');
+    buffer.writeln('>>');
+    buffer.writeln('endobj');
+    buffer.writeln('xref');
+    buffer.writeln('0 6');
+    buffer.writeln('0000000000 65535 f');
+    buffer.writeln('0000000009 00000 n');
+    buffer.writeln('0000000058 00000 n');
+    buffer.writeln('0000000115 00000 n');
+    buffer.writeln('0000000273 00000 n');
+    buffer.writeln('0000000542 00000 n');
+    buffer.writeln('trailer');
+    buffer.writeln('<<');
+    buffer.writeln('/Size 6');
+    buffer.writeln('/Root 1 0 R');
+    buffer.writeln('>>');
+    buffer.writeln('startxref');
+    buffer.writeln('621');
+    buffer.writeln('%%EOF');
+
+    return buffer.toString();
+  }
+
+  /// Create Markdown content
+  String _createMarkdownContent({
+    required String title,
+    required String content,
+    required List<String> tags,
+    required DateTime createdDate,
+    required bool includeTimestamps,
+  }) {
+    final buffer = StringBuffer();
+
+    buffer.writeln('# $title');
+    buffer.writeln();
+    if (includeTimestamps) {
+      buffer.writeln('**Created:** $createdDate');
+      buffer.writeln();
+    }
+    if (tags.isNotEmpty) {
+      buffer.writeln('**Tags:** ${tags.map((t) => '#$t').join(' ')}');
+      buffer.writeln();
+    }
+    buffer.writeln('---');
+    buffer.writeln();
+    buffer.writeln(content);
+
+    return buffer.toString();
+  }
+
+  /// Create JSON content
+  String _createJsonContent({
+    required String title,
+    required String content,
+    required List<String> tags,
+    required DateTime createdDate,
+    required bool includeTimestamps,
+  }) {
+    final jsonData = <String, dynamic>{
+      'title': title,
+      'content': content,
+      'exportedAt': DateTime.now().toIso8601String(),
+    };
+
+    if (includeTimestamps) {
+      jsonData['createdDate'] = createdDate.toIso8601String();
+    }
+
+    if (tags.isNotEmpty) {
+      jsonData['tags'] = tags;
+    }
+
+    // Manual JSON serialization for better control
+    final buffer = StringBuffer();
+    buffer.writeln('{');
+    buffer.writeln('  "title": "${_escapeJson(title)}",');
+    buffer.writeln('  "content": "${_escapeJson(content)}",');
+    if (includeTimestamps) {
+      buffer.writeln('  "createdDate": "${createdDate.toIso8601String()}",');
+    }
+    if (tags.isNotEmpty) {
+      buffer.writeln(
+        '  "tags": [${tags.map((t) => '"${_escapeJson(t)}"').join(', ')}],',
+      );
+    }
+    buffer.writeln('  "exportedAt": "${DateTime.now().toIso8601String()}"');
+    buffer.writeln('}');
+
+    return buffer.toString();
+  }
+
+  String _escapeText(String text) {
+    return text.replaceAll('(', '\\(').replaceAll(')', '\\)');
+  }
+
+  String _escapeJson(String text) {
+    return text
+        .replaceAll('\\', '\\\\')
+        .replaceAll('"', '\\"')
+        .replaceAll('\n', '\\n')
+        .replaceAll('\r', '\\r')
+        .replaceAll('\t', '\\t');
+  }
+}

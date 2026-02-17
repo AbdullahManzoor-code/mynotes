@@ -5,12 +5,8 @@ import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:permission_handler/permission_handler.dart';
 import '../design_system/design_system.dart';
 import '../widgets/universal_item_card.dart';
-import '../../core/utils/smart_voice_parser.dart';
-import '../../data/repositories/unified_repository.dart';
 import '../../injection_container.dart' show getIt;
-import '../../core/services/app_logger.dart';
 import '../bloc/quick_add/quick_add_bloc.dart';
-import '../../core/services/global_ui_service.dart';
 
 /// Fixed Universal Quick Add Screen
 /// Fully working manual and voice input with proper UI

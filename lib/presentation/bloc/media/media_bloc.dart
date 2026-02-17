@@ -28,7 +28,9 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     on<RemoveImageFromNoteEvent>(_onRemoveImageFromNote);
     on<StartAudioRecordingEvent>(_onStartAudioRecording);
     on<StopAudioRecordingEvent>(_onStopAudioRecording);
-    on<PlayAudioEvent>(_onPlayAudio);
+    // CONSOLIDATED (SESSION 15 FIX M005): PlayAudioEvent handler removed
+    // Use AudioPlaybackBloc for audio playback instead
+    // on<PlayAudioEvent>(_onPlayAudio);
     on<CaptureVideoEvent>(_onCaptureVideo);
     on<PickVideoFromGalleryEvent>(_onPickVideoFromGallery);
     on<AddVideoToNoteEvent>(_onAddVideoToNote);
@@ -168,6 +170,17 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
     }
   }
 
+  /* CONSOLIDATED (SESSION 15 FIX M005): Playback delegated to AudioPlaybackBloc
+     This handler was causing event name collision (PlayAudioEvent in two BLoCs).
+     For audio playback scenarios:
+     
+     1. Recording playback: Use AudioPlaybackBloc directly
+        InitializeAudioEvent(audioPath: recordingPath) → PlayAudioEvent()
+        
+     2. Voice memo in note: UI creates AudioPlaybackBloc context when user taps play
+        
+     3. Media gallery playback: AudioPlaybackBloc manages full playback lifecycle
+
   Future<void> _onPlayAudio(
     PlayAudioEvent event,
     Emitter<MediaState> emit,
@@ -180,6 +193,7 @@ class MediaBloc extends Bloc<MediaEvent, MediaState> {
       emit(MediaError(event.noteId, errorMsg));
     }
   }
+  */
 
   Future<void> _onCaptureVideo(
     CaptureVideoEvent event,

@@ -11,13 +11,13 @@ class NoteTagsInput extends StatefulWidget {
   final bool readOnly;
 
   const NoteTagsInput({
-    Key? key,
+    super.key,
     required this.initialTags,
     required this.onTagsChanged,
     this.maxTags = 10,
     this.hintText = 'Add tags (e.g., work, personal)',
     this.readOnly = false,
-  }) : super(key: key);
+  });
 
   @override
   State<NoteTagsInput> createState() => _NoteTagsInputState();
@@ -154,8 +154,7 @@ class NoteTagsDisplay extends StatelessWidget {
   final List<String> tags;
   final void Function(String tag)? onTagTap;
 
-  const NoteTagsDisplay({Key? key, required this.tags, this.onTagTap})
-    : super(key: key);
+  const NoteTagsDisplay({super.key, required this.tags, this.onTagTap});
 
   @override
   Widget build(BuildContext context) {

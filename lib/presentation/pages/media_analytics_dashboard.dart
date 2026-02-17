@@ -25,7 +25,7 @@ class MediaAnalyticsDashboard extends StatelessWidget {
 }
 
 class _MediaAnalyticsDashboardView extends StatelessWidget {
-  const _MediaAnalyticsDashboardView({super.key});
+  const _MediaAnalyticsDashboardView();
 
   @override
   Widget build(BuildContext context) {

@@ -133,7 +133,7 @@ class _QuickAddConfirmationScreenState extends State<QuickAddConfirmationScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,

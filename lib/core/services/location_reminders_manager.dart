@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:flutter/foundation.dart';
 import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:mynotes/core/services/geofence_service.dart';
 import 'package:mynotes/core/services/location_notification_service.dart';

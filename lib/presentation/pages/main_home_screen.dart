@@ -1,20 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/presentation/pages/enhanced_notes_list_screen.dart';
+import 'package:mynotes/presentation/pages/enhanced_todos_list_screen_refactored.dart';
 import 'package:mynotes/presentation/widgets/quick_add_bottom_sheet.dart';
 import 'package:mynotes/presentation/bloc/navigation/navigation_bloc.dart';
 import 'package:mynotes/presentation/design_system/design_system.dart';
 import 'package:mynotes/core/routes/app_routes.dart';
 import 'package:mynotes/presentation/widgets/global_command_palette.dart';
 import 'package:mynotes/presentation/pages/today_dashboard_screen.dart';
-import 'package:mynotes/presentation/pages/enhanced_notes_list_screen.dart';
-import 'package:mynotes/presentation/screens/todos_screen_fixed.dart';
+// import 'package:mynotes/presentation/pages/enhanced_notes_list_screen.dart';
+// import 'package:mynotes/presentation/screens/todos_screen_fixed.dart';
 import 'package:mynotes/presentation/pages/enhanced_reminders_list_screen.dart';
 import 'package:mynotes/presentation/screens/reflection_home_screen.dart';
 import 'package:mynotes/presentation/pages/integrated_features_screen.dart';
 import 'package:mynotes/presentation/pages/location_reminder_screen.dart';
-
-import 'package:mynotes/core/services/app_logger.dart';
 
 /// Main Home Screen with Bottom Navigation
 /// Central hub for all app features
@@ -67,7 +67,7 @@ class MainHomeScreen extends StatelessWidget {
                 children: const [
                   TodayDashboardScreen(),
                   EnhancedNotesListScreen(),
-                  TodosScreen(),
+                  EnhancedTodosListScreenRefactored(),
                   EnhancedRemindersListScreen(),
                   ReflectionHomeScreen(),
                   LocationReminderScreen(),

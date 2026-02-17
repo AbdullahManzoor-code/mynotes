@@ -9,8 +9,7 @@ import '../../domain/entities/alarm.dart';
 import '../../domain/entities/note.dart';
 import '../bloc/alarm/alarms_bloc.dart';
 import '../../injection_container.dart' show getIt;
-import '../../core/notifications/notification_service.dart'
-    hide AlarmRecurrence;
+import 'package:mynotes/core/notifications/notification_service.dart';
 
 class CreateAlarmBottomSheet extends StatefulWidget {
   final dynamic alarm; // Can be Alarm or AlarmParams

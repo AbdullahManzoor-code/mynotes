@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uuid/uuid.dart';
+import '../../../core/services/dnd_service.dart';
 import '../../../domain/entities/focus_session.dart';
 import '../../../domain/repositories/stats_repository.dart';
-import 'package:uuid/uuid.dart';
 
 // Session Type Enum
 enum SessionType { work, shortBreak, longBreak }
@@ -119,6 +121,15 @@ class UpdateDistractionFreeModeEvent extends FocusEvent {
   List<Object?> get props => [enabled];
 }
 
+class SetAutoDndPreferenceEvent extends FocusEvent {
+  final bool enabled;
+
+  const SetAutoDndPreferenceEvent(this.enabled);
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
 class UpdateAmbientSoundEvent extends FocusEvent {
   final String sound;
 
@@ -126,6 +137,32 @@ class UpdateAmbientSoundEvent extends FocusEvent {
 
   @override
   List<Object?> get props => [sound];
+}
+
+class LoadFocusLockSettingsEvent extends FocusEvent {
+  const LoadFocusLockSettingsEvent();
+}
+
+class LoadAutoDndPreferenceEvent extends FocusEvent {
+  const LoadAutoDndPreferenceEvent();
+}
+
+class ToggleFocusLockEvent extends FocusEvent {
+  final bool enabled;
+
+  const ToggleFocusLockEvent(this.enabled);
+
+  @override
+  List<Object?> get props => [enabled];
+}
+
+class UpdateFocusLockPinEvent extends FocusEvent {
+  final String? pin;
+
+  const UpdateFocusLockPinEvent(this.pin);
+
+  @override
+  List<Object?> get props => [pin];
 }
 
 class SelectTaskEvent extends FocusEvent {
@@ -170,7 +207,11 @@ class FocusState extends Equatable {
   final bool isTaskSelectionStep;
   final bool showSettings;
   final bool distractionFreeMode;
+  final bool autoDndEnabled;
+  final bool autoDndAsked;
   final String selectedSound;
+  final bool isLockEnabled;
+  final String? lockPin;
 
   const FocusState({
     this.status = FocusStatus.initial,
@@ -194,7 +235,11 @@ class FocusState extends Equatable {
     this.isTaskSelectionStep = false,
     this.showSettings = false,
     this.distractionFreeMode = false,
+    this.autoDndEnabled = false,
+    this.autoDndAsked = false,
     this.selectedSound = 'None',
+    this.isLockEnabled = false,
+    this.lockPin,
   });
 
   bool get isBreak =>
@@ -223,7 +268,11 @@ class FocusState extends Equatable {
     bool? isTaskSelectionStep,
     bool? showSettings,
     bool? distractionFreeMode,
+    bool? autoDndEnabled,
+    bool? autoDndAsked,
     String? selectedSound,
+    bool? isLockEnabled,
+    String? lockPin,
   }) {
     return FocusState(
       status: status ?? this.status,
@@ -251,7 +300,11 @@ class FocusState extends Equatable {
       isTaskSelectionStep: isTaskSelectionStep ?? this.isTaskSelectionStep,
       showSettings: showSettings ?? this.showSettings,
       distractionFreeMode: distractionFreeMode ?? this.distractionFreeMode,
+      autoDndEnabled: autoDndEnabled ?? this.autoDndEnabled,
+      autoDndAsked: autoDndAsked ?? this.autoDndAsked,
       selectedSound: selectedSound ?? this.selectedSound,
+      isLockEnabled: isLockEnabled ?? this.isLockEnabled,
+      lockPin: lockPin ?? this.lockPin,
     );
   }
 
@@ -278,7 +331,11 @@ class FocusState extends Equatable {
     isTaskSelectionStep,
     showSettings,
     distractionFreeMode,
+    autoDndEnabled,
+    autoDndAsked,
     selectedSound,
+    isLockEnabled,
+    lockPin,
   ];
 }
 
@@ -287,6 +344,12 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   final StatsRepository repository;
   Timer? _timer;
   static const _uuid = Uuid();
+  static const DndMode _defaultDndMode = DndMode.totalSilence;
+  static const String _lockEnabledKey = 'focus_lock_enabled';
+  static const String _lockPinKey = 'focus_lock_pin';
+  static const String _autoDndEnabledKey = 'focus_auto_dnd_enabled';
+  static const String _autoDndAskedKey = 'focus_auto_dnd_asked';
+  SharedPreferences? _prefs;
 
   FocusBloc({required this.repository}) : super(const FocusState()) {
     on<StartFocusSessionEvent>(_onStart);
@@ -302,8 +365,13 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     on<ToggleTaskSelectionEvent>(_onToggleTaskSelection);
     on<ToggleSettingsEvent>(_onToggleSettings);
     on<UpdateDistractionFreeModeEvent>(_onUpdateDistractionFreeMode);
+    on<SetAutoDndPreferenceEvent>(_onSetAutoDndPreference);
     on<UpdateAmbientSoundEvent>(_onUpdateAmbientSound);
     on<SelectTaskEvent>(_onSelectTask);
+    on<LoadFocusLockSettingsEvent>(_onLoadLockSettings);
+    on<ToggleFocusLockEvent>(_onToggleLock);
+    on<UpdateFocusLockPinEvent>(_onUpdateLockPin);
+    on<LoadAutoDndPreferenceEvent>(_onLoadAutoDndPreference);
   }
 
   Future<void> _onRateSession(
@@ -345,7 +413,10 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     }
   }
 
-  void _onStart(StartFocusSessionEvent event, Emitter<FocusState> emit) {
+  Future<void> _onStart(
+    StartFocusSessionEvent event,
+    Emitter<FocusState> emit,
+  ) async {
     _timer?.cancel();
     final totalSeconds = event.minutes * 60;
     emit(
@@ -361,30 +432,63 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
       ),
     );
 
+    await _enableDndIfNeeded();
+
     _startTimer();
   }
 
-  void _onPause(PauseFocusSessionEvent event, Emitter<FocusState> emit) {
+  Future<void> _onPause(
+    PauseFocusSessionEvent event,
+    Emitter<FocusState> emit,
+  ) async {
     _timer?.cancel();
     emit(state.copyWith(status: FocusStatus.paused));
+    await _disableDndIfNeeded();
   }
 
-  void _onResume(ResumeFocusSessionEvent event, Emitter<FocusState> emit) {
+  Future<void> _onResume(
+    ResumeFocusSessionEvent event,
+    Emitter<FocusState> emit,
+  ) async {
     emit(state.copyWith(status: FocusStatus.active));
+    await _enableDndIfNeeded();
     _startTimer();
   }
 
-  void _onSkipBreak(SkipBreakEvent event, Emitter<FocusState> emit) {
+  Future<void> _onSkipBreak(
+    SkipBreakEvent event,
+    Emitter<FocusState> emit,
+  ) async {
     if (!state.isBreak) return;
 
     _timer?.cancel();
     _startWorkSession(emit);
+    await _enableDndIfNeeded();
   }
 
   void _startTimer() {
     _timer?.cancel();
+    // FIX F008: Use DateTime-based calculation instead of Timer.periodic
+    // This ensures timer is accurate even when app is backgrounded
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      add(TickFocusEvent(state.secondsRemaining - 1));
+      if (state.sessionStartTime == null) {
+        timer.cancel();
+        return;
+      }
+
+      // Calculate actual elapsed time from session start (handles backgrounding)
+      final now = DateTime.now();
+      final elapsedSeconds = now.difference(state.sessionStartTime!).inSeconds;
+      final secondsRemaining = state.totalSeconds - elapsedSeconds;
+
+      if (secondsRemaining <= 0) {
+        // Session complete
+        timer.cancel();
+        add(const TickFocusEvent(0));
+      } else {
+        // Continue ticking with actual elapsed time
+        add(TickFocusEvent(secondsRemaining));
+      }
     });
   }
 
@@ -431,6 +535,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
       _timer?.cancel();
 
       if (state.sessionType == SessionType.work) {
+        await _disableDndIfNeeded();
         // Work session completed - save to database
         final sessionId = _uuid.v4();
         final session = FocusSession(
@@ -472,6 +577,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
         } else {
           // Short break ended -> start next work session
           _startWorkSession(emit);
+          await _enableDndIfNeeded();
         }
       }
     } else {
@@ -484,6 +590,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     Emitter<FocusState> emit,
   ) async {
     _timer?.cancel();
+    await _disableDndIfNeeded();
 
     // Only save if it was a work session (not break)
     if ((state.status == FocusStatus.active ||
@@ -531,10 +638,7 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     emit(state.copyWith(isTaskSelectionStep: event.isTaskSelection));
   }
 
-  void _onToggleSettings(
-    ToggleSettingsEvent event,
-    Emitter<FocusState> emit,
-  ) {
+  void _onToggleSettings(ToggleSettingsEvent event, Emitter<FocusState> emit) {
     emit(state.copyWith(showSettings: !state.showSettings));
   }
 
@@ -552,10 +656,66 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
     emit(state.copyWith(selectedSound: event.sound));
   }
 
-  void _onSelectTask(
-    SelectTaskEvent event,
+  Future<void> _onLoadLockSettings(
+    LoadFocusLockSettingsEvent event,
     Emitter<FocusState> emit,
-  ) {
+  ) async {
+    final prefs = await _getPrefs();
+    final isEnabled = prefs.getBool(_lockEnabledKey) ?? false;
+    final pin = prefs.getString(_lockPinKey);
+    emit(state.copyWith(isLockEnabled: isEnabled, lockPin: pin));
+  }
+
+  Future<void> _onToggleLock(
+    ToggleFocusLockEvent event,
+    Emitter<FocusState> emit,
+  ) async {
+    emit(state.copyWith(isLockEnabled: event.enabled));
+    final prefs = await _getPrefs();
+    await prefs.setBool(_lockEnabledKey, event.enabled);
+  }
+
+  Future<void> _onUpdateLockPin(
+    UpdateFocusLockPinEvent event,
+    Emitter<FocusState> emit,
+  ) async {
+    final normalized = (event.pin ?? '').trim();
+    final pinValue = normalized.isEmpty ? null : normalized;
+    emit(state.copyWith(lockPin: pinValue));
+    final prefs = await _getPrefs();
+    if (pinValue == null) {
+      await prefs.remove(_lockPinKey);
+    } else {
+      await prefs.setString(_lockPinKey, pinValue);
+    }
+  }
+
+  Future<void> _onSetAutoDndPreference(
+    SetAutoDndPreferenceEvent event,
+    Emitter<FocusState> emit,
+  ) async {
+    emit(state.copyWith(autoDndEnabled: event.enabled, autoDndAsked: true));
+    final prefs = await _getPrefs();
+    await prefs.setBool(_autoDndEnabledKey, event.enabled);
+    await prefs.setBool(_autoDndAskedKey, true);
+  }
+
+  Future<void> _onLoadAutoDndPreference(
+    LoadAutoDndPreferenceEvent event,
+    Emitter<FocusState> emit,
+  ) async {
+    final prefs = await _getPrefs();
+    final autoDndEnabled = prefs.getBool(_autoDndEnabledKey) ?? false;
+    final autoDndAsked = prefs.getBool(_autoDndAskedKey) ?? false;
+    emit(
+      state.copyWith(
+        autoDndEnabled: autoDndEnabled,
+        autoDndAsked: autoDndAsked,
+      ),
+    );
+  }
+
+  void _onSelectTask(SelectTaskEvent event, Emitter<FocusState> emit) {
     emit(
       state.copyWith(
         initialTaskTitle: event.title,
@@ -566,8 +726,27 @@ class FocusBloc extends Bloc<FocusEvent, FocusState> {
   }
 
   @override
-  Future<void> close() {
+  Future<void> close() async {
     _timer?.cancel();
+    await _disableDndIfNeeded();
     return super.close();
+  }
+
+  Future<void> _enableDndIfNeeded() async {
+    if (!state.distractionFreeMode) return;
+    if (state.sessionType != SessionType.work) return;
+    // Only auto-enable DND if user has enabled it in preferences
+    if (!state.autoDndEnabled) return;
+    await DndService.enableDnd(mode: _defaultDndMode);
+  }
+
+  Future<void> _disableDndIfNeeded() async {
+    if (!state.distractionFreeMode) return;
+    await DndService.disableDnd();
+  }
+
+  Future<SharedPreferences> _getPrefs() async {
+    _prefs ??= await SharedPreferences.getInstance();
+    return _prefs!;
   }
 }

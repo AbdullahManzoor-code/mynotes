@@ -243,17 +243,29 @@ class AudioRecorderBloc extends Bloc<AudioRecorderEvent, AudioRecorderState> {
     );
   }
 
+  // CONSOLIDATED (SESSION 15 FIX M005): Audio playback delegated to AudioPlaybackBloc
+  // These handlers are kept for backward compatibility but AudioPlaybackBloc is now
+  // the primary audio playback system. Record-playback scenarios should use:
+  // 1. AudioRecorderBloc for recording state management
+  // 2. AudioPlaybackBloc for playback functionality (via AudioPlaybackEvent)
+
   Future<void> _onPlayRecording(
     PlayRecording event,
     Emitter<AudioRecorderState> emit,
   ) async {
-    emit(state.copyWith(isPlaying: !state.isPlaying));
+    // DEPRECATED: Use AudioPlaybackBloc instead
+    // emit(state.copyWith(isPlaying: !state.isPlaying));
+    // Simply toggle UI state, actual playback handled by AudioPlaybackBloc
+    if (state.hasRecording && state.recordingPath != null) {
+      emit(state.copyWith(isPlaying: !state.isPlaying));
+    }
   }
 
   Future<void> _onPausePlayback(
     PausePlayback event,
     Emitter<AudioRecorderState> emit,
   ) async {
+    // DEPRECATED: Use AudioPlaybackBloc.PauseAudioEvent instead
     emit(state.copyWith(isPlaying: false));
   }
 
@@ -261,6 +273,8 @@ class AudioRecorderBloc extends Bloc<AudioRecorderEvent, AudioRecorderState> {
     UpdatePlaybackPosition event,
     Emitter<AudioRecorderState> emit,
   ) async {
+    // CONSOLIDATED: Position updates from AudioPlaybackBloc can be mirrored here
+    // if recorder UI needs to show playback progress
     emit(
       state.copyWith(
         playbackDuration: event.position,
@@ -273,6 +287,7 @@ class AudioRecorderBloc extends Bloc<AudioRecorderEvent, AudioRecorderState> {
     PlaybackCompleted event,
     Emitter<AudioRecorderState> emit,
   ) async {
+    // CONSOLIDATED: When AudioPlaybackBloc completes, reset recorder playback state
     emit(state.copyWith(isPlaying: false, playbackDuration: Duration.zero));
   }
 

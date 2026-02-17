@@ -573,7 +573,6 @@ class BackupCompleteScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     AppLogger.i('BackupCompleteScreen: Building for $backupPath');
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final fileName = backupPath.split(Platform.pathSeparator).last;
 
     return Scaffold(

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
-import 'package:mynotes/presentation/bloc/accessibility_features/accessibility_features_bloc.dart';
 
 /// Encrypted preferences service (SEC-003)
 class EncryptedPreferencesService extends ChangeNotifier {

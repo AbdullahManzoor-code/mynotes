@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/domain/models/do_not_disturb_settings.dart';
+import '../bloc/reminder_actions/do_not_disturb_bloc.dart';
 
 /// Quick reschedule options
 enum QuickRescheduleOption {
@@ -265,54 +268,6 @@ class SmartSnoozeWidget extends StatelessWidget {
   }
 }
 
-/// Do Not Disturb settings
-class DoNotDisturbSettings {
-  final bool enabled;
-  final TimeOfDay startTime;
-  final TimeOfDay endTime;
-  final bool allowUrgent;
-  final List<String> allowedContacts;
-
-  DoNotDisturbSettings({
-    this.enabled = false,
-    required this.startTime,
-    required this.endTime,
-    this.allowUrgent = false,
-    this.allowedContacts = const [],
-  });
-
-  DoNotDisturbSettings copyWith({
-    bool? enabled,
-    TimeOfDay? startTime,
-    TimeOfDay? endTime,
-    bool? allowUrgent,
-    List<String>? allowedContacts,
-  }) {
-    return DoNotDisturbSettings(
-      enabled: enabled ?? this.enabled,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
-      allowUrgent: allowUrgent ?? this.allowUrgent,
-      allowedContacts: allowedContacts ?? this.allowedContacts,
-    );
-  }
-
-  bool isActive() {
-    if (!enabled) return false;
-
-    final now = TimeOfDay.now();
-    final nowMinutes = now.hour * 60 + now.minute;
-    final startMinutes = startTime.hour * 60 + startTime.minute;
-    final endMinutes = endTime.hour * 60 + endTime.minute;
-
-    if (startMinutes <= endMinutes) {
-      return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
-    } else {
-      return nowMinutes >= startMinutes || nowMinutes <= endMinutes;
-    }
-  }
-}
-
 /// Do Not Disturb settings panel
 class DoNotDisturbPanel extends StatefulWidget {
   final DoNotDisturbSettings settings;
@@ -329,125 +284,137 @@ class DoNotDisturbPanel extends StatefulWidget {
 }
 
 class _DoNotDisturbPanelState extends State<DoNotDisturbPanel> {
-  late DoNotDisturbSettings _settings;
+  late final DoNotDisturbBloc _bloc;
 
   @override
   void initState() {
     super.initState();
-    _settings = widget.settings;
+    _bloc = DoNotDisturbBloc(widget.settings);
+  }
+
+  @override
+  void dispose() {
+    _bloc.close();
+    super.dispose();
   }
 
   void _updateStartTime(TimeOfDay time) {
-    setState(() {
-      _settings = _settings.copyWith(startTime: time);
-    });
-    widget.onSettingsChanged(_settings);
+    _bloc.add(UpdateDoNotDisturbStartTime(time));
   }
 
   void _updateEndTime(TimeOfDay time) {
-    setState(() {
-      _settings = _settings.copyWith(endTime: time);
-    });
-    widget.onSettingsChanged(_settings);
+    _bloc.add(UpdateDoNotDisturbEndTime(time));
   }
 
   void _toggleEnabled(bool value) {
-    setState(() {
-      _settings = _settings.copyWith(enabled: value);
-    });
-    widget.onSettingsChanged(_settings);
+    _bloc.add(ToggleDoNotDisturbEnabled(value));
   }
 
   void _toggleAllowUrgent(bool value) {
-    setState(() {
-      _settings = _settings.copyWith(allowUrgent: value);
-    });
-    widget.onSettingsChanged(_settings);
+    _bloc.add(ToggleDoNotDisturbUrgent(value));
   }
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header with toggle
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
+    return BlocProvider.value(
+      value: _bloc,
+      child: BlocListener<DoNotDisturbBloc, DoNotDisturbSettings>(
+        listenWhen: (previous, current) => previous != current,
+        listener: (context, settings) {
+          widget.onSettingsChanged(settings);
+        },
+        child: BlocBuilder<DoNotDisturbBloc, DoNotDisturbSettings>(
+          builder: (context, settings) {
+            return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Do Not Disturb',
-                  style: Theme.of(context).textTheme.titleMedium,
+                // Header with toggle
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Do Not Disturb',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        if (settings.enabled)
+                          Text(
+                            'Active from ${settings.startTime.format(context)} to ${settings.endTime.format(context)}',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodySmall?.copyWith(
+                              color: Colors.green,
+                            ),
+                          ),
+                      ],
+                    ),
+                    Switch(
+                      value: settings.enabled,
+                      onChanged: _toggleEnabled,
+                    ),
+                  ],
                 ),
-                if (_settings.enabled)
-                  Text(
-                    'Active from ${_settings.startTime.format(context)} to ${_settings.endTime.format(context)}',
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodySmall?.copyWith(color: Colors.green),
-                  ),
-              ],
-            ),
-            Switch(value: _settings.enabled, onChanged: _toggleEnabled),
-          ],
-        ),
 
-        if (_settings.enabled) ...[
-          SizedBox(height: 16),
+                if (settings.enabled) ...[
+                  SizedBox(height: 16),
 
-          // Time range
-          Card(
-            child: Padding(
-              padding: EdgeInsets.all(12),
-              child: Column(
-                children: [
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('Start Time'),
-                    trailing: Text(_settings.startTime.format(context)),
-                    onTap: () async {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: _settings.startTime,
-                      );
-                      if (time != null) {
-                        _updateStartTime(time);
-                      }
-                    },
+                  // Time range
+                  Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text('Start Time'),
+                            trailing: Text(settings.startTime.format(context)),
+                            onTap: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: settings.startTime,
+                              );
+                              if (time != null) {
+                                _updateStartTime(time);
+                              }
+                            },
+                          ),
+                          Divider(height: 0),
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text('End Time'),
+                            trailing: Text(settings.endTime.format(context)),
+                            onTap: () async {
+                              final time = await showTimePicker(
+                                context: context,
+                                initialTime: settings.endTime,
+                              );
+                              if (time != null) {
+                                _updateEndTime(time);
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                  Divider(height: 0),
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text('End Time'),
-                    trailing: Text(_settings.endTime.format(context)),
-                    onTap: () async {
-                      final time = await showTimePicker(
-                        context: context,
-                        initialTime: _settings.endTime,
-                      );
-                      if (time != null) {
-                        _updateEndTime(time);
-                      }
-                    },
+
+                  SizedBox(height: 16),
+
+                  // Options
+                  CheckboxListTile(
+                    title: Text('Allow Urgent Reminders'),
+                    subtitle: Text('High priority reminders will still notify'),
+                    value: settings.allowUrgent,
+                    onChanged: (value) => _toggleAllowUrgent(value ?? false),
                   ),
                 ],
-              ),
-            ),
-          ),
-
-          SizedBox(height: 16),
-
-          // Options
-          CheckboxListTile(
-            title: Text('Allow Urgent Reminders'),
-            subtitle: Text('High priority reminders will still notify'),
-            value: _settings.allowUrgent,
-            onChanged: (value) => _toggleAllowUrgent(value ?? false),
-          ),
-        ],
-      ],
+              ],
+            );
+          },
+        ),
+      ),
     );
   }
 }

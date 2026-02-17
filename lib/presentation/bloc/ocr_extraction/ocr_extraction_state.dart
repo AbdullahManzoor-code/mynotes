@@ -1,4 +1,5 @@
-part of 'ocr_extraction_bloc.dart';
+// part of 'ocr_extraction_bloc.dart';
+import 'package:equatable/equatable.dart';
 
 abstract class OcrExtractionState extends Equatable {
   const OcrExtractionState();

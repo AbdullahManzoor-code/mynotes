@@ -51,6 +51,22 @@ class StopAudioRecordingEvent extends MediaEvent {
   List<Object?> get props => [noteId];
 }
 
+/* CONSOLIDATED (SESSION 15 FIX): Event Name Collision Resolution
+   PlayAudioEvent was defined in both:
+   - MediaBloc.media_event.dart (here) — minimal implementation
+   - AudioPlaybackBloc.audio_playback_event.dart — full featured
+   
+   RESOLUTION: Use AudioPlaybackBloc.PlayAudioEvent for all audio playback.
+   This event is now DISABLED in MediaBloc. If needed, use:
+   - AudioPlaybackBloc.InitializeAudioEvent(audioPath: path)
+   - AudioPlaybackBloc.PlayAudioEvent()
+   - AudioPlaybackBloc.PauseAudioEvent()
+   
+   For voice memo playback from notes:
+   1. NoteEditorBloc dispatches AddMediaEvent with audio path
+   2. UI creates AudioPlaybackBloc context for that recording
+   3. Playback controlled via AudioPlaybackBloc (not MediaBloc)
+
 class PlayAudioEvent extends MediaEvent {
   final String noteId;
   final String mediaId;
@@ -58,6 +74,7 @@ class PlayAudioEvent extends MediaEvent {
   @override
   List<Object?> get props => [noteId, mediaId];
 }
+*/
 
 class CaptureVideoEvent extends MediaEvent {
   final String noteId;

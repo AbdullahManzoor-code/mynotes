@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:mynotes/presentation/bloc/note/note_state.dart'
     show NotesLoaded;
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:vibration/vibration.dart';
 
-import 'package:mynotes/core/services/global_ui_service.dart';
 import 'package:mynotes/core/services/backup_service.dart';
 import 'package:mynotes/presentation/bloc/theme/theme_bloc.dart';
 import 'package:mynotes/presentation/bloc/theme/theme_event.dart';
@@ -21,12 +21,12 @@ import 'package:mynotes/presentation/pages/voice_settings_screen.dart';
 import 'package:mynotes/presentation/pages/backup_export_screen.dart';
 import 'package:mynotes/presentation/pages/biometric_lock_screen.dart';
 import 'package:mynotes/presentation/pages/privacy_policy_screen.dart';
+import 'package:mynotes/presentation/pages/global_search_screen.dart';
 import 'package:mynotes/injection_container.dart' show getIt;
 import 'package:mynotes/presentation/widgets/developer_test_links_sheet.dart';
 import 'package:mynotes/presentation/widgets/theme_color_picker_bottomsheet.dart';
 import 'package:mynotes/presentation/bloc/alarm/alarm_bloc.dart';
 import 'package:mynotes/core/notifications/alarm_service.dart';
-import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
 import 'package:mynotes/presentation/bloc/alarm/alarm_event.dart';
 import 'package:mynotes/presentation/bloc/alarm/alarm_state.dart';
@@ -41,7 +41,6 @@ import 'package:mynotes/core/services/location_service.dart';
 // Analytics & Quick Actions
 import 'analytics_dashboard_screen.dart';
 import 'focus_session_screen.dart';
-import 'enhanced_global_search_screen.dart';
 
 /// Unified Settings Screen
 /// Combines all settings, quick actions, and developer tools in one place
@@ -242,10 +241,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
               'Global Search',
               'Search across everything',
               Icons.search,
-              () => _navigateToScreen(
-                context,
-                const EnhancedGlobalSearchScreen(),
-              ),
+              () => _navigateToScreen(context, const GlobalSearchScreen()),
             ),
             _buildQuickActionTile(
               'Focus Session',
@@ -401,9 +397,44 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
               () => _triggerTestAlarm(context),
             ),
             _buildDeveloperTile(
+              'Test: Full Alarm (Immediate)',
+              'Test alarm callback immediately (no wait)',
+              () => _testFullAlarmImmediate(context),
+            ),
+            _buildDeveloperTile(
+              'Test: AndroidAlarmManager (3s)',
+              'Test background alarm in 3 seconds',
+              () => _testAndroidAlarmManager(context),
+            ),
+            _buildDeveloperTile(
               'Test: Check Permissions',
               'Verify alarm permissions are granted',
               () => _checkAlarmPermissions(context),
+            ),
+            _buildDeveloperTile(
+              'Test: Notification Only',
+              'Test AwesomeNotifications directly',
+              () => _testNotificationOnly(context),
+            ),
+            _buildDeveloperTile(
+              'Test: Vibration Only',
+              'Test vibration pattern',
+              () => _testVibrationOnly(context),
+            ),
+            _buildDeveloperTile(
+              'Stop: Vibration',
+              'Stop vibration immediately',
+              () => _stopVibration(context),
+            ),
+            _buildDeveloperTile(
+              'Test: Ringtone Only',
+              'Test alarm ringtone sound',
+              () => _testRingtoneOnly(context),
+            ),
+            _buildDeveloperTile(
+              'Stop: Ringtone',
+              'Stop ringtone immediately',
+              () => _stopRingtone(context),
             ),
             _buildDeveloperTile(
               'Test: Earliest Alarm Detection',
@@ -1407,6 +1438,9 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
   Future<void> _triggerTestAlarm(BuildContext context) async {
     AppLogger.i('═' * 60);
     AppLogger.i('[TEST-ALARM] ⏰ Starting test alarm trigger...');
+    AppLogger.i(
+      '[TEST-ALARM] Current time: ${DateTime.now().toIso8601String()}',
+    );
     AppLogger.i('═' * 60);
 
     try {
@@ -1424,18 +1458,27 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
       await alarmService.requestPermissions();
       AppLogger.i('[TEST-ALARM] ✅ Permissions requested');
 
-      // Schedule alarm for 10 seconds from now
+      // FIRST: Test the callback directly to verify it works
+      AppLogger.i('═' * 60);
+      AppLogger.i('[TEST-ALARM] Step 4: Testing callback directly...');
+      await alarmService.testAlarmTrigger();
+      AppLogger.i('[TEST-ALARM] ✅ Direct callback test completed');
+      AppLogger.i('═' * 60);
+
+      // SECOND: Schedule actual AndroidAlarmManager alarm
       final scheduledTime = DateTime.now().add(const Duration(seconds: 10));
       final testAlarmId = 'test_alarm_${DateTime.now().millisecondsSinceEpoch}';
 
-      AppLogger.i('[TEST-ALARM] Step 4: Preparing to schedule alarm...');
+      AppLogger.i(
+        '[TEST-ALARM] Step 5: Preparing to schedule AndroidAlarmManager...',
+      );
       AppLogger.i('[TEST-ALARM] - Alarm ID: $testAlarmId');
       AppLogger.i(
         '[TEST-ALARM] - Scheduled for: ${scheduledTime.toIso8601String()}',
       );
       AppLogger.i('[TEST-ALARM] - Time from now: 10 seconds');
 
-      AppLogger.i('[TEST-ALARM] Step 5: Calling scheduleAlarm()...');
+      AppLogger.i('[TEST-ALARM] Step 6: Calling scheduleAlarm()...');
       await alarmService.scheduleAlarm(
         dateTime: scheduledTime,
         id: testAlarmId,
@@ -1446,18 +1489,26 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
 
       AppLogger.i('═' * 60);
       AppLogger.i('✅ [TEST-ALARM-SUCCESS] Test alarm created!');
+      AppLogger.i(
+        'Watch for [ALARM-SERVICE-BACKGROUND] in logs after 10 seconds',
+      );
       AppLogger.i('═' * 60);
 
       if (context.mounted) {
         getIt<GlobalUiService>().showSuccess(
-          '✅ Test alarm scheduled for 10 seconds\n\n'
-          'Instructions:\n'
-          '1. Keep app open OR minimize to test background\n'
-          '2. You should hear sound + vibration in 10 seconds\n'
-          '3. Check terminal logs for [ALARM-TRIGGERED-CALLBACK]\n'
-          '4. If no notification:\n'
-          '   - Grant POST_NOTIFICATIONS permission\n'
-          '   - Grant SCHEDULE_EXACT_ALARM permission',
+          '✅ Test alarm scheduled\n\n'
+          'IMMEDIATE TEST:\n'
+          '• Sound + vibration should have triggered NOW\n'
+          '• Check logs for [ALARM-SERVICE-BACKGROUND]\n\n'
+          'BACKGROUND TEST (10 seconds):\n'
+          '1. Keep app open OR minimize\n'
+          '2. Wait 10 seconds for AndroidAlarmManager\n'
+          '3. Check logs for [ALARM-SERVICE-BACKGROUND]\n'
+          '4. Should see notification + sound + vibration\n\n'
+          'If no background alarm:\n'
+          '• Grant POST_NOTIFICATIONS permission\n'
+          '• Grant SCHEDULE_EXACT_ALARM permission\n'
+          '• Check battery optimization settings',
         );
       }
     } catch (e) {
@@ -1828,6 +1879,334 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
       }
     }
   }
+
+  // ======================== COMPONENT TESTING ========================
+  Future<void> _testNotificationOnly(BuildContext context) async {
+    AppLogger.i('═' * 60);
+    AppLogger.i('[TEST-NOTIFICATION] Testing AwesomeNotifications...');
+    AppLogger.i('═' * 60);
+
+    try {
+      AppLogger.i('[TEST-NOTIFICATION] Creating test notification...');
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: 999,
+          channelKey: 'alarm_channel',
+          title: '🔔 Test Notification',
+          body: 'This is a test notification from Developer Settings',
+          wakeUpScreen: true,
+          category: NotificationCategory.Alarm,
+          fullScreenIntent: true,
+          autoDismissible: true,
+          locked: false,
+          notificationLayout: NotificationLayout.Default,
+        ),
+        actionButtons: [
+          NotificationActionButton(
+            key: 'TEST_DISMISS',
+            label: 'Dismiss',
+            actionType: ActionType.Default,
+          ),
+        ],
+      );
+
+      AppLogger.i('═' * 60);
+      AppLogger.i('[TEST-NOTIFICATION] ✅ Notification created successfully');
+      AppLogger.i('═' * 60);
+
+      if (context.mounted) {
+        getIt<GlobalUiService>().showSuccess(
+          '✅ Notification test completed\n\n'
+          'Check your notification tray for the test notification.\n\n'
+          'If you don\'t see it:\n'
+          '• Grant POST_NOTIFICATIONS permission\n'
+          '• Check notification settings in Android Settings',
+        );
+      }
+    } catch (e, stack) {
+      AppLogger.e('═' * 60);
+      AppLogger.e('[TEST-NOTIFICATION] ❌ Failed to create notification');
+      AppLogger.e('Error: $e');
+      AppLogger.e('Stack: $stack');
+      AppLogger.e('═' * 60);
+
+      if (context.mounted) {
+        getIt<GlobalUiService>().showError(
+          '❌ Notification test failed:\n$e\n\n'
+          'Check logs for [TEST-NOTIFICATION]',
+        );
+      }
+    }
+  }
+
+  Future<void> _testVibrationOnly(BuildContext context) async {
+    AppLogger.i('═' * 60);
+    AppLogger.i('[TEST-VIBRATION] Testing vibration...');
+    AppLogger.i('═' * 60);
+
+    try {
+      // Check if device can vibrate
+      final hasVibrator = await Vibration.hasVibrator();
+      AppLogger.i('[TEST-VIBRATION] Device has vibrator: $hasVibrator');
+
+      if (hasVibrator == true) {
+        AppLogger.i('[TEST-VIBRATION] Starting vibration pattern...');
+        await Vibration.vibrate(
+          pattern: [500, 1000, 500, 1000, 500, 1000],
+          intensities: [0, 255, 0, 255, 0, 255],
+        );
+
+        AppLogger.i('═' * 60);
+        AppLogger.i('[TEST-VIBRATION] ✅ Vibration test completed');
+        AppLogger.i('═' * 60);
+
+        if (context.mounted) {
+          getIt<GlobalUiService>().showSuccess(
+            '✅ Vibration test completed\n\n'
+            'You should feel 3 vibration pulses.\n\n'
+            'If you didn\'t feel anything:\n'
+            '• Check device is not in silent mode\n'
+            '• Check vibration is enabled in Android Settings\n'
+            '• Some devices may not support vibration patterns',
+          );
+        }
+      } else {
+        AppLogger.w('[TEST-VIBRATION] ⚠️ Device does not have vibrator');
+
+        if (context.mounted) {
+          getIt<GlobalUiService>().showWarning(
+            '⚠️ No vibrator detected\n\n'
+            'This device may not support vibration.',
+          );
+        }
+      }
+    } catch (e, stack) {
+      AppLogger.e('═' * 60);
+      AppLogger.e('[TEST-VIBRATION] ❌ Vibration test failed');
+      AppLogger.e('Error: $e');
+      AppLogger.e('Stack: $stack');
+      AppLogger.e('═' * 60);
+
+      if (context.mounted) {
+        getIt<GlobalUiService>().showError(
+          '❌ Vibration test failed:\n$e\n\n'
+          'Check logs for [TEST-VIBRATION]',
+        );
+      }
+    }
+  }
+
+  Future<void> _testRingtoneOnly(BuildContext context) async {
+    AppLogger.i('═' * 60);
+    AppLogger.i('[TEST-RINGTONE] Testing alarm ringtone...');
+    AppLogger.i('═' * 60);
+
+    try {
+      AppLogger.i('[TEST-RINGTONE] Playing alarm sound...');
+      await FlutterRingtonePlayer().playAlarm();
+
+      AppLogger.i('═' * 60);
+      AppLogger.i('[TEST-RINGTONE] ✅ Alarm sound started');
+      AppLogger.i('═' * 60);
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('🔊 Alarm Sound Playing'),
+            content: const Text(
+              'You should hear the alarm ringtone playing.\n\n'
+              'Tap "Stop" to stop the sound.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  AppLogger.i('[TEST-RINGTONE] Stopping alarm sound...');
+                  await FlutterRingtonePlayer().stop();
+                  AppLogger.i('[TEST-RINGTONE] ✅ Alarm sound stopped');
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                },
+                child: const Text('Stop'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e, stack) {
+      AppLogger.e('═' * 60);
+      AppLogger.e('[TEST-RINGTONE] ❌ Ringtone test failed');
+      AppLogger.e('Error: $e');
+      AppLogger.e('Stack: $stack');
+      AppLogger.e('═' * 60);
+
+      if (context.mounted) {
+        getIt<GlobalUiService>().showError(
+          '❌ Ringtone test failed:\n$e\n\n'
+          'Check logs for [TEST-RINGTONE]\n\n'
+          'Possible solutions:\n'
+          '• Check device is not in silent mode\n'
+          '• Check volume is turned up\n'
+          '• Check Do Not Disturb is off',
+        );
+      }
+    }
+  }
+
+  Future<void> _testFullAlarmImmediate(BuildContext context) async {
+    AppLogger.i('═' * 60);
+    AppLogger.i('[TEST-FULL-ALARM] Testing full alarm callback immediately...');
+    AppLogger.i('═' * 60);
+
+    try {
+      final alarmService = AlarmService();
+      await alarmService.init();
+
+      AppLogger.i('[TEST-FULL-ALARM] Triggering alarm callback...');
+      await alarmService.testAlarmTrigger();
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: const Text('⏰ Full Alarm Test'),
+            content: const Text(
+              'Full alarm callback triggered!\n\n'
+              'You should:\n'
+              '✓ See a notification\n'
+              '✓ Feel vibration\n'
+              '✓ Hear alarm sound\n\n'
+              'Check logs for [ALARM-MANAGER-CALLBACK].\n\n'
+              'Tap "Stop All" to stop sound and vibration.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await FlutterRingtonePlayer().stop();
+                  await Vibration.cancel();
+                  if (context.mounted) Navigator.pop(context);
+                },
+                child: const Text('Stop All'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e, stack) {
+      AppLogger.e('[TEST-FULL-ALARM] ❌ Test failed: $e');
+      AppLogger.e('Stack: $stack');
+
+      if (context.mounted) {
+        getIt<GlobalUiService>().showError(
+          '❌ Full alarm test failed:\n$e\n\n'
+          'Check logs for [TEST-FULL-ALARM]',
+        );
+      }
+    }
+  }
+
+  Future<void> _testAndroidAlarmManager(BuildContext context) async {
+    AppLogger.i('═' * 60);
+    AppLogger.i('[TEST-ANDROID-ALARM] Testing AndroidAlarmManager...');
+    AppLogger.i('═' * 60);
+
+    try {
+      final alarmService = AlarmService();
+      await alarmService.init();
+
+      AppLogger.i('[TEST-ANDROID-ALARM] Scheduling alarm in 3 seconds...');
+      await alarmService.testAndroidAlarmManagerImmediate();
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => AlertDialog(
+            title: const Text('⏰ Background Alarm Test'),
+            content: const Text(
+              '✅ AndroidAlarmManager test scheduled\n\n'
+              '🧪 TESTING INSTRUCTIONS:\n\n'
+              '1. Wait 3 seconds for immediate test\n'
+              '2. OR minimize/kill the app NOW\n'
+              '3. Wait for alarm notification\n\n'
+              '📱 KILL APP TEST:\n'
+              '1. Close this dialog\n'
+              '2. Force stop the app in Settings\n'
+              '3. Wait 3 seconds\n'
+              '4. Alarm should still trigger!\n\n'
+              '✅ Expected:\n'
+              '• Notification appears\n'
+              '• Sound plays\n'
+              '• Vibration occurs\n'
+              '• Even if app is killed!\n\n'
+              'Check logs for [ALARM-MANAGER-CALLBACK]',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e, stack) {
+      AppLogger.e('[TEST-ANDROID-ALARM] ❌ Test failed: $e');
+      AppLogger.e('Stack: $stack');
+
+      if (context.mounted) {
+        getIt<GlobalUiService>().showError(
+          '❌ AndroidAlarmManager test failed:\n$e\n\n'
+          'Possible causes:\n'
+          '• AndroidAlarmManager not initialized\n'
+          '• SCHEDULE_EXACT_ALARM permission not granted\n'
+          '• Battery optimization blocking alarms\n\n'
+          'Check logs for [TEST-ANDROID-ALARM]',
+        );
+      }
+    }
+  }
+
+  Future<void> _stopVibration(BuildContext context) async {
+    AppLogger.i('[STOP-VIBRATION] Stopping vibration...');
+    try {
+      final alarmService = AlarmService();
+      await alarmService.init();
+      await alarmService.stopVibration();
+
+      if (context.mounted) {
+        getIt<GlobalUiService>().showSuccess('✅ Vibration stopped');
+      }
+    } catch (e) {
+      AppLogger.e('[STOP-VIBRATION] Failed: $e');
+      if (context.mounted) {
+        getIt<GlobalUiService>().showError('❌ Failed to stop vibration:\n$e');
+      }
+    }
+  }
+
+  Future<void> _stopRingtone(BuildContext context) async {
+    AppLogger.i('[STOP-RINGTONE] Stopping ringtone...');
+    try {
+      final alarmService = AlarmService();
+      await alarmService.init();
+      await alarmService.stopRingtone();
+
+      if (context.mounted) {
+        getIt<GlobalUiService>().showSuccess('✅ Ringtone stopped');
+      }
+    } catch (e) {
+      AppLogger.e('[STOP-RINGTONE] Failed: $e');
+      if (context.mounted) {
+        getIt<GlobalUiService>().showError('❌ Failed to stop ringtone:\n$e');
+      }
+    }
+  }
+
+  // ======================== PERMISSIONS TESTING ========================
 
   // ======================== NOTES CRUD TESTING ========================
   void _showNotesCrudTestSheet(BuildContext context) {
@@ -2838,12 +3217,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
       final todosBloc = context.read<TodosBloc>();
 
       final start = DateTime.now();
-      final notesState = notesBloc.state;
-      final todosState = todosBloc.state;
       final elapsed = DateTime.now().difference(start).inMilliseconds;
-
-      final notesReady = notesState is NotesLoaded;
-      final todosReady = todosState is TodosLoaded;
 
       AppLogger.i('[TEST] ✅ Query performance test PASSED (${elapsed}ms)');
       if (!context.mounted) return;
@@ -2907,8 +3281,6 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
   Future<void> _showAllPermissionsStatus(BuildContext context) async {
     AppLogger.i('[PERMS] Checking all permissions status');
     try {
-      final permissions = <String, PermissionStatus>{};
-
       // Request locations for status first
       final Map<String, PermissionStatus> statuses = {
         'POST_NOTIFICATIONS': await Permission.notification.status,

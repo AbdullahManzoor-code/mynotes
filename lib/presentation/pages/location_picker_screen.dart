@@ -9,7 +9,6 @@ import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bl
 import 'package:mynotes/presentation/bloc/location_picker/location_picker_bloc.dart';
 import '../design_system/design_system.dart';
 import 'dart:ui' as ui;
-import '../../core/services/app_logger.dart';
 
 // Type alias for PlacePrediction from PlacesService
 typedef PlacePredictionLocal = PlacePrediction;

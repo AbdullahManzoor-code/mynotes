@@ -1,0 +1,440 @@
+================================================================================
+PHASE 8: THIRD-PARTY INTEGRATIONS
+================================================================================
+
+8.1 Firebase Services
+---------------------
+Firebase SDKs (Auth/Firestore/Functions/Storage/Analytics/Crashlytics/Remote Config/FCM):
+- No firebase_* packages are listed in dependencies. See [pubspec.yaml](pubspec.yaml#L1-L318).
+- No Firebase config files found in the repository (google-services.json, GoogleService-Info.plist).
+- AppUrls includes a placeholder Firebase base URL constant only, but no SDK wiring. See [lib/core/constants/app_urls.dart](lib/core/constants/app_urls.dart#L1-L140).
+
+Authentication methods configured:
+- None for Firebase (no firebase_auth). See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Firestore collections and usage:
+- None (no cloud_firestore). See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Cloud Functions:
+- None (no cloud_functions). See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Storage buckets:
+- None (no firebase_storage). See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Analytics events:
+- Internal analytics exists via AnalyticsBloc, but no Firebase Analytics SDK. See [lib/presentation/bloc/analytics/analytics_bloc.dart](lib/presentation/bloc/analytics/analytics_bloc.dart#L1) and [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Crashlytics setup:
+- None (no firebase_crashlytics). See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Remote Config:
+- None (no firebase_remote_config). See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Cloud Messaging (FCM):
+- None (no firebase_messaging). See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+8.2 Payment Integrations
+------------------------
+- No Stripe/Razorpay/PayPal SDKs in dependencies. See [pubspec.yaml](pubspec.yaml#L1-L318).
+- No webhook handlers or payment service classes found in lib/. (No payment packages referenced in dependency list.)
+
+8.3 Other Third-Party Services
+------------------------------
+Maps (Google Maps / Places / Geolocation):
+- Google Maps SDK dependency: [pubspec.yaml](pubspec.yaml#L188-L207).
+- Places API service and API key placeholder: [lib/core/services/places_service.dart](lib/core/services/places_service.dart#L1-L120).
+- Google Maps API key placeholder in AndroidManifest: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L53-L92).
+- Location service (geolocator + geocoding): [lib/core/services/location_service.dart](lib/core/services/location_service.dart#L1-L120).
+- Location screens and blocs use Google Maps: [lib/presentation/pages/location_picker_screen.dart](lib/presentation/pages/location_picker_screen.dart) and [lib/presentation/bloc/location_picker/location_picker_bloc.dart](lib/presentation/bloc/location_picker/location_picker_bloc.dart).
+
+Analytics (Mixpanel/Amplitude/etc):
+- No external analytics SDKs in dependencies. See [pubspec.yaml](pubspec.yaml#L1-L318).
+- Internal analytics widgets and bloc are present: [lib/presentation/bloc/analytics/analytics_bloc.dart](lib/presentation/bloc/analytics/analytics_bloc.dart#L1) and [lib/presentation/widgets/analytics/analytics_card.dart](lib/presentation/widgets/analytics/analytics_card.dart#L1-L120).
+
+Social login (Google/Facebook/Apple):
+- Google Sign-In dependency is present in pubspec: [pubspec.yaml](pubspec.yaml#L178-L187).
+- No usage of GoogleSignIn found in lib/ (no code references). See dependency only.
+- No Facebook/Apple SDKs listed. See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Chat (Socket.io/SendBird/etc):
+- No chat SDKs listed. See [pubspec.yaml](pubspec.yaml#L1-L318).
+
+Notifications (Local):
+- Awesome Notifications + Android Alarm Manager usage in main(): [lib/main.dart](lib/main.dart#L1-L520).
+- Android manifest permissions for alarms and notifications: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L1-L122).
+
+Document scanning & OCR:
+- Dependencies include google_mlkit_text_recognition, cunning_document_scanner: [pubspec.yaml](pubspec.yaml#L112-L130).
+
+Calendar integration:
+- device_calendar dependency: [pubspec.yaml](pubspec.yaml#L178-L187).
+
+Voice & STT:
+- speech_to_text dependency: [pubspec.yaml](pubspec.yaml#L97-L103).
+
+================================================================================
+PHASE 9: CONFIGURATION & ENVIRONMENT
+================================================================================
+
+9.1 Environment Setup
+---------------------
+Flavors/environments (dev, staging, prod):
+- No Android productFlavors found in Gradle config. See [android/app/build.gradle.kts](android/app/build.gradle.kts#L1-L76).
+
+Environment variables:
+- No .env or envied usage in code; only envied_generator in dev_dependencies. See [pubspec.yaml](pubspec.yaml#L240-L318).
+
+API base URLs per environment:
+- AppUrls defines dev/staging/prod endpoints but no runtime switching. See [lib/core/constants/app_urls.dart](lib/core/constants/app_urls.dart#L1-L40).
+- DioClient uses hardcoded baseUrl constant (example URL). See [lib/core/network/dio_client.dart](lib/core/network/dio_client.dart#L1-L40).
+
+Build configurations:
+- Android compileSdk uses Flutter config; minSdk 24, targetSdk 34; minify/shrink enabled for release. See [android/app/build.gradle.kts](android/app/build.gradle.kts#L1-L76).
+- Signing config uses key.properties if present. See [android/app/build.gradle.kts](android/app/build.gradle.kts#L1-L76).
+
+9.2 Platform-Specific Code
+---------------------------
+Android-specific configurations:
+- Permissions and services in manifest: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L1-L122).
+- Google Maps API key placeholder: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L53-L92).
+- AlarmManager services and receivers: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L74-L112).
+
+iOS-specific configurations:
+- Info.plist permissions for camera, photos, microphone, speech, Face ID, notifications, location, background modes: [ios/Runner/Info.plist](ios/Runner/Info.plist#L1-L92).
+
+Permissions required (Android):
+- Storage: READ/WRITE external, READ_MEDIA_*: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L1-L20).
+- Camera + mic: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L21-L30).
+- Notifications + alarms: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L31-L45).
+- Location (foreground/background): [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L46-L54).
+- Biometrics: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L55-L62).
+
+Platform channels:
+- DND controls via MethodChannel: [lib/core/services/dnd_service.dart](lib/core/services/dnd_service.dart#L1-L80).
+- Clipboard monitoring via MethodChannel: [lib/core/services/clipboard_service.dart](lib/core/services/clipboard_service.dart#L1-L80).
+
+9.3 CI/CD
+---------
+- GitHub Actions workflow builds Android AAB/APK and creates a release. See [\.github/workflows/flutter-build.yml](.github/workflows/flutter-build.yml#L1-L70).
+- Uses secrets for keystore and signing. See [\.github/workflows/flutter-build.yml](.github/workflows/flutter-build.yml#L10-L40).
+
+================================================================================
+PHASE 10: ISSUES & PROBLEMS IDENTIFICATION
+================================================================================
+
+10.1 Code Quality Issues
+------------------------
+
+God classes / very large files:
+- EnhancedNoteEditorScreen is 2081 lines and imports many services, widgets, and handles multiple features in one file. See [lib/presentation/pages/enhanced_note_editor_screen.dart](lib/presentation/pages/enhanced_note_editor_screen.dart#L1-L120).
+- GlobalSearchScreen is 949 lines (large UI + search logic). See [lib/presentation/pages/global_search_screen.dart](lib/presentation/pages/global_search_screen.dart#L1-L80).
+- FocusSessionScreen is 946 lines (large UI + timer side effects). See [lib/presentation/pages/focus_session_screen.dart](lib/presentation/pages/focus_session_screen.dart#L1-L80).
+- ReflectionHomeScreen is 949 lines (UI + auth flow). See [lib/presentation/screens/reflection_home_screen.dart](lib/presentation/screens/reflection_home_screen.dart#L1-L80).
+- EnhancedRemindersListScreen is 1076 lines (large UI + state logic). See [lib/presentation/pages/enhanced_reminders_list_screen.dart](lib/presentation/pages/enhanced_reminders_list_screen.dart#L1-L80).
+- NotesBloc is 1058 lines. See [lib/presentation/bloc/note/note_bloc.dart](lib/presentation/bloc/note/note_bloc.dart#L1-L120).
+- AlarmsBloc is 1178 lines. See [lib/presentation/bloc/alarm/alarm_bloc.dart](lib/presentation/bloc/alarm/alarm_bloc.dart#L1-L120).
+- AppRouter is 645 lines with a large switch statement. See [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart#L1-L260).
+
+Code duplication (URL validation/normalization repeated in multiple places):
+- UrlValidator in widget: [lib/presentation/widgets/link_preview_widget.dart](lib/presentation/widgets/link_preview_widget.dart#L23-L74).
+- LinkPreviewBloc duplicates validation/normalize logic: [lib/presentation/bloc/link_preview/link_preview_bloc.dart](lib/presentation/bloc/link_preview/link_preview_bloc.dart#L120-L175).
+- String extension has isValidUrl: [lib/core/extensions/string_extensions.dart](lib/core/extensions/string_extensions.dart#L18-L40).
+- Link entity has isValidUrl/ensureScheme: [lib/domain/entities/link.dart](lib/domain/entities/link.dart#L40-L80).
+
+Dead code / deprecated screens:
+- Deprecated SettingsScreen with large commented-out code block. See [lib/presentation/pages/settings_screen.dart](lib/presentation/pages/settings_screen.dart#L1-L200).
+
+Hardcoded strings/values:
+- Base URLs and endpoints hardcoded in AppUrls. See [lib/core/constants/app_urls.dart](lib/core/constants/app_urls.dart#L1-L140).
+- DioClient baseUrl hardcoded. See [lib/core/network/dio_client.dart](lib/core/network/dio_client.dart#L1-L40).
+- Google Places API key placeholder hardcoded in PlacesService. See [lib/core/services/places_service.dart](lib/core/services/places_service.dart#L1-L20).
+- Google Maps API key placeholder in AndroidManifest. See [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L53-L92).
+
+Potential logging of sensitive data:
+- PrettyDioLogger logs request and response bodies (may include sensitive data). See [lib/core/network/dio_client.dart](lib/core/network/dio_client.dart#L16-L40).
+
+10.2 Architecture Issues
+------------------------
+
+Side effects in build methods (should be in initState or BlocListener):
+- FocusSessionScreen triggers _initFocusScreen inside build, risking repeated side effects. See [lib/presentation/pages/focus_session_screen.dart](lib/presentation/pages/focus_session_screen.dart#L18-L40).
+- EnhancedRemindersListScreen triggers _initScreen inside build, risking repeated side effects. See [lib/presentation/pages/enhanced_reminders_list_screen.dart](lib/presentation/pages/enhanced_reminders_list_screen.dart#L12-L32).
+
+Business logic in UI layer:
+- ReflectionHomeScreen handles biometric authentication directly in UI state. See [lib/presentation/screens/reflection_home_screen.dart](lib/presentation/screens/reflection_home_screen.dart#L26-L74).
+
+Monolithic router:
+- AppRouter includes all routes in a large switch statement (hard to maintain). See [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart#L1-L260).
+
+10.3 Performance Issues
+-----------------------
+
+Repeated initialization in build:
+- FocusSessionScreen calls _initFocusScreen in build, which can re-run on rebuilds. See [lib/presentation/pages/focus_session_screen.dart](lib/presentation/pages/focus_session_screen.dart#L18-L40).
+- EnhancedRemindersListScreen calls _initScreen in build, can re-run on rebuilds. See [lib/presentation/pages/enhanced_reminders_list_screen.dart](lib/presentation/pages/enhanced_reminders_list_screen.dart#L12-L32).
+
+Large widget trees:
+- EnhancedNoteEditorScreen, GlobalSearchScreen, ReflectionHomeScreen, FocusSessionScreen, EnhancedRemindersListScreen (see file lengths above) likely cause long build times and high memory usage.
+
+10.4 Security Issues
+--------------------
+
+API keys exposed / placeholders in code:
+- PlacesService API key placeholder: [lib/core/services/places_service.dart](lib/core/services/places_service.dart#L1-L20).
+- Google Maps API key placeholder in manifest: [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L53-L92).
+
+Missing SSL pinning:
+- DioClient has no certificate pinning configuration. See [lib/core/network/dio_client.dart](lib/core/network/dio_client.dart#L1-L40).
+
+10.5 UX Issues
+--------------
+
+Potential re-initialization causing UI flicker:
+- FocusSessionScreen and EnhancedRemindersListScreen side effects in build can retrigger loading/animations. See [lib/presentation/pages/focus_session_screen.dart](lib/presentation/pages/focus_session_screen.dart#L18-L40) and [lib/presentation/pages/enhanced_reminders_list_screen.dart](lib/presentation/pages/enhanced_reminders_list_screen.dart#L12-L32).
+
+Deprecated Settings screen routed but replaced:
+- SettingsScreen is deprecated and redirects to UnifiedSettingsScreen; comments indicate legacy content. See [lib/presentation/pages/settings_screen.dart](lib/presentation/pages/settings_screen.dart#L1-L40).
+
+================================================================================
+PHASE 11: COMPLETE FLOW DOCUMENTATION
+================================================================================
+
+11.1 App Startup Flow (main() to first screen)
+----------------------------------------------
+main() startup sequence:
+1) main() entry point logs and initializes bindings. See [lib/main.dart](lib/main.dart#L260-L280).
+2) AndroidAlarmManager initialized. See [lib/main.dart](lib/main.dart#L282-L300).
+3) AwesomeNotifications initialized and action listener registered. See [lib/main.dart](lib/main.dart#L304-L340).
+4) sqflite FFI init for desktop platforms. See [lib/main.dart](lib/main.dart#L342-L350).
+5) setupServiceLocator() registers services, repos, BLoCs. See [lib/main.dart](lib/main.dart#L352-L360) and [lib/injection_container.dart](lib/injection_container.dart#L1-L200).
+6) CoreDatabase created; NotificationService and AlarmService retrieved. See [lib/main.dart](lib/main.dart#L362-L390).
+7) Alarm action handler registered and alarms rescheduled. See [lib/main.dart](lib/main.dart#L392-L456).
+8) Initial LoadAlarms event dispatched. See [lib/main.dart](lib/main.dart#L458-L468).
+9) runApp(MyNotesApp) invoked. See [lib/main.dart](lib/main.dart#L470-L485).
+10) MyNotesApp builds MultiBlocProvider, ThemeBloc, NotesBloc, MediaBloc, etc. See [lib/main.dart](lib/main.dart#L486-L620).
+11) MaterialApp initialRoute set to AppRoutes.splash. See [lib/main.dart](lib/main.dart#L560-L600).
+12) AppRouter.onGenerateRoute resolves to SplashScreen. See [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart#L23-L60).
+13) SplashScreen initializes, checks first launch + biometric, then navigates. See [lib/presentation/pages/splash_screen.dart](lib/presentation/pages/splash_screen.dart#L20-L140).
+
+11.2 User Journey Flows
+-----------------------
+
+First time user flow:
+1) App starts at SplashScreen. See [lib/presentation/pages/splash_screen.dart](lib/presentation/pages/splash_screen.dart#L20-L140).
+2) _checkFirstLaunch returns true (SharedPreferences). See [lib/presentation/pages/splash_screen.dart](lib/presentation/pages/splash_screen.dart#L118-L140).
+3) Navigate to OnboardingScreen. See [lib/presentation/pages/splash_screen.dart](lib/presentation/pages/splash_screen.dart#L96-L110).
+4) User completes onboarding; first_launch set to false. See [lib/presentation/pages/onboarding_screen.dart](lib/presentation/pages/onboarding_screen.dart#L10-L30).
+5) Navigate to home (MainHomeScreen). See [lib/presentation/pages/onboarding_screen.dart](lib/presentation/pages/onboarding_screen.dart#L20-L35) and [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart#L50-L80).
+
+Returning user flow (biometric enabled):
+1) SplashScreen checks biometric enabled. See [lib/presentation/pages/splash_screen.dart](lib/presentation/pages/splash_screen.dart#L100-L120).
+2) Navigate to biometric lock screen route. See [lib/presentation/pages/splash_screen.dart](lib/presentation/pages/splash_screen.dart#L102-L110) and [lib/core/routes/app_routes.dart](lib/core/routes/app_routes.dart#L88-L120).
+3) After unlock, user navigates to home. (Biometric screen routes to home; see AppRoutes.home in [lib/core/routes/app_routes.dart](lib/core/routes/app_routes.dart#L10-L40)).
+
+Returning user flow (no biometric):
+1) SplashScreen navigates directly to AppRoutes.home. See [lib/presentation/pages/splash_screen.dart](lib/presentation/pages/splash_screen.dart#L102-L120).
+2) AppRouter builds MainHomeScreen. See [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart#L40-L70) and [lib/presentation/pages/main_home_screen.dart](lib/presentation/pages/main_home_screen.dart#L1-L120).
+
+Core feature flow: Create a note
+1) User on MainHomeScreen taps FAB -> QuickAddBottomSheet. See [lib/presentation/pages/main_home_screen.dart](lib/presentation/pages/main_home_screen.dart#L70-L120).
+2) Navigate to note editor: AppRoutes.noteEditor. See [lib/presentation/pages/main_home_screen.dart](lib/presentation/pages/main_home_screen.dart#L30-L60) and [lib/core/routes/app_routes.dart](lib/core/routes/app_routes.dart#L20-L40).
+3) AppRouter builds EnhancedNoteEditorScreen. See [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart#L70-L110) and [lib/presentation/pages/enhanced_note_editor_screen.dart](lib/presentation/pages/enhanced_note_editor_screen.dart#L1-L120).
+4) NotesBloc handles CreateNoteEvent and persists to repository. See [lib/presentation/bloc/note/note_bloc.dart](lib/presentation/bloc/note/note_bloc.dart#L20-L120).
+
+Core feature flow: Set a reminder
+1) User opens reminders list screen. See [lib/core/routes/app_routes.dart](lib/core/routes/app_routes.dart#L40-L70) and [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart#L160-L220).
+2) EnhancedRemindersListScreen displays alarms and controls. See [lib/presentation/pages/enhanced_reminders_list_screen.dart](lib/presentation/pages/enhanced_reminders_list_screen.dart#L1-L80).
+3) AlarmsBloc handles AddAlarmEvent and schedules notification. See [lib/presentation/bloc/alarm/alarm_bloc.dart](lib/presentation/bloc/alarm/alarm_bloc.dart#L20-L120).
+4) Android AlarmManager + AwesomeNotifications trigger background alarm. See [lib/main.dart](lib/main.dart#L1-L200) and [lib/main.dart](lib/main.dart#L280-L360).
+
+Core feature flow: Location reminder
+1) User opens location reminder screen. See [lib/core/routes/app_routes.dart](lib/core/routes/app_routes.dart#L40-L70) and [lib/core/routes/app_router.dart](lib/core/routes/app_router.dart#L200-L260).
+2) Location picker uses Google Maps & PlacesService. See [lib/presentation/pages/location_picker_screen.dart](lib/presentation/pages/location_picker_screen.dart) and [lib/core/services/places_service.dart](lib/core/services/places_service.dart#L1-L120).
+3) LocationService requests permissions and listens to location updates. See [lib/core/services/location_service.dart](lib/core/services/location_service.dart#L20-L110).
+
+Error/edge case flows:
+- SplashScreen initialization error shows error text and logs. See [lib/presentation/pages/splash_screen.dart](lib/presentation/pages/splash_screen.dart#L130-L150).
+- Alarm background action errors are caught and logged. See [lib/main.dart](lib/main.dart#L200-L260).
+
+================================================================================
+PHASE 12: SUMMARY OUTPUT FORMAT
+================================================================================
+
+12.1 Tech Stack Summary Table
+-----------------------------
+Category | Technology | Version | Status
+Framework | Flutter | (SDK set by Flutter tooling) | Active
+Language | Dart | ^3.8.1 | Active [pubspec.yaml](pubspec.yaml#L1-L20)
+State Mgmt | flutter_bloc, bloc | ^9.1.1 | Active [pubspec.yaml](pubspec.yaml#L20-L60)
+DI | get_it | ^9.2.0 | Active [pubspec.yaml](pubspec.yaml#L20-L60)
+Database | sqflite, sqlite3_flutter_libs | ^2.3.0 / ^0.5.20 | Active [pubspec.yaml](pubspec.yaml#L60-L90)
+Auth | local_auth | ^3.0.0 | Active [pubspec.yaml](pubspec.yaml#L120-L140)
+Notifications | awesome_notifications, flutter_local_notifications | ^0.10.1 / ^18.0.1 | Active [pubspec.yaml](pubspec.yaml#L100-L120)
+Maps | google_maps_flutter, geolocator | ^2.5.0 / ^14.0.2 | Active [pubspec.yaml](pubspec.yaml#L188-L207)
+Networking | dio | ^5.7.0 | Active [pubspec.yaml](pubspec.yaml#L40-L55)
+Media | image_picker, video_player, just_audio | ^1.0.4 / ^2.8.1 / ^0.10.5 | Active [pubspec.yaml](pubspec.yaml#L80-L120)
+UI | flutter_screenutil, google_fonts | ^5.9.3 / ^8.0.1 | Active [pubspec.yaml](pubspec.yaml#L140-L165)
+Analytics SDK | None external | N/A | Not configured [pubspec.yaml](pubspec.yaml#L1-L318)
+Payments | None | N/A | Not configured [pubspec.yaml](pubspec.yaml#L1-L318)
+Firebase | None | N/A | Not configured [pubspec.yaml](pubspec.yaml#L1-L318)
+
+12.2 Feature Completeness Matrix
+--------------------------------
+Feature | Implemented | Working | Quality (1-10) | Notes
+Notes CRUD | Yes | Yes | 8 | Core note flow via NotesBloc and EnhancedNoteEditorScreen. [lib/presentation/bloc/note/note_bloc.dart](lib/presentation/bloc/note/note_bloc.dart#L1-L120), [lib/presentation/pages/enhanced_note_editor_screen.dart](lib/presentation/pages/enhanced_note_editor_screen.dart#L1-L120)
+Todos | Yes | Yes | 7 | TodoBloc/TodosBloc implemented. [lib/presentation/bloc/todos/todos_bloc.dart](lib/presentation/bloc/todos/todos_bloc.dart)
+Reminders/Alarms | Yes | Yes | 7 | Alarm system with background notifications. [lib/presentation/bloc/alarm/alarm_bloc.dart](lib/presentation/bloc/alarm/alarm_bloc.dart#L1-L120), [lib/main.dart](lib/main.dart#L1-L520)
+Focus Sessions | Yes | Yes | 7 | FocusBloc + FocusSessionScreen. [lib/presentation/pages/focus_session_screen.dart](lib/presentation/pages/focus_session_screen.dart#L1-L80)
+Reflections | Yes | Yes | 6 | ReflectionBloc + ReflectionHomeScreen. [lib/presentation/screens/reflection_home_screen.dart](lib/presentation/screens/reflection_home_screen.dart#L1-L80)
+Media Gallery | Yes | Yes | 7 | MediaBloc + gallery screens. [lib/presentation/bloc/media/media_bloc.dart](lib/presentation/bloc/media/media_bloc.dart)
+OCR/Document Scan | Yes | Partial | 6 | OCRService + document scan; external SDK used. [lib/core/services/ocr_service.dart](lib/core/services/ocr_service.dart)
+Location Reminders | Yes | Partial | 6 | Requires API key + permissions. [lib/core/services/places_service.dart](lib/core/services/places_service.dart#L1-L120), [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L46-L92)
+Global Search | Yes | Yes | 6 | GlobalSearchBloc and screen. [lib/presentation/pages/global_search_screen.dart](lib/presentation/pages/global_search_screen.dart#L1-L80)
+Onboarding | Yes | Yes | 8 | IntroductionScreen. [lib/presentation/pages/onboarding_screen.dart](lib/presentation/pages/onboarding_screen.dart#L1-L120)
+Settings | Yes | Yes | 6 | UnifiedSettingsScreen used; SettingsScreen deprecated. [lib/presentation/pages/settings_screen.dart](lib/presentation/pages/settings_screen.dart#L1-L40)
+Analytics | Yes (internal) | Yes | 6 | Internal analytics only. [lib/presentation/bloc/analytics/analytics_bloc.dart](lib/presentation/bloc/analytics/analytics_bloc.dart#L1)
+Cloud Sync | No | No | N/A | AppUrls includes endpoints, but no API layer usage. [lib/core/constants/app_urls.dart](lib/core/constants/app_urls.dart#L1-L140)
+Payments | No | No | N/A | No payment SDKs. [pubspec.yaml](pubspec.yaml#L1-L318)
+Firebase | No | No | N/A | No firebase SDKs/config. [pubspec.yaml](pubspec.yaml#L1-L318)
+
+12.3 Critical Issues List (Priority Order)
+------------------------------------------
+1 | God classes (multiple 900-2000+ line screens and 1000+ line blocs) | High | [lib/presentation/pages/enhanced_note_editor_screen.dart](lib/presentation/pages/enhanced_note_editor_screen.dart#L1-L120), [lib/presentation/pages/global_search_screen.dart](lib/presentation/pages/global_search_screen.dart#L1-L80), [lib/presentation/pages/focus_session_screen.dart](lib/presentation/pages/focus_session_screen.dart#L1-L80), [lib/presentation/screens/reflection_home_screen.dart](lib/presentation/screens/reflection_home_screen.dart#L1-L80), [lib/presentation/pages/enhanced_reminders_list_screen.dart](lib/presentation/pages/enhanced_reminders_list_screen.dart#L1-L80), [lib/presentation/bloc/note/note_bloc.dart](lib/presentation/bloc/note/note_bloc.dart#L1-L120), [lib/presentation/bloc/alarm/alarm_bloc.dart](lib/presentation/bloc/alarm/alarm_bloc.dart#L1-L120) | Split by feature/responsibility
+2 | Side effects in build methods | High | [lib/presentation/pages/focus_session_screen.dart](lib/presentation/pages/focus_session_screen.dart#L18-L40), [lib/presentation/pages/enhanced_reminders_list_screen.dart](lib/presentation/pages/enhanced_reminders_list_screen.dart#L12-L32) | Move to initState or BlocListener
+3 | Hardcoded API base URLs and placeholders | Medium | [lib/core/constants/app_urls.dart](lib/core/constants/app_urls.dart#L1-L40), [lib/core/network/dio_client.dart](lib/core/network/dio_client.dart#L1-L40), [lib/core/services/places_service.dart](lib/core/services/places_service.dart#L1-L20), [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L53-L92) | Externalize to environment config
+4 | URL validation duplication | Medium | [lib/presentation/widgets/link_preview_widget.dart](lib/presentation/widgets/link_preview_widget.dart#L23-L74), [lib/presentation/bloc/link_preview/link_preview_bloc.dart](lib/presentation/bloc/link_preview/link_preview_bloc.dart#L120-L175), [lib/core/extensions/string_extensions.dart](lib/core/extensions/string_extensions.dart#L18-L40), [lib/domain/entities/link.dart](lib/domain/entities/link.dart#L40-L80) | Centralize in one utility
+5 | Deprecated SettingsScreen with large commented code | Low | [lib/presentation/pages/settings_screen.dart](lib/presentation/pages/settings_screen.dart#L1-L200) | Remove or move to archive
+
+12.4 Complete Improvement Recommendations
+-----------------------------------------
+
+Issue 1: God classes / oversized screens & blocs
+What is wrong:
+- Single files exceed 900-2000+ lines, mixing UI, state wiring, and feature logic.
+Why it is wrong:
+- Hard to test, maintain, and reason; increases rebuild cost and merge conflicts.
+How to fix (example):
+```dart
+// Before: EnhancedNoteEditorScreen (monolith)
+// After: Split into modular widgets and smaller blocs
+
+class EnhancedNoteEditorScreen extends StatelessWidget {
+	const EnhancedNoteEditorScreen({super.key});
+
+	@override
+	Widget build(BuildContext context) {
+		return const NoteEditorScaffold(
+			header: NoteEditorHeader(),
+			body: NoteEditorBody(),
+			media: NoteEditorMediaPanel(),
+		);
+	}
+}
+```
+Priority: High
+References:
+- [lib/presentation/pages/enhanced_note_editor_screen.dart](lib/presentation/pages/enhanced_note_editor_screen.dart#L1-L120)
+- [lib/presentation/bloc/note/note_bloc.dart](lib/presentation/bloc/note/note_bloc.dart#L1-L120)
+
+Issue 2: Side effects in build methods
+What is wrong:
+- build() triggers _initFocusScreen/_initScreen, causing repeated side effects on rebuild.
+Why it is wrong:
+- Leads to duplicated event dispatch, timers, and re-initializations.
+How to fix:
+```dart
+class FocusSessionScreen extends StatefulWidget {
+	const FocusSessionScreen({super.key});
+	@override
+	State<FocusSessionScreen> createState() => _FocusSessionScreenState();
+}
+
+class _FocusSessionScreenState extends State<FocusSessionScreen> {
+	@override
+	void initState() {
+		super.initState();
+		_initFocusScreen(context); // move from build
+	}
+
+	@override
+	Widget build(BuildContext context) { /* ... */ }
+}
+```
+Priority: High
+References:
+- [lib/presentation/pages/focus_session_screen.dart](lib/presentation/pages/focus_session_screen.dart#L18-L40)
+- [lib/presentation/pages/enhanced_reminders_list_screen.dart](lib/presentation/pages/enhanced_reminders_list_screen.dart#L12-L32)
+
+Issue 3: Hardcoded base URLs and API keys
+What is wrong:
+- Base URLs and API keys are hardcoded or placeholder strings in code.
+Why it is wrong:
+- Risk of leaking secrets, harder to switch environments, brittle configuration.
+How to fix:
+```dart
+// Use env config with build-time injection
+class Env {
+	static const apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+	static const googleMapsKey = String.fromEnvironment('GOOGLE_MAPS_KEY');
+}
+
+final dio = Dio(BaseOptions(baseUrl: Env.apiBaseUrl));
+```
+Priority: Medium
+References:
+- [lib/core/constants/app_urls.dart](lib/core/constants/app_urls.dart#L1-L40)
+- [lib/core/network/dio_client.dart](lib/core/network/dio_client.dart#L1-L40)
+- [lib/core/services/places_service.dart](lib/core/services/places_service.dart#L1-L20)
+- [android/app/src/main/AndroidManifest.xml](android/app/src/main/AndroidManifest.xml#L53-L92)
+
+Issue 4: URL validation duplication
+What is wrong:
+- URL validation logic duplicated in widget, bloc, entity, and extensions.
+Why it is wrong:
+- Inconsistent behavior and maintenance overhead.
+How to fix:
+```dart
+// Centralize URL utilities
+class UrlUtils {
+	static bool isValid(String url) {
+		try {
+			Uri.parse(url);
+			return url.startsWith('http://') || url.startsWith('https://');
+		} catch (_) {
+			return false;
+		}
+	}
+
+	static String normalize(String url) {
+		return url.startsWith('http') ? url : 'https://$url';
+	}
+}
+```
+Priority: Medium
+References:
+- [lib/presentation/widgets/link_preview_widget.dart](lib/presentation/widgets/link_preview_widget.dart#L23-L74)
+- [lib/presentation/bloc/link_preview/link_preview_bloc.dart](lib/presentation/bloc/link_preview/link_preview_bloc.dart#L120-L175)
+- [lib/core/extensions/string_extensions.dart](lib/core/extensions/string_extensions.dart#L18-L40)
+- [lib/domain/entities/link.dart](lib/domain/entities/link.dart#L40-L80)
+
+Issue 5: Deprecated SettingsScreen with commented legacy code
+What is wrong:
+- Deprecated screen contains large commented-out UI logic.
+Why it is wrong:
+- Dead code adds noise and confusion.
+How to fix:
+```dart
+// Remove deprecated screen or keep a minimal redirect only
+class SettingsScreen extends StatelessWidget {
+	const SettingsScreen({super.key});
+	@override
+	Widget build(BuildContext context) => const UnifiedSettingsScreen();
+}
+```
+Priority: Low
+References:
+- [lib/presentation/pages/settings_screen.dart](lib/presentation/pages/settings_screen.dart#L1-L200)
+
+================================================================================
+END OF PHASES 8-12 DOCUMENTATION
+================================================================================

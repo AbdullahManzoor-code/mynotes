@@ -1,3 +1,9 @@
+// ══════════════════════════════════════════════════════════════════════════════
+// [F009/F010] DISABLED: Unused Pomodoro BLoC system
+// Reason: Use FocusBloc instead (includes stats integration + DateTime-based timer)
+// Status: File kept for reference - NOT REGISTERED in DI container
+// ══════════════════════════════════════════════════════════════════════════════
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';

@@ -231,9 +231,7 @@ class SearchOperatorsScreen extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         final newText =
-            controller.text +
-            (controller.text.isEmpty ? '' : ' ') +
-            '$operator ';
+            '${controller.text}${controller.text.isEmpty ? '' : ' '}$operator ';
         context.read<NotesBloc>().add(
           UpdateNoteViewConfigEvent(searchQuery: newText),
         );

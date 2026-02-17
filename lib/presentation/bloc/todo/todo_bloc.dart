@@ -7,11 +7,8 @@ import 'todo_state.dart';
 /// DEPRECATED: This bloc was for note-based todos.
 /// Use TodosBloc for standalone todo management instead.
 class TodoBloc extends Bloc<TodoEvent, TodoState> {
-  final NoteRepository _noteRepository;
-
   TodoBloc({required NoteRepository noteRepository})
-    : _noteRepository = noteRepository,
-      super(const TodoInitial()) {
+      : super(const TodoInitial()) {
     on<LoadTodosEvent>(_onLoadTodos);
     on<AddTodoEvent>(_onAddTodo);
     on<ToggleTodoEvent>(_onToggleTodo);

@@ -5,13 +5,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/core/services/app_logger.dart' show AppLogger;
 import 'package:mynotes/presentation/bloc/params/alarm_params.dart';
 import 'package:mynotes/domain/entities/alarm.dart'
-    show Alarm, AlarmRecurrence, AlarmStatus, AlarmIndicator, AlarmStats;
+    show Alarm, AlarmRecurrence, AlarmStatus, AlarmStats;
 import 'package:uuid/uuid.dart';
 import 'dart:async';
 
 import '../../../core/exceptions/app_exceptions.dart';
 import '../../../core/notifications/notification_service.dart'
     as notification_service;
+import '../../../core/services/upcoming_alarms_notification_service.dart';
 import '../../../domain/repositories/alarm_repository.dart';
 import '../../../domain/repositories/note_repository.dart';
 import 'alarm_event.dart';
@@ -50,10 +51,12 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
     on<ClearCompletedAlarmsEvent>(_onClearCompletedAlarms);
     on<RescheduleAlarmEvent>(_onRescheduleAlarm);
     on<FilterAlarms>(_onFilterAlarms);
+    on<SearchAlarmsEvent>(_onSearchAlarms);
     on<UpdateAlarmDraftEvent>(_onUpdateAlarmDraft);
     on<UpdateAlarmUiConfigEvent>(_onUpdateAlarmUiConfig);
     on<StartPeriodicRefreshEvent>(_onStartPeriodicRefresh);
     on<StopPeriodicRefreshEvent>(_onStopPeriodicRefresh);
+    on<DismissAlarmEvent>(_onDismissAlarm);
   }
 
   @override
@@ -214,6 +217,12 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
           stats: _calculateStats(resultAlarms),
         ),
       );
+
+      // Schedule device notifications for upcoming alarms
+      AppLogger.i('Scheduling device notifications for upcoming alarms...');
+      await UpcomingAlarmsNotificationService.scheduleUpcomingAlarmsNotifications(
+        resultAlarms.map((a) => _toAlarmEntity(a)).toList(),
+      );
     } catch (e, stackTrace) {
       AppLogger.e('Load error: $e', e, stackTrace);
       emit(
@@ -300,6 +309,13 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       _cachedAlarms.add(alarmToSave);
 
       AppLogger.i('Alarm created successfully: $alarmId');
+
+      // Schedule device notification for this new alarm
+      AppLogger.i('Scheduling device notification for new alarm...');
+      await UpcomingAlarmsNotificationService.scheduleUpcomingAlarmsNotifications(
+        [_toAlarmEntity(alarmToSave)],
+      );
+
       emit(
         AlarmSuccess(
           'Alarm set for ${alarmToSave.getTimeString()}',
@@ -661,7 +677,47 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
     }
   }
 
-  /// 🔄 Toggle alarm enabled status
+  /// � Dismiss alarm (stop sound, don't mark complete)
+  Future<void> _onDismissAlarm(
+    DismissAlarmEvent event,
+    Emitter<AlarmState> emit,
+  ) async {
+    try {
+      _validateAlarmId(event.alarmId);
+      AppLogger.i('🔇 [DISMISS-ALARM] Dismissing alarm: ${event.alarmId}');
+
+      // Find alarm
+      AlarmParams? alarm;
+      try {
+        alarm = _cachedAlarms.firstWhere((a) => a.alarmId == event.alarmId);
+      } catch (_) {
+        throw ReminderNotFoundException(reminderId: event.alarmId);
+      }
+
+      // Cancel notification
+      AppLogger.i('🔇 [DISMISS-ALARM] Canceling notification...');
+      await _notificationService.cancel(event.alarmId.hashCode);
+
+      // Just dismiss the popup/notification, don't mark as completed
+      // The alarm remains in the list for future reference
+      AppLogger.i('✅ [DISMISS-ALARM] Alarm dismissed successfully');
+
+      emit(AlarmSuccess('Alarm dismissed', result: alarm));
+    } on ReminderNotFoundException catch (e) {
+      AppLogger.w('🔇 [DISMISS-ALARM] Alarm not found: ${e.reminderId}');
+      emit(AlarmError(e.message, code: e.code, exception: e));
+    } catch (e, stackTrace) {
+      AppLogger.e('🔇 [DISMISS-ALARM] Error: $e', e, stackTrace);
+      emit(
+        AlarmError(
+          'Failed to dismiss alarm: ${e.toString()}',
+          code: 'DISMISS_ERROR',
+        ),
+      );
+    }
+  }
+
+  /// �🔄 Toggle alarm enabled status
   Future<void> _onToggleAlarm(
     ToggleAlarmEvent event,
     Emitter<AlarmState> emit,
@@ -815,6 +871,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
   ) async {
     try {
       emit(const AlarmLoading(message: 'Rescheduling reminder...'));
+      AppLogger.i('[RESCHEDULE-ALARM] Rescheduling alarm: ${event.alarmId}');
 
       final alarm = getAlarmById(event.alarmId);
       if (alarm == null) {
@@ -834,6 +891,49 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
       // Convert to Alarm entity and update in repository
       final alarmEntity = _toAlarmEntity(updatedAlarm);
       await _alarmRepository.updateAlarm(alarmEntity);
+      AppLogger.i('[RESCHEDULE-ALARM] Alarm updated in database');
+
+      // Reschedule the notification with the new time
+      try {
+        // Cancel old notification
+        await _notificationService.cancel(event.alarmId.hashCode);
+        AppLogger.i('[RESCHEDULE-ALARM] Old notification cancelled');
+
+        // Get linked note if exists
+        dynamic linkedNote;
+        if (updatedAlarm.noteId != null) {
+          try {
+            linkedNote = await _noteRepository.getNoteById(
+              updatedAlarm.noteId!,
+            );
+          } catch (e) {
+            AppLogger.w('[RESCHEDULE-ALARM] Could not load linked note: $e');
+          }
+        }
+
+        // Schedule new notification
+        await _notificationService.schedule(
+          id: event.alarmId.hashCode,
+          title: linkedNote?.title?.isNotEmpty == true
+              ? linkedNote.title
+              : updatedAlarm.title,
+          body: updatedAlarm.description,
+          scheduledTime: event.newTime,
+          repeatDays: updatedAlarm.repeatDays.isNotEmpty
+              ? updatedAlarm.repeatDays
+              : null,
+        );
+        AppLogger.i(
+          '[RESCHEDULE-ALARM] New notification scheduled successfully',
+        );
+      } catch (e, stackTrace) {
+        AppLogger.e('[RESCHEDULE-ALARM] Failed to reschedule notification: $e');
+        throw ReminderSchedulingException(
+          message: 'Failed to reschedule notification: $e',
+          originalError: e,
+          stackTrace: stackTrace,
+        );
+      }
 
       // Update cache
       final index = _cachedAlarms.indexWhere((a) => a.alarmId == event.alarmId);
@@ -841,6 +941,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         _cachedAlarms[index] = updatedAlarm;
       }
 
+      AppLogger.i('[RESCHEDULE-ALARM] Alarm rescheduled successfully');
       emit(
         AlarmLoaded(
           alarms: List.from(_cachedAlarms),
@@ -854,6 +955,7 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
         ),
       );
     } catch (e) {
+      AppLogger.e('[RESCHEDULE-ALARM] Error: $e');
       emit(
         AlarmError(
           'Failed to reschedule reminder: ${e.toString()}',
@@ -872,6 +974,36 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
           currentFilter: event.filter,
           filteredAlarms: _applyCurrentFilter(_cachedAlarms, event.filter),
           stats: _calculateStats(_cachedAlarms),
+        ),
+      );
+    }
+  }
+
+  /// 🔍 Search alarms by query
+  Future<void> _onSearchAlarms(
+    SearchAlarmsEvent event,
+    Emitter<AlarmState> emit,
+  ) async {
+    if (state is AlarmLoaded) {
+      final s = state as AlarmLoaded;
+      final query = event.query.toLowerCase().trim();
+
+      List<AlarmParams> searchResults;
+      if (query.isEmpty) {
+        searchResults = _cachedAlarms;
+      } else {
+        searchResults = _cachedAlarms.where((alarm) {
+          return alarm.title.toLowerCase().contains(query) ||
+              alarm.description.toLowerCase().contains(query) ||
+              (alarm.alarmId?.toLowerCase().contains(query) ?? false) ||
+              alarm.tags.any((tag) => tag.toLowerCase().contains(query));
+        }).toList();
+      }
+
+      emit(
+        s.copyWith(
+          filteredAlarms: searchResults,
+          stats: _calculateStats(searchResults),
         ),
       );
     }

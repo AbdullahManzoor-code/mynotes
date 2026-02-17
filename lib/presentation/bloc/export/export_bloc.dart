@@ -22,6 +22,7 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
       super(const ExportInitial()) {
     on<ExportSingleNoteEvent>(_onExportSingleNote);
     on<ExportMultipleNotesEvent>(_onExportMultipleNotes);
+    on<ExportCustomContentEvent>(_onExportCustomContent);
     on<CalculateExportSizeEvent>(_onCalculateExportSize);
     on<CancelExportEvent>(_onCancelExport);
   }
@@ -102,6 +103,63 @@ class ExportBloc extends Bloc<ExportEvent, ExportState> {
       emit(ExportSuccess(filePath: filePath));
     } catch (e) {
       emit(ExportError(message: 'Bulk export failed: ${e.toString()}'));
+    }
+  }
+
+  Future<void> _onExportCustomContent(
+    ExportCustomContentEvent event,
+    Emitter<ExportState> emit,
+  ) async {
+    try {
+      emit(const ExportInProgress());
+      final service = ExportService();
+      File? file;
+
+      switch (event.format.toLowerCase()) {
+        case 'markdown':
+        case 'md':
+          file = await service.exportMarkdown(
+            title: event.title,
+            content: event.content,
+            tags: event.tags,
+            createdDate: event.createdDate,
+            includeTags: event.includeTags,
+            includeTimestamps: event.includeTimestamps,
+            includeMediaRefs: event.includeMediaRefs,
+          );
+          break;
+        case 'json':
+          file = await service.exportJson(
+            title: event.title,
+            content: event.content,
+            tags: event.tags,
+            createdDate: event.createdDate,
+            includeTags: event.includeTags,
+            includeTimestamps: event.includeTimestamps,
+            includeMediaRefs: event.includeMediaRefs,
+          );
+          break;
+        case 'pdf':
+        default:
+          file = await service.exportPdf(
+            title: event.title,
+            content: event.content,
+            tags: event.tags,
+            createdDate: event.createdDate,
+            includeTags: event.includeTags,
+            includeTimestamps: event.includeTimestamps,
+            includeMediaRefs: event.includeMediaRefs,
+          );
+      }
+
+      if (file == null) {
+        emit(const ExportError(message: 'Export failed'));
+        return;
+      }
+
+      emit(ExportSuccess(filePath: file.path));
+    } catch (e) {
+      emit(ExportError(message: 'Export failed: ${e.toString()}'));
     }
   }
 

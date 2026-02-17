@@ -6,7 +6,6 @@ part 'voice_command_state.dart';
 class VoiceCommandBloc extends Bloc<VoiceCommandEvent, VoiceCommandState> {
   bool _isSoundEnabled = true;
   bool _isVibrationEnabled = true;
-  bool _isListening = false;
 
   VoiceCommandBloc() : super(VoiceCommandInitial()) {
     on<StartListeningEvent>(_onStartListening);
@@ -22,7 +21,6 @@ class VoiceCommandBloc extends Bloc<VoiceCommandEvent, VoiceCommandState> {
     StartListeningEvent event,
     Emitter<VoiceCommandState> emit,
   ) async {
-    _isListening = true;
     emit(VoiceCommandListening());
   }
 
@@ -30,7 +28,6 @@ class VoiceCommandBloc extends Bloc<VoiceCommandEvent, VoiceCommandState> {
     StopListeningEvent event,
     Emitter<VoiceCommandState> emit,
   ) async {
-    _isListening = false;
     emit(VoiceCommandInitial());
   }
 
@@ -48,10 +45,9 @@ class VoiceCommandBloc extends Bloc<VoiceCommandEvent, VoiceCommandState> {
         add(PlayFeedbackEvent(VoiceCommandFeedbackType.commandRecognized));
       }
 
-      emit(VoiceCommandRecognized(
-        commandType: command,
-        extractedContent: content,
-      ));
+      emit(
+        VoiceCommandRecognized(commandType: command, extractedContent: content),
+      );
     } catch (e) {
       if (_isSoundEnabled) {
         add(PlayFeedbackEvent(VoiceCommandFeedbackType.error));
@@ -65,10 +61,7 @@ class VoiceCommandBloc extends Bloc<VoiceCommandEvent, VoiceCommandState> {
     Emitter<VoiceCommandState> emit,
   ) async {
     final command = VoiceCommandParser.parseCommand(event.input);
-    emit(VoiceCommandRecognized(
-      commandType: command,
-      extractedContent: null,
-    ));
+    emit(VoiceCommandRecognized(commandType: command, extractedContent: null));
   }
 
   Future<void> _onToggleSoundFeedback(
@@ -76,10 +69,12 @@ class VoiceCommandBloc extends Bloc<VoiceCommandEvent, VoiceCommandState> {
     Emitter<VoiceCommandState> emit,
   ) async {
     _isSoundEnabled = event.enabled;
-    emit(VoiceCommandFeedbackToggled(
-      soundEnabled: _isSoundEnabled,
-      vibrationEnabled: _isVibrationEnabled,
-    ));
+    emit(
+      VoiceCommandFeedbackToggled(
+        soundEnabled: _isSoundEnabled,
+        vibrationEnabled: _isVibrationEnabled,
+      ),
+    );
   }
 
   Future<void> _onToggleVibrationFeedback(
@@ -87,10 +82,12 @@ class VoiceCommandBloc extends Bloc<VoiceCommandEvent, VoiceCommandState> {
     Emitter<VoiceCommandState> emit,
   ) async {
     _isVibrationEnabled = event.enabled;
-    emit(VoiceCommandFeedbackToggled(
-      soundEnabled: _isSoundEnabled,
-      vibrationEnabled: _isVibrationEnabled,
-    ));
+    emit(
+      VoiceCommandFeedbackToggled(
+        soundEnabled: _isSoundEnabled,
+        vibrationEnabled: _isVibrationEnabled,
+      ),
+    );
   }
 
   Future<void> _onPlayFeedback(

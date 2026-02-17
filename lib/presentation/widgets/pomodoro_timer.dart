@@ -1,3 +1,10 @@
+// ════════════════════════════════════════════════════════════════════════════
+// [F009/F010] DISABLED: Duplicate Pomodoro timer system
+// Reason: Use FocusSessionScreen + FocusBloc instead (includes stats integration)
+// File kept for reference but disabled - commented out entire widget
+// ════════════════════════════════════════════════════════════════════════════
+
+/* DISABLED - START
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/pomodoro/pomodoro_bloc.dart';
@@ -255,4 +262,4 @@ class PomodoroTimer extends StatelessWidget {
     );
   }
 }
-
+DISABLED - END */

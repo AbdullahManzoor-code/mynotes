@@ -13,14 +13,14 @@ class SvgImageWidget extends StatelessWidget {
 
   const SvgImageWidget(
     this.name, {
-    Key? key,
+    super.key,
     this.width,
     this.height,
     this.fit = BoxFit.contain,
     this.color,
     this.useColorFilter = false,
     this.assetType = 'icons',
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

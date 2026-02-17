@@ -271,7 +271,20 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     try {
       NoteParams params;
       if (event.note != null) {
-        params = NoteParams.fromNote(event.note!);
+        // Verify the note still exists in the database
+        // (it might have been deleted from another screen)
+        final dbNote = await _noteRepository.getNoteById(event.note!.id);
+        if (dbNote == null) {
+          // Note was deleted while loading editor
+          emit(
+            NoteEditorLoaded(
+              params: const NoteParams(),
+              errorCode: 'NOTE_DELETED',
+            ),
+          );
+          return;
+        }
+        params = NoteParams.fromNote(dbNote);
       } else if (event.template != null) {
         String content = event.template.contentPlaceholder;
         if (!content.startsWith('[{"insert"')) {
@@ -438,12 +451,24 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     }
   }
 
-  void _onMediaRemoved(MediaRemoved event, Emitter<NoteEditorState> emit) {
+  Future<void> _onMediaRemoved(MediaRemoved event, Emitter<NoteEditorState> emit) async {
     if (state is NoteEditorLoaded) {
       final s = state as NoteEditorLoaded;
       try {
         final newMedia = List<MediaItem>.from(s.params.media);
         if (event.index >= 0 && event.index < newMedia.length) {
+          // ISSUE-009 FIX: Delete the actual file from disk before removing from list
+          final removeItem = newMedia[event.index];
+          try {
+            await _mediaProcessingService.deleteFile(removeItem.filePath);
+            // Also delete thumbnail if it exists
+            if (removeItem.thumbnailPath.isNotEmpty) {
+              await _mediaProcessingService.deleteFile(removeItem.thumbnailPath);
+            }
+          } catch (e) {
+            // Log but don't fail the whole removal operation
+            print('Warning: Failed to delete media file: $e');
+          }
           newMedia.removeAt(event.index);
         }
         emit(
@@ -540,14 +565,40 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
         if (s.params.content.isEmpty) {
           throw Exception('Content is empty');
         }
-        final summary = s.params.content.length > 50
-            ? '${s.params.content.substring(0, 50)}...'
-            : s.params.content;
+        // Generate intelligent summary by extracting first sentence or key phrase
+        final summary = _generateIntelligentSummary(s.params.content);
         emit(s.copyWith(isSummarizing: false, summary: summary));
       } catch (e) {
         emit(s.copyWith(isSummarizing: false, errorCode: 'SUMMARY_FAILED'));
       }
     }
+  }
+
+  /// Generate intelligent summary by extracting first complete sentence or key phrases
+  String _generateIntelligentSummary(String content) {
+    if (content.isEmpty) return '';
+    
+    // Remove markdown/JSON artifacts and get plain text
+    String plainText = content.replaceAll(RegExp(r'[\{\}\[\]"\\]'), '');
+    
+    // Extract first sentence (up to . ! or ?)
+    final sentenceMatch = RegExp(r'([^.!?]*[.!?])').firstMatch(plainText);
+    if (sentenceMatch != null) {
+      final sentence = sentenceMatch.group(0)?.trim() ?? '';
+      if (sentence.length > 20) {
+        return sentence.length > 150 
+            ? '${sentence.substring(0, 150)}...'
+            : sentence;
+      }
+    }
+    
+    // Fallback: first 100 chars with word boundary
+    if (plainText.length > 100) {
+      final truncated = plainText.substring(0, 100);
+      final lastSpace = truncated.lastIndexOf(' ');
+      return '${truncated.substring(0, lastSpace)}...';
+    }
+    return plainText;
   }
 
   Future<void> _onSaveNote(
@@ -563,31 +614,28 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
           return;
         }
 
+        // ISSUE-008 FIX: Actually save the note to database
+        // Convert params to Note entity and persist
+        final noteToSave = s.params.copyWith(
+          updatedAt: DateTime.now(),
+        ).toNote();
+
+        // Create or update based on whether noteId exists
+        if (s.params.noteId == null) {
+          // Creating new note
+          await _noteRepository.createNote(noteToSave);
+        } else {
+          // Updating existing note
+          await _noteRepository.updateNote(noteToSave);
+        }
+
         // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
-        // Parse and update links
+        // Parse and update links only if note was saved successfully
         if (s.params.content.isNotEmpty) {
           final links = _linkParserService.extractLinks(
             s.params.content,
-          ); // Use content from params which might be Quill Delta JSON?
-          // Note: extractLinks expects plain text or we need to parse Delta to text first.
-          // Assuming s.params.content is Text for now, or if it is JSON we might need to be careful.
-          // However, _onContentChanged updates params.content.
-          // If UI sends Delta JSON, we might need to extract text from it.
-          // But LinkParserService regex works on string.
-          // Let's assume we pass the raw string and let regex find [[...]].
-          if (s.params.noteId != null) {
-            // We need to resolve Link Titles to IDs.
-            // This is tricky: updateNoteLinks expects target IDs.
-            // Logic: For each extracted Title [[Title]], find a Note with that Title.
-            // IF multiple, pick one? IF none, maybe just store the text for now or Create a Stub?
-            // For now, let's implement basic "Find by Title" lookups?
-            // Repository needs `findNoteByTitle`.
-            // SIMPLIFICATION: usage of updateNoteLinks(sourceId, targetIds) matches IDs.
-            // We need to map Titles -> IDs.
-            // Let's SKIP ID resolution for now and just print passing.
-            // Or better: Let's assume LinkParser extracts IDs? No, users type Titles.
-            // Ok, let's fetch ALL notes and match titles. Inefficient but works.
-
+          );
+          if (noteToSave.id.isNotEmpty) {
             final allNotes = await _noteRepository.getAllNotes();
             final targetIds = <String>[];
 
@@ -602,7 +650,7 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
                 targetIds.add(match.id);
               }
             }
-            await _noteRepository.updateNoteLinks(s.params.noteId!, targetIds);
+            await _noteRepository.updateNoteLinks(noteToSave.id, targetIds);
           }
         }
 

@@ -1,31 +1,41 @@
 import 'dart:async';
-import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/core/constants/app_colors.dart';
-import 'package:mynotes/domain/entities/note.dart';
 import 'package:mynotes/presentation/bloc/focus/focus_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_bloc.dart';
 import 'package:mynotes/presentation/bloc/note/note_state.dart';
 import 'package:mynotes/presentation/bloc/note/note_event.dart';
 import 'package:mynotes/core/services/app_logger.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/widgets/focus/focus_lock_toggle.dart';
+import 'package:mynotes/presentation/widgets/focus/dnd_permission_banner.dart';
 import 'focus_celebration_screen.dart';
 
 /// Focus Session Active Screen
 /// Pomodoro timer with immersive gradient design and task selection
-class FocusSessionScreen extends StatelessWidget {
+class FocusSessionScreen extends StatefulWidget {
   const FocusSessionScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Initial data load and timer setup
-    _initFocusScreen(context);
+  State<FocusSessionScreen> createState() => _FocusSessionScreenState();
+}
 
+class _FocusSessionScreenState extends State<FocusSessionScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // FIX F003: Moved from build() to initState() to prevent re-initialization on rebuild
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initFocusScreen(context);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return BlocConsumer<FocusBloc, FocusState>(
       listener: (context, state) {
         if (state.status == FocusStatus.completed) {
@@ -109,6 +119,9 @@ class FocusSessionScreen extends StatelessWidget {
   void _initFocusScreen(BuildContext context) {
     AppLogger.i('FocusSessionScreen: _initFocusScreen called');
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Load auto-DND preference
+      context.read<FocusBloc>().add(const LoadAutoDndPreferenceEvent());
+
       // Trigger load notes for selection if needed
       context.read<NotesBloc>().add(const LoadNotesEvent());
 
@@ -140,6 +153,56 @@ class FocusSessionScreen extends StatelessWidget {
     AppLogger.i('FocusSessionScreen: Attempting to start session');
     final focusState = context.read<FocusBloc>().state;
     if (focusState.distractionFreeMode) {
+      // Ask about auto-DND on first time if not asked before
+      if (!focusState.autoDndAsked) {
+        final enableAutoDnd = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppColors.darkCardBackground,
+            title: Text(
+              'Auto-Enable Do Not Disturb?',
+              style: AppTypography.heading3(
+                context,
+              ).copyWith(color: Colors.white),
+            ),
+            content: Text(
+              'Would you like MyNotes to automatically enable "Do Not Disturb" mode on your device when you start a focus session? This will minimize distractions and help you stay focused.',
+              style: AppTypography.bodyMedium(
+                context,
+              ).copyWith(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  AppLogger.i('FocusSessionScreen: Auto-DND declined');
+                  context.read<FocusBloc>().add(
+                    const SetAutoDndPreferenceEvent(false),
+                  );
+                  Navigator.pop(context, false);
+                },
+                child: const Text('No'),
+              ),
+              TextButton(
+                onPressed: () {
+                  AppLogger.i('FocusSessionScreen: Auto-DND enabled');
+                  context.read<FocusBloc>().add(
+                    const SetAutoDndPreferenceEvent(true),
+                  );
+                  Navigator.pop(context, true);
+                },
+                child: Text(
+                  'Yes',
+                  style: TextStyle(color: AppColors.focusAccentGreen),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        // Don't continue if dialog was dismissed
+        if (enableAutoDnd == null) return;
+      }
+
       final confirmed = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
@@ -151,7 +214,9 @@ class FocusSessionScreen extends StatelessWidget {
             ).copyWith(color: Colors.white),
           ),
           content: Text(
-            'To ensure deep focus, please enable "Do Not Disturb" on your device settings. We will minimize in-app distractions.',
+            focusState.autoDndEnabled
+                ? 'Ready to focus? We\'ll automatically enable "Do Not Disturb" on your device.'
+                : 'To ensure deep focus, please enable "Do Not Disturb" on your device settings manually. We will minimize in-app distractions.',
             style: AppTypography.bodyMedium(
               context,
             ).copyWith(color: Colors.white70),
@@ -170,7 +235,7 @@ class FocusSessionScreen extends StatelessWidget {
                 Navigator.pop(context, true);
               },
               child: Text(
-                'I enabled it',
+                focusState.autoDndEnabled ? 'Start Session' : 'I enabled it',
                 style: TextStyle(color: AppColors.focusAccentGreen),
               ),
             ),
@@ -596,6 +661,8 @@ class FocusSessionScreen extends StatelessWidget {
             'Session ${state.completedWorkSessions + 1} of ${state.sessionsBeforeLongBreak}',
             style: TextStyle(color: Colors.white54, fontSize: 14.sp),
           ),
+          SizedBox(height: 16.h),
+          const DndPermissionBanner(),
         ],
       ),
     );
@@ -780,6 +847,7 @@ class FocusSessionScreen extends StatelessWidget {
                   );
                 },
               ),
+              const FocusLockToggle(),
             ],
           ),
         ),

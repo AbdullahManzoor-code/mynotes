@@ -1,13 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../widgets/media_gallery_widget.dart';
 import '../widgets/drawing_canvas_widget.dart';
 import '../widgets/collection_manager_widget.dart';
 import '../widgets/kanban_board_widget.dart';
 import '../design_system/design_system.dart';
 import '../../core/routes/app_routes.dart';
-import '../../core/design_system/app_typography.dart';
-import '../../core/services/app_logger.dart';
 import 'graph_view_page.dart';
 
 class IntegratedFeaturesScreen extends StatelessWidget {

@@ -1,9 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../design_system/design_system.dart';
+import '../bloc/video_trimming/video_trimming_bloc.dart';
+import '../../injection_container.dart' show getIt;
+
+/* ════════════════════════════════════════════════════════════════════════════
+   M010: CONSOLIDATED FINDINGS - VIDEO TRIMMING IMPLEMENTATION
+   
+   ARCHITECTURE ASSESSMENT:
+   This screen provides comprehensive trimming UI but NO actual video processing:
+   
+   ✅ WORKING:
+   • Custom timeline with trim handles
+   • Start/end position selection with validation
+   • Playback preview and position tracking
+   • Duration calculation and display
+   • Complete state management via VideoTrimmingBloc
+   
+   ⚠️  MISSING/PLACEHOLDER:
+   • Actual video file trimming (no FFmpeg integration)
+   • Export/save functionality (onApplyTrimming just returns state)
+   • MediaProcessingService lacks trimVideo() method
+   
+   DUPLICATION IDENTIFIED:
+   VideoEditorScreen (media_viewer_screen.dart) also provides trimming:
+   • Uses video_editor package's TrimSlider + TrimTimeline
+   • Alternative trimming UI for same operation
+   • Less functional than this implementation
+   
+   RECOMMENDATION:
+   1. Consolidate UI to VideoEditorScreen (uses proven package)
+   2. Implement actual trimming in MediaProcessingService
+   3. Route both trim requests to VideoEditorScreen
+   4. Archive VideoTrimmingScreen or keep as alternative
+   
+   KEPT: As-is for now, flagged for backend implementation
+═══════════════════════════════════════════════════════════════════════════════ */
 
 /// Video Trimming Screen
 /// Trim video clips by selecting start and end points
+///
+/// ⚠️  NOTE: UI-only implementation. Actual video trimming/export not implemented.
+///    See VideoEditorScreen for integration approach.
 class VideoTrimmingScreen extends StatefulWidget {
   final String videoPath;
   final String videoTitle;
@@ -22,16 +61,11 @@ class VideoTrimmingScreen extends StatefulWidget {
 
 class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
   late VideoTrimController _controller;
-  int _startPositionMs = 0;
-  int _endPositionMs = 0;
-  int _currentPositionMs = 0;
-  bool _isPlaying = false;
 
   @override
   void initState() {
     super.initState();
     _controller = VideoTrimController(widget.videoDurationMs);
-    _endPositionMs = widget.videoDurationMs;
   }
 
   @override
@@ -42,21 +76,60 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _buildTrimAppBar(context),
-      body: Column(
-        children: [
-          // Video Preview
-          Expanded(child: _buildVideoPreview(context)),
-          // Duration Display
-          _buildDurationDisplay(context),
-          // Timeline with Trim Handles
-          _buildTimelineWithHandles(context),
-          // Playback Controls
-          _buildPlaybackControls(context),
-          // Action Buttons
-          _buildActionButtons(context),
-        ],
+    return BlocProvider(
+      create: (context) => getIt<VideoTrimmingBloc>()
+        ..add(
+          InitializeVideoTrimmingEvent(
+            videoPath: widget.videoPath,
+            durationMs: widget.videoDurationMs,
+          ),
+        ),
+      child: BlocBuilder<VideoTrimmingBloc, VideoTrimmingState>(
+        builder: (context, state) {
+          final totalDurationMs = state.totalDurationMs == 0
+              ? widget.videoDurationMs
+              : state.totalDurationMs;
+          final startPositionMs = state.startPositionMs;
+          final endPositionMs = state.endPositionMs == 0
+              ? totalDurationMs
+              : state.endPositionMs;
+          final currentPositionMs = state.currentPositionMs;
+          final isPlaying = state.isPlaying;
+
+          return Scaffold(
+            appBar: _buildTrimAppBar(context),
+            body: Column(
+              children: [
+                // Video Preview
+                Expanded(
+                  child: _buildVideoPreview(
+                    context,
+                    currentPositionMs,
+                    totalDurationMs,
+                  ),
+                ),
+                // Duration Display
+                _buildDurationDisplay(
+                  context,
+                  startPositionMs,
+                  endPositionMs,
+                  totalDurationMs,
+                ),
+                // Timeline with Trim Handles
+                _buildTimelineWithHandles(
+                  context,
+                  startPositionMs,
+                  endPositionMs,
+                  totalDurationMs,
+                ),
+                // Playback Controls
+                _buildPlaybackControls(context, isPlaying, startPositionMs),
+                // Action Buttons
+                _buildActionButtons(context, startPositionMs, endPositionMs),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -77,7 +150,11 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
     );
   }
 
-  Widget _buildVideoPreview(BuildContext context) {
+  Widget _buildVideoPreview(
+    BuildContext context,
+    int currentPositionMs,
+    int totalDurationMs,
+  ) {
     return Container(
       color: Colors.black87,
       child: Center(
@@ -98,7 +175,7 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
                 borderRadius: BorderRadius.circular(4.r),
               ),
               child: Text(
-                '${_formatDuration(_currentPositionMs)} / ${_formatDuration(widget.videoDurationMs)}',
+                '${_formatDuration(currentPositionMs)} / ${_formatDuration(totalDurationMs)}',
                 style: TextStyle(fontSize: 12.sp, color: Colors.white70),
               ),
             ),
@@ -108,11 +185,16 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
     );
   }
 
-  Widget _buildDurationDisplay(BuildContext context) {
+  Widget _buildDurationDisplay(
+    BuildContext context,
+    int startPositionMs,
+    int endPositionMs,
+    int totalDurationMs,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final trimmedDuration = (_endPositionMs - _startPositionMs).clamp(
+    final trimmedDuration = (endPositionMs - startPositionMs).clamp(
       0,
-      widget.videoDurationMs,
+      totalDurationMs,
     );
 
     return Container(
@@ -132,7 +214,7 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
               ),
               SizedBox(height: 4.h),
               Text(
-                _formatDuration(_startPositionMs),
+                _formatDuration(startPositionMs),
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
@@ -166,7 +248,7 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
               ),
               SizedBox(height: 4.h),
               Text(
-                _formatDuration(_endPositionMs),
+                _formatDuration(endPositionMs),
                 style: TextStyle(
                   fontSize: 14.sp,
                   fontWeight: FontWeight.w600,
@@ -180,7 +262,12 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
     );
   }
 
-  Widget _buildTimelineWithHandles(BuildContext context) {
+  Widget _buildTimelineWithHandles(
+    BuildContext context,
+    int startPositionMs,
+    int endPositionMs,
+    int totalDurationMs,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
@@ -215,11 +302,10 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
               // Trimmed Range Highlight
               Positioned(
                 left:
-                    (_startPositionMs / widget.videoDurationMs) *
+                    (startPositionMs / totalDurationMs) *
                     (MediaQuery.of(context).size.width - 32.w),
                 right:
-                    ((widget.videoDurationMs - _endPositionMs) /
-                        widget.videoDurationMs) *
+                    ((totalDurationMs - endPositionMs) / totalDurationMs) *
                     (MediaQuery.of(context).size.width - 32.w),
                 child: Container(
                   height: 60.h,
@@ -247,22 +333,21 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
               // Start Handle
               Positioned(
                 left:
-                    (_startPositionMs / widget.videoDurationMs) *
+                    (startPositionMs / totalDurationMs) *
                     (MediaQuery.of(context).size.width - 32.w),
                 child: GestureDetector(
                   onHorizontalDragUpdate: (details) {
-                    setState(() {
-                      _startPositionMs =
-                          ((_startPositionMs +
-                                      (details.delta.dx /
-                                              (MediaQuery.of(
-                                                    context,
-                                                  ).size.width -
-                                                  32.w)) *
-                                          widget.videoDurationMs)
-                                  .clamp(0, _endPositionMs - 1000))
-                              .toInt();
-                    });
+                    final newStartPosition =
+                        ((startPositionMs +
+                                    (details.delta.dx /
+                                            (MediaQuery.of(context).size.width -
+                                                32.w)) *
+                                        totalDurationMs)
+                                .clamp(0, endPositionMs - 1000))
+                            .toInt();
+                    context.read<VideoTrimmingBloc>().add(
+                      UpdateStartPositionEvent(newStartPosition),
+                    );
                   },
                   child: Container(
                     width: 12.w,
@@ -280,26 +365,21 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
               // End Handle
               Positioned(
                 right:
-                    ((widget.videoDurationMs - _endPositionMs) /
-                        widget.videoDurationMs) *
+                    ((totalDurationMs - endPositionMs) / totalDurationMs) *
                     (MediaQuery.of(context).size.width - 32.w),
                 child: GestureDetector(
                   onHorizontalDragUpdate: (details) {
-                    setState(() {
-                      _endPositionMs =
-                          ((_endPositionMs +
-                                      (details.delta.dx /
-                                              (MediaQuery.of(
-                                                    context,
-                                                  ).size.width -
-                                                  32.w)) *
-                                          widget.videoDurationMs)
-                                  .clamp(
-                                    _startPositionMs + 1000,
-                                    widget.videoDurationMs,
-                                  ))
-                              .toInt();
-                    });
+                    final newEndPosition =
+                        ((endPositionMs +
+                                    (details.delta.dx /
+                                            (MediaQuery.of(context).size.width -
+                                                32.w)) *
+                                        totalDurationMs)
+                                .clamp(startPositionMs + 1000, totalDurationMs))
+                            .toInt();
+                    context.read<VideoTrimmingBloc>().add(
+                      UpdateEndPositionEvent(newEndPosition),
+                    );
                   },
                   child: Container(
                     width: 12.w,
@@ -321,7 +401,11 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
     );
   }
 
-  Widget _buildPlaybackControls(BuildContext context) {
+  Widget _buildPlaybackControls(
+    BuildContext context,
+    bool isPlaying,
+    int startPositionMs,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: EdgeInsets.all(16.w),
@@ -333,10 +417,12 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            icon: Icon(_isPlaying ? Icons.pause_circle : Icons.play_circle),
+            icon: Icon(isPlaying ? Icons.pause_circle : Icons.play_circle),
             iconSize: 40.sp,
             onPressed: () {
-              setState(() => _isPlaying = !_isPlaying);
+              context.read<VideoTrimmingBloc>().add(
+                const TogglePlaybackEvent(),
+              );
             },
           ),
           SizedBox(width: 24.w),
@@ -344,10 +430,14 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
             icon: const Icon(Icons.stop_circle),
             iconSize: 32.sp,
             onPressed: () {
-              setState(() {
-                _isPlaying = false;
-                _currentPositionMs = _startPositionMs;
-              });
+              if (isPlaying) {
+                context.read<VideoTrimmingBloc>().add(
+                  const TogglePlaybackEvent(),
+                );
+              }
+              context.read<VideoTrimmingBloc>().add(
+                UpdateCurrentPositionEvent(startPositionMs),
+              );
             },
           ),
         ],
@@ -355,8 +445,11 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
     );
   }
 
-  Widget _buildActionButtons(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildActionButtons(
+    BuildContext context,
+    int startPositionMs,
+    int endPositionMs,
+  ) {
     return Container(
       padding: EdgeInsets.all(16.w),
       child: Row(
@@ -375,7 +468,8 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
           SizedBox(width: 12.w),
           Expanded(
             child: ElevatedButton.icon(
-              onPressed: () => _saveTrimmedVideo(),
+              onPressed: () =>
+                  _saveTrimmedVideo(context, startPositionMs, endPositionMs),
               icon: const Icon(Icons.check),
               label: const Text('Save'),
               style: ElevatedButton.styleFrom(
@@ -396,7 +490,11 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
-  void _saveTrimmedVideo() {
+  void _saveTrimmedVideo(
+    BuildContext context,
+    int startPositionMs,
+    int endPositionMs,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -406,7 +504,7 @@ class _VideoTrimmingScreenState extends State<VideoTrimmingScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Trimmed Duration: ${_formatDuration(_endPositionMs - _startPositionMs)}',
+              'Trimmed Duration: ${_formatDuration(endPositionMs - startPositionMs)}',
             ),
             SizedBox(height: 12.h),
             const Text('Exporting will save the trimmed video.'),

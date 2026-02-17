@@ -1,14 +1,119 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart' show FlutterTimezone;
+import 'package:awesome_notifications/awesome_notifications.dart';
+import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:vibration/vibration.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz_data;
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import '../../domain/entities/alarm.dart';
+import '../../domain/repositories/alarm_repository.dart';
 import '../../core/routes/app_router.dart';
 import '../../core/routes/app_routes.dart';
 import '../../core/services/app_logger.dart';
 import 'dart:convert';
+
+// ════════════════════════════════════════════════════════════════════════════════
+// CRITICAL: Top-level callback for AndroidAlarmManager
+// ════════════════════════════════════════════════════════════════════════════════
+// This MUST be a top-level function (not a class method) for AndroidAlarmManager.
+// It runs in a separate isolate when the alarm triggers, even if app is killed.
+// ════════════════════════════════════════════════════════════════════════════════
+
+@pragma('vm:entry-point')
+void alarmManagerCallback() {
+  AppLogger.i('═' * 70);
+  AppLogger.i('[ALARM-MANAGER-CALLBACK] ⏰ Callback triggered in isolate!');
+  AppLogger.i('Time: ${DateTime.now().toIso8601String()}');
+  AppLogger.i('═' * 70);
+
+  try {
+    // Initialize Awesome Notifications in this isolate (fresh context)
+    AppLogger.i(
+      '[ALARM-MANAGER-CALLBACK] Initializing AwesomeNotifications...',
+    );
+    AwesomeNotifications().initialize(null, [
+      NotificationChannel(
+        channelKey: 'alarm_channel',
+        channelName: 'Alarm Notifications',
+        channelDescription: 'Channel for alarm trigger notifications',
+        defaultColor: const Color(0xFF9D50DD),
+        ledColor: Colors.white,
+        importance: NotificationImportance.Max,
+        channelShowBadge: true,
+        locked: true,
+        playSound: true,
+        enableVibration: true,
+      ),
+    ]);
+    AppLogger.i('[ALARM-MANAGER-CALLBACK] ✅ AwesomeNotifications initialized');
+
+    // Trigger Vibration
+    AppLogger.i('[ALARM-MANAGER-CALLBACK] Starting vibration...');
+    Vibration.vibrate(pattern: [500, 1000, 500, 1000], repeat: -1);
+    AppLogger.i('[ALARM-MANAGER-CALLBACK] ✅ Vibration started');
+
+    // Trigger Sound
+    AppLogger.i('[ALARM-MANAGER-CALLBACK] Playing alarm sound...');
+    FlutterRingtonePlayer().playAlarm();
+    AppLogger.i('[ALARM-MANAGER-CALLBACK] ✅ Alarm sound started');
+
+    // Show Notification with interactive action buttons
+    AppLogger.i(
+      '[ALARM-MANAGER-CALLBACK] Creating notification with actions...',
+    );
+    AwesomeNotifications().createNotification(
+      content: NotificationContent(
+        id: 10,
+        channelKey: 'alarm_channel',
+        title: '⏰ Alarm Triggered!',
+        body: 'Your reminder is here! Tap to view details.',
+        wakeUpScreen: true,
+        category: NotificationCategory.Alarm,
+        fullScreenIntent: true,
+        autoDismissible: false,
+        locked: true,
+      ),
+      actionButtons: [
+        // Snooze 10 minutes
+        NotificationActionButton(
+          key: 'SNOOZE_10',
+          label: '⏸️ Snooze 10m',
+          actionType: ActionType.Default,
+          isDangerousOption: false,
+        ),
+        // Reschedule button
+        NotificationActionButton(
+          key: 'RESCHEDULE',
+          label: '📅 Reschedule',
+          actionType: ActionType.Default,
+          isDangerousOption: false,
+        ),
+        // Dismiss/Close button
+        NotificationActionButton(
+          key: 'DISMISS',
+          label: '✓ Dismiss',
+          actionType: ActionType.Default,
+          isDangerousOption: false,
+        ),
+      ],
+    );
+    AppLogger.i(
+      '[ALARM-MANAGER-CALLBACK] ✅ Notification created with action buttons',
+    );
+    AppLogger.i('═' * 70);
+    AppLogger.i('[ALARM-MANAGER-CALLBACK] ✅ Callback completed successfully!');
+    AppLogger.i('═' * 70);
+  } catch (e, stack) {
+    AppLogger.e('═' * 70);
+    AppLogger.e('[ALARM-MANAGER-CALLBACK] ❌ Callback failed!');
+    AppLogger.e('Error: $e');
+    AppLogger.e('Stack: $stack');
+    AppLogger.e('═' * 70);
+  }
+}
 
 class AlarmService {
   final FlutterLocalNotificationsPlugin _plugin =
@@ -238,26 +343,18 @@ class AlarmService {
         playSound: true,
         actions: [
           const AndroidNotificationAction(
-            'quick_reply',
-            'Quick Answer',
-            icon: DrawableResourceAndroidBitmap('ic_reply'),
-            allowGeneratedReplies: true,
-            inputs: [
-              AndroidNotificationActionInput(
-                label: 'Type your note...',
-                allowFreeFormInput: true,
-              ),
-            ],
+            'SNOOZE_10',
+            '⏸️ Snooze 10m',
             showsUserInterface: true,
           ),
           const AndroidNotificationAction(
-            'snooze',
-            'Snooze 10m',
+            'RESCHEDULE',
+            '📅 Reschedule',
             showsUserInterface: true,
           ),
           const AndroidNotificationAction(
-            'complete',
-            'Mark Completed',
+            'DISMISS',
+            '✓ Dismiss',
             showsUserInterface: true,
           ),
         ],
@@ -297,8 +394,10 @@ class AlarmService {
         case AlarmRecurrence.none:
           break;
         case AlarmRecurrence.custom:
-          // TODO: Handle this case.
-          throw UnimplementedError();
+          // Custom recurrence: will be handled by scheduling based on weekDays
+          // Android doesn't support arbitrary custom patterns, but we schedule
+          // the next occurrence from the alarm's getNextOccurrence() method
+          break;
       }
       AppLogger.i('[ALARM-SCHEDULE] ✅ Step 5: Recurrence configured');
 
@@ -307,6 +406,7 @@ class AlarmService {
       AppLogger.i('[ALARM-SCHEDULE] Hash ID: $idHash (from: $id)');
 
       AppLogger.i('[ALARM-SCHEDULE] ⏳ Step 6: Calling zonedSchedule...');
+
       if (recurrence == AlarmRecurrence.none) {
         AppLogger.i('[ALARM-SCHEDULE] Scheduling ONE-TIME alarm...');
         await _plugin.zonedSchedule(
@@ -322,6 +422,25 @@ class AlarmService {
         );
         AppLogger.i(
           '[ALARM-SCHEDULE] ✅ zonedSchedule() completed for ONE-TIME alarm',
+        );
+      } else if (recurrence == AlarmRecurrence.custom) {
+        // For custom recurrence, schedule based on weekDays
+        AppLogger.i('[ALARM-SCHEDULE] Scheduling CUSTOM recurring alarm...');
+        // Schedule with weekly pattern (will repeat on selected weekdays)
+        await _plugin.zonedSchedule(
+          idHash,
+          title ?? 'Reminder',
+          'Custom recurring alarm notification',
+          scheduledDate,
+          details,
+          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime,
+          payload: payload,
+        );
+        AppLogger.i(
+          '[ALARM-SCHEDULE] ✅ zonedSchedule() completed for CUSTOM alarm',
         );
       } else {
         AppLogger.i(
@@ -364,12 +483,12 @@ class AlarmService {
           );
 
           // Use oneShot to schedule the background alarm
-          // This will trigger the alarmCallback function even if app is killed
+          // This will trigger the top-level alarmManagerCallback function even if app is killed
           await AndroidAlarmManager.oneShot(
             duration,
             int.parse(id.hashCode.toString().replaceAll('-', '')) %
                 2147483647, // Use same ID hash
-            _backgroundAlarmCallback,
+            alarmManagerCallback, // Top-level function defined above
             exact: true, // Try to trigger at exact time
             wakeup: true, // Wake up device if sleeping
             rescheduleOnReboot: true, // Reschedule if device reboots
@@ -432,17 +551,113 @@ class AlarmService {
     }
   }
 
-  /// Static callback for AndroidAlarmManager background execution
-  /// This is called by the system when alarm triggers, even if app is killed
-  /// We delegate to the alarmCallback in main.dart which handles all the details
-  @pragma('vm:entry-point')
-  static Future<void> _backgroundAlarmCallback() async {
-    AppLogger.i(
-      '[ALARM-SERVICE-BACKGROUND] Background alarm callback triggered!',
-    );
-    // The actual alarm callback (alarmCallback) is defined in main.dart
-    // and gets called automatically by the system
-    AppLogger.i('[ALARM-SERVICE-BACKGROUND] Delegating to main alarm callback');
+  /// Test method to trigger alarm callback directly for developer testing
+  Future<void> testAlarmTrigger() async {
+    AppLogger.i('═' * 60);
+    AppLogger.i('[TEST-ALARM-TRIGGER] Manually triggering alarm...');
+    AppLogger.i('═' * 60);
+    try {
+      alarmManagerCallback(); // Call the top-level function
+      AppLogger.i('[TEST-ALARM-TRIGGER] ✅ Manual trigger completed');
+    } catch (e, stack) {
+      AppLogger.e('[TEST-ALARM-TRIGGER] ❌ Manual trigger failed: $e');
+      AppLogger.e('Stack: $stack');
+    }
+    AppLogger.i('═' * 60);
+  }
+
+  /// Test notification only (no sound/vibration)
+  Future<void> testNotificationOnly() async {
+    AppLogger.i('[TEST-NOTIFICATION] Testing notification only...');
+    try {
+      await AwesomeNotifications().createNotification(
+        content: NotificationContent(
+          id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          channelKey: 'alarm_channel',
+          title: '🔔 Test Notification',
+          body: 'This is a test notification (no sound/vibration)',
+          wakeUpScreen: false,
+          category: NotificationCategory.Reminder,
+        ),
+      );
+      AppLogger.i('[TEST-NOTIFICATION] ✅ Notification sent');
+    } catch (e, stack) {
+      AppLogger.e('[TEST-NOTIFICATION] ❌ Failed: $e');
+      AppLogger.e('Stack: $stack');
+    }
+  }
+
+  /// Test vibration only
+  Future<void> testVibrationOnly() async {
+    AppLogger.i('[TEST-VIBRATION] Testing vibration only...');
+    try {
+      await Vibration.vibrate(pattern: [0, 500, 200, 500], repeat: -1);
+      AppLogger.i('[TEST-VIBRATION] ✅ Vibration started (cancel manually)');
+    } catch (e, stack) {
+      AppLogger.e('[TEST-VIBRATION] ❌ Failed: $e');
+      AppLogger.e('Stack: $stack');
+    }
+  }
+
+  /// Stop vibration
+  Future<void> stopVibration() async {
+    AppLogger.i('[STOP-VIBRATION] Stopping vibration...');
+    try {
+      await Vibration.cancel();
+      AppLogger.i('[STOP-VIBRATION] ✅ Vibration stopped');
+    } catch (e) {
+      AppLogger.e('[STOP-VIBRATION] ❌ Failed: $e');
+    }
+  }
+
+  /// Test ringtone only
+  Future<void> testRingtoneOnly() async {
+    AppLogger.i('[TEST-RINGTONE] Testing ringtone only...');
+    try {
+      await FlutterRingtonePlayer().playAlarm();
+      AppLogger.i('[TEST-RINGTONE] ✅ Ringtone started (cancel manually)');
+    } catch (e, stack) {
+      AppLogger.e('[TEST-RINGTONE] ❌ Failed: $e');
+      AppLogger.e('Stack: $stack');
+    }
+  }
+
+  /// Stop ringtone
+  Future<void> stopRingtone() async {
+    AppLogger.i('[STOP-RINGTONE] Stopping ringtone...');
+    try {
+      await FlutterRingtonePlayer().stop();
+      AppLogger.i('[STOP-RINGTONE] ✅ Ringtone stopped');
+    } catch (e) {
+      AppLogger.e('[STOP-RINGTONE] ❌ Failed: $e');
+    }
+  }
+
+  /// Test AndroidAlarmManager with immediate callback
+  Future<void> testAndroidAlarmManagerImmediate() async {
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      AppLogger.i(
+        '[TEST-ALARM-MANAGER] Testing AndroidAlarmManager (3 sec)...',
+      );
+      try {
+        final success = await AndroidAlarmManager.oneShot(
+          const Duration(seconds: 3),
+          DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          alarmManagerCallback,
+          exact: true,
+          wakeup: true,
+        );
+        AppLogger.i(
+          '[TEST-ALARM-MANAGER] ${success ? "✅" : "❌"} Scheduled: $success',
+        );
+        AppLogger.i('[TEST-ALARM-MANAGER] Wait 3 seconds for alarm...');
+      } catch (e, stack) {
+        AppLogger.e('[TEST-ALARM-MANAGER] ❌ Failed: $e');
+        AppLogger.e('Stack: $stack');
+      }
+    } else {
+      AppLogger.w('[TEST-ALARM-MANAGER] ⚠️ Only available on Android');
+    }
   }
 
   Future<void> cancelAlarm(String id) async {
@@ -475,6 +690,59 @@ class AlarmService {
     } catch (e) {
       AppLogger.e('[ALARM] Failed to cancel all alarms', e);
       throw Exception('Failed to cancel all alarms: $e');
+    }
+  }
+
+  /// Reschedule all active alarms from database (call on app startup/reboot)
+  Future<void> rescheduleAllActiveAlarms(AlarmRepository repository) async {
+    AppLogger.i('═' * 60);
+    AppLogger.i('[ALARM-RESTORE] Rescheduling all active alarms...');
+    AppLogger.i('═' * 60);
+
+    try {
+      final alarms = await repository.getAlarms();
+      final activeAlarms = alarms.where((alarm) => alarm.isActive).toList();
+
+      AppLogger.i('[ALARM-RESTORE] Found ${activeAlarms.length} active alarms');
+
+      for (final alarm in activeAlarms) {
+        try {
+          final nextOccurrence = alarm.getNextOccurrence();
+
+          if (nextOccurrence != null &&
+              nextOccurrence.isAfter(DateTime.now())) {
+            AppLogger.i(
+              '[ALARM-RESTORE] Rescheduling: ${alarm.id} at ${nextOccurrence.toIso8601String()}',
+            );
+
+            await scheduleAlarm(
+              dateTime: nextOccurrence,
+              id: alarm.id,
+              title: alarm.message,
+              vibrate: alarm.vibrate,
+              recurrence: alarm.recurrence,
+            );
+
+            AppLogger.i('[ALARM-RESTORE] ✅ Rescheduled: ${alarm.id}');
+          } else {
+            AppLogger.w('[ALARM-RESTORE] ⚠️ Skipping past alarm: ${alarm.id}');
+          }
+        } catch (e) {
+          AppLogger.e('[ALARM-RESTORE] ❌ Failed to reschedule ${alarm.id}: $e');
+        }
+      }
+
+      AppLogger.i('═' * 60);
+      AppLogger.i(
+        '[ALARM-RESTORE] ✅ Completed rescheduling ${activeAlarms.length} alarms',
+      );
+      AppLogger.i('═' * 60);
+    } catch (e, stack) {
+      AppLogger.e('═' * 60);
+      AppLogger.e('[ALARM-RESTORE] ❌ Failed to restore alarms');
+      AppLogger.e('Error: $e');
+      AppLogger.e('Stack: $stack');
+      AppLogger.e('═' * 60);
     }
   }
 

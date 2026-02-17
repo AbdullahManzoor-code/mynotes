@@ -44,12 +44,17 @@ class AppRoutes {
   static const String locationReminder = '/reminders/location';
   static const String savedLocations = '/locations/saved';
   static const String alarms = '/alarms';
+  static const String activeAlarms = '/alarms/active';
+  static const String rescheduleAlarm = '/alarms/reschedule';
+  static const String snoozeConfirmation = '/alarms/snooze-confirmation';
+  static const String dismissConfirmation = '/alarms/dismiss-confirmation';
   static const String reminderTemplates = '/reminders/templates';
   static const String createReminder = '/reminders/create';
   static const String editReminder = '/reminders/edit';
 
   // ==================== Todos Module ====================
   static const String todosList = '/todos';
+  static const String todoEditor = '/todos/editor';
   static const String todoFocus = '/todos/focus';
   static const String advancedTodo = '/todos/advanced';
   static const String recurringTodoSchedule = '/todos/recurring-schedule';

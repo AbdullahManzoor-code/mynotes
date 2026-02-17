@@ -1,12 +1,13 @@
-import 'dart:io' show File;
-
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:audioplayers/audioplayers.dart';
 import '../../core/constants/app_colors.dart';
-import 'dart:async';
+import '../bloc/audio_playback/audio_playback_bloc.dart';
+import '../bloc/audio_playback/audio_playback_event.dart';
+import '../bloc/audio_playback/audio_playback_state.dart';
 
 /// WhatsApp-style voice message widget with animated waveform
+/// Uses AudioPlaybackBloc for state management
 class VoiceMessageWidget extends StatefulWidget {
   final String audioPath;
   final Duration? duration;
@@ -27,14 +28,8 @@ class VoiceMessageWidget extends StatefulWidget {
 
 class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
     with SingleTickerProviderStateMixin {
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  bool _isPlaying = false;
-  Duration _currentPosition = Duration.zero;
-  Duration _totalDuration = Duration.zero;
   late AnimationController _waveController;
-  StreamSubscription? _positionSubscription;
-  StreamSubscription? _durationSubscription;
-  StreamSubscription? _completeSubscription;
+  late AudioPlaybackBloc _audioBloc;
 
   @override
   void initState() {
@@ -44,69 +39,21 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
       duration: const Duration(milliseconds: 800),
     )..repeat(reverse: true);
 
-    _totalDuration = widget.duration ?? Duration.zero;
-    _setupAudioPlayer();
-  }
-
-  void _setupAudioPlayer() {
-    _positionSubscription = _audioPlayer.onPositionChanged.listen((position) {
-      if (mounted) {
-        setState(() => _currentPosition = position);
-      }
-    });
-
-    _durationSubscription = _audioPlayer.onDurationChanged.listen((duration) {
-      if (mounted) {
-        setState(() => _totalDuration = duration);
-      }
-    });
-
-    _completeSubscription = _audioPlayer.onPlayerComplete.listen((_) {
-      if (mounted) {
-        setState(() {
-          _isPlaying = false;
-          _currentPosition = Duration.zero;
-        });
-      }
-    });
+    _audioBloc = AudioPlaybackBloc();
+    _audioBloc.add(
+      InitializeAudioEvent(
+        audioPath: widget.audioPath,
+        initialDuration: widget.duration,
+      ),
+    );
   }
 
   @override
   void dispose() {
-    _positionSubscription?.cancel();
-    _durationSubscription?.cancel();
-    _completeSubscription?.cancel();
-    _audioPlayer.dispose();
     _waveController.dispose();
+    _audioBloc.add(const DisposeAudioEvent());
+    _audioBloc.close();
     super.dispose();
-  }
-
-  Future<void> _togglePlayback() async {
-    try {
-      if (_isPlaying) {
-        await _audioPlayer.pause();
-        if (mounted) setState(() => _isPlaying = false);
-      } else {
-        final file = File(widget.audioPath);
-        if (!await file.exists()) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Audio file not found')),
-            );
-          }
-          return;
-        }
-        await _audioPlayer.play(DeviceFileSource(widget.audioPath));
-        if (mounted) setState(() => _isPlaying = true);
-      }
-    } catch (e) {
-      debugPrint('Error playing voice message: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Playback failed: $e')));
-      }
-    }
   }
 
   String _formatDuration(Duration duration) {
@@ -127,81 +74,106 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
 
     return GestureDetector(
       onLongPress: widget.onDelete,
-      child: Container(
-        margin: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
-        padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 12.w),
-        decoration: BoxDecoration(
-          color: backgroundColor,
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Play/Pause button
-            GestureDetector(
-              onTap: _togglePlayback,
-              child: Container(
-                width: 36.w,
-                height: 36.w,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: widget.isSent
-                      ? AppColors.primaryColor
-                      : (isDark ? Colors.grey.shade700 : Colors.grey.shade400),
-                ),
-                child: Icon(
-                  _isPlaying ? Icons.pause : Icons.play_arrow,
-                  color: Colors.white,
-                  size: 20.sp,
-                ),
-              ),
-            ),
+      child: BlocProvider<AudioPlaybackBloc>.value(
+        value: _audioBloc,
+        child: Container(
+          margin: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
+          padding: EdgeInsets.symmetric(vertical: 8.h, horizontal: 12.w),
+          decoration: BoxDecoration(
+            color: backgroundColor,
+            borderRadius: BorderRadius.circular(12.r),
+          ),
+          child: BlocBuilder<AudioPlaybackBloc, AudioPlaybackState>(
+            bloc: _audioBloc,
+            builder: (context, state) {
+              final isPlaying = state.isPlaying;
+              final currentPosition = state.position;
+              final totalDuration = state.duration;
 
-            SizedBox(width: 8.w),
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Play/Pause button
+                  GestureDetector(
+                    onTap: () {
+                      if (isPlaying) {
+                        _audioBloc.add(const PauseAudioEvent());
+                      } else {
+                        _audioBloc.add(const PlayAudioEvent());
+                      }
+                    },
+                    child: Container(
+                      width: 36.w,
+                      height: 36.w,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: widget.isSent
+                            ? AppColors.primaryColor
+                            : (isDark
+                                  ? Colors.grey.shade700
+                                  : Colors.grey.shade400),
+                      ),
+                      child: Icon(
+                        isPlaying ? Icons.pause : Icons.play_arrow,
+                        color: Colors.white,
+                        size: 20.sp,
+                      ),
+                    ),
+                  ),
 
-            // Waveform visualization
-            Expanded(
-              child: _isPlaying
-                  ? _buildAnimatedWaveform()
-                  : _buildStaticWaveform(),
-            ),
+                  SizedBox(width: 8.w),
 
-            SizedBox(width: 8.w),
+                  // Waveform visualization
+                  Expanded(
+                    child: isPlaying
+                        ? _buildAnimatedWaveform(
+                            currentPosition,
+                            totalDuration,
+                            isDark,
+                          )
+                        : _buildStaticWaveform(isDark),
+                  ),
 
-            // Duration
-            Text(
-              _isPlaying
-                  ? _formatDuration(_currentPosition)
-                  : _formatDuration(_totalDuration),
-              style: TextStyle(
-                fontSize: 11.sp,
-                color: isDark ? Colors.white70 : Colors.black87,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ],
+                  SizedBox(width: 8.w),
+
+                  // Duration
+                  Text(
+                    isPlaying
+                        ? _formatDuration(currentPosition)
+                        : _formatDuration(totalDuration),
+                    style: TextStyle(
+                      fontSize: 11.sp,
+                      color: isDark ? Colors.white70 : Colors.black87,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildAnimatedWaveform() {
+  Widget _buildAnimatedWaveform(
+    Duration position,
+    Duration duration,
+    bool isDark,
+  ) {
     return AnimatedBuilder(
       animation: _waveController,
       builder: (context, child) {
         return CustomPaint(
           size: Size(double.infinity, 30.h),
           painter: WaveformPainter(
-            progress: _totalDuration.inMilliseconds > 0
-                ? _currentPosition.inMilliseconds /
-                      _totalDuration.inMilliseconds
+            progress: duration.inMilliseconds > 0
+                ? position.inMilliseconds / duration.inMilliseconds
                 : 0.0,
             animationValue: _waveController.value,
             color: widget.isSent
                 ? AppColors.primaryColor
-                : (Theme.of(context).brightness == Brightness.dark
-                      ? Colors.grey.shade400
-                      : Colors.grey.shade600),
+                : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
             isAnimating: true,
           ),
         );
@@ -209,7 +181,7 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
     );
   }
 
-  Widget _buildStaticWaveform() {
+  Widget _buildStaticWaveform(bool isDark) {
     return CustomPaint(
       size: Size(double.infinity, 30.h),
       painter: WaveformPainter(
@@ -217,9 +189,7 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
         animationValue: 0.5,
         color: widget.isSent
             ? AppColors.primaryColor.withOpacity(0.6)
-            : (Theme.of(context).brightness == Brightness.dark
-                  ? Colors.grey.shade500
-                  : Colors.grey.shade500),
+            : (isDark ? Colors.grey.shade500 : Colors.grey.shade500),
         isAnimating: false,
       ),
     );

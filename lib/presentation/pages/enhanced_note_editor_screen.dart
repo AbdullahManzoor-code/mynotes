@@ -40,7 +40,6 @@ import 'package:mynotes/presentation/widgets/document_scanner_widget.dart';
 import 'package:mynotes/presentation/widgets/add_reminder_bottom_sheet.dart';
 import 'package:mynotes/presentation/widgets/note_template_selector.dart';
 import '../widgets/universal_media_sheet.dart';
-import 'package:mynotes/presentation/widgets/create_todo_bottom_sheet.dart';
 import 'package:mynotes/presentation/pages/media_viewer_screen.dart';
 import 'package:mynotes/presentation/widgets/note_suggestion_bar.dart';
 import 'package:mynotes/presentation/widgets/note_tags_input.dart';
@@ -359,92 +358,6 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     }
   }
 
-  Widget _buildBacklinksPanel(BuildContext context, NoteEditorState state) {
-    return Container(
-      margin: const EdgeInsets.only(top: 24),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.grey400),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.link, size: 20, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(
-                'Linked References',
-                style: AppTypography.heading3(
-                  context,
-                  AppColors.textPrimary(context),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ...state.linkedNotes.map(
-            (linkedNote) => InkWell(
-              onTap: () {
-                AppLogger.i(
-                  'EnhancedNoteEditorScreen: Linked note tapped: ${linkedNote.id}',
-                );
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => EnhancedNoteEditorScreen(note: linkedNote),
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            linkedNote.title.isNotEmpty
-                                ? linkedNote.title
-                                : 'Untitled Note',
-                            style: AppTypography.body1(
-                              context,
-                              AppColors.textPrimary(context),
-                            ).copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          if (linkedNote.content.isNotEmpty)
-                            Text(
-                              linkedNote.content.length > 50
-                                  ? '${linkedNote.content.substring(0, 50)}...'
-                                  : linkedNote.content,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.caption(
-                                context,
-                                AppColors.textSecondary(context),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right,
-                      size: 16,
-                      color: AppColors.grey500,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showTagPicker(BuildContext context, NoteEditorBloc editorBloc) {
     AppLogger.i('EnhancedNoteEditorScreen: _showTagPicker triggered');
     showModalBottomSheet(
@@ -560,6 +473,17 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
               },
             ),
             _buildPremiumMenuOption(
+              icon: Icons.auto_stories_outlined,
+              title: 'Apply Template',
+              subtitle: 'Restructure note with a template',
+              color: Colors.purple.shade400,
+              onTap: () {
+                AppLogger.i('EnhancedNoteEditorScreen: Apply template tapped');
+                Navigator.pop(sheetContext);
+                _showTemplateSelector(context, editorBloc);
+              },
+            ),
+            _buildPremiumMenuOption(
               icon: Icons.share_outlined,
               title: 'Share & Export',
               subtitle: 'Send as text, PDF or Markdown',
@@ -618,6 +542,109 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
         HapticFeedback.lightImpact();
         onTap();
       },
+    );
+  }
+
+  void _showTemplateSelector(BuildContext context, NoteEditorBloc editorBloc) {
+    AppLogger.i('EnhancedNoteEditorScreen: _showTemplateSelector triggered');
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => GlassContainer(
+        borderRadius: 24.r,
+        blur: 20,
+        color: AppColors.surface(context).withOpacity(0.9),
+        padding: EdgeInsets.symmetric(vertical: 20.h),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40.w,
+              height: 4.h,
+              decoration: BoxDecoration(
+                color: AppColors.textSecondary(context).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 16.w),
+              child: Text(
+                'Select Template',
+                style: AppTypography.heading2(context),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Flexible(
+              child: GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                padding: EdgeInsets.symmetric(horizontal: 16.w),
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12.w,
+                  mainAxisSpacing: 12.h,
+                  childAspectRatio: 1.0,
+                ),
+                itemCount: NoteTemplates.builtIn.length,
+                itemBuilder: (context, index) {
+                  final template = NoteTemplates.builtIn[index];
+                  return InkWell(
+                    onTap: () {
+                      AppLogger.i(
+                        'EnhancedNoteEditorScreen: Template selected: ${template.name}',
+                      );
+                      editorBloc.add(TemplateApplied(template));
+                      Navigator.pop(sheetContext);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Applied template: ${template.name}'),
+                          backgroundColor: AppColors.successColor,
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16.r),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: AppColors.surface(context),
+                        borderRadius: BorderRadius.circular(16.r),
+                        border: Border.all(
+                          color: AppColors.border(context),
+                          width: 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.description,
+                            size: 32.sp,
+                            color: AppColors.primary,
+                          ),
+                          SizedBox(height: 8.h),
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8.w),
+                            child: Text(
+                              template.name,
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.bodySmall(
+                                context,
+                              ).copyWith(fontWeight: FontWeight.w600),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SizedBox(height: 16.h),
+          ],
+        ),
+      ),
     );
   }
 
@@ -894,6 +921,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
       child: TextField(
         controller: titleController,
         focusNode: titleFocusNode,
+        autofocus: note == null, // Auto-focus only for new notes
         style: AppTypography.heading1(context).copyWith(
           fontSize: 24.sp,
           fontWeight: FontWeight.w800,
@@ -1375,39 +1403,6 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     );
   }
 
-  void _openTemplateSelector(BuildContext context, NoteEditorBloc editorBloc) {
-    AppLogger.i('EnhancedNoteEditorScreen: Opening template selector');
-    showModalBottomSheet(
-      context: context,
-      builder: (sheetContext) => Container(
-        padding: const EdgeInsets.all(16),
-        child: TemplateSelector(
-          onTemplateSelected: (template) {
-            AppLogger.i(
-              'EnhancedNoteEditorScreen: Template selected: $template',
-            );
-            editorBloc.add(TemplateApplied(template));
-            Navigator.pop(sheetContext);
-          },
-        ),
-      ),
-    );
-  }
-
-  void _openTodoPicker(BuildContext context, NoteEditorBloc editorBloc) {
-    AppLogger.i('EnhancedNoteEditorScreen: Opening todo picker');
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (sheetContext) => CreateTodoBottomSheet(
-        onTodoCreated: (todo) {
-          AppLogger.i('EnhancedNoteEditorScreen: Todo created: ${todo.text}');
-          editorBloc.add(TodoAdded(todo));
-        },
-      ),
-    );
-  }
-
   Future<void> _onDrawingComplete(
     BuildContext context,
     NoteEditorBloc editorBloc,
@@ -1832,19 +1827,12 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
           fit: BoxFit.cover,
         );
       case MediaType.video:
-        return item.thumbnailPath != null
-            ? Image.file(
-                File(item.thumbnailPath!),
-                width: 140.w,
-                height: 160.h,
-                fit: BoxFit.cover,
-              )
-            : Container(
-                color: Colors.black87,
-                child: const Center(
-                  child: Icon(Icons.videocam, color: Colors.white),
-                ),
-              );
+        return Image.file(
+          File(item.thumbnailPath),
+          width: 140.w,
+          height: 160.h,
+          fit: BoxFit.cover,
+        );
       case MediaType.audio:
         return Container(
           color: AppColors.primary.withOpacity(0.1),
@@ -1960,7 +1948,8 @@ class _NoteEditorLifecycleWrapper extends StatefulWidget {
 }
 
 class _NoteEditorLifecycleWrapperState
-    extends State<_NoteEditorLifecycleWrapper> {
+    extends State<_NoteEditorLifecycleWrapper>
+    with WidgetsBindingObserver {
   late NoteEditorBloc _editorBloc;
   late quill.QuillController _quillController;
   final TextEditingController _titleController = TextEditingController();
@@ -1980,6 +1969,10 @@ class _NoteEditorLifecycleWrapperState
   void initState() {
     super.initState();
     AppLogger.i('EnhancedNoteEditorScreen: LifecycleWrapper initState');
+
+    // Register lifecycle observer for app pause/resume events
+    WidgetsBinding.instance.addObserver(this);
+
     _editorBloc =
         NoteEditorBloc(
           speechService: _speechService,
@@ -1999,6 +1992,23 @@ class _NoteEditorLifecycleWrapperState
 
     _quillController = quill.QuillController.basic();
     _setupUIListeners();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    AppLogger.i('EnhancedNoteEditorScreen: AppLifecycleState = $state');
+
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      // App is pausing or being closed - auto-save any unsaved changes
+      if (_editorBloc.state is NoteEditorLoaded) {
+        final editorState = _editorBloc.state as NoteEditorLoaded;
+        if (editorState.isDirty) {
+          AppLogger.i('EnhancedNoteEditorScreen: Auto-saving on app pause');
+          _editorBloc.add(const SaveNoteRequested());
+        }
+      }
+    }
   }
 
   void _setupUIListeners() {
@@ -2025,6 +2035,9 @@ class _NoteEditorLifecycleWrapperState
   @override
   void dispose() {
     AppLogger.i('EnhancedNoteEditorScreen: LifecycleWrapper dispose');
+    // Remove lifecycle observer before disposal
+    WidgetsBinding.instance.removeObserver(this);
+
     _debounceTimer?.cancel();
     _titleController.dispose();
     _quillController.dispose();
@@ -2083,15 +2096,59 @@ class _NoteEditorLifecycleWrapperState
             }
           }
         },
-        child: widget.builder(
-          context,
-          _editorBloc,
-          _quillController,
-          _titleController,
-          _titleFocusNode,
-          _contentFocusNode,
-          _scrollController,
-          _quillScrollController,
+        child: PopScope(
+          canPop: false,
+          onPopInvokedWithResult: (didPop, result) async {
+            if (didPop) return;
+
+            // Check if there are unsaved changes
+            final state = _editorBloc.state;
+            if (state is NoteEditorLoaded && state.isDirty) {
+              final shouldDiscard =
+                  await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Unsaved Changes'),
+                      content: const Text(
+                        'You have unsaved changes. Do you want to discard them?',
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Keep Editing'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.pop(ctx, true),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                          child: const Text('Discard'),
+                        ),
+                      ],
+                    ),
+                  ) ??
+                  false;
+
+              if (shouldDiscard == true && context.mounted) {
+                Navigator.pop(context);
+              }
+            } else {
+              // No unsaved changes, pop normally
+              if (context.mounted) {
+                Navigator.pop(context);
+              }
+            }
+          },
+          child: widget.builder(
+            context,
+            _editorBloc,
+            _quillController,
+            _titleController,
+            _titleFocusNode,
+            _contentFocusNode,
+            _scrollController,
+            _quillScrollController,
+          ),
         ),
       ),
     );

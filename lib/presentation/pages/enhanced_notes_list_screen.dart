@@ -284,7 +284,7 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
               final bool isLoading = state is NoteLoading;
               final bool isError = state is NoteError;
               final bool isLoaded = state is NotesLoaded;
-              final bool isArchived = state is ArchivedNotesLoaded;
+              // Archive status determined by state type
 
               final List<Note> pinnedNotes = isLoaded
                   ? state.displayedNotes.where((n) => n.isPinned).toList()
@@ -402,10 +402,7 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
                             AppLogger.i(
                               'EnhancedNotesListScreen: Opening view options sheet',
                             );
-                            _showViewOptionsSheet(
-                              context,
-                              state as NotesLoaded,
-                            );
+                            _showViewOptionsSheet(context, state);
                           }
                         },
                         icon: Icon(
@@ -472,7 +469,7 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
                           else
                             _buildNotesGridSection(
                               context,
-                              state as NotesLoaded,
+                              state,
                               pinnedNotes,
                               unpinnedNotes,
                               showSections,
@@ -915,12 +912,19 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
 
   Widget _buildNoteGridOrList(List<Note> notes, NoteViewMode viewMode) {
     if (viewMode == NoteViewMode.grid) {
+      // Responsive grid: 2 columns on phone, 3 columns on tablet (600dp+)
+      final screenWidth = MediaQuery.of(context).size.width;
+      final isTablet = screenWidth >= 600;
+      final crossAxisCount = isTablet ? 3 : 2;
+      final horizontalPadding = isTablet ? 20.w : 16.w;
+      final spacing = isTablet ? 16.w : 12.w;
+
       return SliverPadding(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
         sliver: SliverMasonryGrid.count(
-          crossAxisCount: 2,
-          mainAxisSpacing: 12.h,
-          crossAxisSpacing: 12.w,
+          crossAxisCount: crossAxisCount,
+          mainAxisSpacing: spacing,
+          crossAxisSpacing: spacing,
           itemBuilder: (context, index) {
             final note = notes[index];
             return NoteCardWidget(
@@ -952,7 +956,9 @@ class _EnhancedNotesListScreenState extends State<EnhancedNotesListScreen>
     return SliverToBoxAdapter(
       child: AnimatedListView(
         items: notes,
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        padding: EdgeInsets.symmetric(
+          horizontal: MediaQuery.of(context).size.width >= 600 ? 24.w : 16.w,
+        ),
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemBuilder: (context, index) {

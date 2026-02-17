@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../design_system/design_system.dart';
-import '../../core/services/app_logger.dart';
 
 /// OCR Text Extraction Screen
 /// Shows extracted text from scanned documents with editing capabilities
@@ -22,7 +21,6 @@ class OcrTextExtractionScreen extends StatefulWidget {
 
 class _OcrTextExtractionScreenState extends State<OcrTextExtractionScreen> {
   late TextEditingController _textController;
-  final bool _isProcessing = false;
 
   @override
   void initState() {

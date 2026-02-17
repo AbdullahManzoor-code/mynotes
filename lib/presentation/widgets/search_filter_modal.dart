@@ -1,210 +1,213 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import '../design_system/design_system.dart';
 import '../../domain/models/search_filters.dart';
+import '../bloc/global_search/search_filters_bloc.dart';
 
-class SearchFilterModal extends StatefulWidget {
+class SearchFilterModal extends StatelessWidget {
   final SearchFilters initialFilters;
 
   const SearchFilterModal({super.key, required this.initialFilters});
 
   @override
-  State<SearchFilterModal> createState() => _SearchFilterModalState();
-}
-
-class _SearchFilterModalState extends State<SearchFilterModal> {
-  late List<String> _selectedTypes;
-  DateTime? _startDate;
-  DateTime? _endDate;
-  String? _selectedCategory;
-  late String _sortBy;
-  late bool _sortDescending;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedTypes = List.from(widget.initialFilters.types);
-    _startDate = widget.initialFilters.startDate;
-    _endDate = widget.initialFilters.endDate;
-    _selectedCategory = widget.initialFilters.category;
-    _sortBy = widget.initialFilters.sortBy;
-    _sortDescending = widget.initialFilters.sortDescending;
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return BlocProvider(
+      create: (_) => SearchFiltersBloc(initialFilters),
+      child: BlocBuilder<SearchFiltersBloc, SearchFiltersState>(
+        builder: (context, state) {
+          final filters = state.filters;
+          final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      padding: EdgeInsets.all(24.w),
-      decoration: BoxDecoration(
-        color: AppColors.surface(context),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Search Filters',
-                style: AppTypography.titleLarge(null, null, FontWeight.bold),
-              ),
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _selectedTypes = [];
-                    _startDate = null;
-                    _endDate = null;
-                    _selectedCategory = null;
-                    _sortBy = 'updated_at';
-                    _sortDescending = true;
-                  });
-                },
-                child: const Text('Reset'),
-              ),
-            ],
-          ),
-          SizedBox(height: 24.h),
-
-          // Types
-          Text(
-            'Item Types',
-            style: AppTypography.titleMedium(null, null, FontWeight.bold),
-          ),
-          SizedBox(height: 12.h),
-          Wrap(
-            spacing: 8.w,
-            children: [
-              _buildTypeChip('Notes', 'note'),
-              _buildTypeChip('Todos', 'todo'),
-              _buildTypeChip('Reminders', 'reminder'),
-            ],
-          ),
-          SizedBox(height: 24.h),
-
-          // Date Range
-          Text(
-            'Date Range',
-            style: AppTypography.titleMedium(null, null, FontWeight.bold),
-          ),
-          SizedBox(height: 12.h),
-          Row(
-            children: [
-              Expanded(
-                child: _buildDateButton(
-                  _startDate == null
-                      ? 'From'
-                      : DateFormat('MMM d, y').format(_startDate!),
-                  () => _selectDate(true),
-                ),
-              ),
-              SizedBox(width: 12.w),
-              Expanded(
-                child: _buildDateButton(
-                  _endDate == null
-                      ? 'To'
-                      : DateFormat('MMM d, y').format(_endDate!),
-                  () => _selectDate(false),
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 24.h),
-
-          // Sorting
-          Text(
-            'Sort By',
-            style: AppTypography.titleMedium(null, null, FontWeight.bold),
-          ),
-          SizedBox(height: 12.h),
-          DropdownButtonFormField<String>(
-            value: _sortBy,
-            decoration: InputDecoration(
-              filled: true,
-              fillColor: isDark ? Colors.grey.shade800 : Colors.grey.shade100,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12.r),
-                borderSide: BorderSide.none,
-              ),
+          return Container(
+            padding: EdgeInsets.all(24.w),
+            decoration: BoxDecoration(
+              color: AppColors.surface(context),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
-            items: const [
-              DropdownMenuItem(
-                value: 'updated_at',
-                child: Text('Last Updated'),
-              ),
-              DropdownMenuItem(
-                value: 'created_at',
-                child: Text('Created Date'),
-              ),
-              DropdownMenuItem(value: 'title', child: Text('Title')),
-            ],
-            onChanged: (val) => setState(() => _sortBy = val!),
-          ),
-          SizedBox(height: 12.h),
-          SwitchListTile(
-            title: Text(
-              'Descending Order',
-              style: AppTypography.bodyMedium(null),
-            ),
-            value: _sortDescending,
-            onChanged: (val) => setState(() => _sortDescending = val),
-            contentPadding: EdgeInsets.zero,
-            activeColor: AppColors.primary,
-          ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Search Filters',
+                      style: AppTypography.titleLarge(
+                        null,
+                        null,
+                        FontWeight.bold,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        context.read<SearchFiltersBloc>().add(
+                          const ResetSearchFiltersEvent(),
+                        );
+                      },
+                      child: const Text('Reset'),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 24.h),
 
-          SizedBox(height: 32.h),
-          SizedBox(
-            width: double.infinity,
-            height: 56.h,
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.pop(
-                  context,
-                  SearchFilters(
-                    types: _selectedTypes,
-                    startDate: _startDate,
-                    endDate: _endDate,
-                    category: _selectedCategory,
-                    sortBy: _sortBy,
-                    sortDescending: _sortDescending,
+                // Types
+                Text(
+                  'Item Types',
+                  style: AppTypography.titleMedium(
+                    null,
+                    null,
+                    FontWeight.bold,
                   ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12.r),
                 ),
-              ),
-              child: const Text(
-                'Apply Filters',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+                SizedBox(height: 12.h),
+                Wrap(
+                  spacing: 8.w,
+                  children: [
+                    _buildTypeChip(context, filters, 'Notes', 'note'),
+                    _buildTypeChip(context, filters, 'Todos', 'todo'),
+                    _buildTypeChip(context, filters, 'Reminders', 'reminder'),
+                  ],
+                ),
+                SizedBox(height: 24.h),
+
+                // Date Range
+                Text(
+                  'Date Range',
+                  style: AppTypography.titleMedium(
+                    null,
+                    null,
+                    FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildDateButton(
+                        context,
+                        filters.startDate == null
+                            ? 'From'
+                            : DateFormat('MMM d, y').format(
+                                filters.startDate!,
+                              ),
+                        () => _selectDate(context, true),
+                      ),
+                    ),
+                    SizedBox(width: 12.w),
+                    Expanded(
+                      child: _buildDateButton(
+                        context,
+                        filters.endDate == null
+                            ? 'To'
+                            : DateFormat('MMM d, y').format(
+                                filters.endDate!,
+                              ),
+                        () => _selectDate(context, false),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 24.h),
+
+                // Sorting
+                Text(
+                  'Sort By',
+                  style: AppTypography.titleMedium(
+                    null,
+                    null,
+                    FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 12.h),
+                DropdownButtonFormField<String>(
+                  value: filters.sortBy,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor:
+                        isDark ? Colors.grey.shade800 : Colors.grey.shade100,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.r),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                  items: const [
+                    DropdownMenuItem(
+                      value: 'updated_at',
+                      child: Text('Last Updated'),
+                    ),
+                    DropdownMenuItem(
+                      value: 'created_at',
+                      child: Text('Created Date'),
+                    ),
+                    DropdownMenuItem(value: 'title', child: Text('Title')),
+                  ],
+                  onChanged: (val) {
+                    if (val == null) return;
+                    context.read<SearchFiltersBloc>().add(
+                      UpdateSearchSortByEvent(val),
+                    );
+                  },
+                ),
+                SizedBox(height: 12.h),
+                SwitchListTile(
+                  title: Text(
+                    'Descending Order',
+                    style: AppTypography.bodyMedium(null),
+                  ),
+                  value: filters.sortDescending,
+                  onChanged: (val) {
+                    context.read<SearchFiltersBloc>().add(
+                      UpdateSearchSortDescendingEvent(val),
+                    );
+                  },
+                  contentPadding: EdgeInsets.zero,
+                  activeColor: AppColors.primary,
+                ),
+
+                SizedBox(height: 32.h),
+                SizedBox(
+                  width: double.infinity,
+                  height: 56.h,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, filters),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                    ),
+                    child: const Text(
+                      'Apply Filters',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16.h),
+              ],
             ),
-          ),
-          SizedBox(height: 16.h),
-        ],
+          );
+        },
       ),
     );
   }
 
-  Widget _buildTypeChip(String label, String value) {
-    final isSelected = _selectedTypes.contains(value);
+  Widget _buildTypeChip(
+    BuildContext context,
+    SearchFilters filters,
+    String label,
+    String value,
+  ) {
+    final isSelected = filters.types.contains(value);
     return FilterChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (selected) {
-        setState(() {
-          if (selected) {
-            _selectedTypes.add(value);
-          } else {
-            _selectedTypes.remove(value);
-          }
-        });
+        context.read<SearchFiltersBloc>().add(
+          ToggleSearchFilterTypeEvent(value, selected),
+        );
       },
       selectedColor: AppColors.primary,
       labelStyle: TextStyle(color: isSelected ? Colors.white : null),
@@ -212,7 +215,11 @@ class _SearchFilterModalState extends State<SearchFilterModal> {
     );
   }
 
-  Widget _buildDateButton(String label, VoidCallback onTap) {
+  Widget _buildDateButton(
+    BuildContext context,
+    String label,
+    VoidCallback onTap,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return InkWell(
       onTap: onTap,
@@ -233,21 +240,22 @@ class _SearchFilterModalState extends State<SearchFilterModal> {
     );
   }
 
-  Future<void> _selectDate(bool isStart) async {
+  Future<void> _selectDate(BuildContext context, bool isStart) async {
     final picked = await showDatePicker(
       context: context,
       initialDate: DateTime.now(),
       firstDate: DateTime(2020),
       lastDate: DateTime.now(),
     );
-    if (picked != null) {
-      setState(() {
-        if (isStart) {
-          _startDate = picked;
-        } else {
-          _endDate = picked;
-        }
-      });
+    if (picked == null) return;
+    if (isStart) {
+      context.read<SearchFiltersBloc>().add(
+        UpdateSearchFilterStartDateEvent(picked),
+      );
+      return;
     }
+    context.read<SearchFiltersBloc>().add(
+      UpdateSearchFilterEndDateEvent(picked),
+    );
   }
 }

@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:mynotes/core/utils/url_validator_util.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -30,26 +31,7 @@ class LinkPreview {
     }
   }
 
-  bool get isValidUrl {
-    try {
-      Uri.parse(url);
-      return url.startsWith('http://') || url.startsWith('https://');
-    } catch (e) {
-      return false;
-    }
-  }
-}
-
-/// URL validator
-class UrlValidator {
-  static bool isValidUrl(String url) {
-    try {
-      Uri.parse(url);
-      return url.startsWith('http://') || url.startsWith('https://');
-    } catch (e) {
-      return false;
-    }
-  }
+  bool get isValidUrl => UrlValidatorUtil.isValidUrl(url);
 
   static String normalizeUrl(String url) {
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -95,14 +77,18 @@ class LinkPreviewWidget extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 8.h),
+      margin: EdgeInsets.symmetric(vertical: 12.h),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkCardBackground : Colors.white,
-        borderRadius: BorderRadius.circular(12.r),
+        borderRadius: BorderRadius.circular(14.r),
+        border: Border.all(
+          color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.shade200,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+            blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
@@ -113,83 +99,124 @@ class LinkPreviewWidget extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Preview Image
+            // Preview Image with gradient overlay
             if (link.imageUrl != null && link.imageUrl!.isNotEmpty)
-              CachedNetworkImage(
-                imageUrl: link.imageUrl!,
-                height: 160.h,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  height: 160.h,
-                  color: isDark
-                      ? Colors.white10
-                      : Colors.black.withOpacity(0.05),
-                  child: const Center(
-                    child: CircularProgressIndicator(strokeWidth: 2),
+              Stack(
+                children: [
+                  CachedNetworkImage(
+                    imageUrl: link.imageUrl!,
+                    height: 160.h,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => Container(
+                      height: 160.h,
+                      color: isDark
+                          ? Colors.white10
+                          : Colors.black.withOpacity(0.05),
+                      child: const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      height: 160.h,
+                      color: isDark
+                          ? Colors.white10
+                          : Colors.black.withOpacity(0.05),
+                      child: const Center(child: Icon(Icons.link_off)),
+                    ),
                   ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  height: 160.h,
-                  color: isDark
-                      ? Colors.white10
-                      : Colors.black.withOpacity(0.05),
-                  child: const Center(child: Icon(Icons.link_off)),
-                ),
+                  // Optional: Subtle gradient overlay for better text readability
+                  Positioned(
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    child: Container(
+                      height: 40.h,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.transparent,
+                            Colors.black.withOpacity(0.1),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
 
             Padding(
-              padding: EdgeInsets.all(12.w),
+              padding: EdgeInsets.all(16.w),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Domain and favicon
                   Row(
                     children: [
-                      if (link.faviconUrl != null)
+                      if (link.faviconUrl != null &&
+                          link.faviconUrl!.isNotEmpty)
                         CachedNetworkImage(
                           imageUrl: link.faviconUrl!,
-                          width: 16.w,
-                          height: 16.w,
+                          width: 18.w,
+                          height: 18.w,
                           placeholder: (context, url) =>
-                              Icon(Icons.language, size: 16.sp),
+                              Icon(Icons.language, size: 18.sp),
                           errorWidget: (context, url, error) =>
-                              Icon(Icons.language, size: 16.sp),
+                              Icon(Icons.language, size: 18.sp),
                         )
                       else
                         Icon(
                           Icons.language,
-                          size: 16.sp,
-                          color: AppColors.textMuted,
+                          size: 18.sp,
+                          color: isDark
+                              ? AppColors.linkColorDark
+                              : AppColors.linkColorLight,
                         ),
-                      SizedBox(width: 8.w),
-                      Text(
-                        link.domain,
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.textMuted,
+                      SizedBox(width: 10.w),
+                      Expanded(
+                        child: Text(
+                          link.domain,
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: isDark
+                                    ? AppColors.secondaryTextDark
+                                    : AppColors.textMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Spacer(),
+                      SizedBox(width: 8.w),
                       if (onDelete != null)
-                        IconButton(
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: Icon(
-                            Icons.close,
-                            size: 16.sp,
-                            color: AppColors.textMuted,
+                        SizedBox(
+                          width: 28.w,
+                          height: 28.w,
+                          child: IconButton(
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: Icon(
+                              Icons.close_rounded,
+                              size: 18.sp,
+                              color: isDark
+                                  ? Colors.white.withOpacity(0.6)
+                                  : Colors.grey.shade500,
+                            ),
+                            onPressed: onDelete,
                           ),
-                          onPressed: onDelete,
                         ),
                     ],
                   ),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: 12.h),
 
                   // Title
                   Text(
                     link.title,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -198,11 +225,14 @@ class LinkPreviewWidget extends StatelessWidget {
                   // Description
                   if (link.description != null &&
                       link.description!.isNotEmpty) ...[
-                    SizedBox(height: 4.h),
+                    SizedBox(height: 8.h),
                     Text(
                       link.description!,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: AppColors.textMuted,
+                        color: isDark
+                            ? AppColors.secondaryTextDark.withOpacity(0.8)
+                            : AppColors.textMuted,
+                        height: 1.4,
                       ),
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
@@ -254,8 +284,8 @@ class _LinkInputFieldState extends State<LinkInputField> {
       return;
     }
 
-    if (!UrlValidator.isValidUrl(url) &&
-        !UrlValidator.isValidUrl(UrlValidator.normalizeUrl(url))) {
+    if (!UrlValidatorUtil.isValidUrl(url) &&
+        !UrlValidatorUtil.isValidUrl(UrlValidatorUtil.normalizeUrl(url))) {
       setState(() => _urlError = 'Invalid URL format');
       return;
     }
@@ -266,13 +296,13 @@ class _LinkInputFieldState extends State<LinkInputField> {
     });
 
     try {
-      final normalizedUrl = UrlValidator.normalizeUrl(url);
+      final normalizedUrl = UrlValidatorUtil.normalizeUrl(url);
 
       // In a real app, we would use AnyLinkPreview to fetch metadata
 
       final preview = LinkPreview(
         url: normalizedUrl,
-        title: UrlValidator.getDisplayUrl(normalizedUrl),
+        title: UrlValidatorUtil.getDisplayUrl(normalizedUrl),
         description: 'Link preview',
         createdAt: DateTime.now(),
       );

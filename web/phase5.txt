@@ -1,0 +1,1134 @@
+═══════════════════════════════════════════════════════════════════════════════════════
+                    PHASE 5: BUSINESS LOGIC EXTRACTION
+═══════════════════════════════════════════════════════════════════════════════════════
+
+## 5.1 - EVERY SERVICE CLASS
+
+### Core Infrastructure Services
+
+#### 1. AppLogger Service
+**File**: lib/core/services/app_logger.dart  
+**Purpose**: Centralized logging and debugging
+**Methods**:
+- `i(String message)` → void (Info)
+- `d(String message)` → void (Debug)
+- `w(String message)` → void (Warn)
+- `e(String message, [Exception? ex])` → void (Error)
+- `v(String message)` → void (Verbose)
+- `wtf(String message)` → void (What a Terrible Failure)
+**Usage**: `AppLogger.i('Message')` throughout app
+**Output**: Console + log file (if enabled)
+
+#### 2. BiometricAuthService
+**File**: lib/core/services/biometric_auth_service.dart (165 lines)  
+**Purpose**: Biometric authentication (fingerprint, face ID)
+**Methods**:
+- `isBiometricAvailable() → Future<bool>` - Check device capability
+- `getAvailableBiometrics() → Future<List<BiometricType>>` - Get types (FINGERPRINT, FACE, etc.)
+- `authenticate({reason, useErrorDialogs, stickyAuth}) → Future<bool>` - Perform auth
+- `isBiometricEnabled() → Future<bool>` - Check if user enabled
+- `enableBiometric() → Future<void>` - Save preference
+- `disableBiometric() → Future<void>` - Disable
+- `isAuthRequired({timeout = 5 mins}) → Future<bool>` - Check if re-auth needed
+- `getBiometricTypeName(types) → String` - Human readable type
+**Dependencies**: 
+- `local_auth` (platform)
+- `SharedPreferences` (storage)
+**Error Handling**: Throws custom exceptions with user-friendly messages
+**Called By**: BiometricAuthBloc, ReflectionHomeScreen, SettingsBloc
+
+#### 3. LocationService
+**File**: lib/core/services/location_service.dart (200+ lines)  
+**Purpose**: GPS location tracking and geofencing
+**Methods**:
+- `requestLocationPermission() → Future<PermissionStatus>`
+- `getCurrentLocation() → Future<LocationData?>` - Single location read
+- `getPositionStream() → Stream<Position>` - Continuous location updates
+- `calculateDistance(lat1, lon1, lat2, lon2) → double` - Distance in meters
+- `isInRadius(currentPos, refPos, radius) → bool` - Proximity check
+- `startLocationTracking() → void` - Begin background tracking
+- `stopLocationTracking() → void` - Stop tracking
+- `markLocationAsFavorite(name, lat, lng) → Future<void>`
+- `getSavedLocations() → Future<List<SavedLocation>>`
+**Dependencies**:
+- `geolocator` (location)
+- `service_locator` (DI)
+**Permissions**: 
+- LOCATION (fine/coarse)
+- BACKGROUND_LOCATION_UPDATES
+**Called By**: GeofenceService, LocationReminderScreen, LocationReminderBloc
+**Performance**: Battery intensive - only run when actively using feature
+
+#### 4. SpeechService
+**File**: lib/core/services/speech_service.dart (250+ lines)  
+**Purpose**: Speech-to-text transcription
+**Methods**:
+- `initialize() → Future<bool>` - Initialize speech recognizer
+- `startListening({onResult, onError}) → Future<void>` - Start recording
+- `stopListening() → Future<void>` - Stop and finalize
+- `cancelListening() → Future<void>` - Discard
+- `getLanguages() → Future<List<LocaleName>>` - Available languages
+- `setSpeechRate(rate) → Future<void>` - 0.0-2.0
+- `getStatusStream() → Stream<String>` - Real-time status
+**Dependencies**:
+- `speech_to_text` (Google Cloud)
+- `permission_handler` (RECORD_AUDIO)
+**Permissions**: RECORD_AUDIO
+**Integration Points**:
+- GlobalSearchScreen (voice search)
+- EnhancedNoteEditorScreen (voice input)
+- FixedUniversalQuickAddScreen (voice create)
+**Note**: Requires internet for transcription
+
+#### 5. OCRService (Optical Character Recognition)
+**File**: lib/core/services/ocr_service.dart (150+ lines)  
+**Purpose**: Extract text from images/PDFs/documents
+**Methods**:
+- `extractTextFromImage(imagePath) → Future<String>`
+  - Uses google_mlkit_text_recognition
+  - Recognizes text orientation
+- `extractTextFromPDF(pdfPath) → Future<String>`
+  - Page-by-page extraction
+- `extractTextFromDocument(docPath) → Future<String>`
+  - Word/PowerPoint/etc. support (if available)
+- `processAndClean(rawText) → String` - Format extracted text
+**Dependencies**:
+- `google_mlkit_text_recognition` (on-device)
+- `pdf` (PDF handling)
+**Permissions**: None (offline ML)
+**Performance**: Runs on-device, no internet required
+**Called By**: DocumentScanScreen, OCRExtractionScreen
+
+#### 6. AudioRecorderService
+**File**: lib/core/services/audio_recorder_service.dart  
+**Purpose**: Record audio files
+**Methods**:
+- `requestPermission() → Future<PermissionStatus>`
+- `startRecording(outputPath) → Future<void>`
+- `stopRecording() → Future<String?>` - Returns file path
+- `pauseRecording() → Future<void>`
+- `resumeRecording() → Future<void>`
+- `cancelRecording() → Future<void>`
+- `getAmplitude() → Stream<double>` - Real-time level
+**Dependencies**:
+- `record` (audio recording)
+- `permission_handler` (RECORD_AUDIO)
+**Permissions**: RECORD_AUDIO, WRITE_EXTERNAL_STORAGE
+**Output Format**: MP4, WAV, M4A
+**Called By**: AudioRecorderScreen, EnhancedNoteEditorScreen
+
+#### 7. MediaProcessingService
+**File**: lib/core/services/media_processing_service.dart (300+ lines)  
+**Purpose**: Image/video compression, resizing, filtering
+**Methods**:
+- `compressImage(imagePath, {quality}) → Future<String>` - Smaller JPEG
+- `resizeImage(imagePath, width, height) → Future<String>`
+- `cropImage(imagePath, rect) → Future<String>`
+- `rotateImage(imagePath, degrees) → Future<String>`
+- `applyFilter(imagePath, filterType) → Future<String>` - Brightness, saturation, etc.
+- `compressVideo(videoPath, quality) → Future<String>` - Video compression
+- `getThumbnail(filePath, {size}) → Future<Uint8List>` - Generate thumbnail
+- `generateThumbnails(videoPath) → Future<List<Uint8List>>` - Multiple frames
+**Dependencies**:
+- `image` (image manipulation)
+- `video_compress`
+- `image_gallery_saver`
+**Performance**: CPU intensive - should run on isolate
+**Called By**: MediaPickerBloc, MediaProcessor, EnhancedNoteEditorScreen
+
+#### 8. BackupService
+**File**: lib/core/services/backup_service.dart (200+ lines)  
+**Purpose**: Create backups of data and media
+**Backup Types**:
+```dart
+enum BackupType { full, dataOnly, mediaOnly }
+```
+**Methods**:
+- `createBackup(BackupType type) → Future<String>` - Returns backup path
+  - `full`: Database + all media + settings
+  - `dataOnly`: Database + settings only
+  - `mediaOnly`: Only media files
+- `restoreBackup(filePath) → Future<void>` - Restore from file
+- `getBackupSize(type) → Future<int>` - Size in bytes
+- `scheduleAutoBackup(frequency) → Future<void>` - Daily/weekly/monthly
+- `deleteBackup(filePath) → Future<void>`
+- `listBackups() → Future<List<BackupFile>>`
+**Format**: ZIP compressed
+**Location**: Device storage (Downloads, Documents, etc.)
+**Called By**: BackupExportBloc, SettingsBloc
+
+#### 9. ExportService
+**File**: lib/core/services/export_service.dart (250+ lines)  
+**Purpose**: Export notes to various formats
+**Export Formats**:
+```dart
+enum ExportFormat { json, csv, pdf, markdown, html, plainText }
+```
+**Methods**:
+- `exportNotes(List<Note> notes, format) → Future<String>` - File path
+- `exportNoteToPdf(Note note) → Future<String>`
+- `exportToMarkdown(Note note) → Future<String>`
+- `exportToJson(items) → Future<String>`
+- `exportToCsv(items) → Future<String>`
+**Dependencies**:
+- `pdf` (PDF generation)
+- `markdown` (markdown support)
+**Called By**: ExportBloc, EnhancedNoteEditorScreen
+
+#### 10. NotificationService
+**File**: lib/core/notifications/notification_service.dart (350+ lines)  
+**Purpose**: Local notifications
+**Methods**:
+- `init(alarmService) → Future<void>`
+- `showNotification({id, title, body, ...}) → Future<void>`
+- `scheduleNotification({datetime, title, body, ...}) → Future<void>`
+- `cancelNotification(id) → Future<void>`
+- `cancelAll() → Future<void>`
+**Dependencies**:
+- `awesome_notifications` (Android >= 8)
+- `flutter_local_notifications` (fallback)
+**Integration**: Works with AlarmService for background alarms
+**Channels**: ("alarms", "notes", "reminders", "focus", etc.)
+**Actions**: Snooze (5m, 10m, 15m), Dismiss, Open
+**Called By**: AlarmBloc, ReminderBloc, FocusBloc
+
+#### 11. AlarmService (Background Alarms)
+**File**: lib/core/notifications/alarm_service.dart (200+ lines)  
+**Purpose**: Background alarm scheduling (app killed)
+**Methods**:
+- `init() → Future<void>`
+- `scheduleAlarm(id, datetime, title) → Future<void>`
+  - Uses `android_alarm_manager_plus`
+- `cancelAlarm(id) → Future<void>`
+- `rescheduleRecurring(Alarm alarm) → Future<void>`
+**Background Entry Point**:
+```dart
+@pragma('vm:entry-point')
+void alarmCallback() {
+  // Runs in isolate even when app is killed
+  // Initializes services and shows notification
+}
+```
+**Called By**: AlarmBloc, RemindersBloc
+**Challenge**: Must be initialized in isolate (no BuildContext access)
+
+#### 12. GeofenceService
+**File**: lib/core/services/geofence_service.dart (350+ lines)  
+**Purpose**: Monitor location against saved geofences
+**Methods**:
+- `addGeofence(id, lat, lng, radius, message) → Future<void>`
+- `removeGeofence(id) → Future<void>`
+- `checkProximity(currentLat, lng, geofenceId) → bool`
+- `startMonitoring(geofences) → Stream<GeofenceEvent>`
+  ```dart
+  enum GeofenceState { enter, exit }
+  class GeofenceEvent {
+    String geofenceId;
+    GeofenceState state; // enter or exit
+  }
+  ```
+- `onGeofenceTriggered(event) → Future<void>` - Show notification
+
+#### 13. PermissionService
+**File**: lib/core/services/permission_service.dart  
+**Purpose**: Unified permission handling
+**Methods**:
+- `checkPermission(Permission perm) → Future<PermissionStatus>`
+- `requestPermission(Permission perm) → Future<PermissionStatus>`
+- `requestMultiple(List<Permission>) → Future<Map<Permission, PermissionStatus>>`
+- `openAppSettings() → Future<bool>` - Direct to settings
+- `shouldShowRationaleFor(Permission) → Future<bool>`
+**Permissions Handled**:
+- CAMERA (document scan, photos)
+- MICROPHONE (voice, audio record)
+- LOCATION (geofence, maps)
+- STORAGE (media picker, backup)
+- CALENDAR (calendar sync)
+- CONTACTS (if applicable)
+- BIOMETRIC (fingerprint)
+**Called By**: Almost every service and screen
+
+#### 14. SharingService
+**File**: lib/core/services/sharing_service.dart (200+ lines)  
+**Purpose**: Share notes with other apps
+**Methods**:
+- `shareAsText(Note note) → Future<void>` - Copy to clipboard
+- `shareAsImage(Note note) → Future<void>` - Screenshot
+- `shareAsFile(filePath) → Future<void>` - Via share sheet
+- `openFile(filePath) → Future<void>` - External app
+- `openLink(url) → Future<void>` - Browser
+**Integration**: Native share sheet
+**Called By**: Context menu, detail screens
+
+#### 15. CalendarService
+**File**: lib/core/services/calendar_service.dart  
+**Purpose**: Device calendar integration
+**Methods**:
+- `requestCalendarPermission() → Future<PermissionStatus>`
+- `getCalendars() → Future<List<Calendar>>`
+- `createEvent(title, date, ...) → Future<String>` - Event ID
+- `updateEvent(id, title, date, ...) → Future<void>`
+- `deleteEvent(id) → Future<void>`
+- `getCalendarEvents(date) → Future<List<CalendarEvent>>`
+**Dependencies**:
+- `device_calendar` (platform)
+**Sync**: One-way (notes → calendar)
+**Called By**: CalendarIntegrationBloc, TodoListScreen
+
+#### 16. SettingsService & Theme Services
+**File**: lib/core/services/settings_service.dart, lib/core/services/theme_customization_service.dart  
+**Purpose**: Preference management
+**Methods**:
+- `getSetting<T>(key) → T?`
+- `setSetting<T>(key, value) → Future<void>`
+- `getAllSettings() → Map<String, dynamic>`
+- `resetSettings() → Future<void>`
+**Theme Methods**:
+- `setThemeType(AppThemeType) → Future<void>`
+- `setFontSize(double scale) → Future<void>` - 0.8 to 1.5
+- `setAccentColor(Color) → Future<void>`
+- `enableDarkMode(bool) → Future<void>`
+**Storage**: SharedPreferences (synchronously available)
+
+#### 17. ClipboardService
+**File**: lib/core/services/clipboard_service.dart  
+**Purpose**: Clipboard monitoring
+**Methods**:
+- `startMonitoring() → Stream<String>` - Watch for changes
+- `copy(String text) → Future<void>`
+- `paste() → Future<String>`
+**Permissions**: CLIPBOARD (Android)
+**Use Case**: Auto-link when URL copied to clipboard
+**Called By**: SplashScreen (monitors for link parsing)
+
+#### 18. ConnectivityService
+**File**: lib/core/services/connectivity_service.dart  
+**Purpose**: Monitor internet connection
+**Methods**:
+- `initialize() → void`
+- `onConnectivityChanged() → Stream<ConnectivityResult>`
+- `hasInternetConnection() → Future<bool>`
+- `getConnectionType() → Future<ConnectivityResult>`
+**Dependencies**:
+- `connectivity_plus`
+**Called By**: GlobalUiService, Services requiring internet
+
+#### 19. GlobalUiService
+**File**: lib/core/services/global_ui_service.dart (250+ lines)  
+**Purpose**: Global UI interactions (snackbars, dialogs, haptics)
+**Methods**:
+- `showSnackbar(message, {duration, color}) → void`
+- `showErrorSnackbar(error) → void`
+- `showSuccessSnackbar(message) → void`
+- `showDialog({title, content, buttons}) → Future<bool>`
+- `showLoadingDialog(message) → void`
+- `hideLoadingDialog() → void`
+- `triggerHaptic(HapticType type) → Future<void>`
+- `requestReview() → void`
+**Haptic Types**:
+```dart
+enum HapticType { light, medium, heavy, success, warning, error, selection }
+```
+**Called By**: Every BLoC and screen for user feedback
+
+#### 20. AutoLockService
+**File**: lib/core/services/auto_lock_service.dart  
+**Purpose**: App lock timeout
+**Methods**:
+- `setAutoLockDuration(Duration) → void`
+- `resetTimer() → void`
+- `startTimer() → void`
+- `lockApp() → void`
+- `unlockApp() → void`
+- `onAppPaused() → void`
+- `onAppResumed() → void`
+**Integration**: AppLifecycleListener
+**Called By**: MainApp on lifecycle changes
+
+---
+
+## 5.2 - DOMAIN SERVICES (Business Logic)
+
+#### SmartCollectionsService
+**File**: lib/domain/services/smart_collections_service.dart  
+**Purpose**: Smart collection rule evaluation
+**Methods**:
+- `evaluateRule(item, rule) → bool` - Check if item matches
+- `evaluateCollection(item, collections) → List<String>` - Which collections match
+- `updateCollectionCounts(items) → Map<String, int>` - Cache counts
+**Logic**: 
+```dart
+// Example rule matching
+if (rule.type == 'priority' && rule.operator == 'equals') {
+  return item.priority == int.parse(rule.value);
+}
+if (rule.type == 'tag' && rule.operator == 'contains') {
+  return item.tags.contains(rule.value);
+}
+if (rule.type == 'date' && rule.operator == 'lessThan') {
+  return item.dueDate?.isBefore(DateTime.parse(rule.value)) ?? false;
+}
+```
+
+#### SmartRemindersService
+**File**: lib/domain/services/smart_reminders_service.dart  
+**Purpose**: AI-powered suggestion engine
+**Methods**:
+- `suggestReminders(notes, todos) → List<ReminderSuggestion>`
+- `analyzePatterns(history) → Pattern`
+- `scoreReminder(reminder) → double` - Relevance 0.0-1.0
+**Algorithms**:
+- Frequency-based (if user creates notes often, suggest more reminders)
+- Time-based (suggest at times when user is active)
+- Content-based (suggest by keywords)
+
+#### AdvancedSearchRankingService
+**File**: lib/domain/services/advanced_search_ranking_service.dart  
+**Purpose**: Search result ranking
+**Methods**:
+- `rankResults(items, query) → List<Ranked<T>>`
+- `calculateRelevance(item, query) → double`
+- `applyFilters(items, filters) → List<T>`
+**Ranking Factors**:
+- Title match (weight: 3.0)
+- Content match (weight: 2.0)
+- Tag match (weight: 1.5)
+- Recency (weight: 1.0)
+- Pinned status (weight: 2.0)
+
+#### RuleEvaluationEngine
+**File**: lib/domain/services/rule_evaluation_engine.dart  
+**Purpose**: Evaluate smart collection rules
+**Methods**:
+- `evaluate(rule, item) → bool`
+- `evaluateAll(rules, item, logic) → bool` - AND/OR logic
+**Operators Supported**:
+- equals, notEquals
+- contains, notContains
+- greaterThan, lessThan
+- startsWith, endsWith
+- between
+
+#### AISupggestionEngine (Placeholder)
+**File**: lib/domain/services/ai_suggestion_engine.dart  
+**Purpose**: AI-powered content suggestions
+**Note**: Currently placeholder, would need:
+- OpenAI API integration
+- Local ML model (TensorFlow Lite)
+- Caching of suggestions
+
+---
+
+## 5.3 - UTILITIES & HELPERS
+
+### Utility Functions (lib/core/utils/)
+
+#### app_utils.dart
+**Functions**:
+```dart
+// File operations
+String getFileExtension(String filePath)
+String getFileNameWithoutExtension(String filePath)
+bool isImageFile(String filePath)  // jpg, png, gif, etc.
+bool isVideoFile(String filePath)  // mp4, mov, avi, etc.
+bool isAudioFile(String filePath)  // mp3, wav, aac, etc.
+String generateUniqueFileName(String extension)
+
+// Date/Time
+String formatDate(DateTime date) // Jul 15, 2024
+String formatTime(DateTime time) // 2:30 PM
+String getRelativeTime(DateTime date) // "2 hours ago"
+DateTime parseString(String dateString)
+```
+
+#### date_time_utils.dart
+**Functions**:
+```dart
+bool isToday(DateTime date)
+bool isYesterday(DateTime date)
+bool isThisWeek(DateTime date)
+bool isThisMonth(DateTime date)
+bool isOverdue(DateTime dueDate)
+int daysUntil(DateTime date)
+String formatDuration(Duration d) // "2h 30m"
+```
+
+#### string_extensions.dart
+**Extensions**:
+```dart
+extension StringX on String {
+  bool get isEmail => contains('@');
+  bool get isUrl => startsWith('http');
+  String get capitalize => isEmpty ? '' : '${this[0].toUpperCase()}${substring(1)}';
+  String get toTitleCase => split(' ').map((e) => e.capitalize).join(' ');
+  String truncate(int length) => length < this.length ? substring(0, length - 3) + '...' : this;
+  String bold => '**$this**';  // Markdown
+  String italic => '*$this*';
+}
+```
+
+#### date_extensions.dart
+**Extensions**:
+```dart
+extension DateTimeX on DateTime {
+  DateTime get startOfDay => DateTime(year, month, day);
+  DateTime get endOfDay => DateTime(year, month, day, 23, 59, 59);
+  bool get isLeapYear => (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0));
+  int get weekOfYear => // ISO 8601 week number
+  DateTime get nextDay => add(Duration(days: 1));
+  DateTime get previousDay => subtract(Duration(days: 1));
+}
+```
+
+#### color_extensions.dart
+**Extensions**:
+```dart
+extension ColorX on Color {
+  String toHex() => '#${value.toRadixString(16).padLeft(8, '0')}';
+  Color withOpacity(double opacity) => withAlpha((opacity * 255).toInt());
+  bool get isDarkColor => computeLuminance() < 0.5;
+}
+```
+
+#### list_extensions.dart
+**Extensions**:
+```dart
+extension ListX<T> on List<T> {
+  T? get firstOrNull => isEmpty ? null : first;
+  T? get lastOrNull => isEmpty ? null : last;
+  List<T> distinct() => toSet().toList();
+  List<List<T>> chunk(int size) => ...
+  T? firstWhereOrNull(bool Function(T) test) => ...
+}
+```
+
+---
+
+## 5.4 - ENUMERATIONS & CONSTANTS
+
+### Enums (lib/core/)
+
+```dart
+// Note color
+enum NoteColor {
+  defaultColor, red, pink, purple, blue, green, yellow, orange, brown, grey
+}
+
+// Todo
+enum TodoPriority { low, medium, high, urgent }
+enum TodoCategory { personal, work, shopping, health, finance, education, home }
+enum TodoFilter { all, active, completed, overdue, today, thisWeek }
+enum TodoSortOption { dueDate, priority, category, createdDate, alphabetical }
+
+// Theme
+enum AppThemeType { system, light, dark, ocean, forest, sunset, midnight }
+enum AppFontFamily { quicksand, roboto, playfair, lato }
+enum FontSizeScale { small, normal, large, extraLarge }
+
+// Backup
+enum BackupType { full, dataOnly, mediaOnly }
+
+// Alarm
+enum AlarmSound {
+  default_, bell, chime, notification, alarm, digital,
+  bird, cat, clock, door, glass, horn, notification2, piano, pong, startup,
+  voiceOver, water, whistle
+}
+
+// Voice
+enum ItemType { note, todo, reminder }
+enum SuggestionType { todo, reminder, linkedNote, template }
+
+// Notifications
+enum NotificationPriority { low, normal, medium, high }
+enum NotificationType { note, todo, reminder }
+
+// DND
+enum DndMode { off, alarms, all }
+
+// Haptics
+enum HapticType { light, medium, heavy, success, warning, error, selection }
+
+// Location
+enum GeofenceState { enter, exit }
+
+// Export
+enum ExportFormat { json, csv, pdf, markdown, html, plainText }
+
+// Reflection question frequency
+enum ReflectionFrequency { daily, weekly, monthly, custom }
+```
+
+### App Constants (lib/core/constants/)
+
+```dart
+class AppConstants {
+  // Timeouts
+  static const Duration dbTimeout = Duration(seconds: 10);
+  static const Duration apiTimeout = Duration(seconds: 30);
+  static const Duration dialogDuration = Duration(milliseconds: 300);
+  static const Duration animationDuration = Duration(milliseconds: 400);
+
+  // Storage
+  static const String notesTableName = 'notes';
+  static const String todosTableName = 'todos';
+  // ... 18 tables
+
+  // Features
+  static const bool enableFTS = false; // Full-text search disabled
+  static const bool enableSmartReminders = true;
+  static const bool enableSmartCollections = true;
+
+  // Limits
+  static const int maxMediaPerNote = 50;
+  static const int maxSubtasksPerTodo = 20;
+  static const int maxTagsPerNote = 10;
+  static const int noteTitleMaxLength = 500;
+  static const int noteContentMaxLength = 100000; // ~100KB text
+
+  // API (if implemented)
+  static const String apiBaseUrl = 'https://api.example.com';
+  static const Duration apiRetryDelay = Duration(seconds: 2);
+  static const int apiMaxRetries = 3;
+
+  // Geofencing
+  static const double defaultGeofenceRadius = 100.0; // meters
+  static const int geofenceCheckIntervalSeconds = 10;
+
+  // Directories
+  static const String backupDirectory = 'mynotes_backups';
+  static const String mediaDirectory = 'mynotes_media';
+  static const String cacheDirectory = 'mynotes_cache';
+}
+```
+
+---
+
+## 5.5 - AUTHENTICATION FLOW (Local Only, No Login)
+
+### Current Implementation: Auto-Authentication
+
+Since the app is local-only with no cloud backend, authentication is minimal:
+
+```
+App Launch
+  │
+  ├─> SplashScreen (entry point)
+  │   │
+  │   └─> _initializeApp():
+  │       ├─> Check SharedPreferences: firstRunComplete?
+  │       │
+  │       ├─> If YES (returning user):
+  │       │   ├─> Check biometric_enabled setting
+  │       │   │
+  │       │   ├─> If YES:
+  │       │   │   ├─> Load BiometricLockScreen
+  │       │   │   └─> User taps/uses face/fingerprint
+  │       │   │       ├─> BiometricAuthService.authenticate()
+  │       │   │       │   └─> Uses local_auth:
+  │       │   │       │       └─> Platform queries biometric hardware
+  │       │   │       │           (No server involved)
+  │       │   │       └─> If successful:
+  │       │   │           ├─> Update last_auth_time
+  │       │   │           └─> Navigate to MainHomeScreen
+  │       │   │
+  │       │   └─> If NO (biometric disabled):
+  │       │       └─> Navigate directly to MainHomeScreen
+  │       │
+  │       └─> If NO (first run):
+  │           └─> Show OnboardingScreen
+  │               └─> User completes onboarding
+  │                   └─> setFirstRunComplete = true
+  │                   └─> Navigate to MainHomeScreen
+  │
+  └─> MainHomeScreen (main app)
+      │
+      └─> User can enable biometric in Settings
+          └─> ToggleBiometricEvent
+              └─> SettingsBloc._onToggleBiometric()
+                  └─> BiometricService.enableBiometric()
+                      └─> Save to SharedPreferences
+```
+
+### BioMetric Authentication Details
+
+**BiometricLockScreen Flow**:
+```dart
+// 1. Check available biometrics
+BiometricAuthBloc.add(CheckBiometricsEvent())
+  └─> BiometricAuthService.getAvailableBiometrics()
+      └─> local_auth.getAvailableBiometrics()
+          └─> Queries device hardware
+              └─> Returns [FACE, FINGERPRINT, IRIS, etc.]
+
+// 2. User initiates auth
+BiometricAuthBloc.add(AuthenticateEvent())
+  └─> BiometricAuthService.authenticate(
+       reason: 'Unlock your notes'
+     )
+      └─> local_auth.authenticate()
+          └─> Platform-specific:
+              ├─> Android: Shows fingerprint/face dialog
+              └─> iOS: Uses BiometricKit SDK
+                  └─> If success: return true
+                  └─> If fail: return false
+
+// 3. On success
+emit(BiometricAuthenticated())
+  └─> Update last_auth_time
+  └─> Navigate to MainHomeScreen
+
+// 4. On failure
+emit(BiometricAuthFailure(message: '...'))
+  └─> Offer retry
+  └─> After N attempts, suggest PIN fallback
+```
+
+### PIN Authentication (Fallback)
+```dart
+// PIN is stored locally, not hashed
+// Stored in SharedPreferences under key: 'pin_code'
+
+PINSetupScreen:
+  └─> User enters 4-6 digit PIN
+  └─> Confirm PIN re-entry
+  └─> Save to SharedPreferences
+
+// On app lock, fallback to PIN entry:
+BiometricLockScreen:
+  └─> If user taps "Use PIN"
+  └─> Show PIN entry dialog
+  └─> Verify against stored value
+  └─> If correct: unlock
+```
+
+### Security Issues ⚠️
+1. **PIN stored in plain text** (should hash with bcrypt)
+2. **No encryption at rest** (should use flutter_secure_storage or SQLCipher)
+3. **No session tokens** (local-only, acceptable)
+4. **No API authentication** (no backend)
+5. **Biometric data not encrypted** (managed by OS)
+
+---
+
+## 5.6 - NAVIGATION & ROUTING
+
+### Routing Architecture: Navigator 1.0 (Material)
+
+**App Entry**:
+```dart
+// main.dart
+MaterialApp(
+  home: SplashScreen(),
+  onGenerateRoute: AppRouter.onGenerateRoute,
+  initialRoute: AppRoutes.splash,
+  // ... other settings
+)
+```
+
+**Route Registration**:
+```dart
+// lib/core/routes/app_routes.dart
+static const String splash = '/';
+static const String home = '/home';
+static const String notesList = '/notes';
+static const String noteEditor = '/notes/editor';
+// ... 100+ routes
+```
+
+**Route Generation**:
+```dart
+// lib/core/routes/app_router.dart
+static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+  switch (settings.name) {
+    case AppRoutes.splash:
+      return MaterialPageRoute(builder: (_) => const SplashScreen());
+    
+    case AppRoutes.home:
+      return MaterialPageRoute(builder: (_) => const MainHomeScreen());
+    
+    case AppRoutes.notesList:
+      return MaterialPageRoute(builder: (_) => 
+        BlocProvider(
+          create: (_) => getIt<NotesBloc>(),
+          child: const EnhancedNotesListScreenRefactored(),
+        )
+      );
+    
+    case AppRoutes.noteEditor:
+      final args = settings.arguments as Note?;
+      return MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => getIt<NoteEditorBloc>(),
+          child: EnhancedNoteEditorScreen(note: args),
+        )
+      );
+    
+    // ... 98 more cases
+    
+    default:
+      return MaterialPageRoute(
+        builder: (_) => Scaffold(
+          body: Center(child: Text('No route found: ${settings.name}')),
+        ),
+      );
+  }
+}
+```
+
+### Navigation Methods
+
+**Push (new screen)**:
+```dart
+context.read<NavigationBloc>().add(
+  NavigateEvent(AppRoutes.noteEditor, arguments: note)
+);
+// OR
+Navigator.of(context).pushNamed(AppRoutes.noteEditor, arguments: note);
+```
+
+**Pop (go back)**:
+```dart
+Navigator.of(context).pop();
+```
+
+**Replace (replace current screen)**:
+```dart
+Navigator.of(context).pushReplacementNamed(AppRoutes.home);
+```
+
+**Push and Remove Until (clear stack)**:
+```dart
+Navigator.of(context).pushNamedAndRemoveUntil(
+  AppRoutes.home,
+  (Route<dynamic> route) => false, // Remove all
+);
+```
+
+### Deep Linking (If Implemented)
+
+**Not currently implemented** but would handle:
+```
+mynotes://note/abc123 → Open specific note
+mynotes://search?q=flutter → Search with query
+mynotes://reflection/2024-01-15 → Open reflection by date
+```
+
+### Bottom Navigation / TabBars
+
+**MainHomeScreen** uses PageView with 7 tabs:
+```dart
+PageView(
+  onPageChanged: (index) {
+    NotesBloc.add(TabChangedEvent(index));
+  },
+  children: [
+    TodayDashboardScreen(),      // 0
+    EnhancedNotesListScreen(),   // 1
+    EnhancedTodosListScreen(),   // 2
+    RemindersListScreen(),       // 3
+    ReflectionHomeScreen(),      // 4
+    LocationReminderScreen(),    // 5
+    IntegratedFeaturesScreen(),  // 6
+  ],
+)
+```
+
+### Navigation Issues & Anti-Patterns
+
+⚠️ **Current Problems**:
+1. **app_router.dart is 645 lines** - Monolithic switch statement
+2. **No route guards** - Anyone can navigate anywhere
+3. **No middleware** - No logging/analytics on navigation
+4. **Arguments type-unsafe** - Uses dynamic casting
+5. **No animations** - All routes use MaterialPageRoute (slide)
+
+✅ **Could Improve With**:
+- [x] GoRouter (routes as tree, deeplinking)
+- [x] AutoRoute (code generation)
+- [x] GetX (easier syntax)
+- [x] Route guards (require authentication)
+- [x] Named transitions (custom animations per route)
+
+---
+
+## 5.7 - COMPLETE UTILITY & EXTENSION FUNCTIONS
+
+### String Extensions
+Location: lib/core/extensions/string_extensions.dart
+
+```dart
+extension StringX on String {
+  // Validation
+  bool get isValidEmail => RegExp(r'^[^@]+@[^@]+\.[^@]+$').hasMatch(this);
+  bool get isValidUrl => startsWith('http://') || startsWith('https://');
+  bool get isValidDate => DateTime.tryParse(this) != null;
+  
+  // Formatting
+  String get capitalize => isEmpty ? '' : '${this[0].toUpperCase()}${substring(1)}';
+  String get toCamelCase {
+    List<String> words = split(' ');
+    return words.asMap().entries.map((entry) {
+      return entry.key == 0
+        ? entry.value.toLowerCase()
+        : entry.value.capitalize;
+    }).join();
+  }
+  String get toTitleCase => split(' ').map((e) => e.capitalize).join(' ');
+  String get toSnakeCase => replaceAll(RegExp(r'(?<=[a-z])[A-Z]'), '_$0').toLowerCase();
+  
+  // Truncation
+  String truncate(int length, {String suffix = '...'}) =>
+    length < this.length ? substring(0, length - suffix.length) + suffix : this;
+  
+  // Markdown
+  String get bold => '**$this**';
+  String get italic => '*$this*';
+  String get code => '`$this`';
+  String link(String url) => '[$this]($url)';
+  
+  // Parsing
+  List<String> splitByWhitespace() => split(RegExp(r'\s+'));
+  bool containsIgnoreCase(String text) => toLowerCase().contains(text.toLowerCase());
+  
+  // Cleaning
+  String get trimWhitespace => replaceAll(RegExp(r'\s+'), ' ').trim();
+  String removeAllWhitespace() => replaceAll(RegExp(r'\s'), '');
+  String removeSpecialCharacters() => replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
+}
+```
+
+### DateTime Extensions
+Location: lib/core/extensions/date_time_extensions.dart
+
+```dart
+extension DateTimeX on DateTime {
+  // Boundaries
+  DateTime get startOfDay => DateTime(year, month, day);
+  DateTime get endOfDay => DateTime(year, month, day, 23, 59, 59, 999, 999);
+  DateTime get startOfWeek => subtract(Duration(days: weekday - 1));
+  DateTime get endOfWeek => add(Duration(days: 7 - weekday));
+  DateTime get startOfMonth => DateTime(year, month);
+  DateTime get endOfMonth => DateTime(year, month + 1).subtract(Duration(days: 1));
+  DateTime get startOfYear => DateTime(year);
+  DateTime get endOfYear => DateTime(year, 12, 31, 23, 59, 59);
+  
+  // Checks
+  bool get isToday => startOfDay == DateTime.now().startOfDay;
+  bool get isYesterday => startOfDay == DateTime.now().subtract(Duration(days: 1)).startOfDay;
+  bool get isTomorrow => startOfDay == DateTime.now().add(Duration(days: 1)).startOfDay;
+  bool get isThisWeek => isSameWeek(DateTime.now());
+  bool get isThisMonth => year == DateTime.now().year && month == DateTime.now().month;
+  bool get isThisYear => year == DateTime.now().year;
+  bool get isPast => isBefore(DateTime.now());
+  bool get isFuture => isAfter(DateTime.now());
+  bool get isLeapYear => (year % 4 == 0) && ((year % 100 != 0) || (year % 400 == 0));
+  bool get isWeekend => weekday == DateTime.saturday || weekday == DateTime.sunday;
+  bool get isWeekday => !isWeekend;
+  
+  // Navigation
+  DateTime get nextDay => add(Duration(days: 1));
+  DateTime get previousDay => subtract(Duration(days: 1));
+  DateTime get nextWeek => add(Duration(days: 7));
+  DateTime get previousWeek => subtract(Duration(days: 7));
+  DateTime get nextMonth => month == 12
+    ? DateTime(year + 1, 1, day)
+    : DateTime(year, month + 1, day);
+  DateTime get previousMonth => month == 1
+    ? DateTime(year - 1, 12, day)
+    : DateTime(year, month - 1, day);
+  
+  // Utilities
+  int get weekOfYear => _getWeekOfYear();
+  bool isSameDay(DateTime other) => startOfDay == other.startOfDay;
+  bool isSameWeek(DateTime other) => startOfWeek == other.startOfWeek;
+  bool isSameMonth(DateTime other) => year == other.year && month == other.month;
+  int daysUntil(DateTime other) => other.startOfDay.difference(startOfDay).inDays;
+  String get formatted12Hour => '${hour > 12 ? hour - 12 : hour}:${minute.toString().padLeft(2, '0')} ${hour >= 12 ? 'PM' : 'AM'}';
+}
+```
+
+### Duration Extensions
+```dart
+extension DurationX on Duration {
+  String get formatted {
+    final hours = inHours;
+    final minutes = inMinutes % 60;
+    final seconds = inSeconds % 60;
+    
+    if (hours > 0) return '${hours}h ${minutes}m';
+    if (minutes > 0) return '${minutes}m ${seconds}s';
+    return '${seconds}s';
+  }
+  
+  String get formattedShort {
+    if (inHours > 0) return '${inHours}h';
+    if (inMinutes > 0) return '${inMinutes}m';
+    return '${inSeconds}s';
+  }
+}
+```
+
+### List Extensions
+```dart
+extension ListX<T> on List<T> {
+  // Accessors
+  T? get firstOrNull => isEmpty ? null : first;
+  T? get lastOrNull => isEmpty ? null : last;
+  T? getOrNull(int index) => index < 0 || index >= length ? null : this[index];
+  
+  // Transformations
+  List<T> distinct() => toSet().toList();
+  List<List<T>> chunk(int size) {
+    final chunks = <List<T>>[];
+    for (int i = 0; i < length; i += size) {
+      chunks.add(sublist(i, min(i + size, length)));
+    }
+    return chunks;
+  }
+  
+  // Searching
+  T? firstWhereOrNull(bool Function(T) test) {
+    for (var element in this) {
+      if (test(element)) return element;
+    }
+    return null;
+  }
+  
+  // Aggregation
+  int countWhere(bool Function(T) test) => where(test).length;
+  bool anyMatch(bool Function(T) test) => any(test);
+  bool allMatch(bool Function(T) test) => every(test);
+  
+  // Summing
+  int sumInts(int Function(T) selector) => fold<int>(0, (sum, item) => sum + selector(item));
+  double sumDoubles(double Function(T) selector) => fold<double>(0.0, (sum, item) => sum + selector(item));
+}
+```
+
+### Map Extensions
+```dart
+extension MapX<K, V> on Map<K, V> {
+  // Safe access
+  V? getOrNull(K key) => this[key];
+  V getOr(K key, V defaultValue) => this[key] ?? defaultValue;
+  
+  // Transformations
+  Map<K, T> mapValues<T>(T Function(V) transform) =>
+    map((key, value) => MapEntry(key, transform(value)));
+  
+  // Filtering
+  Map<K, V> filterWhere(bool Function(K, V) test) =>
+    Map.fromEntries(entries.where((e) => test(e.key, e.value)));
+}
+```
+
+### Convenience Methods for Common Operations
+```dart
+// Logging + Easy debugging
+extension DebugX<T> on T {
+  T log([String? label]) {
+    AppLogger.d('${label ?? runtimeType}: $this');
+    return this;
+  }
+}
+
+// Navigation convenience
+extension NavigationX on BuildContext {
+  void go(String route, {Object? arguments}) =>
+    Navigator.of(this).pushNamed(route, arguments: arguments);
+  
+  void replace(String route, {Object? arguments}) =>
+    Navigator.of(this).pushReplacementNamed(route, arguments: arguments);
+  
+  void home() =>
+    Navigator.of(this).pushNamedAndRemoveUntil(AppRoutes.home, (_) => false);
+}
+
+// BLoC convenience
+extension BlocX on BuildContext {
+  T read<T extends StateStreamable<Object?>>() => ReadContext(this).read<T>();
+  T watch<T extends StateStreamable<Object?>>() => WatchContext(this).watch<T>();
+}
+```
+
+---
+
+## 5.8 - MIXINS
+
+### Debounce Mixin
+```dart
+mixin DebounceMixin {
+  Timer? _debounceTimer;
+  
+  void debounce(VoidCallback callback, {Duration delay = const Duration(milliseconds: 300)}) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(delay, callback);
+  }
+  
+  void disposeDela() => _debounceTimer?.cancel();
+}
+```
+
+### Throttle Mixin
+```dart
+mixin ThrottleMixin {
+  DateTime? _lastCallTime;
+  
+  void throttle(VoidCallback callback, {Duration interval = const Duration(seconds: 1)}) {
+    final now = DateTime.now();
+    if (_lastCallTime == null || now.difference(_lastCallTime!).inMilliseconds >= interval.inMilliseconds) {
+      _lastCallTime = now;
+      callback();
+    }
+  }
+}
+```
+
+### Connectivity Mixin
+```dart
+mixin ConnectivityMixin on State {
+  late ConnectivityService _connectivity;
+  bool _isOnline = true;
+  
+  @override
+  void initState() {
+    super.initState();
+    _connectivity = getIt<ConnectivityService>();
+    _connectivity.onConnectivityChanged().listen((result) {
+      setState(() => _isOnline = result != ConnectivityResult.none);
+    });
+  }
+}
+```
+
+---
+
+## SUMMARY OF PHASE 5
+
+✅ **Documented**:
+- 20+ Core Services with methods and dependencies
+- 5 Domain Services (business logic)
+- 100+ Utility functions and extensions
+- ~20 Enmerations for type safety
+- Complete authentication flow (local biometric)
+- Navigator 1.0 routing with 100+ routes
+- Utilities for strings, dates, lists, maps
+- 3 Mixins for common patterns
+
+⚠️ **Areas for Improvement**:
+- Routing monolith (645 lines) - refactor with GoRouter
+- No route guards - add middleware
+- No navigation middleware - add logging
+- Extensions could be expanded
+- More mixins for patterns (Lifecycle, Theme, etc.)
+
+🎯 **Could Implement**:
+- [ ] GoRouter for type-safe routing
+- [ ] Service locator tests
+- [ ] Mock services for testing
+- [ ] More comprehensive extensions
+- [ ] Custom errors vs generic exceptions
+- [ ] Service wrappers for caching/offline
+
+═══════════════════════════════════════════════════════════════════════════════════════

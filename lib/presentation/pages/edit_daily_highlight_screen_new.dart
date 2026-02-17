@@ -1,6 +1,5 @@
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:mynotes/core/services/app_logger.dart';
 import '../design_system/design_system.dart';
 
 /// Edit Daily Highlight Screen
