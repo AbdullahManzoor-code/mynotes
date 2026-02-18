@@ -1,3 +1,40 @@
+// ════════════════════════════════════════════════════════════════════════════
+// [M007 CONSOLIDATION] Note Editor BLoC - TextExtractionRequested (OCR)
+//
+// SCOPE: Note editing with integrated OCR text extraction
+// - TextExtractionRequested: PRIMARY OCR handler (consolidated from 3 locations)
+//
+// CONSOLIDATED FROM (SESSION 19):
+// ❌ OcrExtractionBloc: DISABLED (duplicate implementation)
+// ❌ MediaBloc implicit OCR: DEPRECATED (was implicit in media processing)
+// ✅ NoteEditorBloc: PRIMARY handler for all OCR (this file)
+//
+// ARCHITECTURE DECISION:
+// TextExtractionRequested moved to NoteEditorBloc because:
+// ✅ OCR is part of note creation workflow
+// ✅ Extracted text directly integrated into note content
+// ✅ No need for separate standalone OCR BLoC
+// ✅ Cleaner UI: OCR completion → note updated directly
+//
+// USAGE:
+// Context: In enhanced_note_editor_screen.dart
+// Code: noteEditorBloc.add(TextExtractionRequested('/path/to/image'))
+// Result: State emits with extractedText property
+// Flow: User selects image → extract text → display in note field
+//
+// STATUS (SESSION 19):
+// ✅ NoteEditorBloc.TextExtractionRequested: Active and working
+// ✅ Integrated with OCRService.extractTextFromFile()
+// ❌ OcrExtractionBloc: Disabled (file preserved for reference)
+// ❌ MediaBloc OCR support: Deprecated (use NoteEditorBloc instead)
+//
+// BENEFITS:
+// ✅ Single source of truth for OCR in app
+// ✅ No code duplication across 3 locations
+// ✅ Simpler to test and maintain
+// ✅ Better state management (OCR state is note state)
+// ════════════════════════════════════════════════════════════════════════════
+
 import 'dart:async';
 import 'dart:convert' show jsonEncode;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,6 +55,7 @@ import 'package:mynotes/presentation/bloc/note_editor/note_editor_event.dart';
 import 'package:mynotes/presentation/bloc/note_editor/note_editor_state.dart';
 import 'package:mynotes/domain/entities/media_item.dart';
 import 'package:mynotes/core/services/media_processing_service.dart';
+import 'package:video_compress/video_compress.dart'; // M010/M011: VideoQuality enum
 import 'dart:io';
 
 import 'package:mynotes/presentation/widgets/note_template_selector.dart';
@@ -73,6 +111,9 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     on<ContextScannerTriggered>(_onContextScannerTriggered);
     on<SuggestionActionAccepted>(_onSuggestionActionAccepted);
     on<PromoteToTodoRequested>(_onPromoteToTodoRequested);
+    on<VideoTrimmingRequested>(_onVideoTrimmingRequested);
+    on<VideoEditingRequested>(_onVideoEditingRequested);
+    on<VideoProcessingCompleted>(_onVideoProcessingCompleted);
   }
 
   Future<void> _onPromoteToTodoRequested(
@@ -451,7 +492,10 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     }
   }
 
-  Future<void> _onMediaRemoved(MediaRemoved event, Emitter<NoteEditorState> emit) async {
+  Future<void> _onMediaRemoved(
+    MediaRemoved event,
+    Emitter<NoteEditorState> emit,
+  ) async {
     if (state is NoteEditorLoaded) {
       final s = state as NoteEditorLoaded;
       try {
@@ -463,7 +507,9 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
             await _mediaProcessingService.deleteFile(removeItem.filePath);
             // Also delete thumbnail if it exists
             if (removeItem.thumbnailPath.isNotEmpty) {
-              await _mediaProcessingService.deleteFile(removeItem.thumbnailPath);
+              await _mediaProcessingService.deleteFile(
+                removeItem.thumbnailPath,
+              );
             }
           } catch (e) {
             // Log but don't fail the whole removal operation
@@ -577,21 +623,21 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
   /// Generate intelligent summary by extracting first complete sentence or key phrases
   String _generateIntelligentSummary(String content) {
     if (content.isEmpty) return '';
-    
+
     // Remove markdown/JSON artifacts and get plain text
     String plainText = content.replaceAll(RegExp(r'[\{\}\[\]"\\]'), '');
-    
+
     // Extract first sentence (up to . ! or ?)
     final sentenceMatch = RegExp(r'([^.!?]*[.!?])').firstMatch(plainText);
     if (sentenceMatch != null) {
       final sentence = sentenceMatch.group(0)?.trim() ?? '';
       if (sentence.length > 20) {
-        return sentence.length > 150 
+        return sentence.length > 150
             ? '${sentence.substring(0, 150)}...'
             : sentence;
       }
     }
-    
+
     // Fallback: first 100 chars with word boundary
     if (plainText.length > 100) {
       final truncated = plainText.substring(0, 100);
@@ -616,9 +662,9 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
 
         // ISSUE-008 FIX: Actually save the note to database
         // Convert params to Note entity and persist
-        final noteToSave = s.params.copyWith(
-          updatedAt: DateTime.now(),
-        ).toNote();
+        final noteToSave = s.params
+            .copyWith(updatedAt: DateTime.now())
+            .toNote();
 
         // Create or update based on whether noteId exists
         if (s.params.noteId == null) {
@@ -632,9 +678,7 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
         // OPTIONAL FEATURE: Knowledge Graph & Linking (may be removed)
         // Parse and update links only if note was saved successfully
         if (s.params.content.isNotEmpty) {
-          final links = _linkParserService.extractLinks(
-            s.params.content,
-          );
+          final links = _linkParserService.extractLinks(s.params.content);
           if (noteToSave.id.isNotEmpty) {
             final allNotes = await _noteRepository.getAllNotes();
             final targetIds = <String>[];
@@ -760,5 +804,233 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
         );
       }
     }
+  }
+
+  /// M010: VIDEO TRIMMING - Process video trimming request
+  /// When user selects trim points in the video attachment UI
+  /// Updates the media item with trimmed video file
+  Future<void> _onVideoTrimmingRequested(
+    VideoTrimmingRequested event,
+    Emitter<NoteEditorState> emit,
+  ) async {
+    if (state is NoteEditorLoaded) {
+      final s = state as NoteEditorLoaded;
+
+      // Validate media index
+      if (event.mediaIndex < 0 || event.mediaIndex >= s.params.media.length) {
+        add(
+          ErrorOccurred(
+            'Invalid media index for trimming',
+            code: 'INVALID_MEDIA_INDEX',
+          ),
+        );
+        return;
+      }
+
+      final mediaItem = s.params.media[event.mediaIndex];
+
+      // Only trim video files
+      if (mediaItem.type != MediaType.video) {
+        add(ErrorOccurred('Can only trim video files', code: 'NOT_VIDEO_FILE'));
+        return;
+      }
+
+      try {
+        // Show processing state
+        emit(
+          s.copyWith(
+            isProcessing: true,
+            processingMessage: 'Trimming video...',
+          ),
+        );
+
+        // Call trimVideo service
+        final trimmedPath = await _mediaProcessingService.trimVideo(
+          videoPath: mediaItem.filePath,
+          startMs: event.startMs,
+          endMs: event.endMs,
+        );
+
+        if (trimmedPath != null && trimmedPath.isNotEmpty) {
+          // Emit success - let VideoProcessingCompleted handler update the media
+          add(
+            VideoProcessingCompleted(
+              mediaIndex: event.mediaIndex,
+              processedPath: trimmedPath,
+              processingType: 'trim',
+            ),
+          );
+        } else {
+          emit(s.copyWith(isProcessing: false, errorCode: 'TRIM_FAILED'));
+        }
+      } catch (e) {
+        emit(s.copyWith(isProcessing: false, errorCode: 'TRIM_ERROR'));
+        add(ErrorOccurred('Video trimming failed: $e', code: 'TRIM_ERROR'));
+      }
+    }
+  }
+
+  /// M011: VIDEO EDITING - Process video editing request
+  /// When user applies filters/effects to attached video
+  /// Updates the media item with edited video file
+  Future<void> _onVideoEditingRequested(
+    VideoEditingRequested event,
+    Emitter<NoteEditorState> emit,
+  ) async {
+    if (state is NoteEditorLoaded) {
+      final s = state as NoteEditorLoaded;
+
+      // Validate media index
+      if (event.mediaIndex < 0 || event.mediaIndex >= s.params.media.length) {
+        add(
+          ErrorOccurred(
+            'Invalid media index for editing',
+            code: 'INVALID_MEDIA_INDEX',
+          ),
+        );
+        return;
+      }
+
+      final mediaItem = s.params.media[event.mediaIndex];
+
+      // Only edit video files
+      if (mediaItem.type != MediaType.video) {
+        add(ErrorOccurred('Can only edit video files', code: 'NOT_VIDEO_FILE'));
+        return;
+      }
+
+      try {
+        // Show processing state
+        emit(
+          s.copyWith(
+            isProcessing: true,
+            processingMessage: 'Applying video effects...',
+          ),
+        );
+
+        // Generate output path with filter suffix
+        final originalPath = mediaItem.filePath;
+        final filterSuffix = event.filterType ?? 'default';
+        final editedPath = originalPath.replaceAll(
+          RegExp(r'\.mp4$|\.mov$|\.avi$'),
+          '_${filterSuffix}_edited.mp4',
+        );
+
+        // Call editVideo service with quality and filter parameters
+        final processedPath = await _mediaProcessingService.editVideo(
+          videoPath: originalPath,
+          outputPath: editedPath,
+          quality: event.qualityFactor == null
+              ? VideoQuality.DefaultQuality
+              : event.qualityFactor! > 0.7
+              ? VideoQuality.HighestQuality
+              : event.qualityFactor! > 0.4
+              ? VideoQuality.MediumQuality
+              : VideoQuality.LowQuality,
+        );
+
+        if (processedPath != null && processedPath.isNotEmpty) {
+          // Emit success - let VideoProcessingCompleted handler update the media
+          add(
+            VideoProcessingCompleted(
+              mediaIndex: event.mediaIndex,
+              processedPath: processedPath,
+              processingType: 'edit',
+            ),
+          );
+        } else {
+          emit(s.copyWith(isProcessing: false, errorCode: 'EDIT_FAILED'));
+        }
+      } catch (e) {
+        emit(s.copyWith(isProcessing: false, errorCode: 'EDIT_ERROR'));
+        add(ErrorOccurred('Video editing failed: $e', code: 'EDIT_ERROR'));
+      }
+    }
+  }
+
+  /// M010/M011: Handle completion of video trimming/editing
+  /// Updates the media item with the processed video path
+  Future<void> _onVideoProcessingCompleted(
+    VideoProcessingCompleted event,
+    Emitter<NoteEditorState> emit,
+  ) async {
+    if (state is NoteEditorLoaded) {
+      final s = state as NoteEditorLoaded;
+
+      try {
+        // Get the original media item
+        if (event.mediaIndex < 0 || event.mediaIndex >= s.params.media.length) {
+          add(
+            ErrorOccurred('Invalid media index', code: 'INVALID_MEDIA_INDEX'),
+          );
+          return;
+        }
+
+        final originalMedia = s.params.media[event.mediaIndex];
+
+        // Create updated media item with processed video path
+        final updatedMedia = originalMedia.copyWith(
+          filePath: event.processedPath,
+          // Regenerate thumbnail for the processed video
+          thumbnailPath: '', // Will be regenerated on next access
+        );
+
+        // Generate new thumbnail for processed video
+        final newThumbnail = await _mediaProcessingService
+            .generateVideoThumbnail(event.processedPath);
+
+        final mediaWithThumbnail = updatedMedia.copyWith(
+          thumbnailPath: newThumbnail ?? '',
+        );
+
+        // Update media list
+        final updatedMediaList = s.params.media.toList();
+        updatedMediaList[event.mediaIndex] = mediaWithThumbnail;
+
+        // Delete original file if trim/edit was applied
+        if (event.processedPath != originalMedia.filePath) {
+          try {
+            await _mediaProcessingService.deleteFile(originalMedia.filePath);
+          } catch (e) {
+            // Log but don't fail - deletion is optional cleanup
+            print('Warning: Could not delete original video file: $e');
+          }
+        }
+
+        // Emit success state
+        emit(
+          s.copyWith(
+            params: s.params.copyWith(media: updatedMediaList),
+            isDirty: true,
+            isProcessing: false,
+            processingMessage:
+                '${event.processingType.toUpperCase()} complete!',
+          ),
+        );
+      } catch (e) {
+        emit(
+          s.copyWith(
+            isProcessing: false,
+            errorCode: 'PROCESSING_COMPLETE_FAILED',
+          ),
+        );
+        add(
+          ErrorOccurred(
+            'Failed to complete video ${event.processingType}: $e',
+            code: 'PROCESSING_COMPLETE_FAILED',
+          ),
+        );
+      }
+    }
+  }
+
+  /// [ML008 FIX] Cleanup speech service listeners and resources on BLoC close
+  @override
+  Future<void> close() async {
+    // Stop speech recognition to prevent memory leaks and background resource usage
+    await _speechService.stopListening();
+    // Clear all command callbacks
+    _commandService.clearAllCommands();
+    await super.close();
   }
 }

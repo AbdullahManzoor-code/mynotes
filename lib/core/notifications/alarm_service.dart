@@ -77,10 +77,24 @@ void alarmManagerCallback() {
         locked: true,
       ),
       actionButtons: [
-        // Snooze 10 minutes
+        // [A006 FIX] Multiple snooze options (flexible duration)
+        // Previously: Hardcoded to 10 minutes only
+        // Now: Users can choose 5, 10, or 15 minute snooze
+        NotificationActionButton(
+          key: 'SNOOZE_5',
+          label: '⏸️ Snooze 5m',
+          actionType: ActionType.Default,
+          isDangerousOption: false,
+        ),
         NotificationActionButton(
           key: 'SNOOZE_10',
           label: '⏸️ Snooze 10m',
+          actionType: ActionType.Default,
+          isDangerousOption: false,
+        ),
+        NotificationActionButton(
+          key: 'SNOOZE_15',
+          label: '⏸️ Snooze 15m',
           actionType: ActionType.Default,
           isDangerousOption: false,
         ),

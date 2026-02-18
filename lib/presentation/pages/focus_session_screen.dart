@@ -34,6 +34,14 @@ class _FocusSessionScreenState extends State<FocusSessionScreen> {
     });
   }
 
+  /// [ML015 FIX] Cleanup wakelock and other resources on screen disposal
+  @override
+  void dispose() {
+    // Disable wakelock to allow normal screen sleep behavior
+    WakelockPlus.disable();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<FocusBloc, FocusState>(

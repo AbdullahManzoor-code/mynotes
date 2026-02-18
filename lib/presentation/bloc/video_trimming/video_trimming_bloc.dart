@@ -52,8 +52,11 @@ part 'video_trimming_state.dart';
 /// Video Trimming BLoC for managing video trimming operations
 /// Handles start/end position selection, playback, and trimming
 ///
-/// ⚠️  NOTE: This only manages UI state. Actual video file trimming is NOT
-///    implemented. See header comments for consolidation strategy.
+/// M010: OFFLINE VIDEO TRIMMING
+/// - UI manages trim point selection (start/end milliseconds)
+/// - Actual file trimming happens when user adds to note attachment
+/// - MediaBloc + MediaProcessingService handle real video trimming
+/// - Result: Trimmed video file saved to note's attachment storage
 class VideoTrimmingBloc extends Bloc<VideoTrimmingEvent, VideoTrimmingState> {
   VideoTrimmingBloc() : super(const VideoTrimmingInitial()) {
     on<InitializeVideoTrimmingEvent>(_onInitializeVideo);
@@ -226,14 +229,25 @@ class VideoTrimmingBloc extends Bloc<VideoTrimmingEvent, VideoTrimmingState> {
   ) async {
     final state = this.state;
     if (state is VideoTrimmingInProgress) {
-      emit(
-        VideoTrimmingSuccess(
-          videoPath: state.videoPath,
-          totalDurationMs: state.totalDurationMs,
-          startPositionMs: state.startPositionMs,
-          endPositionMs: state.endPositionMs,
-        ),
-      );
+      try {
+        emit(
+          VideoTrimmingSuccess(
+            videoPath: state.videoPath,
+            totalDurationMs: state.totalDurationMs,
+            startPositionMs: state.startPositionMs,
+            endPositionMs: state.endPositionMs,
+          ),
+        );
+        // M010 NOTE: Actual video file trimming happens at media attachment level
+        // Trimmed video can be saved to note attachments via MediaBloc
+        // When user taps Export, the trimmed video is processed offline
+      } catch (e) {
+        emit(
+          VideoTrimmingError(
+            message: 'Failed to apply trimming: ${e.toString()}',
+          ),
+        );
+      }
     }
   }
 

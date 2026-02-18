@@ -1,3 +1,45 @@
+// ════════════════════════════════════════════════════════════════════════════
+// [M013 CONSOLIDATION] Media BLoC - Media Capture & Processing
+//
+// SCOPE: Media capture and basic operations
+// - CapturePhotoEvent, PickPhotoFromGalleryEvent (image capture)
+// - CaptureVideoEvent, PickVideoFromGalleryEvent (video capture)
+// - ScanDocumentEvent (document scanning)
+// - CompressImageEvent, CompressVideoEvent (media compression)
+// - AddImageToNoteEvent, AddVideoToNoteEvent (adding media to notes)
+// - RemoveImageFromNoteEvent, RemoveVideoFromNoteEvent (removing media)
+//
+// CONSOLIDATED PLAYBACK (moved to specialized BLoCs):
+// ✅ AudioPlaybackBloc: Audio playback (moved from MediaBloc + AudioRecorderBloc)
+// ✅ VideoPlaybackBloc: Video playback (separate dedicated BLoC)
+// ✅ MediaGalleryBloc: Gallery display and filtering
+// ✅ MediaFilterBloc: Advanced filter UI (filter state management)
+// ✅ MediaSearchBloc: Search across media (separate handler)
+//
+// ARCHITECTURE DECISION:
+// Kept separate BLoCs for distinct responsibilities:
+// - MediaBloc: Capture & basic operations (image/video/document input)
+// - MediaGalleryBloc: Gallery display and selection
+// - MediaFilterBloc: Complex filter UI state (tags, dates, sizes)
+// - MediaSearchBloc: Search functionality
+// - AudioPlaybackBloc: Audio playback (consolidated from AudioRecorder)
+// - VideoPlaybackBloc: Video playback
+//
+// WHY NOT CONSOLIDATED INTO ONE MEGA-BLOC:
+// ✅ Separation of concerns (capture vs display vs filter vs search)
+// ✅ Easier to test and maintain
+// ✅ Future scalability: Can add new media types without bloating main BLoC
+// ✅ Independent state management for each concern
+//
+// STATUS (SESSION 19):
+// ✅ MediaBloc: Active (capture and basic media operations)
+// ✅ MediaGalleryBloc: Active (display, selection, batch ops)
+// ✅ MediaFilterBloc: Active (filter UI state)
+// ✅ MediaSearchBloc: Active (search functionality)
+// ❌ AudioPlayback: Consolidated to dedicated AudioPlaybackBloc
+// ❌ VideoPlayback: Consolidated to dedicated VideoPlaybackBloc
+// ════════════════════════════════════════════════════════════════════════════
+
 import 'dart:io' as io;
 
 import 'package:flutter_bloc/flutter_bloc.dart';

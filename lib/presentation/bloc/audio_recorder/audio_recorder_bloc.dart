@@ -1,3 +1,22 @@
+// ════════════════════════════════════════════════════════════════════════════
+// [M005 CONSOLIDATION] Audio Recording BLoC
+//
+// SCOPE: Recording ONLY (StartRecording, PauseRecording, ResumeRecording, StopRecording)
+//
+// DEPRECATED EVENTS (moved to AudioPlaybackBloc):
+// - PlayRecording, PausePlayback, UpdatePlaybackPosition, PlaybackCompleted
+//
+// REASON: AudioRecorderBloc previously handled both recording AND playback.
+// For cleaner architecture, playback moved to dedicated AudioPlaybackBloc.
+//
+// MIGRATION PATH:
+// - Old: AudioRecorderBloc.add(PlayRecording(path))
+// - New: AudioPlaybackBloc.add(PlayAudioEvent(path))
+//
+// STATUS: Recording functionality active and working ✅
+//         Playback consolidated to AudioPlaybackBloc ✅
+// ════════════════════════════════════════════════════════════════════════════
+
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';

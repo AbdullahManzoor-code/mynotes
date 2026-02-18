@@ -179,4 +179,17 @@ class VoiceCommandService {
       'clear_format': 'Say "clear formatting" to remove styles',
     };
   }
+
+  /// [ML009 FIX] Cleanup speech recognition resources and command callbacks
+  /// Call this during app shutdown to prevent singleton memory leaks
+  Future<void> dispose() async {
+    // Stop active listening if running
+    if (_isListening) {
+      await stopListening();
+    }
+    // Clear all registered command callbacks
+    clearAllCommands();
+    // Cleanup resources
+    _isListening = false;
+  }
 }

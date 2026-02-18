@@ -6,8 +6,72 @@ import 'dart:convert';
 part 'folders_bloc_event.dart';
 part 'folders_bloc_state.dart';
 
-/// Folders BLoC for managing folder hierarchy
-/// Supports nested folders and drag-drop reordering
+/* ════════════════════════════════════════════════════════════════════════════
+   O001: FOLDER SYSTEM CONSOLIDATION — DEPRECATED (Session 16)
+   
+   STATUS: 🟡 DEPRECATED — Use NoteFoldersBloc instead
+   
+   ISSUE IDENTIFIED:
+   Two folder management systems exist in the codebase:
+   
+   1. NoteFoldersBloc (PRIMARY - RECOMMENDED)
+      - Location: lib/presentation/bloc/note_folders/note_folders_bloc.dart
+      - Features: Shallow folder structure with UI icons & colors
+      - Default folders: Inbox, Favorites, Archive (visually distinct)
+      - Storage: SharedPreferences + folder-note mappings
+      - Status: ✅ Actively used, integrated with UI
+      - Architecture: Simple, flat structure suitable for notes app
+   
+   2. FoldersBloc (SECONDARY - THIS FILE - DEPRECATED)
+      - Location: lib/presentation/bloc/folders/folders_bloc.dart (THIS)
+      - Features: Hierarchical nesting (parentId, order) for complex structures
+      - Default folders: Personal, Work, Archive (generic)
+      - Storage: SharedPreferences (SAME KEY as NoteFoldersBloc!)
+      - Status: ❌ NOT registered in DI, NOT used in screens, UNUSED
+      - Problem: File not imported anywhere, events never dispatched
+      - Storage conflict: Uses same 'note_folders' key but different data format
+   
+   ROOT CAUSE:
+   FoldersBloc was created for hierarchical folder structure but architectural
+   decision was made to use simpler NoteFoldersBloc for notes organization.
+   FoldersBloc remains in codebase but disconnected from DI and routes.
+   
+   CONSOLIDATION DECISION:
+   ✅ PRIMARY: NoteFoldersBloc
+      - Simplicity matches offline note-taking app needs
+      - Already integrated with UI and screens
+      - Has folder-to-note mapping infrastructure
+      - Used in practice
+   
+   ❌ SECONDARY: FoldersBloc (this file)
+      - Should be removed to eliminate:
+        * Storage key conflicts
+        * Event name collisions (CreateFolderEvent in both)
+        * Maintenance burden of unused code
+        * Confusion in codebase
+   
+   MIGRATION PATH (If hierarchical folders needed in future):
+   1. Update NoteFoldersBloc to support parentId (nesting)
+   2. Add hierarchy navigation UI
+   3. Remove FoldersBloc entirely
+   4. Keep this comment as historical reference
+   
+   CURRENT ACTION: Marked as DEPRECATED
+   - File preserved for reference
+   - NOT registered in DI (safe to ignore)
+   - Should be removed in next cleanup phase
+   - All folder operations should use NoteFoldersBloc
+   
+   Files that need update if removed:
+   - lib/presentation/bloc/folders/folders_bloc.dart (DELETE)
+   - lib/presentation/bloc/folders/folders_bloc_event.dart (DELETE)
+   - lib/presentation/bloc/folders/folders_bloc_state.dart (DELETE)
+   - folders/ directory (DELETE)
+═══════════════════════════════════════════════════════════════════════════════ */
+
+/// ⚠️  DEPRECATED: Folders BLoC for managing folder hierarchy
+///
+/// Use NoteFoldersBloc instead. See file header for consolidation details.
 class FoldersBloc extends Bloc<FoldersBlocEvent, FoldersBlocState> {
   final List<FolderItem> _folders = [];
   static const String _foldersKey = 'note_folders';

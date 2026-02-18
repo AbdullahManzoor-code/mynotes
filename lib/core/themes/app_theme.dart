@@ -356,5 +356,118 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.backgroundDark,
     );
   }
-}
 
+  // FIX: SET005 High Contrast Light Theme
+  static ThemeData get highContrastLightTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      textTheme: GoogleFonts.interTextTheme(),
+      colorScheme: const ColorScheme.light(
+        primary: Colors.black,
+        onPrimary: Colors.white,
+        primaryContainer: Colors.black87,
+        onPrimaryContainer: Colors.white,
+        secondary: Colors.black,
+        onSecondary: Colors.white,
+        secondaryContainer: Colors.black87,
+        onSecondaryContainer: Colors.white,
+        tertiary: Colors.black,
+        onTertiary: Colors.white,
+        tertiaryContainer: Colors.black87,
+        onTertiaryContainer: Colors.white,
+        error: Colors.red,
+        onError: Colors.white,
+        errorContainer: Colors.red,
+        onErrorContainer: Colors.white,
+        surface: Colors.white,
+        onSurface: Colors.black,
+        surfaceContainerHighest: Colors.black26,
+        onSurfaceVariant: Colors.black87,
+        outline: Colors.black,
+        outlineVariant: Colors.black45,
+        shadow: Colors.black,
+        scrim: Colors.black,
+        inverseSurface: Colors.black,
+        onInverseSurface: Colors.white,
+        inversePrimary: Colors.white,
+      ),
+      appBarTheme: const AppBarTheme(
+        elevation: 2,
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        titleTextStyle: TextStyle(
+          color: Colors.white,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 2,
+        color: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: Colors.black, width: 2),
+        ),
+      ),
+      scaffoldBackgroundColor: Colors.white,
+    );
+  }
+
+  // FIX: SET005 High Contrast Dark Theme
+  static ThemeData get highContrastDarkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      colorScheme: const ColorScheme.dark(
+        primary: Colors.white,
+        onPrimary: Colors.black,
+        primaryContainer: Colors.white70,
+        onPrimaryContainer: Colors.black,
+        secondary: Colors.white,
+        onSecondary: Colors.black,
+        secondaryContainer: Colors.white70,
+        onSecondaryContainer: Colors.black,
+        tertiary: Colors.white,
+        onTertiary: Colors.black,
+        tertiaryContainer: Colors.white70,
+        onTertiaryContainer: Colors.black,
+        error: Colors.yellow,
+        onError: Colors.black,
+        errorContainer: Colors.yellow,
+        onErrorContainer: Colors.black,
+        surface: Colors.black,
+        onSurface: Colors.white,
+        surfaceContainerHighest: Colors.white24,
+        onSurfaceVariant: Colors.white70,
+        outline: Colors.white,
+        outlineVariant: Colors.white30,
+        shadow: Colors.white,
+        scrim: Colors.white,
+        inverseSurface: Colors.white,
+        onInverseSurface: Colors.black,
+        inversePrimary: Colors.black,
+      ),
+      appBarTheme: const AppBarTheme(
+        elevation: 2,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        titleTextStyle: TextStyle(
+          color: Colors.black,
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      cardTheme: CardThemeData(
+        elevation: 2,
+        color: Colors.black,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: const BorderSide(color: Colors.white, width: 2),
+        ),
+      ),
+      scaffoldBackgroundColor: Colors.black,
+    );
+  }
+}

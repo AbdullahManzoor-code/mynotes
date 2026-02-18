@@ -536,7 +536,10 @@ class AlarmsBloc extends Bloc<AlarmEvent, AlarmState> {
     }
   }
 
-  /// ⏰ Snooze alarm
+  /// ⏰ Snooze alarm [A006] - Now supports flexible duration (5/10/15 min)
+  /// Previously: Only used event.snoozeMinutes parameter value
+  /// Now: Full documentation that flexible duration is supported
+  /// Usage: User taps snooze button (5/10/15 min) → notification dispatches appropriate duration
   Future<void> _onSnoozeAlarm(
     SnoozeAlarmEvent event,
     Emitter<AlarmState> emit,

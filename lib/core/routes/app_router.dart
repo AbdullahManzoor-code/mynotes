@@ -96,6 +96,7 @@ import 'package:mynotes/presentation/pages/fixed_universal_quick_add_screen.dart
 import 'package:mynotes/presentation/pages/unified_items_screen.dart';
 import 'package:mynotes/domain/entities/reflection_question.dart';
 import 'package:mynotes/presentation/pages/daily_focus_highlight_screen.dart';
+import 'package:mynotes/presentation/pages/export_options_screen.dart';
 
 import 'package:mynotes/core/services/app_logger.dart';
 
@@ -445,7 +446,17 @@ class AppRouter {
       case AppRoutes.backupExport:
         return MaterialPageRoute(builder: (_) => const BackupExportScreen());
 
-      // ==================== Reflection Module ====================
+      case AppRoutes.exportOptions:
+        final args = settings.arguments as Map<String, dynamic>? ?? {};
+        return MaterialPageRoute(
+          builder: (_) => ExportOptionsScreen(
+            itemTitle: args['title'] as String?,
+            itemContent: args['content'] as String?,
+            tags: args['tags'] as List<String>?,
+          ),
+        );
+
+      // ==================== Reflection Module ======================
       case AppRoutes.analytics:
         return MaterialPageRoute(
           builder: (_) => const AnalyticsDashboardScreen(),

@@ -36,7 +36,7 @@ class _FixedUniversalQuickAddScreenState
   void initState() {
     super.initState();
     AppLogger.i('FixedUniversalQuickAddScreen: Initialized');
-    _bloc = QuickAddBloc();
+    _bloc = getIt<QuickAddBloc>();
     _bloc.add(InitializeQuickAdd());
     _initializeAnimations();
     _initializeVoice();

@@ -10,6 +10,8 @@ abstract class NoteEditorState extends Equatable {
   final bool isSaving;
   final bool isSummarizing;
   final bool isExtracting;
+  final bool isProcessing; // M010/M011: Video processing (trim/edit)
+  final String? processingMessage; // M010/M011: Processing status message
   final String? summary;
   final String? extractedText;
   final String? errorCode;
@@ -24,6 +26,8 @@ abstract class NoteEditorState extends Equatable {
     this.isSaving = false,
     this.isSummarizing = false,
     this.isExtracting = false,
+    this.isProcessing = false, // M010/M011: Default not processing
+    this.processingMessage, // M010/M011: Processing message
     this.summary,
     this.extractedText,
     this.errorCode,
@@ -40,6 +44,8 @@ abstract class NoteEditorState extends Equatable {
     isSaving,
     isSummarizing,
     isExtracting,
+    isProcessing,
+    processingMessage,
     summary,
     extractedText,
     errorCode,
@@ -61,6 +67,8 @@ class NoteEditorLoaded extends NoteEditorState {
     super.isSaving,
     super.isSummarizing,
     super.isExtracting,
+    super.isProcessing,
+    super.processingMessage,
     super.summary,
     super.extractedText,
     super.errorCode,
@@ -75,6 +83,8 @@ class NoteEditorLoaded extends NoteEditorState {
     bool? isSaving,
     bool? isSummarizing,
     bool? isExtracting,
+    bool? isProcessing,
+    String? processingMessage,
     String? summary,
     String? extractedText,
     String? errorCode,
@@ -89,6 +99,8 @@ class NoteEditorLoaded extends NoteEditorState {
       isSaving: isSaving ?? this.isSaving,
       isSummarizing: isSummarizing ?? this.isSummarizing,
       isExtracting: isExtracting ?? this.isExtracting,
+      isProcessing: isProcessing ?? this.isProcessing,
+      processingMessage: processingMessage ?? this.processingMessage,
       summary: summary ?? this.summary,
       extractedText: extractedText ?? this.extractedText,
       errorCode: errorCode ?? this.errorCode,

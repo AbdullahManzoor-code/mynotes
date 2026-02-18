@@ -85,6 +85,7 @@ class AppRoutes {
   // ==================== Backup & Export ====================
   static const String backupExport = '/backup-export';
   static const String backupExportComplete = '/backup-export-complete';
+  static const String exportOptions = '/export-options';
 
   // ==================== App Settings & Privacy ====================
   static const String appSettings = '/app-settings';

@@ -17,8 +17,7 @@ class MediaAnalyticsDashboard extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          MediaAnalyticsBloc(mediaRepository: getIt<MediaRepository>())
-            ..add(LoadMediaAnalyticsEvent()),
+          getIt<MediaAnalyticsBloc>()..add(LoadMediaAnalyticsEvent()),
       child: const _MediaAnalyticsDashboardView(),
     );
   }

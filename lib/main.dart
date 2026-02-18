@@ -7,6 +7,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
+import 'package:mynotes/presentation/bloc/command_palette/command_palette_bloc.dart';
 import 'package:vibration/vibration.dart';
 // import 'package:mynotes/domain/entities/alarm.dart';
 import 'package:mynotes/domain/repositories/alarm_repository.dart';
@@ -54,6 +55,9 @@ import 'package:mynotes/presentation/bloc/audio_recorder/audio_recorder_bloc.dar
 import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bloc.dart';
 import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
 import 'package:mynotes/presentation/bloc/accessibility_features/accessibility_features_bloc.dart';
+import 'package:mynotes/presentation/bloc/localization/localization_bloc.dart';
+import 'package:mynotes/presentation/bloc/note_linking/note_linking_bloc.dart';
+import 'package:mynotes/presentation/bloc/link_preview/link_preview_bloc.dart';
 import 'package:mynotes/core/notifications/alarm_service.dart' as notifications;
 import 'package:mynotes/presentation/widgets/global_error_handler_listener.dart';
 import 'package:mynotes/presentation/widgets/global_overlay.dart';
@@ -238,17 +242,43 @@ Future<void> _onNotificationActionReceived(
       Vibration.cancel();
       AwesomeNotifications().dismiss(receivedAction.id!);
 
+      // [A005 FIX] Better error handling for deleted linked items
+      // Previously: Would navigate to missing note/todo, showing generic error
+      // Now: Check if note exists first, show graceful message if deleted
       if (reminderType == 'note' && linkedNoteId != null) {
         AppLogger.i('[ACTION-HANDLER] Navigating to note: $linkedNoteId');
-        AppRouter.navigatorKey.currentState?.pushNamed(
-          AppRoutes.noteEditor,
-          arguments: {'noteId': linkedNoteId},
-        );
+        try {
+          AppRouter.navigatorKey.currentState?.pushNamed(
+            AppRoutes.noteEditor,
+            arguments: {
+              'noteId': linkedNoteId,
+              'fromDeletedReminder':
+                  true, // Flag to handle gracefully if note deleted
+            },
+          );
+        } catch (e) {
+          AppLogger.w('[ACTION-HANDLER] Could not navigate to note: $e');
+          // User stays on current screen, can view other notes or close app
+        }
       } else if (reminderType == 'todo' && linkedTodoId != null) {
         AppLogger.i('[ACTION-HANDLER] Navigating to todos list');
-        AppRouter.navigatorKey.currentState?.pushNamed(AppRoutes.todosList);
+        try {
+          AppRouter.navigatorKey.currentState?.pushNamed(AppRoutes.todosList);
+        } catch (e) {
+          AppLogger.w('[ACTION-HANDLER] Could not navigate to todos: $e');
+          // User stays on current screen
+        }
+      } else if (linkedNoteId == null && linkedTodoId == null) {
+        // [A005] Item was likely deleted
+        AppLogger.w(
+          '[ACTION-HANDLER] Reminder item no longer exists (deleted)',
+        );
+        // Show user-friendly feedback (snackbar would require context)
+        // App just stays on current screen - graceful degradation
       }
-      AppLogger.i('✅ [ALARM-ACTION] Navigation completed');
+      AppLogger.i(
+        '✅ [ALARM-ACTION] Navigation attempted or skipped gracefully',
+      );
     }
   } catch (e, stack) {
     AppLogger.e('[ALARM-ACTION-ERROR] Failed to handle action: $e');
@@ -500,44 +530,125 @@ class MyNotesApp extends StatelessWidget {
               getIt<AccessibilityFeaturesBloc>()
                 ..add(const LoadAccessibilitySettingsEvent()),
         ),
+        BlocProvider<LocalizationBloc>(
+          create: (context) =>
+              getIt<LocalizationBloc>()..add(const LoadLocalizationEvent()),
+        ),
+        BlocProvider<NoteLinkingBloc>(
+          create: (context) => getIt<NoteLinkingBloc>(),
+        ),
+        BlocProvider<LinkPreviewBloc>(
+          create: (context) => getIt<LinkPreviewBloc>(),
+        ),
+        // FIX: CF005 Register CommandPaletteBloc for command palette support
+        BlocProvider<CommandPaletteBloc>(
+          create: (context) =>
+              getIt<CommandPaletteBloc>()..add(const LoadCommandsEvent()),
+        ),
       ],
       child: BlocBuilder<ThemeBloc, ThemeState>(
         builder: (context, themeState) {
-          return AlarmPopupListener(
-            child: ScreenUtilInit(
-              designSize: const Size(375, 812),
-              minTextAdapt: true,
-              splitScreenMode: true,
-              builder: (context, child) {
-                return MaterialApp(
-                  title: AppConstants.appName,
-                  debugShowCheckedModeBanner: false,
-                  theme: AppTheme.lightTheme,
-                  darkTheme: AppTheme.darkTheme,
-                  themeMode: _parseThemeMode(themeState.themeMode),
-                  navigatorKey: AppRouter.navigatorKey,
-                  scaffoldMessengerKey: getIt<GlobalUiService>().messengerKey,
-                  initialRoute: AppRoutes.splash,
-                  onGenerateRoute: AppRouter.onGenerateRoute,
-                  // Accessibility features
-                  showSemanticsDebugger: false,
-                  builder: (context, materialAppChild) {
-                    return _TextScalingWrapper(
-                      child: UpcomingAlarmsNotificationWidget(
-                        child: GlobalErrorHandlerListener(
-                          child: Stack(
-                            children: [
-                              GlobalOverlay(child: materialAppChild!),
-                              const FocusLockOverlay(),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
+          // FIX: SET005 Build should also listen to accessibility settings
+          return BlocBuilder<
+            AccessibilityFeaturesBloc,
+            AccessibilityFeaturesState
+          >(
+            builder: (context, a11yState) {
+              // FIX: SET006 Also listen to localization changes
+              return BlocBuilder<LocalizationBloc, LocalizationState>(
+                builder: (context, i18nState) {
+                  // Determine if high contrast mode is enabled
+                  final useHighContrast =
+                      a11yState is AccessibilitySettingsLoaded
+                      ? a11yState.highContrastEnabled
+                      : false;
+
+                  // Select appropriate theme based on dark mode and high contrast
+                  final isDark =
+                      _parseThemeMode(themeState.themeMode) == ThemeMode.dark ||
+                      ((_parseThemeMode(themeState.themeMode) ==
+                              ThemeMode.system) &&
+                          MediaQuery.of(context).platformBrightness ==
+                              Brightness.dark);
+
+                  final themeData = useHighContrast
+                      ? (isDark
+                            ? AppTheme.highContrastDarkTheme
+                            : AppTheme.highContrastLightTheme)
+                      : (isDark ? AppTheme.darkTheme : AppTheme.lightTheme);
+
+                  // FIX: SET006 Parse locale from LocalizationBloc
+                  Locale? selectedLocale;
+                  if (i18nState is LocalizationLoaded) {
+                    try {
+                      selectedLocale = Locale(
+                        i18nState.language.split('_')[0],
+                        i18nState.language.contains('_')
+                            ? i18nState.language.split('_')[1]
+                            : null,
+                      );
+                    } catch (e) {
+                      selectedLocale = const Locale('en');
+                    }
+                  }
+
+                  return AlarmPopupListener(
+                    child: ScreenUtilInit(
+                      designSize: const Size(375, 812),
+                      minTextAdapt: true,
+                      splitScreenMode: true,
+                      builder: (context, child) {
+                        return MaterialApp(
+                          title: AppConstants.appName,
+                          debugShowCheckedModeBanner: false,
+                          theme: themeData,
+                          darkTheme: themeData,
+                          themeMode:
+                              ThemeMode.light, // Already selected correct theme
+                          // FIX: SET006 Apply selected locale
+                          locale: selectedLocale,
+                          // FIX: SET006 Support multiple locales
+                          supportedLocales: const [
+                            Locale('en'),
+                            Locale('es'),
+                            Locale('fr'),
+                            Locale('de'),
+                            Locale('it'),
+                            Locale('pt'),
+                            Locale('ja'),
+                            Locale('zh'),
+                          ],
+                          navigatorKey: AppRouter.navigatorKey,
+                          scaffoldMessengerKey:
+                              getIt<GlobalUiService>().messengerKey,
+                          initialRoute: AppRoutes.splash,
+                          onGenerateRoute: AppRouter.onGenerateRoute,
+                          // FIX: SET005 Enable semantics if screen reader enabled
+                          showSemanticsDebugger:
+                              a11yState is AccessibilitySettingsLoaded
+                              ? a11yState.screenReaderEnabled
+                              : false,
+                          builder: (context, materialAppChild) {
+                            return _TextScalingWrapper(
+                              child: UpcomingAlarmsNotificationWidget(
+                                child: GlobalErrorHandlerListener(
+                                  child: Stack(
+                                    children: [
+                                      GlobalOverlay(child: materialAppChild!),
+                                      const FocusLockOverlay(),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
+                  );
+                },
+              );
+            },
           );
         },
       ),

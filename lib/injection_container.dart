@@ -40,6 +40,9 @@ import 'package:mynotes/data/repositories/smart_collection_repository_impl.dart'
 import 'package:mynotes/data/repositories/smart_reminder_repository_impl.dart';
 import 'package:mynotes/data/repositories/reminder_template_repository_impl.dart';
 import 'package:mynotes/presentation/bloc/media_viewer/media_viewer_bloc.dart';
+import 'package:mynotes/presentation/bloc/note_linking/note_linking_bloc.dart';
+import 'package:mynotes/presentation/bloc/note_versioning/note_versioning_bloc.dart';
+import 'package:mynotes/presentation/bloc/link_preview/link_preview_bloc.dart';
 import 'package:mynotes/presentation/bloc/smart_collections/smart_collections_bloc.dart';
 import 'package:mynotes/presentation/bloc/smart_reminders/smart_reminders_bloc.dart';
 import 'package:mynotes/presentation/bloc/unified_items/unified_items_bloc.dart';
@@ -55,7 +58,12 @@ import 'package:mynotes/presentation/bloc/export/export_bloc.dart';
 import 'package:mynotes/presentation/bloc/text_editor/text_editor_bloc.dart';
 import 'package:mynotes/presentation/bloc/video_trimming/video_trimming_bloc.dart';
 import 'package:mynotes/presentation/bloc/video_editor/video_editor_bloc.dart';
+import 'package:mynotes/presentation/bloc/media/media_organization/media_organization_bloc.dart';
+import 'package:mynotes/presentation/bloc/media/media_analytics/media_analytics_bloc.dart';
+import 'package:mynotes/presentation/bloc/quick_add/quick_add_bloc.dart';
 import 'package:mynotes/presentation/bloc/command_palette/command_palette_bloc.dart';
+import 'package:mynotes/presentation/bloc/deep_linking/deep_linking_bloc.dart';
+import 'package:mynotes/presentation/bloc/dashboard_widgets/dashboard_widgets_bloc.dart';
 import 'package:mynotes/domain/repositories/note_repository.dart';
 import 'package:mynotes/domain/repositories/reflection_repository.dart';
 import 'package:mynotes/domain/repositories/stats_repository.dart';
@@ -268,8 +276,27 @@ Future<void> setupServiceLocator() async {
   /// Video Editor BLoC
   getIt.registerFactory<VideoEditorBloc>(() => VideoEditorBloc());
 
+  /// Media Organization BLoC - PH010: Album/grouping feature
+  getIt.registerFactory<MediaOrganizationBloc>(
+    () => MediaOrganizationBloc(mediaRepository: getIt<MediaRepository>()),
+  );
+
+  /// Media Analytics BLoC - PH011: Media statistics
+  getIt.registerFactory<MediaAnalyticsBloc>(
+    () => MediaAnalyticsBloc(mediaRepository: getIt<MediaRepository>()),
+  );
+
+  /// Quick Add BLoC - PH015: Natural language parsing for quick note/todo creation
+  getIt.registerFactory<QuickAddBloc>(() => QuickAddBloc());
+
   /// Command Palette BLoC
   getIt.registerFactory<CommandPaletteBloc>(() => CommandPaletteBloc());
+
+  /// Deep Linking BLoC - FIX: CF004 Register for deep link handling
+  getIt.registerFactory<DeepLinkingBloc>(() => DeepLinkingBloc());
+
+  /// Dashboard Widgets BLoC - FIX: CF007 Register for widget customization
+  getIt.registerFactory<DashboardWidgetsBloc>(() => DashboardWidgetsBloc());
 
   /// Media BLoC
   getIt.registerSingleton<MediaBloc>(
@@ -305,6 +332,15 @@ Future<void> setupServiceLocator() async {
 
   /// Media Viewer BLoC
   getIt.registerFactory<MediaViewerBloc>(() => MediaViewerBloc());
+
+  /// Note Linking BLoC - AN001: Wiki-style note linking
+  getIt.registerFactory<NoteLinkingBloc>(() => NoteLinkingBloc());
+
+  /// Note Versioning BLoC - AN002: Version history management
+  getIt.registerFactory<NoteVersioningBloc>(() => NoteVersioningBloc());
+
+  /// Link Preview BLoC - AN003: URL metadata fetching
+  getIt.registerFactory<LinkPreviewBloc>(() => LinkPreviewBloc());
 
   /// Search BLoC
   getIt.registerFactory<SearchBloc>(

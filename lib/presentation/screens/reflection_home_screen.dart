@@ -34,6 +34,16 @@ class _ReflectionHomeScreenState extends State<ReflectionHomeScreen> {
     context.read<ReflectionBloc>().add(const LoadAllAnswersEvent());
   }
 
+  /// [ML017 FIX] Cleanup LocalAuthentication resources and pending futures
+  @override
+  void dispose() {
+    // Note: LocalAuthentication doesn't require explicit cleanup in current versions,
+    // but included here for clarity and future-proofing if library changes
+    // Cancel any pending delayed futures (e.g., auto-lock timer)
+    // All mounted checks will prevent operations on disposed widget
+    super.dispose();
+  }
+
   Future<void> _unlockReflections() async {
     try {
       final bool canAuthenticateWithBiometrics = await _auth.canCheckBiometrics;

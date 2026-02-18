@@ -19,7 +19,7 @@ class MediaOrganizationView extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          MediaOrganizationBloc(mediaRepository: getIt<MediaRepository>())
+          getIt<MediaOrganizationBloc>()
             ..add(const LoadMediaOrganizationEvent(groupBy: 'type')),
       child: const _MediaOrganizationViewContent(),
     );

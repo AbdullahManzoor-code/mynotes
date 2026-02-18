@@ -21,6 +21,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/core/routes/app_routes.dart';
 import 'package:mynotes/core/services/speech_service.dart';
 import 'package:mynotes/core/services/voice_command_service.dart';
 import 'package:mynotes/core/services/link_parser_service.dart';
@@ -41,6 +42,7 @@ import 'package:mynotes/presentation/widgets/add_reminder_bottom_sheet.dart';
 import 'package:mynotes/presentation/widgets/note_template_selector.dart';
 import '../widgets/universal_media_sheet.dart';
 import 'package:mynotes/presentation/pages/media_viewer_screen.dart';
+import 'package:mynotes/presentation/pages/video_trimming_screen.dart';
 import 'package:mynotes/presentation/widgets/note_suggestion_bar.dart';
 import 'package:mynotes/presentation/widgets/note_tags_input.dart';
 
@@ -491,7 +493,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
               onTap: () {
                 AppLogger.i('EnhancedNoteEditorScreen: Share option tapped');
                 Navigator.pop(sheetContext);
-                _handleShare(editorBloc);
+                _handleShare(sheetContext, editorBloc);
               },
             ),
             const Divider(height: 32),
@@ -648,23 +650,27 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     );
   }
 
-  void _handleShare(NoteEditorBloc editorBloc) {
+  void _handleShare(BuildContext context, NoteEditorBloc editorBloc) {
     AppLogger.i('EnhancedNoteEditorScreen: _handleShare triggered');
     final state = editorBloc.state;
     if (state is NoteEditorLoaded) {
-      final text = "${state.params.title}\n\n${state.params.content}";
       AppLogger.i(
-        'EnhancedNoteEditorScreen: Sharing note: ${state.params.title}',
+        'EnhancedNoteEditorScreen: Navigating to export for note: ${state.params.title}',
       );
-      Share.share(
-        text,
-        subject: state.params.title.isNotEmpty
-            ? state.params.title
-            : 'MyNotes Content',
+      Navigator.pushNamed(
+        context,
+        AppRoutes.exportOptions,
+        arguments: {
+          'title': state.params.title,
+          'content': state.params.content,
+          'tags': state.params.tags,
+          'createdDate': DateTime.now(),
+          'noteId': state.params.noteId,
+        },
       );
     } else {
       AppLogger.w(
-        'EnhancedNoteEditorScreen: Attempted to share while state is not NoteEditorLoaded',
+        'EnhancedNoteEditorScreen: Attempted to export while state is not NoteEditorLoaded',
       );
     }
   }
@@ -1736,6 +1742,9 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     NoteEditorBloc bloc,
     NoteEditorState state,
   ) {
+    final isVideo = item.type == MediaType.video;
+    final isProcessing = state.isProcessing;
+
     return GestureDetector(
       onTap: () {
         AppLogger.i(
@@ -1762,6 +1771,35 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
             children: [
               _buildMediaThumbnail(item),
               _buildMediaOverlay(item),
+              // M010/M011: Processing overlay
+              if (isProcessing)
+                Container(
+                  color: Colors.black.withOpacity(0.5),
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 40.w,
+                          height: 40.w,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation(
+                              AppColors.primary.withOpacity(0.8),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8.h),
+                        Text(
+                          state.processingMessage ?? 'Processing...',
+                          style: TextStyle(color: Colors.white, fontSize: 9.sp),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              // Close button
               Positioned(
                 top: 4,
                 right: 4,
@@ -1782,6 +1820,31 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                   ),
                 ),
               ),
+              // M010: Trim button (for videos)
+              if (isVideo && !isProcessing)
+                Positioned(
+                  top: 4,
+                  left: 4,
+                  child: _buildActionButton(
+                    icon: Icons.content_cut,
+                    tooltip: 'Trim',
+                    onTap: () =>
+                        _onTrimVideoTapped(context, bloc, state, index, item),
+                  ),
+                ),
+              // M011: Edit button (for videos)
+              if (isVideo && !isProcessing)
+                Positioned(
+                  top: 4,
+                  left: 40,
+                  child: _buildActionButton(
+                    icon: Icons.edit,
+                    tooltip: 'Edit',
+                    onTap: () =>
+                        _onEditVideoTapped(context, bloc, state, index, item),
+                  ),
+                ),
+              // Media name overlay
               Positioned(
                 bottom: 0,
                 left: 0,
@@ -1813,6 +1876,291 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// M010/M011: Build action button for trim/edit
+  Widget _buildActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.8),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: Colors.white, size: 14.sp),
+        ),
+      ),
+    );
+  }
+
+  /// M010: Handle trim button tap - launch VideoTrimmingScreen
+  /// Dispatches VideoTrimmingRequested with trim range when screen closes
+  void _onTrimVideoTapped(
+    BuildContext context,
+    NoteEditorBloc bloc,
+    NoteEditorState state,
+    int index,
+    MediaItem item,
+  ) {
+    AppLogger.i(
+      'EnhancedNoteEditorScreen: Trim video button tapped for ${item.name}',
+    );
+
+    // Calculate default trim range (trim 5% from start, 95% end)
+    final videoDurationMs = item.durationMs > 0 ? item.durationMs : 60000;
+    final startMs = (videoDurationMs * 0.05).toInt();
+    final endMs = (videoDurationMs * 0.95).toInt();
+
+    // Launch VideoTrimmingScreen with required videoTitle parameter
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (context) => VideoTrimmingScreen(
+              videoPath: item.filePath,
+              videoTitle: item.name,
+              videoDurationMs: videoDurationMs,
+            ),
+          ),
+        )
+        .then((result) {
+          // When user closes VideoTrimmingScreen, dispatch trim event
+          AppLogger.i(
+            'EnhancedNoteEditorScreen: Trim screen closed, dispatching VideoTrimmingRequested',
+          );
+          bloc.add(
+            VideoTrimmingRequested(
+              mediaIndex: index,
+              startMs: startMs,
+              endMs: endMs,
+            ),
+          );
+        });
+  }
+
+  /// M011: Handle edit button tap - show filter selection
+  void _onEditVideoTapped(
+    BuildContext context,
+    NoteEditorBloc bloc,
+    NoteEditorState state,
+    int index,
+    MediaItem item,
+  ) {
+    AppLogger.i(
+      'EnhancedNoteEditorScreen: Edit video button tapped for ${item.name}',
+    );
+
+    _showVideoFilterDialog(context, bloc, state, index, item);
+  }
+
+  /// M011: Show filter/quality selection dialog
+  void _showVideoFilterDialog(
+    BuildContext context,
+    NoteEditorBloc bloc,
+    NoteEditorState state,
+    int index,
+    MediaItem item,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+      ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(24.w),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Header
+            Text(
+              'Edit Video',
+              style: TextStyle(
+                fontSize: 18.sp,
+                fontWeight: FontWeight.bold,
+                color: AppColors.primary,
+              ),
+            ),
+            SizedBox(height: 24.h),
+            // Quality selection section
+            Text(
+              'Video Quality',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.surface(context),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            // Quality buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                _buildQualityButton(
+                  context,
+                  label: 'Low\n20%',
+                  qualityFactor: 0.2,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _applyVideoEdit(bloc, state, index, 0.2, 'quality_low');
+                  },
+                ),
+                _buildQualityButton(
+                  context,
+                  label: 'Medium\n50%',
+                  qualityFactor: 0.5,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _applyVideoEdit(bloc, state, index, 0.5, 'quality_medium');
+                  },
+                ),
+                _buildQualityButton(
+                  context,
+                  label: 'High\n80%',
+                  qualityFactor: 0.8,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _applyVideoEdit(bloc, state, index, 0.8, 'quality_high');
+                  },
+                ),
+              ],
+            ),
+            SizedBox(height: 24.h),
+            // Filter options (future enhancements)
+            Text(
+              'Filters (Coming Soon)',
+              style: TextStyle(
+                fontSize: 14.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.surface(context),
+              ),
+            ),
+            SizedBox(height: 16.h),
+            Wrap(
+              spacing: 8.w,
+              runSpacing: 8.h,
+              children: [
+                _buildFilterTag('Grayscale', enabled: false),
+                _buildFilterTag('Sepia', enabled: false),
+                _buildFilterTag('Brightness', enabled: false),
+                _buildFilterTag('Contrast', enabled: false),
+              ],
+            ),
+            SizedBox(height: 24.h),
+            // Close button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.surface(context),
+                  side: BorderSide(color: AppColors.primary),
+                  padding: EdgeInsets.symmetric(vertical: 12.h),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.r),
+                  ),
+                ),
+                child: Text(
+                  'Close',
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 14.sp,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// M011: Build quality selection button
+  Widget _buildQualityButton(
+    BuildContext context, {
+    required String label,
+    required double qualityFactor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 16.w),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withOpacity(0.1),
+          border: Border.all(color: AppColors.primary, width: 1.5),
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: Column(
+          children: [
+            Icon(Icons.video_library, color: AppColors.primary, size: 24.sp),
+            SizedBox(height: 8.h),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 11.sp,
+                fontWeight: FontWeight.w600,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// M011: Build disabled filter tag
+  Widget _buildFilterTag(String label, {required bool enabled}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+      decoration: BoxDecoration(
+        color: enabled
+            ? AppColors.primary.withOpacity(0.2)
+            : Colors.grey.withOpacity(0.2),
+        border: Border.all(
+          color: enabled ? AppColors.primary : Colors.grey,
+          width: 1,
+        ),
+        borderRadius: BorderRadius.circular(16.r),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 11.sp,
+          color: enabled ? AppColors.primary : Colors.grey,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  /// M011: Apply video edit with quality selection
+  void _applyVideoEdit(
+    NoteEditorBloc bloc,
+    NoteEditorState state,
+    int index,
+    double qualityFactor,
+    String filterType,
+  ) {
+    AppLogger.i(
+      'EnhancedNoteEditorScreen: Applying video edit - quality: $qualityFactor, filter: $filterType',
+    );
+    bloc.add(
+      VideoEditingRequested(
+        mediaIndex: index,
+        qualityFactor: qualityFactor,
+        filterType: filterType,
       ),
     );
   }

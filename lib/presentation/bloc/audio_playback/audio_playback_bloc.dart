@@ -1,3 +1,23 @@
+// ════════════════════════════════════════════════════════════════════════════
+// [M005 CONSOLIDATION] Audio Playback BLoC - CONSOLIDATED PRIMARY
+//
+// SCOPE: Audio playback ONLY (PlayAudioEvent, PauseAudioEvent, SeekAudioEvent, etc.)
+//
+// CONSOLIDATED FROM:
+// - AudioRecorderBloc originally had playback events (PlayRecording, PausePlayback, etc.)
+// - AudioPlaybackBloc is now the PRIMARY/CANONICAL playback handler
+// - MediaBloc.PlayAudioEvent delegates to AudioPlaybackBloc
+//
+// BENEFITS:
+// ✅ Single source of truth for audio playback
+// ✅ Recording and playback in separate BLoCs (clear separation of concerns)
+// ✅ Reduced code duplication
+// ✅ Easier testing and maintenance
+//
+// STATUS: All playback functionality consolidated here ✅
+//         Recording remains in AudioRecorderBloc ✅
+// ════════════════════════════════════════════════════════════════════════════
+
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:audioplayers/audioplayers.dart';

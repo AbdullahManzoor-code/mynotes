@@ -182,3 +182,56 @@ class ErrorOccurred extends NoteEditorEvent {
 class PromoteToTodoRequested extends NoteEditorEvent {
   const PromoteToTodoRequested();
 }
+
+/// M010: VIDEO TRIMMING - Triggered when user initiates video trimming
+/// on attached video files from the media attachment UI
+class VideoTrimmingRequested extends NoteEditorEvent {
+  final int mediaIndex; // Index of media item to trim
+  final int startMs; // Trim start position in milliseconds
+  final int endMs; // Trim end position in milliseconds
+
+  const VideoTrimmingRequested({
+    required this.mediaIndex,
+    required this.startMs,
+    required this.endMs,
+  });
+
+  @override
+  List<Object?> get props => [mediaIndex, startMs, endMs];
+}
+
+/// M011: VIDEO EDITING - Triggered when user wants to apply filters/effects
+/// to attached video files (quality adjustment, color filters, etc.)
+class VideoEditingRequested extends NoteEditorEvent {
+  final int mediaIndex; // Index of media item to edit
+  final double? qualityFactor; // Quality adjustment (0.5-1.0)
+  final String? filterType; // Filter type: 'normal', 'brightness', 'contrast'
+  final Map<String, dynamic>? params; // Additional filter parameters
+
+  const VideoEditingRequested({
+    required this.mediaIndex,
+    this.qualityFactor,
+    this.filterType,
+    this.params,
+  });
+
+  @override
+  List<Object?> get props => [mediaIndex, qualityFactor, filterType, params];
+}
+
+/// M010/M011: VIDEO PROCESSING COMPLETED
+/// Emitted after trimming/editing completes successfully
+class VideoProcessingCompleted extends NoteEditorEvent {
+  final int mediaIndex; // Index of processed media item
+  final String processedPath; // Path to the processed video file
+  final String processingType; // 'trim' or 'edit'
+
+  const VideoProcessingCompleted({
+    required this.mediaIndex,
+    required this.processedPath,
+    required this.processingType,
+  });
+
+  @override
+  List<Object?> get props => [mediaIndex, processedPath, processingType];
+}
