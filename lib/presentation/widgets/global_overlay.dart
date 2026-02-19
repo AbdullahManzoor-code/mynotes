@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/core/services/global_ui_service.dart';
 import 'package:mynotes/injection_container.dart';
+import '../design_system/design_system.dart';
 
 /// Global Overlay Wrapper
 /// Provides global loading indicator and other overlays
@@ -31,12 +32,12 @@ class GlobalOverlay extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.all(24.0),
+                    padding: EdgeInsets.all(24.w),
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const CircularProgressIndicator(),
-                        const SizedBox(height: 16),
+                        SizedBox(height: 16.h),
                         Text(
                           'Loading...',
                           style: Theme.of(context).textTheme.titleSmall,

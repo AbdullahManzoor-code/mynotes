@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/domain/entities/saved_location_model.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 class SavedLocationChip extends StatelessWidget {
   final SavedLocation location;
@@ -18,7 +19,7 @@ class SavedLocationChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: EdgeInsets.symmetric(horizontal: 4.w),
       child: FilterChip(
         selected: isSelected,
         label: Text(location.name),
@@ -30,7 +31,7 @@ class SavedLocationChip extends StatelessWidget {
         onSelected: (_) => onTap(),
         deleteIcon: onDelete != null ? const Icon(Icons.close, size: 16) : null,
         onDeleted: onDelete,
-        backgroundColor: Colors.grey[200],
+        backgroundColor: AppColors.grey400.withOpacity(0.1),
         selectedColor: Theme.of(context).colorScheme.primary,
         labelStyle: TextStyle(
           color: isSelected
@@ -66,7 +67,7 @@ class SavedLocationChips extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Quick Select', style: Theme.of(context).textTheme.labelMedium),
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
@@ -83,7 +84,7 @@ class SavedLocationChips extends StatelessWidget {
             }).toList(),
           ),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: 12.h),
       ],
     );
   }

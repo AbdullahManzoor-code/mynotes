@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:avatar_glow/avatar_glow.dart';
-import '../../core/constants/app_colors.dart';
+// import '../../core/constants/app_colors.dart';
+import '../design_system/app_colors.dart';
 
 /// Reusable voice input button widget with AvatarGlow animation
 class VoiceInputButton extends StatelessWidget {
@@ -28,9 +29,10 @@ class VoiceInputButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final buttonSize = size ?? 48.w;
-    final primaryActiveColor = activeColor ?? Colors.red;
+    final primaryActiveColor = activeColor ?? AppColors.errorColor;
     final primaryInactiveColor =
-        inactiveColor ?? (isDark ? Colors.white70 : AppColors.primaryColor);
+        inactiveColor ??
+        (isDark ? AppColors.secondaryTextDark : AppColors.primaryColor);
 
     return AvatarGlow(
       animate: isListening && showWaves,
@@ -41,7 +43,7 @@ class VoiceInputButton extends StatelessWidget {
       child: Material(
         elevation: isListening ? 12.0 : 4.0,
         shape: const CircleBorder(),
-        color: Colors.transparent,
+        color: AppColors.lightSurface,
         child: InkWell(
           onTap: onPressed,
           customBorder: const CircleBorder(),
@@ -63,7 +65,7 @@ class VoiceInputButton extends StatelessWidget {
             ),
             child: Icon(
               isListening ? Icons.mic : Icons.mic_none,
-              color: Colors.white,
+              color: AppColors.lightText,
               size: buttonSize * 0.5,
             ),
           ),

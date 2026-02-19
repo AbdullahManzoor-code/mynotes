@@ -165,7 +165,7 @@ class UniversalMediaSheet extends StatelessWidget {
             decoration: BoxDecoration(
               color: AppColors.surface(context).withOpacity(0.4),
               borderRadius: BorderRadius.circular(20.r),
-              border: Border.all(color: Colors.white.withOpacity(0.05)),
+              border: Border.all(color: AppColors.lightText.withOpacity(0.05)),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

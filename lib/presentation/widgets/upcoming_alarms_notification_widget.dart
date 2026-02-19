@@ -55,9 +55,12 @@ class _UpcomingAlarmsBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
+        color: AppColors.infoColor.withOpacity(0.05),
         border: Border(
-          bottom: BorderSide(color: Colors.blue.shade200, width: 2),
+          bottom: BorderSide(
+            color: AppColors.infoColor.withOpacity(0.2),
+            width: 2,
+          ),
         ),
       ),
       child: SingleChildScrollView(
@@ -66,7 +69,10 @@ class _UpcomingAlarmsBanner extends StatelessWidget {
           children: [
             Padding(
               padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 12.h),
-              child: Icon(Icons.notifications_active, color: Colors.blue[700]),
+              child: Icon(
+                Icons.notifications_active,
+                color: AppColors.infoDark,
+              ),
             ),
             ...List.generate(alarms.length, (index) {
               final alarm = alarms[index];
@@ -76,7 +82,7 @@ class _UpcomingAlarmsBanner extends StatelessWidget {
               padding: EdgeInsets.symmetric(horizontal: 8.w),
               child: Icon(
                 Icons.info_outline,
-                color: Colors.blue[700],
+                color: AppColors.infoDark,
                 size: 20,
               ),
             ),
@@ -159,16 +165,16 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
         child: Container(
           padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           decoration: BoxDecoration(
-            color: isRinging ? Colors.red.shade100 : Colors.white,
+            color: isRinging ? AppColors.errorLight : AppColors.lightSurface,
             border: Border.all(
-              color: isRinging ? Colors.red[500]! : Colors.blue[300]!,
+              color: isRinging ? AppColors.errorColor : AppColors.infoColor,
               width: 1.5,
             ),
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               if (isRinging)
                 BoxShadow(
-                  color: Colors.red.withOpacity(0.3),
+                  color: AppColors.errorColor.withOpacity(0.3),
                   blurRadius: 8,
                   spreadRadius: 1,
                 ),
@@ -184,7 +190,7 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.bold,
-                  color: isRinging ? Colors.red[700] : Colors.blue[700],
+                  color: isRinging ? AppColors.errorDark : AppColors.infoDark,
                 ),
               ),
               SizedBox(height: 2.h),
@@ -194,7 +200,7 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
                 timeFormat.format(widget.alarm.alarmTime),
                 style: TextStyle(
                   fontSize: 10,
-                  color: isRinging ? Colors.red[600] : Colors.blue[600],
+                  color: isRinging ? AppColors.errorColor : AppColors.infoColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -211,7 +217,7 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
                   style: TextStyle(
                     fontSize: 8,
                     fontWeight: FontWeight.w500,
-                    color: Colors.grey[700],
+                    color: AppColors.grey500,
                   ),
                 ),
               ),
@@ -224,7 +230,7 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
                   height: 6,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: Colors.red[500],
+                    color: AppColors.errorColor,
                   ),
                 ),
               ],

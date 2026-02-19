@@ -51,25 +51,36 @@ class NoteTemplates {
     NoteTemplate(
       name: 'Daily Journal',
       description: 'Personal reflection and daily thoughts',
-      titlePlaceholder: 'Date: ${DateTime.now()}',
-      contentPlaceholder: '''Today's reflection:
+      titlePlaceholder: 'Journal - ${DateTime.now().toString().split(' ')[0]}',
+      contentPlaceholder: '''## Today's Reflection
 
-Morning thoughts:
+### Morning Thoughts
+What am I thinking about today?
 - 
 
-Afternoon:
+### Afternoon Review
+What happened during the day?
 - 
 
-Evening reflections:
+### Evening Reflections
+What went well today?
 - 
 
-Gratitude (3 things):
-1. 
-2. 
-3. 
+What could be improved?
+- 
 
-Tomorrow's focus:
-- ''',
+### Gratitude (3 things)
+1. I'm grateful for...
+2. I'm grateful for...
+3. I'm grateful for...
+
+### Tomorrow's Focus
+What's my priority for tomorrow?
+- 
+
+### Mood/Energy Level
+Morning: ☀️ | Afternoon: 🌤️ | Evening: 🌙
+''',
       icon: 'diary',
       category: 'Personal',
       createdAt: DateTime.now(),
@@ -314,6 +325,380 @@ Recommendation: ''',
       category: 'Planning',
       createdAt: DateTime.now(),
     ),
+    NoteTemplate(
+      name: 'Weekly Goals',
+      description: 'Plan and track weekly objectives',
+      titlePlaceholder: 'Week of ${DateTime.now().toString().split(' ')[0]}',
+      contentPlaceholder: '''## Weekly Goals
+
+### Priority Goals
+1. [Goal] - Why it matters:
+2. [Goal] - Why it matters:
+3. [Goal] - Why it matters:
+
+### Work
+- [ ] Task 1
+- [ ] Task 2
+- [ ] Task 3
+
+### Personal
+- [ ] Task 1
+- [ ] Task 2
+- [ ] Task 3
+
+### Health & Wellness
+- [ ] Task 1
+- [ ] Task 2
+
+### Progress Notes
+- What went well:
+- Challenges faced:
+- Lessons learned:
+
+### Next Week's Focus
+- ''',
+      icon: 'goals',
+      category: 'Planning',
+      createdAt: DateTime.now(),
+    ),
+    NoteTemplate(
+      name: 'Study Notes',
+      description: 'Organize learning materials',
+      titlePlaceholder: '[Subject] - [Topic]',
+      contentPlaceholder: '''## Study Notes
+
+### Key Concepts
+1. **Concept:** Definition:
+2. **Concept:** Definition:
+3. **Concept:** Definition:
+
+### Important Details
+- Point 1: Explanation
+- Point 2: Explanation
+- Point 3: Explanation
+
+### Examples & Applications
+Example 1:
+- Scenario:
+- Solution:
+
+Example 2:
+- Scenario:
+- Solution:
+
+### Questions to Review
+- Q: A:
+- Q: A:
+
+### Practice Problems
+Problem 1: [Solution]
+Problem 2: [Solution]
+
+### Summary
+Main takeaway: ''',
+      icon: 'study',
+      category: 'Learning',
+      createdAt: DateTime.now(),
+    ),
+    NoteTemplate(
+      name: 'Fitness Tracker',
+      description: 'Log workouts and progress',
+      titlePlaceholder:
+          'Fitness Log - ${DateTime.now().toString().split(' ')[0]}',
+      contentPlaceholder: '''## Workout Log
+
+### Today's Workout
+**Date:** 
+**Duration:** 
+**Type:** (Cardio/Strength/Flexibility/Other)
+
+### Exercise Details
+1. Exercise: 
+   - Sets × Reps: 
+   - Weight: 
+   - Notes: 
+
+2. Exercise: 
+   - Sets × Reps: 
+   - Weight: 
+   - Notes: 
+
+3. Exercise: 
+   - Sets × Reps: 
+   - Weight: 
+   - Notes: 
+
+### Vitals
+- Heart Rate: bpm
+- Energy Level: 1-10
+- How I Felt: 
+
+### Goals Progress
+- Weekly Goal: 
+- Current Status: 
+- On Track? Yes/No
+
+### Notes & Improvements
+- What went well:
+- What to improve:
+''',
+      icon: 'fitness',
+      category: 'Personal',
+      createdAt: DateTime.now(),
+    ),
+    NoteTemplate(
+      name: 'Interview Prep',
+      description: 'Prepare for interviews',
+      titlePlaceholder: '[Company] - [Position]',
+      contentPlaceholder: '''## Interview Preparation
+
+### Company Research
+- Company Name: 
+- Industry: 
+- Mission/Vision: 
+- Recent News: 
+- Company Culture: 
+
+### Position Details
+- Job Title: 
+- Key Responsibilities: 
+- Required Skills: 
+- Growth Opportunities: 
+
+### About You
+- Relevant Experience: 
+- Key Achievements: 
+- Skills Match: 
+- Why This Role: 
+
+### Common Questions Prep
+Q: Tell me about yourself
+A: 
+
+Q: Why do you want this job?
+A: 
+
+Q: What's your biggest strength?
+A: 
+
+Q: What's your biggest weakness?
+A: 
+
+### Questions to Ask
+- ?
+- ?
+- ?
+
+### Interview Details
+- Date/Time: 
+- Location: 
+- Interviewer(s): 
+- Dress Code: 
+''',
+      icon: 'interview',
+      category: 'Work',
+      createdAt: DateTime.now(),
+    ),
+    NoteTemplate(
+      name: 'Book Notes',
+      description: 'Capture key insights from books',
+      titlePlaceholder: '[Book Title] by [Author]',
+      contentPlaceholder: '''## Book Notes
+
+### Book Info
+- Title: 
+- Author: 
+- Published: 
+- Pages: 
+- Genre: 
+
+### Overall Impression
+Rating: ⭐⭐⭐⭐⭐
+
+Summary in one sentence: 
+
+### Main Themes
+1. Theme & Explanation:
+2. Theme & Explanation:
+3. Theme & Explanation:
+
+### Key Takeaways
+1. Insight: Why it matters:
+2. Insight: Why it matters:
+3. Insight: Why it matters:
+
+### Favorite Quotes
+> "Quote" - Page X
+
+> "Quote" - Page X
+
+### How It Changed My Thinking
+- Before: 
+- After: 
+
+### Practical Applications
+How I can apply this:
+- 
+- 
+
+### Character/Concept Analysis
+- Important Character: Role & Impact:
+
+### Questions for Discussion
+- ?
+- ?
+''',
+      icon: 'book',
+      category: 'Learning',
+      createdAt: DateTime.now(),
+    ),
+    NoteTemplate(
+      name: 'Team Standup',
+      description: 'Daily team sync notes',
+      titlePlaceholder:
+          'Team Standup - ${DateTime.now().toString().split(' ')[0]}',
+      contentPlaceholder: '''## Daily Standup
+
+**Date:** 
+**Attendees:** 
+
+### What I Completed Yesterday
+- [ ] Task 1
+- [ ] Task 2
+- [ ] Task 3
+
+### What I'm Working On Today
+- [ ] Task 1
+- [ ] Task 2
+- [ ] Task 3
+
+### Blockers/Challenges
+- Issue: Impact: Solution:
+- Issue: Impact: Solution:
+
+### Team Updates
+- [Team Member]: Status:
+- [Team Member]: Status:
+- [Team Member]: Status:
+
+### Announcements
+- 
+
+### Next Steps
+- 
+
+### Action Items
+- [ ] Item Owner: Deadline:
+- [ ] Item Owner: Deadline:
+''',
+      icon: 'meeting',
+      category: 'Work',
+      createdAt: DateTime.now(),
+    ),
+    NoteTemplate(
+      name: 'Budget Plan',
+      description: 'Track income and expenses',
+      titlePlaceholder: 'Budget - ${DateTime.now().toString().split(' ')[0]}',
+      contentPlaceholder: '''## Budget Planner
+
+### Income
+- Source 1: ₹
+- Source 2: ₹
+**Total Income:** ₹
+
+### Fixed Expenses
+- Rent/Mortgage: ₹
+- Insurance: ₹
+- Utilities: ₹
+- Loan Payments: ₹
+**Subtotal:** ₹
+
+### Variable Expenses
+- Groceries: ₹
+- Transportation: ₹
+- Entertainment: ₹
+- Dining Out: ₹
+- Shopping: ₹
+**Subtotal:** ₹
+
+### Savings
+- Emergency Fund: ₹
+- Investment: ₹
+- Goals: ₹
+**Subtotal:** ₹
+
+### Summary
+- Total Income: ₹
+- Total Expenses: ₹
+- Remaining: ₹
+
+### Financial Goals
+- Short Term: 
+- Long Term: 
+''',
+      icon: 'budget',
+      category: 'Planning',
+      createdAt: DateTime.now(),
+    ),
+    NoteTemplate(
+      name: 'Personal SWOT',
+      description: 'Analyze your strengths and weaknesses',
+      titlePlaceholder: '[Your Name] - Personal SWOT Analysis',
+      contentPlaceholder: '''## Personal SWOT Analysis
+
+### Strengths
+What am I good at?
+- 
+- 
+- 
+
+Unique qualities?
+- 
+- 
+
+Natural talents?
+- 
+
+### Weaknesses
+What could I improve?
+- 
+- 
+- 
+
+Where do I lack skills?
+- 
+- 
+
+### Opportunities
+What external opportunities exist?
+- New Skills to Learn:
+- Industries/Fields:
+- Resources Available:
+- Connections I Could Make:
+
+### Threats
+What could hinder my progress?
+- Market/Industry Changes:
+- Skill Gaps:
+- Competition:
+- Personal Challenges:
+
+### Action Plan
+Based on this analysis:
+1. How can I leverage my strengths?
+2. How can I address my weaknesses?
+3. Which opportunities should I pursue?
+4. How can I mitigate threats?
+
+### Success Metrics
+How will I measure progress?
+- 
+- 
+''',
+      icon: 'analysis',
+      category: 'Personal',
+      createdAt: DateTime.now(),
+    ),
   ];
 
   static NoteTemplate getTemplate(String name) {
@@ -427,14 +812,15 @@ class _TemplateSelectorState extends State<TemplateSelector> {
 
         SizedBox(height: 16),
 
-        // Template grid
+        // Template grid - Large cards
         GridView.builder(
           shrinkWrap: true,
           physics: NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
+            mainAxisSpacing: 16,
+            crossAxisSpacing: 16,
+            childAspectRatio: 0.85,
           ),
           itemCount: _filteredTemplates.length,
           itemBuilder: (context, index) {
@@ -462,34 +848,68 @@ class _TemplateCard extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Card(
-        child: Padding(
-          padding: EdgeInsets.all(12),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(Icons.note_outlined, size: 32),
-              Column(
+        elevation: 3,
+        child: Material(
+          child: InkWell(
+            onTap: onTap,
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    template.name,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                  Container(
+                    padding: EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.shade50,
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    child: Icon(
+                      Icons.note_outlined,
+                      size: 40,
+                      color: Colors.blue.shade600,
+                    ),
                   ),
-                  SizedBox(height: 4),
-                  Text(
-                    template.description,
-                    style: Theme.of(context).textTheme.labelSmall,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 12),
+                        Text(
+                          template.name,
+                          style: Theme.of(context).textTheme.titleSmall
+                              ?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          template.description,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                fontSize: 13,
+                                color: Colors.grey.shade700,
+                              ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Chip(
+                    label: Text(
+                      template.category,
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    backgroundColor: Colors.blue.shade100,
+                    avatar: Icon(Icons.label, size: 16),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),

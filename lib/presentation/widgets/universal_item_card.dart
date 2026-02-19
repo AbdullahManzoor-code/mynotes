@@ -90,7 +90,7 @@ class _UniversalItemCardState extends State<UniversalItemCard>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: AppColors.darkText.withOpacity(0.1),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -145,13 +145,13 @@ class _UniversalItemCardState extends State<UniversalItemCard>
                 border: Border.all(
                   color: widget.item.isCompleted
                       ? AppColors.primary
-                      : Colors.grey.shade500,
+                      : AppColors.grey500,
                   width: 2,
                 ),
                 borderRadius: BorderRadius.circular(6.r),
               ),
               child: widget.item.isCompleted
-                  ? Icon(Icons.check, color: Colors.white, size: 16.sp)
+                  ? Icon(Icons.check, color: AppColors.lightText, size: 16.sp)
                   : null,
             ),
           ),

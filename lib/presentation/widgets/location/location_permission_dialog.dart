@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mynotes/core/services/location_permission_manager.dart';
 import 'package:mynotes/injection_container.dart' show getIt;
 import 'package:mynotes/core/services/global_ui_service.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Permission Request Dialog
 /// Shows a dialog requesting various permissions for location reminders
@@ -164,12 +165,16 @@ class _LocationPermissionDialogState extends State<LocationPermissionDialog> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: AppColors.primary10,
                 shape: BoxShape.circle,
               ),
-              child: Icon(currentStep.icon, size: 40, color: Colors.blue),
+              child: Icon(
+                currentStep.icon,
+                size: 40,
+                color: AppColors.primaryColor,
+              ),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // Description
             Text(
@@ -177,7 +182,7 @@ class _LocationPermissionDialogState extends State<LocationPermissionDialog> {
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium,
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
 
             // Progress indicator
             ClipRRect(
@@ -187,7 +192,7 @@ class _LocationPermissionDialogState extends State<LocationPermissionDialog> {
                 minHeight: 4,
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Text(
               'Step ${_currentStep + 1} of ${_permissionSteps.length}',
               style: Theme.of(context).textTheme.labelSmall,
@@ -299,14 +304,11 @@ class _LocationPermissionBannerState extends State<LocationPermissionBanner> {
             return Material(
               child: Container(
                 color: Colors.orange[100],
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
                 child: Row(
                   children: [
-                    Icon(Icons.location_on, color: Colors.orange[800]),
-                    const SizedBox(width: 12),
+                    Icon(Icons.location_on, color: AppColors.warningColor),
+                    SizedBox(width: 12.w),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -315,12 +317,12 @@ class _LocationPermissionBannerState extends State<LocationPermissionBanner> {
                           Text(
                             'Permissions Required',
                             style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: Colors.orange[800]),
+                                ?.copyWith(color: AppColors.warningColor),
                           ),
                           Text(
                             'Enable permissions for location reminders',
                             style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(color: Colors.orange[700]),
+                                ?.copyWith(color: AppColors.warningDark),
                           ),
                         ],
                       ),
@@ -329,7 +331,7 @@ class _LocationPermissionBannerState extends State<LocationPermissionBanner> {
                       onPressed: _checkAndRequestPermissions,
                       child: Text(
                         'Enable',
-                        style: TextStyle(color: Colors.orange[800]),
+                        style: TextStyle(color: AppColors.warningColor),
                       ),
                     ),
                   ],

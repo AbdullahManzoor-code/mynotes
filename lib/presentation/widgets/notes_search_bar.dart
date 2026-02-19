@@ -256,7 +256,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
 
   Widget _buildSearchInput(bool isExpanded) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
       child: Row(
         children: [
           Icon(
@@ -266,7 +266,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
                 : AppColors.textSecondary(context),
             size: 20,
           ),
-          const SizedBox(width: 12),
+          SizedBox(width: 12.w),
           Expanded(
             child: TextField(
               controller: _controller,
@@ -295,7 +295,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
             ),
           ),
           if (_showClearButton) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             GestureDetector(
               onTap: _clearSearch,
               child: Icon(
@@ -306,7 +306,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
             ),
           ],
           if (widget.showAdvancedOptions && isExpanded) ...[
-            const SizedBox(width: 8),
+            SizedBox(width: 8.w),
             GestureDetector(
               onTap: _collapseSearchOptions,
               child: Icon(
@@ -325,31 +325,31 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     if (state is! NotesLoaded) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 16.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // General Filters (Pinned, Media)
           _buildGeneralFilters(state),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
 
           // Divider
           Container(
             height: 1,
             color: AppColors.border(context),
-            margin: const EdgeInsets.only(bottom: 16),
+            margin: EdgeInsets.only(bottom: 16.h),
           ),
 
           // Filter by Tags
           _buildTagFilters(state),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
 
           // Filter by Colors
           _buildColorFilters(state),
 
-          const SizedBox(height: 16),
+          SizedBox(height: 16.h),
 
           // Advanced Search Button
           if (widget.onAdvancedSearch != null) _buildAdvancedSearchButton(),
@@ -369,7 +369,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
             AppColors.textSecondary(context),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 12.h),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -378,10 +378,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
             return GestureDetector(
               onTap: () => _toggleTag(tag, state.selectedTags),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
+                padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.primary.withOpacity(0.1)
@@ -421,7 +418,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
             AppColors.textSecondary(context),
           ),
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -448,7 +445,11 @@ class _NotesSearchBarState extends State<NotesSearchBar>
                   ),
                 ),
                 child: isSelected
-                    ? const Icon(Icons.check, color: Colors.white, size: 16)
+                    ? const Icon(
+                        Icons.check,
+                        color: AppColors.lightText,
+                        size: 16,
+                      )
                     : null,
               ),
             );
@@ -471,7 +472,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
             HapticFeedback.lightImpact();
           },
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8.w),
         _buildFilterChip(
           label: 'With Media',
           isSelected: state.filterWithMedia,
@@ -484,7 +485,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
             HapticFeedback.lightImpact();
           },
         ),
-        const SizedBox(width: 8),
+        SizedBox(width: 8.w),
         _buildFilterChip(
           label: 'With Reminders',
           isSelected: state.filterWithReminders,
@@ -509,7 +510,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.primary.withOpacity(0.1)
@@ -543,7 +544,7 @@ class _NotesSearchBarState extends State<NotesSearchBar>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: EdgeInsets.symmetric(vertical: 12.h),
         ),
       ),
     );

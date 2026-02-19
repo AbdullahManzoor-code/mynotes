@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import '../../core/constants/app_colors.dart';
+import '../design_system/app_colors.dart';
 import '../bloc/audio_playback/audio_playback_bloc.dart';
 import '../bloc/audio_playback/audio_playback_event.dart';
 import '../bloc/audio_playback/audio_playback_state.dart';
@@ -70,7 +70,7 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
         ? (isDark
               ? AppColors.primaryColor.withOpacity(0.2)
               : AppColors.primaryColor.withOpacity(0.15))
-        : (isDark ? Colors.grey.shade800 : Colors.grey.shade200);
+        : (isDark ? AppColors.darkCardBackground : AppColors.lightBackground);
 
     return GestureDetector(
       onLongPress: widget.onDelete,
@@ -110,12 +110,12 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
                         color: widget.isSent
                             ? AppColors.primaryColor
                             : (isDark
-                                  ? Colors.grey.shade700
-                                  : Colors.grey.shade400),
+                                  ? AppColors.darkCardBackgroundAlt
+                                  : AppColors.grey400),
                       ),
                       child: Icon(
                         isPlaying ? Icons.pause : Icons.play_arrow,
-                        color: Colors.white,
+                        color: AppColors.lightText,
                         size: 20.sp,
                       ),
                     ),
@@ -143,7 +143,9 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
                         : _formatDuration(totalDuration),
                     style: TextStyle(
                       fontSize: 11.sp,
-                      color: isDark ? Colors.white70 : Colors.black87,
+                      color: isDark
+                          ? AppColors.secondaryTextDark
+                          : AppColors.secondaryText,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -173,7 +175,7 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
             animationValue: _waveController.value,
             color: widget.isSent
                 ? AppColors.primaryColor
-                : (isDark ? Colors.grey.shade400 : Colors.grey.shade600),
+                : (isDark ? AppColors.grey500 : AppColors.grey400),
             isAnimating: true,
           ),
         );
@@ -189,7 +191,7 @@ class _VoiceMessageWidgetState extends State<VoiceMessageWidget>
         animationValue: 0.5,
         color: widget.isSent
             ? AppColors.primaryColor.withOpacity(0.6)
-            : (isDark ? Colors.grey.shade500 : Colors.grey.shade500),
+            : (isDark ? AppColors.grey500 : AppColors.grey400),
         isAnimating: false,
       ),
     );

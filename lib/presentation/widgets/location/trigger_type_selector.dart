@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/domain/entities/location_reminder_model.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 class TriggerTypeSelector extends StatelessWidget {
   final LocationTriggerType selectedType;
@@ -17,7 +18,7 @@ class TriggerTypeSelector extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Trigger When', style: Theme.of(context).textTheme.titleSmall),
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         Row(
           children: [
             Expanded(
@@ -26,17 +27,17 @@ class TriggerTypeSelector extends StatelessWidget {
                 type: LocationTriggerType.arrive,
                 icon: Icons.login,
                 label: 'I arrive',
-                color: Colors.green,
+                color: AppColors.successColor,
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12.w),
             Expanded(
               child: _buildOption(
                 context,
                 type: LocationTriggerType.leave,
                 icon: Icons.logout,
                 label: 'I leave',
-                color: Colors.orange,
+                color: AppColors.warningColor,
               ),
             ),
           ],
@@ -58,11 +59,11 @@ class TriggerTypeSelector extends StatelessWidget {
       onTap: () => onChanged(type),
       borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        padding: EdgeInsets.symmetric(vertical: 16.h, horizontal: 12.w),
         decoration: BoxDecoration(
           color: isSelected
               ? color.withOpacity(0.1)
-              : Colors.grey.withOpacity(0.1),
+              : AppColors.grey400.withOpacity(0.1),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? color : Colors.transparent,
@@ -72,12 +73,12 @@ class TriggerTypeSelector extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? color : Colors.grey),
-            const SizedBox(width: 8),
+            Icon(icon, color: isSelected ? color : AppColors.grey500),
+            SizedBox(width: 8.w),
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? color : Colors.grey,
+                color: isSelected ? color : AppColors.grey500,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
               ),
             ),

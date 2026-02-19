@@ -278,7 +278,7 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
             Container(
               padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: AppColors.primaryColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -288,7 +288,7 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                     'Available Commands:',
                     style: TextStyle(
                       fontSize: 12,
-                      color: Colors.blue,
+                      color: AppColors.primaryColor,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -305,7 +305,10 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                       padding: EdgeInsets.symmetric(vertical: 2.h),
                       child: Text(
                         '• $cmd',
-                        style: TextStyle(fontSize: 11, color: Colors.blue[700]),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.infoDark,
+                        ),
                       ),
                     ),
                   ),

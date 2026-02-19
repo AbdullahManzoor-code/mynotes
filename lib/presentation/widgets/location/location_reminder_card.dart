@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/domain/entities/location_reminder_model.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 class LocationReminderCard extends StatelessWidget {
   final LocationReminder reminder;
@@ -21,12 +22,12 @@ class LocationReminderCard extends StatelessWidget {
     final isActive = reminder.isActive;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: EdgeInsets.only(bottom: 12.h),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: EdgeInsets.all(16.w),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -34,13 +35,13 @@ class LocationReminderCard extends StatelessWidget {
                 children: [
                   // Trigger type icon
                   Container(
-                    padding: const EdgeInsets.all(8),
+                    padding: EdgeInsets.all(8.w),
                     decoration: BoxDecoration(
                       color: isActive
                           ? (reminder.triggerType == LocationTriggerType.arrive
-                                ? Colors.green.withOpacity(0.1)
-                                : Colors.orange.withOpacity(0.1))
-                          : Colors.grey.withOpacity(0.1),
+                                ? AppColors.successColor.withOpacity(0.1)
+                                : AppColors.warningColor.withOpacity(0.1))
+                          : AppColors.grey400.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(
@@ -49,13 +50,13 @@ class LocationReminderCard extends StatelessWidget {
                           : Icons.logout,
                       color: isActive
                           ? (reminder.triggerType == LocationTriggerType.arrive
-                                ? Colors.green
-                                : Colors.orange)
-                          : Colors.grey,
+                                ? AppColors.successColor
+                                : AppColors.warningColor)
+                          : AppColors.grey500,
                       size: 20,
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12.w),
 
                   // Content
                   Expanded(
@@ -68,25 +69,25 @@ class LocationReminderCard extends StatelessWidget {
                             decoration: isActive
                                 ? null
                                 : TextDecoration.lineThrough,
-                            color: isActive ? null : Colors.grey,
+                            color: isActive ? null : AppColors.grey500,
                           ),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4.h),
                         Row(
                           children: [
                             Icon(
                               Icons.location_on,
                               size: 14,
-                              color: Colors.grey,
+                              color: AppColors.grey500,
                             ),
-                            const SizedBox(width: 4),
+                            SizedBox(width: 4.w),
                             Expanded(
                               child: Text(
                                 reminder.placeName ?? 'Unknown location',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: Colors.grey,
+                                  color: AppColors.grey500,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -112,10 +113,7 @@ class LocationReminderCard extends StatelessWidget {
                 children: [
                   // Trigger type badge
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: theme.colorScheme.primaryContainer,
                       borderRadius: BorderRadius.circular(12),
@@ -127,14 +125,11 @@ class LocationReminderCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  SizedBox(width: 8.w),
 
                   // Radius badge
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+                    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: Colors.grey.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
@@ -142,8 +137,8 @@ class LocationReminderCard extends StatelessWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.radar, size: 12, color: Colors.grey),
-                        const SizedBox(width: 4),
+                        Icon(Icons.radar, size: 12, color: AppColors.grey500),
+                        SizedBox(width: 4.w),
                         Text(
                           reminder.radiusDisplay,
                           style: theme.textTheme.bodySmall,
@@ -159,14 +154,14 @@ class LocationReminderCard extends StatelessWidget {
                     Text(
                       'Last: ${_formatDate(reminder.lastTriggered!)}',
                       style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
+                        color: AppColors.grey500,
                       ),
                     ),
 
                   // Delete button
                   IconButton(
                     icon: const Icon(Icons.delete_outline, size: 20),
-                    color: Colors.red,
+                    color: AppColors.errorColor,
                     onPressed: onDelete,
                     tooltip: 'Delete',
                   ),

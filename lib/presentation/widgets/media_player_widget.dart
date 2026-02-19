@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import '../design_system/design_system.dart';
 
 /// Media Player Widget - Shows play button overlay for audio/video
 class MediaPlayerWidget extends StatelessWidget {
@@ -23,7 +24,9 @@ class MediaPlayerWidget extends StatelessWidget {
     return Container(
       height: 120,
       decoration: BoxDecoration(
-        color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+        color: isDark
+            ? AppColors.darkCardBackground
+            : AppColors.lightBackground,
         borderRadius: BorderRadius.circular(12),
         image: thumbnailPath != null
             ? DecorationImage(
@@ -44,7 +47,7 @@ class MediaPlayerWidget extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.7)],
+                  colors: [Colors.transparent, AppColors.shadowDark],
                 ),
               ),
             ),
@@ -57,13 +60,13 @@ class MediaPlayerWidget extends StatelessWidget {
                 onTap: onPlay,
                 customBorder: const CircleBorder(),
                 child: Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: EdgeInsets.all(16.w),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: AppColors.lightSurface.withOpacity(0.9),
                     shape: BoxShape.circle,
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: AppColors.shadowMedium,
                         blurRadius: 10,
                         spreadRadius: 2,
                       ),
@@ -71,7 +74,7 @@ class MediaPlayerWidget extends StatelessWidget {
                   ),
                   child: Icon(
                     mediaType == 'audio' ? Icons.play_arrow : Icons.play_arrow,
-                    color: Colors.blue.shade700,
+                    color: AppColors.primaryColor,
                     size: 36,
                   ),
                 ),
@@ -84,9 +87,9 @@ class MediaPlayerWidget extends StatelessWidget {
             top: 12,
             left: 12,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(0.6),
+                color: AppColors.overlayBlack,
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Row(
@@ -94,14 +97,14 @@ class MediaPlayerWidget extends StatelessWidget {
                 children: [
                   Icon(
                     mediaType == 'audio' ? Icons.audiotrack : Icons.videocam,
-                    color: Colors.white,
+                    color: AppColors.lightText,
                     size: 16,
                   ),
-                  const SizedBox(width: 6),
+                  SizedBox(width: 6.w),
                   Text(
                     mediaType == 'audio' ? 'Audio' : 'Video',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.lightText,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -149,7 +152,7 @@ class ImageThumbnailWidget extends StatelessWidget {
               bottom: 8,
               right: 8,
               child: Container(
-                padding: const EdgeInsets.all(6),
+                padding: EdgeInsets.all(6.w),
                 decoration: BoxDecoration(
                   color: Colors.black.withOpacity(0.5),
                   shape: BoxShape.circle,

@@ -37,7 +37,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
           Container(
             width: 40,
             height: 4,
-            margin: const EdgeInsets.only(top: 12),
+            margin: EdgeInsets.only(top: 12.h),
             decoration: BoxDecoration(
               color: AppColors.textSecondary(context).withOpacity(0.3),
               borderRadius: BorderRadius.circular(2),
@@ -46,7 +46,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
 
           // Header
           Padding(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.all(20.w),
             child: Row(
               children: [
                 Text(
@@ -78,7 +78,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
             child: _buildViewModeSelector(context),
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
 
           // Sort Options Section
           _buildSection(
@@ -87,7 +87,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
             child: _buildSortOptions(context),
           ),
 
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
 
           // Additional Options
           if (onFilterTapped != null) ...[
@@ -96,10 +96,10 @@ class NotesViewOptionsSheet extends StatelessWidget {
               title: 'Filters',
               child: _buildFilterOption(context),
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: 24.h),
           ],
 
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
         ],
       ),
     );
@@ -111,7 +111,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
     required Widget child,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
+      padding: EdgeInsets.symmetric(horizontal: 20.w),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -122,7 +122,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
               AppColors.textSecondary(context),
             ),
           ),
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
           child,
         ],
       ),
@@ -146,7 +146,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
                 HapticFeedback.lightImpact();
               },
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: 16.h),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppColors.primary.withOpacity(0.1)
@@ -163,7 +163,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
                           : AppColors.textSecondary(context),
                       size: 20,
                     ),
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8.w),
                     Text(
                       mode.displayName.split(' ')[0], // Just "List" or "Grid"
                       style: AppTypography.labelMedium(
@@ -188,7 +188,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
       children: NoteSortOption.values.map((option) {
         final isSelected = option == currentSortOption;
         return Container(
-          margin: const EdgeInsets.only(bottom: 8),
+          margin: EdgeInsets.only(bottom: 8.h),
           decoration: BoxDecoration(
             color: isSelected
                 ? AppColors.primary.withOpacity(0.1)
@@ -199,9 +199,9 @@ class NotesViewOptionsSheet extends StatelessWidget {
             ),
           ),
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
+            contentPadding: EdgeInsets.symmetric(
+              horizontal: 16.w,
+              vertical: 4.h,
             ),
             leading: Icon(
               option.icon,
@@ -249,7 +249,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
         Navigator.pop(context);
       },
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         decoration: BoxDecoration(
           color: AppColors.surface(context),
           borderRadius: BorderRadius.circular(12),
@@ -262,7 +262,7 @@ class NotesViewOptionsSheet extends StatelessWidget {
               color: AppColors.textSecondary(context),
               size: 20,
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12.w),
             Text(
               'Filter by tags, colors, dates',
               style: AppTypography.bodyMedium(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 class RadiusSelectorWidget extends StatelessWidget {
   final double radius;
@@ -23,7 +24,7 @@ class RadiusSelectorWidget extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
             ),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 4.h),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.primaryContainer,
                 borderRadius: BorderRadius.circular(16),
@@ -38,7 +39,7 @@ class RadiusSelectorWidget extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: 8.h),
         Slider(
           value: radius,
           min: 50,
@@ -50,8 +51,14 @@ class RadiusSelectorWidget extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: const [
-            Text('50m', style: TextStyle(fontSize: 12, color: Colors.grey)),
-            Text('500m', style: TextStyle(fontSize: 12, color: Colors.grey)),
+            Text(
+              '50m',
+              style: TextStyle(fontSize: 12, color: AppColors.grey500),
+            ),
+            Text(
+              '500m',
+              style: TextStyle(fontSize: 12, color: AppColors.grey500),
+            ),
           ],
         ),
       ],

@@ -80,8 +80,8 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         materialProgressColors: ChewieProgressColors(
           playedColor: AppColors.primary,
           handleColor: AppColors.primary,
-          backgroundColor: Colors.white.withOpacity(0.2),
-          bufferedColor: Colors.white.withOpacity(0.5),
+          backgroundColor: AppColors.lightSurface.withOpacity(0.2),
+          bufferedColor: AppColors.lightSurface.withOpacity(0.5),
         ),
         placeholder: widget.video.thumbnailPath != null
             ? ClipRRect(
@@ -92,7 +92,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                 ),
               )
             : Container(
-                color: Colors.black,
+                color: AppColors.darkText,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16.r),
                 ),
@@ -101,7 +101,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
           return Center(
             child: Text(
               errorMessage,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppColors.lightText),
             ),
           );
         },
@@ -177,7 +177,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
                 IconButton(
                   icon: Icon(
                     Icons.delete_outline_rounded,
-                    color: Colors.red.shade400,
+                    color: AppColors.errorLight,
                     size: 22.sp,
                   ),
                   onPressed: () {
@@ -227,7 +227,7 @@ class _VideoPlayerWidgetState extends State<VideoPlayerWidget> {
         children: [
           Icon(
             Icons.video_camera_back_rounded,
-            color: Colors.red.shade300,
+            color: AppColors.errorDark,
             size: 32.sp,
           ),
           SizedBox(height: 8.h),
@@ -279,7 +279,7 @@ class VideoThumbnailPreview extends StatelessWidget {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return Container(
-                          color: Colors.grey.shade200,
+                          color: AppColors.lightBackground,
                           child: Center(
                             child: Icon(
                               Icons.movie_rounded,
@@ -303,13 +303,13 @@ class VideoThumbnailPreview extends StatelessWidget {
         Positioned.fill(
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.2),
+              color: AppColors.darkText.withOpacity(0.2),
               borderRadius: BorderRadius.circular(16.r),
             ),
             child: Center(
               child: Icon(
                 Icons.play_circle_fill_rounded,
-                color: Colors.white.withOpacity(0.9),
+                color: AppColors.lightSurface.withOpacity(0.9),
                 size: 44.sp,
               ),
             ),
@@ -322,11 +322,11 @@ class VideoThumbnailPreview extends StatelessWidget {
             padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 4.h),
             borderRadius: 8.r,
             blur: 10,
-            color: Colors.black.withOpacity(0.4),
+            color: AppColors.darkText.withOpacity(0.4),
             child: Text(
               _formatDuration(duration),
               style: TextStyle(
-                color: Colors.white,
+                color: AppColors.lightText,
                 fontSize: 10.sp,
                 fontWeight: FontWeight.bold,
               ),
@@ -345,10 +345,14 @@ class VideoThumbnailPreview extends StatelessWidget {
               child: Container(
                 padding: EdgeInsets.all(4.w),
                 decoration: const BoxDecoration(
-                  color: Colors.red,
+                  color: AppColors.errorColor,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(Icons.close, color: Colors.white, size: 14.sp),
+                child: Icon(
+                  Icons.close,
+                  color: AppColors.lightText,
+                  size: 14.sp,
+                ),
               ),
             ),
           ),

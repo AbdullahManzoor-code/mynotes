@@ -328,16 +328,38 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
         }
         params = NoteParams.fromNote(dbNote);
       } else if (event.template != null) {
-        String content = event.template.contentPlaceholder;
-        if (!content.startsWith('[{"insert"')) {
+        // Handle template - check if it's a NoteTemplate object with properties
+        dynamic template = event.template;
+        String content = '';
+        String title = '';
+
+        // Check if template is a NoteTemplate object
+        if (template is Map && template.containsKey('contentPlaceholder')) {
+          // Flutter NoteTemplate from note_template_selector.dart
+          content = template['contentPlaceholder'] ?? '';
+          title = template['titlePlaceholder'] ?? '';
+        } else if (template.runtimeType.toString().contains('NoteTemplate')) {
+          // Try to access properties via reflection if it's a NoteTemplate instance
+          try {
+            content = template.contentPlaceholder ?? '';
+            title = template.titlePlaceholder ?? '';
+          } catch (e) {
+            AppLogger.w('Error accessing template properties: $e');
+            content = event.initialContent ?? '';
+          }
+        } else {
+          // Template is a string or unknown type - use initialContent
+          content = event.initialContent ?? '';
+        }
+
+        // Format content as Quill Delta JSON
+        if (content.isNotEmpty && !content.startsWith('[{"insert"')) {
           content = jsonEncode([
             {'insert': '$content\n'},
           ]);
         }
-        params = NoteParams(
-          title: event.template.titlePlaceholder,
-          content: content,
-        );
+
+        params = NoteParams(title: title, content: content);
       } else {
         params = NoteParams(content: event.initialContent ?? '');
       }
@@ -788,9 +810,32 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     if (state is NoteEditorLoaded) {
       final s = state as NoteEditorLoaded;
 
+      // Handle template - check if it's a NoteTemplate object with properties
+      dynamic template = event.template;
+      String formattedContent = '';
+      String title = '';
+
+      // Check if template has the expected properties
+      if (template.runtimeType.toString().contains('NoteTemplate')) {
+        try {
+          formattedContent = template.contentPlaceholder ?? '';
+          title = template.titlePlaceholder ?? '';
+        } catch (e) {
+          AppLogger.w(
+            'Error accessing template properties in _onTemplateApplied: $e',
+          );
+          formattedContent = '';
+          title = '';
+        }
+      } else if (template is Map &&
+          template.containsKey('contentPlaceholder')) {
+        formattedContent = template['contentPlaceholder'] ?? '';
+        title = template['titlePlaceholder'] ?? '';
+      }
+
       // Ensure content is in Quill Delta JSON format
-      String formattedContent = event.template.contentPlaceholder;
-      if (!formattedContent.startsWith('[{"insert"')) {
+      if (formattedContent.isNotEmpty &&
+          !formattedContent.startsWith('[{"insert"')) {
         formattedContent = jsonEncode([
           {'insert': '$formattedContent\n'},
         ]);
@@ -798,10 +843,7 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
 
       emit(
         s.copyWith(
-          params: s.params.copyWith(
-            title: event.template.titlePlaceholder,
-            content: formattedContent,
-          ),
+          params: s.params.copyWith(title: title, content: formattedContent),
           isDirty: true,
         ),
       );

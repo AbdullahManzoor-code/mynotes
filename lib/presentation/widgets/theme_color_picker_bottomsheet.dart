@@ -57,7 +57,7 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
 
                 // Header
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.w),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -182,7 +182,7 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
 
                 // Action buttons
                 Padding(
-                  padding: const EdgeInsets.all(20),
+                  padding: EdgeInsets.all(20.w),
                   child: Row(
                     children: [
                       Expanded(
