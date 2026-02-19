@@ -343,7 +343,7 @@ class VideoThumbnailPreview extends StatelessWidget {
                 onDelete!();
               },
               child: Container(
-                padding: const EdgeInsets.all(4),
+                padding: EdgeInsets.all(4.w),
                 decoration: const BoxDecoration(
                   color: Colors.red,
                   shape: BoxShape.circle,

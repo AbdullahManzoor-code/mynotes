@@ -359,7 +359,7 @@ class DashboardStats extends StatelessWidget {
                             trendColor: AppColors.successGreen,
                           ),
                         ),
-                        const SizedBox(width: 16),
+                        SizedBox(width: 16.w),
                         Expanded(
                           child: DashboardStatCard(
                             label: 'TODOS DONE',

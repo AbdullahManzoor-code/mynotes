@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 import '../bloc/voice_command/voice_command_bloc.dart';
 
 /// Voice command types
@@ -219,7 +220,7 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -229,7 +230,7 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                 context,
               ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 16.h),
             // Input field
             TextField(
               controller: _textController,
@@ -241,14 +242,14 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                 prefixIcon: Icon(Icons.mic_external_off_rounded),
                 suffixIcon: _isListening
                     ? Padding(
-                        padding: EdgeInsets.all(8),
+                        padding: EdgeInsets.all(8.w),
                         child: CircularProgressIndicator(),
                       )
                     : null,
               ),
               onSubmitted: (_) => _processVoiceInput(),
             ),
-            SizedBox(height: 12),
+            SizedBox(height: 12.h),
             // Action buttons
             Row(
               children: [
@@ -262,7 +263,7 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                     },
                   ),
                 ),
-                SizedBox(width: 8),
+                SizedBox(width: 8.w),
                 Expanded(
                   child: ElevatedButton.icon(
                     icon: Icon(Icons.send),
@@ -272,10 +273,10 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                 ),
               ],
             ),
-            SizedBox(height: 16),
+            SizedBox(height: 16.h),
             // Command help
             Container(
-              padding: EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
                 color: Colors.blue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -291,7 +292,7 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   ...[
                     'create note / new note',
                     'create todo / add task',
@@ -301,7 +302,7 @@ class _VoiceCommandWidgetState extends State<VoiceCommandWidget> {
                     'search',
                   ].map(
                     (cmd) => Padding(
-                      padding: EdgeInsets.symmetric(vertical: 2),
+                      padding: EdgeInsets.symmetric(vertical: 2.h),
                       child: Text(
                         '• $cmd',
                         style: TextStyle(fontSize: 11, color: Colors.blue[700]),

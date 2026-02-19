@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 import '../bloc/pomodoro/pomodoro_timer_bloc.dart';
 import '../bloc/pomodoro/pomodoro_timer_event.dart';
 import '../bloc/pomodoro/pomodoro_timer_state.dart';
@@ -36,7 +37,7 @@ class PomodoroTimerDisplay extends StatelessWidget {
             // Session label
             if (sessionLabel != null)
               Padding(
-                padding: const EdgeInsets.only(bottom: 24),
+                padding: EdgeInsets.only(bottom: 24.h),
                 child: Text(
                   sessionLabel!,
                   style: AppTypography.titleLarge(
@@ -75,7 +76,7 @@ class PomodoroTimerDisplay extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     Text(
                       state.isRunning ? 'Running...' : 'Paused',
                       style: AppTypography.bodySmall(
@@ -88,7 +89,7 @@ class PomodoroTimerDisplay extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 40),
+            SizedBox(height: 40.h),
 
             // Control buttons
             Row(
@@ -116,7 +117,7 @@ class PomodoroTimerDisplay extends StatelessWidget {
                   icon: Icon(state.isRunning ? Icons.pause : Icons.play_arrow),
                   label: Text(state.isRunning ? 'Pause' : 'Start'),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16.w),
                 // Reset button
                 ElevatedButton.icon(
                   onPressed: () {

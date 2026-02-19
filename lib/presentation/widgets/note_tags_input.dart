@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Note tags input and display widget
 class NoteTagsInput extends StatefulWidget {
@@ -83,9 +84,9 @@ class _NoteTagsInputState extends State<NoteTagsInput> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 12,
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: 16.w,
+                vertical: 12.h,
               ),
             ),
             onChanged: (val) => setState(() {}),
@@ -97,7 +98,7 @@ class _NoteTagsInputState extends State<NoteTagsInput> {
 
         // Display tags
         if (_tags.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          SizedBox(height: 12.h),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -124,7 +125,7 @@ class _NoteTagsInputState extends State<NoteTagsInput> {
 
           // Tag counter
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: EdgeInsets.only(top: 8.h),
             child: Text(
               '${_tags.length}/${widget.maxTags} tags',
               style: AppTypography.caption(
@@ -135,7 +136,7 @@ class _NoteTagsInputState extends State<NoteTagsInput> {
           ),
         ] else if (!widget.readOnly)
           Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: EdgeInsets.only(top: 8.h),
             child: Text(
               'No tags added yet',
               style: AppTypography.caption(

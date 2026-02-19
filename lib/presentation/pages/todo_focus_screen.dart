@@ -239,7 +239,7 @@ class _TodoFocusScreenState extends State<TodoFocusScreen> {
       ),
       onDismissed: (_) => _deleteTodo(index),
       child: Card(
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: EdgeInsets.only(bottom: 12.h),
         child: ListTile(
           leading: Checkbox(
             value: todo.isCompleted,
@@ -289,7 +289,7 @@ class _TodoFocusScreenState extends State<TodoFocusScreen> {
 
   Widget _buildAddTodoField() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.w),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         boxShadow: [
@@ -385,4 +385,3 @@ class _TodoFocusScreenState extends State<TodoFocusScreen> {
     );
   }
 }
-

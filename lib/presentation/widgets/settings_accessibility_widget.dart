@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Encrypted preferences service (SEC-003)
 class EncryptedPreferencesService extends ChangeNotifier {
@@ -44,7 +45,7 @@ class StorageSettingsPanel extends StatelessWidget {
 
         return Card(
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -54,7 +55,7 @@ class StorageSettingsPanel extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 16.h),
                 SwitchListTile(
                   title: Text('Auto Backup'),
                   subtitle: Text('Automatically backup data'),
@@ -67,7 +68,7 @@ class StorageSettingsPanel extends StatelessWidget {
                   contentPadding: EdgeInsets.zero,
                 ),
                 if (state.autoBackupEnabled) ...[
-                  SizedBox(height: 12),
+                  SizedBox(height: 12.h),
                   ListTile(
                     title: Text('Backup Frequency'),
                     subtitle: Text(state.backupFrequency),
@@ -121,7 +122,7 @@ class DefaultSettingsPanel extends StatelessWidget {
 
         return Card(
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -131,7 +132,7 @@ class DefaultSettingsPanel extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 16.h),
                 ListTile(
                   title: Text('Font Family'),
                   subtitle: Text(state.fontFamily),
@@ -176,7 +177,7 @@ class DefaultSettingsPanel extends StatelessWidget {
                   ),
                   contentPadding: EdgeInsets.zero,
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: 12.h),
                 SwitchListTile(
                   title: Text('Dark Mode'),
                   subtitle: Text('Use dark theme'),
@@ -258,11 +259,11 @@ class QuickStatsWidget extends StatelessWidget {
             ),
           ],
         ),
-        SizedBox(height: 16),
+        SizedBox(height: 16.h),
         // Completion gauge
         Card(
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -307,19 +308,19 @@ class QuickStatsWidget extends StatelessWidget {
   ) {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, size: 32, color: color),
-            SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Text(
               value,
               style: Theme.of(
                 context,
               ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
-            SizedBox(height: 4),
+            SizedBox(height: 4.h),
             Text(
               label,
               style: Theme.of(
@@ -349,7 +350,7 @@ class AccessibilitySettingsWidget extends StatelessWidget {
 
         return Card(
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(16.w),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -359,7 +360,7 @@ class AccessibilitySettingsWidget extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 16.h),
                 // Accessibility features (A11Y-004/005)
                 SwitchListTile(
                   title: Text('Enable Accessibility'),
@@ -374,7 +375,7 @@ class AccessibilitySettingsWidget extends StatelessWidget {
                   },
                   contentPadding: EdgeInsets.zero,
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: 16.h),
                 // Text scaling
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -383,7 +384,7 @@ class AccessibilitySettingsWidget extends StatelessWidget {
                       'Text Scaling (${state.fontSize})',
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
-                    SizedBox(height: 8),
+                    SizedBox(height: 8.h),
                     Slider(
                       value: state.fontSize.toDouble(),
                       min: 12,

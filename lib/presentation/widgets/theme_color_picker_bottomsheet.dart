@@ -2,6 +2,7 @@ import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 import '../bloc/theme/theme_bloc.dart';
 import '../bloc/theme/theme_event.dart';
 
@@ -41,7 +42,7 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
               children: [
                 // Handle bar
                 Padding(
-                  padding: const EdgeInsets.only(top: 12),
+                  padding: EdgeInsets.only(top: 12.h),
                   child: Container(
                     width: 40,
                     height: 4,
@@ -77,7 +78,7 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
                   child: SingleChildScrollView(
                     controller: scrollController,
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -90,7 +91,7 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
                                   : Colors.grey.shade600,
                             ),
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20.h),
                           ColorPicker(
                             color: selectedColor,
                             onColorChanged: (Color color) {
@@ -123,16 +124,16 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
                               ColorPickerType.wheel: true,
                             },
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: 20.h),
 
                           // Preview
                           Text(
                             'Preview',
                             style: AppTypography.bodyMedium(context),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12.h),
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: EdgeInsets.all(16.w),
                             decoration: BoxDecoration(
                               color: selectedColor.withOpacity(0.1),
                               border: Border.all(
@@ -151,7 +152,7 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
                                   onPressed: () {},
                                   child: const Text('Sample Button'),
                                 ),
-                                const SizedBox(height: 12),
+                                SizedBox(height: 12.h),
                                 Row(
                                   mainAxisAlignment:
                                       MainAxisAlignment.spaceEvenly,
@@ -173,7 +174,6 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
                               ],
                             ),
                           ),
-                          const SizedBox(height: 20),
                         ],
                       ),
                     ),
@@ -194,7 +194,7 @@ class ThemeColorPickerBottomSheet extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      SizedBox(width: 12.w),
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () {

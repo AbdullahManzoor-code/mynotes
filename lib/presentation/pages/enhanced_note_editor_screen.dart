@@ -306,7 +306,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                                   const CircularProgressIndicator(
                                     color: Colors.orange,
                                   ),
-                                  const SizedBox(height: 16),
+                                  SizedBox(height: 16.h),
                                   Text(
                                     'Extracting text...',
                                     style: TextStyle(
@@ -373,7 +373,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
           value: editorBloc,
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(16.w),
               child: NoteTagsInput(
                 initialTags: editorBloc.state.params.tags,
                 maxTags: 10,
@@ -960,7 +960,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     FocusNode contentFocusNode,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16.w),
       child: quill.QuillEditor.basic(
         controller: quillController,
         config: quill.QuillEditorConfig(
@@ -1811,7 +1811,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
                     bloc.add(MediaRemoved(index));
                   },
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: EdgeInsets.all(4.w),
                     decoration: const BoxDecoration(
                       color: Colors.black54,
                       shape: BoxShape.circle,
@@ -1891,7 +1891,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(4),
+          padding: EdgeInsets.all(4.w),
           decoration: BoxDecoration(
             color: AppColors.primary.withOpacity(0.8),
             shape: BoxShape.circle,
@@ -2206,7 +2206,7 @@ class EnhancedNoteEditorScreen extends StatelessWidget {
     if (item.type == MediaType.video) {
       return Center(
         child: Container(
-          padding: const EdgeInsets.all(8),
+          padding: EdgeInsets.all(8.w),
           decoration: const BoxDecoration(
             color: Colors.black26,
             shape: BoxShape.circle,

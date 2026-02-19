@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/injection_container.dart';
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../domain/repositories/note_repository.dart';
 import '../../../domain/entities/note.dart';
 import '../../../core/pdf/pdf_export_service.dart';
@@ -116,7 +117,100 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
             ),
           );
         } else {
-          emit(NotesLoaded.simple(notes));
+          // FIX: Load saved viewMode from SharedPreferences [SESSION 24]
+          NoteViewMode savedViewMode = NoteViewMode.list;
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final savedMode = prefs.getString('notes_view_mode');
+            if (savedMode != null) {
+              // Parse the saved mode (e.g., "NoteViewMode.grid" → "grid")
+              if (savedMode.contains('grid')) {
+                savedViewMode = NoteViewMode.grid;
+              } else if (savedMode.contains('list')) {
+                savedViewMode = NoteViewMode.list;
+              }
+              AppLogger.i(
+                'Restored note view mode: ${savedViewMode.toString()}',
+              );
+            }
+          } catch (e) {
+            AppLogger.w('Failed to load saved view mode: $e');
+          }
+
+          // [N021 FIX] Load saved sort preference from SharedPreferences
+          NoteSortOption savedSortBy = NoteSortOption.dateCreated;
+          try {
+            final prefs = await SharedPreferences.getInstance();
+            final savedSort = prefs.getString('notes_sort_preference');
+            if (savedSort != null) {
+              // Parse enum from string (e.g., "NoteSortBy.alphabetical" → alphabetical)
+              if (savedSort.contains('alphabetical')) {
+                savedSortBy = NoteSortOption.alphabetical;
+              } else if (savedSort.contains('oldest')) {
+                savedSortBy = NoteSortOption.oldest;
+              } else if (savedSort.contains('mostModified')) {
+                savedSortBy = NoteSortOption.mostModified;
+              } else if (savedSort.contains('pinned')) {
+                savedSortBy = NoteSortOption.pinned;
+              } else if (savedSort.contains('completion')) {
+                savedSortBy = NoteSortOption.completion;
+              } else {
+                savedSortBy = NoteSortOption.dateCreated; // default
+              }
+              AppLogger.i(
+                'Restored sort preference: ${savedSortBy.toString()}',
+              );
+            }
+          } catch (e) {
+            AppLogger.w('Failed to load sort preference: $e');
+          }
+
+          // Apply saved sort preference
+          List<Note> notesToDisplay = List.from(notes);
+          switch (savedSortBy) {
+            case NoteSortOption.dateCreated:
+              notesToDisplay.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+              break;
+            case NoteSortOption.oldest:
+              notesToDisplay.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+              break;
+            case NoteSortOption.alphabetical:
+              notesToDisplay.sort((a, b) => a.title.compareTo(b.title));
+              break;
+            case NoteSortOption.dateModified:
+            case NoteSortOption.mostModified:
+              notesToDisplay.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+              break;
+            case NoteSortOption.pinned:
+              notesToDisplay.sort(
+                (a, b) => (b.isPinned ? 1 : 0).compareTo(a.isPinned ? 1 : 0),
+              );
+              break;
+            case NoteSortOption.completion:
+              notesToDisplay.sort(
+                (a, b) =>
+                    (b.completionPercentage).compareTo(a.completionPercentage),
+              );
+              break;
+            case NoteSortOption.titleAZ:
+            case NoteSortOption.titleZA:
+            case NoteSortOption.color:
+            case NoteSortOption.frequency:
+            case NoteSortOption.priority:
+            case NoteSortOption.manual:
+              notesToDisplay.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+              break;
+          }
+
+          emit(
+            NotesLoaded(
+              allNotes: notes,
+              displayedNotes: notesToDisplay,
+              totalCount: notes.length,
+              viewMode: savedViewMode,
+              sortBy: savedSortBy,
+            ),
+          );
         }
       }
       AppLogger.i('Notes loaded successfully.');
@@ -481,6 +575,7 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
   }
 
   /// Add tag to note using Complete Param pattern
+  /// [SESSION 24 - SG202-001] Prevent duplicate tags
   Future<void> _onAddTag(AddTagEvent event, Emitter<NoteState> emit) async {
     try {
       // Convert params to Note entity with updated timestamp
@@ -488,10 +583,23 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
           .copyWith(updatedAt: DateTime.now())
           .toNote();
 
+      // Extract the newly added tag (last in the list)
+      final newTag = event.params.tags.isNotEmpty ? event.params.tags.last : '';
+
+      // FIX: Check if tag already exists before adding [SESSION 24]
+      final existingNote = await _noteRepository.getNoteById(updatedNote.id);
+      if (existingNote != null && existingNote.tags.contains(newTag)) {
+        emit(
+          NoteError(
+            'Tag "$newTag" already exists on this note',
+            exception: Exception('DUPLICATE_TAG'),
+          ),
+        );
+        return;
+      }
+
       await _noteRepository.updateNote(updatedNote);
-      // Extract tag from params (last added tag)
-      final tag = event.params.tags.isNotEmpty ? event.params.tags.last : '';
-      emit(TagAdded(updatedNote, tag));
+      emit(TagAdded(updatedNote, newTag));
 
       // Refresh notes list with current configuration
       await _onLoadNotes(const LoadNotesEvent(), emit);
@@ -892,6 +1000,15 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
           break;
       }
 
+      // [N021 FIX] Persist sort preference to SharedPreferences
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('notes_sort_preference', event.sortBy.toString());
+        AppLogger.i('💾 Saved sort preference: ${event.sortBy}');
+      } catch (e) {
+        AppLogger.w('Failed to save sort preference: $e');
+      }
+
       emit(NotesLoaded.simple(notes));
     } catch (e) {
       emit(
@@ -954,10 +1071,11 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
   }
 
   /// Handle view configuration changes
-  void _onUpdateNoteViewConfig(
+  /// [SESSION 24 - SG202-002] Added viewMode persistence to SharedPreferences
+  Future<void> _onUpdateNoteViewConfig(
     UpdateNoteViewConfigEvent event,
     Emitter<NoteState> emit,
-  ) {
+  ) async {
     if (state is NotesLoaded) {
       final current = state as NotesLoaded;
 
@@ -1005,6 +1123,17 @@ class NotesBloc extends Bloc<NoteEvent, NoteState> {
         secondarySortDescending: newSecDesc,
         manualSortItems: newManual,
       );
+
+      // FIX: Save viewMode to SharedPreferences [SESSION 24]
+      if (event.viewMode != null && event.viewMode != current.viewMode) {
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setString('notes_view_mode', newViewMode.toString());
+          AppLogger.i('Note view mode persisted: ${newViewMode.toString()}');
+        } catch (e) {
+          AppLogger.w('Failed to persist note view mode: $e');
+        }
+      }
 
       emit(
         current.copyWith(

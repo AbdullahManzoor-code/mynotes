@@ -6,6 +6,8 @@ import '../../../core/utils/context_scanner.dart';
 abstract class NoteEditorState extends Equatable {
   final NoteParams params;
   final bool isListening;
+  final String? voicePartialResult; // ISSUE-007: Partial voice input for UI feedback
+  final String? lastVoiceInput; // ISSUE-007: Last recognized voice input
   final bool isDirty;
   final bool isSaving;
   final bool isSummarizing;
@@ -22,6 +24,8 @@ abstract class NoteEditorState extends Equatable {
   const NoteEditorState({
     required this.params,
     this.isListening = false,
+    this.voicePartialResult,
+    this.lastVoiceInput,
     this.isDirty = false,
     this.isSaving = false,
     this.isSummarizing = false,
@@ -40,6 +44,8 @@ abstract class NoteEditorState extends Equatable {
   List<Object?> get props => [
     params,
     isListening,
+    voicePartialResult,
+    lastVoiceInput,
     isDirty,
     isSaving,
     isSummarizing,
@@ -63,6 +69,8 @@ class NoteEditorLoaded extends NoteEditorState {
   const NoteEditorLoaded({
     required super.params,
     super.isListening,
+    super.voicePartialResult,
+    super.lastVoiceInput,
     super.isDirty,
     super.isSaving,
     super.isSummarizing,
@@ -79,6 +87,8 @@ class NoteEditorLoaded extends NoteEditorState {
   NoteEditorLoaded copyWith({
     NoteParams? params,
     bool? isListening,
+    String? voicePartialResult,
+    String? lastVoiceInput,
     bool? isDirty,
     bool? isSaving,
     bool? isSummarizing,
@@ -95,6 +105,8 @@ class NoteEditorLoaded extends NoteEditorState {
     return NoteEditorLoaded(
       params: params ?? this.params,
       isListening: isListening ?? this.isListening,
+      voicePartialResult: voicePartialResult ?? this.voicePartialResult,
+      lastVoiceInput: lastVoiceInput ?? this.lastVoiceInput,
       isDirty: isDirty ?? this.isDirty,
       isSaving: isSaving ?? this.isSaving,
       isSummarizing: isSummarizing ?? this.isSummarizing,

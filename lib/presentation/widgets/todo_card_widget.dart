@@ -134,7 +134,7 @@ class _TodoCardWidgetState extends State<TodoCardWidget>
         direction: DismissDirection.endToStart,
         background: Container(
           alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
+          padding: EdgeInsets.only(right: 20.w),
           decoration: BoxDecoration(
             color: Colors.red,
             borderRadius: BorderRadius.circular(12),

@@ -4,6 +4,7 @@ import 'package:mynotes/presentation/bloc/alarm/alarm_bloc.dart';
 import 'package:mynotes/core/services/app_logger.dart';
 import 'package:intl/intl.dart';
 import 'package:mynotes/presentation/bloc/alarm/alarm_state.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Screen shown when alarm is snoozed
 /// Stateless widget with BLoC integration
@@ -47,14 +48,14 @@ class SnoozeConfirmationScreen extends StatelessWidget {
         },
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: EdgeInsets.all(24.w),
             child: SingleChildScrollView(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   // Success icon with animation
                   Container(
-                    padding: const EdgeInsets.all(24),
+                    padding: EdgeInsets.all(24.w),
                     decoration: BoxDecoration(
                       color: Colors.orange.shade100,
                       shape: BoxShape.circle,
@@ -65,7 +66,7 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                       color: Colors.orange.shade600,
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32.h),
 
                   // Title
                   Text(
@@ -75,13 +76,13 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                       color: Colors.orange[700],
                     ),
                   ),
-                  const SizedBox(height: 16),
+                  SizedBox(height: 16.h),
 
                   // Alarm details
                   Card(
                     elevation: 2,
                     child: Padding(
-                      padding: const EdgeInsets.all(16),
+                      padding: EdgeInsets.all(16.w),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -90,7 +91,7 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                             style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(color: Colors.grey[600]),
                           ),
-                          const SizedBox(height: 12),
+                          SizedBox(height: 12.h),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -105,7 +106,7 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -142,7 +143,7 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -152,9 +153,9 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                                     ?.copyWith(fontWeight: FontWeight.bold),
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 12.w,
+                                  vertical: 6.h,
                                 ),
                                 decoration: BoxDecoration(
                                   color: Colors.orange.shade100,
@@ -175,11 +176,11 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32.h),
 
                   // Info box
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: EdgeInsets.all(12.w),
                     decoration: BoxDecoration(
                       color: Colors.blue.shade50,
                       border: Border.all(color: Colors.blue.shade200),
@@ -200,7 +201,7 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: 32.h),
 
                   // Close button
                   SizedBox(
@@ -215,7 +216,7 @@ class SnoozeConfirmationScreen extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        padding: EdgeInsets.symmetric(vertical: 12.h),
                       ),
                       child: const Text('Got it'),
                     ),

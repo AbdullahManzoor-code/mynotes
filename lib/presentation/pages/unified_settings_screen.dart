@@ -1322,23 +1322,23 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
             const Text(
               'Start Time:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             ListTile(
               title: Text(params.quietHoursStart),
               trailing: const Icon(Icons.edit),
               onTap: () => _selectQuietHourTime(context, params, true),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16.h),
             const Text(
               'End Time:',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             ListTile(
               title: Text(params.quietHoursEnd),
               trailing: const Icon(Icons.edit),
@@ -3259,7 +3259,7 @@ class _UnifiedSettingsScreenState extends State<UnifiedSettingsScreen>
             children: results
                 .map(
                   (result) => Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0),
+                    padding: EdgeInsets.symmetric(vertical: 4.h),
                     child: Text(result, style: const TextStyle(fontSize: 12)),
                   ),
                 )

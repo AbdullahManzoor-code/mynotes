@@ -5,6 +5,7 @@ import 'package:mynotes/presentation/bloc/alarm/alarm_state.dart';
 import 'package:mynotes/core/services/app_logger.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Widget that displays all upcoming alarms with countdown timers
 /// Wraps the entire app to show persistent notification banner
@@ -64,7 +65,7 @@ class _UpcomingAlarmsBanner extends StatelessWidget {
         child: Row(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+              padding: EdgeInsets.symmetric(horizontal: 8.w, vertical: 12.h),
               child: Icon(Icons.notifications_active, color: Colors.blue[700]),
             ),
             ...List.generate(alarms.length, (index) {
@@ -72,7 +73,7 @@ class _UpcomingAlarmsBanner extends StatelessWidget {
               return _AlarmNotificationChip(alarm: alarm);
             }),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+              padding: EdgeInsets.symmetric(horizontal: 8.w),
               child: Icon(
                 Icons.info_outline,
                 color: Colors.blue[700],
@@ -147,8 +148,8 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
     final timeFormat = DateFormat('hh:mm a');
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-      child: InkWell(
+      padding: EdgeInsets.symmetric(horizontal: 6.w, vertical: 8.h),
+      child: GestureDetector(
         onTap: () {
           AppLogger.i(
             '📢 [UPCOMING-ALARM] Tapped on alarm: ${widget.alarm.title}',
@@ -156,7 +157,7 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
           Navigator.of(context).pushNamed('/alarms/active');
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           decoration: BoxDecoration(
             color: isRinging ? Colors.red.shade100 : Colors.white,
             border: Border.all(
@@ -186,7 +187,7 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
                   color: isRinging ? Colors.red[700] : Colors.blue[700],
                 ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: 2.h),
 
               // Time
               Text(
@@ -197,7 +198,7 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: 2.h),
 
               // Title
               LimitedBox(
@@ -217,7 +218,7 @@ class _AlarmNotificationChipState extends State<_AlarmNotificationChip> {
 
               // Ringing indicator
               if (isRinging) ...[
-                const SizedBox(height: 3),
+                SizedBox(height: 3.h),
                 Container(
                   width: 6,
                   height: 6,

@@ -1,0 +1,175 @@
+
+
+# Prompt: Audit & Fix All Screens — Colors, ScreenUtil, Spacing Consistency
+
+Copy and paste the entire block below into your AI coding assistant.
+
+---
+
+You are a Senior Flutter UI Engineer specializing in design system consistency. You have built pixel-perfect apps used by millions. Your job right now is to go through every single screen, widget, and component in my MyNotes Flutter project and make sure the entire app looks and feels like ONE cohesive app, not 57 different apps stitched together. The app uses flutter_screenutil for responsive sizing, and I need you to make sure it is used correctly and consistently everywhere. No hardcoded sizes. No random colors. No inconsistent spacing. Everything must follow one unified design system.
+
+You will work in 6 stages. Stage 1 is listing every screen. Stage 2 is auditing every color used. Stage 3 is auditing every ScreenUtil usage. Stage 4 is auditing all spacing and padding. Stage 5 is defining the single source of truth for the design system. Stage 6 is fixing every inconsistency you found.
+
+---
+
+STAGE 1 — LIST EVERY SCREEN AND VISUAL COMPONENT
+
+Go through the entire lib folder and list every single screen, page, dialog, bottom sheet, and reusable widget that has visual UI. For each one, provide the file path, the class name, the approximate line count, and what it looks like (what the user sees). Organize them into these categories.
+
+Main Screens are the full-page screens the user navigates to. These include the splash screen, onboarding screen, main home screen, notes list screen, note editor screen which is the EnhancedNoteEditorScreen at 2081 lines, todo list screen, todo detail screen, reminders list screen which is the EnhancedRemindersListScreen at 1076 lines, focus timer screen which is the FocusSessionScreen at 946 lines, pomodoro timer screen, reflection home screen at 949 lines, global search screen at 949 lines, media gallery screen, audio recorder screen, settings screen and the unified settings screen, backup screen, analytics dashboard screen, smart collections screen, location picker screen, folder management screen, archive screen, and any other full-page screens you find.
+
+Dialogs and Bottom Sheets are the popup UI elements. These include the quick add bottom sheet, color picker bottom sheet or dialog, tag management dialog, sort options bottom sheet, filter panel, alarm creation dialog, confirmation dialogs for delete and archive, folder picker dialog, export format picker, and any other dialogs or sheets you find.
+
+Reusable Widgets are the components used across multiple screens. These include note card for list view, note card for grid view, todo item widget, alarm item widget, media thumbnail widget, audio player widget, tag chip widget, search bar widget, empty state widget, loading state widget, error state widget, link preview card widget, analytics card widget, and any other reusable widgets you find.
+
+For each item write the file path, class name, line count, and a one-line description of what it shows to the user.
+
+After listing everything, count the totals. How many screens. How many dialogs and sheets. How many reusable widgets. This is the complete visual inventory of the app.
+
+---
+
+STAGE 2 — AUDIT EVERY COLOR USED IN THE APP
+
+Go through every single file that has UI code and find every color reference. I want to know exactly what colors are being used, where they are defined, and whether they are consistent.
+
+First, find where colors are defined. Check if there is a colors constants file like app_colors.dart or colors.dart in the core or theme folder. Check if ThemeData defines a ColorScheme. Check if AccentColorBloc changes colors at runtime. Check if ThemeBloc defines light and dark themes with different color sets.
+
+Second, search every dart file for these patterns and list every occurrence. Search for Color followed by hex values like Color(0xFF followed by any hex. Search for Colors dot followed by any material color like Colors.blue or Colors.grey. Search for Theme.of(context) usages to see if screens use theme colors or hardcoded colors. Search for any hex color strings. Search for withOpacity calls. Search for ColorScheme references. Search for any color-related constants or variables.
+
+Third, create a complete color inventory. For every unique color value found in the codebase, list the hex value, where it is used with file path and line number, how many times it is used across the project, whether it comes from the theme or is hardcoded, and what it is used for such as background, text, icon, border, card, or divider.
+
+Fourth, identify all color problems. Find every hardcoded color that should come from the theme instead. Find colors that are almost the same but slightly different like two different grays used for the same purpose. Find colors that look wrong in dark mode because they are hardcoded for light mode. Find places where colors do not match between screens. For example, if the note card in list view uses one shade of gray for subtitle text but the todo item widget uses a different shade, that is inconsistent. Find any color that does not adapt to the theme meaning it stays the same in both light and dark mode when it should change.
+
+Fifth, define what the correct color system should be. Based on what you find, propose a complete color palette that the entire app should use. The palette should include the following colors with their light mode and dark mode values. Primary color which is the main brand color used for FAB, primary buttons, active indicators, and app bar. Primary variant which is a darker or lighter shade of primary for pressed states and emphasis. Secondary color which is the accent color managed by AccentColorBloc for highlights, toggles, and selected states. Background color for the main screen background. Surface color for cards, bottom sheets, and dialog backgrounds. On Primary color which is text and icon color on top of primary color surfaces. On Background color which is the main text color on background surfaces. On Surface color which is text color on cards and surface elements. Error color for error messages, delete actions, and validation errors. On Error color for text on error surfaces. Outline color for borders, dividers, and card outlines. Surface Variant color for secondary surfaces, input field backgrounds, and chip backgrounds. Text Primary color for titles and headings. Text Secondary color for body text and subtitles. Text Tertiary color for hints, placeholders, and timestamps. Text Disabled color for disabled or inactive text. Icon Primary color for active icons. Icon Secondary color for inactive or decorative icons. Divider color for lines and separators. Shadow color for card and surface shadows. Success color for completed items, confirmation, and positive states. Warning color for overdue items, caution states. Note colors for the user-selectable note card colors which should be a set of 8 to 12 colors that work in both light and dark mode. Tag colors for the tag chip background and text colors.
+
+Write all of these into a single file that will be the source of truth for every color in the app.
+
+---
+
+STAGE 3 — AUDIT EVERY SCREENUTIL USAGE
+
+The app uses flutter_screenutil for responsive sizing. Go through every single file and check how ScreenUtil is being used. I need complete consistency.
+
+First, check ScreenUtil initialization. Find where ScreenUtil.init is called. Check the design size being used. It should be one consistent value like 375 by 812 for iPhone 13 or 360 by 800 for standard Android. Check if it is initialized in main.dart or the MaterialApp builder. Check if it is initialized only once and in the right place.
+
+Second, search every dart file for sizing patterns. Find every usage of .w extension for width-based sizing. Find every usage of .h extension for height-based sizing. Find every usage of .sp extension for font size scaling. Find every usage of .r extension for radius scaling. Find every hardcoded number that should be using ScreenUtil but is not. This means any EdgeInsets, SizedBox, Container width or height, fontSize, borderRadius, or iconSize that uses a plain number like 16 instead of 16.w or 16.h or 16.sp or 16.r.
+
+Third, list every inconsistency. Find places where the same logical size uses different values. For example if some cards use padding of 16.w but other cards use padding of 16 without the extension. Find places where font sizes use .w or .h instead of .sp. Font sizes must always use .sp for proper text scaling. Find places where horizontal padding uses .h instead of .w or vertical padding uses .w instead of .h. Find places where border radius uses .w or .h instead of .r. Find places where icon sizes are inconsistent, some using ScreenUtil and some not. Find places where SizedBox uses plain numbers instead of .w and .h.
+
+Fourth, define the correct ScreenUtil usage rules for this project. Every horizontal measurement including width, horizontal padding, horizontal margin, and horizontal spacing must use .w. Every vertical measurement including height, vertical padding, vertical margin, and vertical spacing must use .h. Every font size must use .sp. Every border radius must use .r. Every icon size must use .r or .w consistently, pick one and stick with it. No plain numbers anywhere in UI code. The only exception is 0 and values inside MediaQuery or LayoutBuilder calculations.
+
+---
+
+STAGE 4 — AUDIT ALL SPACING AND PADDING
+
+Go through every screen and widget and check that spacing is consistent across the entire app. The app should feel like it follows a single spacing rhythm.
+
+First, define the spacing scale. The entire app should use a consistent spacing scale based on multiples of 4. The values should be 0, 2, 4, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64. No random values like 13, 17, 22, or 37 should appear anywhere. Every spacing value in the app should be one of these numbers, applied with ScreenUtil extensions.
+
+Second, audit screen-level padding. Every main screen should have the same horizontal padding from the screen edges to the content. Check what each screen uses and find inconsistencies. The standard should be 16.w horizontal padding on all screens. The standard should be 16.h or 24.h vertical padding from the app bar to the first content item.
+
+Third, audit card padding. Every card component like note card, todo item, alarm item, media card should have consistent internal padding. Check what each card widget uses. They should all use the same padding, likely 12.w to 16.w horizontal and 12.h to 16.h vertical.
+
+Fourth, audit spacing between items. The space between cards in a list should be consistent. Check every ListView and Column for SizedBox spacers or padding between children. All lists should use the same item spacing, likely 8.h to 12.h between cards.
+
+Fifth, audit spacing between sections. The space between sections like "Pinned" section and "All Notes" section should be consistent. Check all section headers and the spacing around them.
+
+Sixth, audit toolbar and bottom bar spacing. The bottom navigation bar, bottom toolbars, and FAB should have consistent spacing and sizing across all screens.
+
+Seventh, audit dialog and bottom sheet padding. All dialogs and bottom sheets should have the same internal padding, the same title style, and the same button spacing.
+
+Eighth, list every spacing inconsistency you find. For each one, show the file path, the line number, the current value, and what it should be changed to.
+
+---
+
+STAGE 5 — CREATE THE UNIFIED DESIGN SYSTEM
+
+Based on everything you found in stages 2, 3, and 4, create the following files that will be the single source of truth for the entire app's visual design.
+
+File 1: lib/core/theme/app_colors.dart
+
+This file should contain a class called AppColors with all the color constants. It should have a static light color scheme and a static dark color scheme. It should include note colors, tag colors, and any special-purpose colors. Every color in the app should come from this file. No hardcoded colors anywhere else.
+
+Write the complete file with every color defined, with comments explaining what each color is for, and with both light and dark mode values.
+
+File 2: lib/core/theme/app_spacing.dart
+
+This file should contain a class called AppSpacing with all the spacing constants using ScreenUtil. It should include screen padding, card padding, item spacing, section spacing, button padding, dialog padding, icon sizes, and any other spacing values. Every spacing value in the app should come from this file.
+
+Write the complete file with every spacing constant, with ScreenUtil extensions applied, and with comments explaining what each value is for.
+
+File 3: lib/core/theme/app_typography.dart
+
+This file should contain a class called AppTypography with all the text styles. It should include heading styles for screen titles, subtitle styles for section headers, body styles for content text, caption styles for timestamps and metadata, label styles for buttons and chips, and any other text styles. Every text style should use .sp for font size via ScreenUtil.
+
+Write the complete file with every text style, using consistent font weights, sizes, and colors from AppColors.
+
+File 4: lib/core/theme/app_theme.dart
+
+This file should contain the ThemeData for both light and dark themes. It should use AppColors for all colors, AppTypography for all text themes, and consistent component themes for AppBar, Card, BottomNavigationBar, FloatingActionButton, Dialog, BottomSheet, InputDecoration, ElevatedButton, TextButton, OutlinedButton, IconButton, Chip, Switch, Checkbox, and Divider.
+
+Write the complete file with both light and dark ThemeData fully configured so that every component automatically gets the right colors and styles from the theme.
+
+File 5: lib/core/theme/app_dimensions.dart
+
+This file should contain a class called AppDimensions with all the fixed dimension constants. It should include card border radius, button border radius, dialog border radius, bottom sheet border radius, icon sizes for small medium and large, avatar sizes, thumbnail sizes, minimum touch target size which should be 48.r, app bar height, bottom nav height, FAB size, and any other dimension values. All values should use ScreenUtil.
+
+Write the complete file.
+
+---
+
+STAGE 6 — FIX EVERY INCONSISTENCY
+
+Now go through every file you listed in Stage 1 and apply the design system from Stage 5. For every file that has a color, spacing, font size, or dimension issue, show me what needs to change.
+
+For each file, use this format. Show the file path. Show each line that needs to change with the line number, the current code, and the replacement code. Confirm that the replacement uses the design system files and not hardcoded values.
+
+Apply fixes in this order.
+
+First fix all color issues. Replace every hardcoded color with the corresponding AppColors reference or Theme.of(context) reference. This includes replacing Color(0xFF...) with AppColors.whatever. Replacing Colors.grey with Theme.of(context).colorScheme.outline or appropriate theme color. Replacing any color that does not adapt to dark mode.
+
+Second fix all ScreenUtil issues. Add .w to every horizontal hardcoded number. Add .h to every vertical hardcoded number. Change font size numbers to use .sp. Change border radius numbers to use .r. Remove any incorrect usage like font size using .w instead of .sp.
+
+Third fix all spacing issues. Replace inconsistent padding values with AppSpacing constants. Replace inconsistent SizedBox sizes with AppSpacing constants. Make sure every screen has the same edge padding. Make sure every list has the same item spacing.
+
+Fourth fix all typography issues. Replace inconsistent TextStyle definitions with AppTypography references. Make sure every title across all screens uses the same style. Make sure every subtitle uses the same style. Make sure every body text uses the same style. Make sure every timestamp and caption uses the same style.
+
+For each fix you apply, actually change the file in the project. Do not just suggest the change. Make the change.
+
+After fixing everything, give me a summary report showing how many files were changed, how many color fixes were applied, how many ScreenUtil fixes were applied, how many spacing fixes were applied, how many typography fixes were applied, and the total number of individual line changes.
+
+---
+
+ADDITIONAL RULES
+
+Do not add any new features or functionality. Only fix visual consistency.
+
+Do not change any business logic, BLoC code, repository code, or service code. Only change UI presentation code.
+
+Do not remove any existing functionality. If a screen has a button that does something, keep it. Just make it look consistent with the rest of the app.
+
+If you find a screen that is deprecated like the old SettingsScreen, note it but do not spend time fixing its styling. Just mention it should be deleted.
+
+If you find dead widgets that are never used, note them but do not fix their styling. Just mention they should be deleted.
+
+Make sure every color works in BOTH light mode and dark mode. Test by checking if the color would be readable against the background color in both themes.
+
+Make sure the note card colors (the user-selected colors for notes) are visible and distinguishable in both light and dark mode. In light mode they should be soft pastel tints. In dark mode they should be muted darker tints that still show the color clearly.
+
+Make sure all text has sufficient contrast ratio against its background in both themes. Title text should have the highest contrast. Body text should be clearly readable. Placeholder and hint text can be lighter but still visible. Disabled text can be quite light but not invisible.
+
+Make sure interactive elements (buttons, links, tappable items) have a minimum touch target size of 48x48 using ScreenUtil, meaning 48.r by 48.r.
+
+Make sure the bottom navigation bar looks the same on every screen it appears on. Same height, same icon sizes, same label sizes, same selected and unselected colors, same background color.
+
+Make sure the app bar looks the same on every screen. Same height, same title style, same icon sizes, same background color. If some screens use a transparent app bar and others use a solid one, make them consistent or make the difference intentional and systematic.
+
+Start now. Begin with Stage 1. List every screen. Then move through each stage in order. Do not skip any stage. Show your work for each stage before moving to the next one.
+
+---
+
+AFTER THIS PROMPT COMPLETES
+
+Once all 6 stages are done, you can verify the results by using this follow-up prompt.
+
+Go through every screen listed in Stage 1 one more time. For each screen, confirm that it uses only AppColors for colors with no hardcoded hex values remaining. Confirm it uses ScreenUtil extensions on every size value with no plain numbers remaining. Confirm it uses AppSpacing for all padding and margins. Confirm it uses AppTypography for all text styles. Confirm it looks correct in both light and dark mode. Mark each screen as either consistent or still has issues. If any screen still has issues, list exactly what remains to be fixed and fix it now.

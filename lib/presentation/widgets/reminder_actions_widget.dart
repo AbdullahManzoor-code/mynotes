@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/domain/models/do_not_disturb_settings.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 import '../bloc/reminder_actions/do_not_disturb_bloc.dart';
 
 /// Quick reschedule options
@@ -86,7 +87,7 @@ class QuickRescheduleSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.w),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -94,7 +95,7 @@ class QuickRescheduleSheet extends StatelessWidget {
             'Quick Reschedule',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          SizedBox(height: 16),
+          SizedBox(height: 16.h),
           ...QuickRescheduleOption.values.map((option) {
             final newTime = option.getScheduledTime(DateTime.now());
             return ListTile(
@@ -109,9 +110,9 @@ class QuickRescheduleSheet extends StatelessWidget {
               },
             );
           }),
-          SizedBox(height: 12),
+          SizedBox(height: 12.h),
           Divider(),
-          SizedBox(height: 12),
+          SizedBox(height: 12.h),
           ListTile(
             title: Text('Custom Time'),
             trailing: Icon(Icons.edit),
@@ -174,7 +175,7 @@ class SmartSnoozeWidget extends StatelessWidget {
     final suggestedTimes = SmartSnoozeEngine.getSuggestedSnoozeTimes();
 
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.w),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -183,12 +184,12 @@ class SmartSnoozeWidget extends StatelessWidget {
             'Snooze Reminder',
             style: Theme.of(context).textTheme.titleMedium,
           ),
-          SizedBox(height: 16),
+          SizedBox(height: 16.h),
           Text(
             'Smart Suggestions',
             style: Theme.of(context).textTheme.labelMedium,
           ),
-          SizedBox(height: 12),
+          SizedBox(height: 12.h),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -202,7 +203,7 @@ class SmartSnoozeWidget extends StatelessWidget {
               );
             }).toList(),
           ),
-          SizedBox(height: 16),
+          SizedBox(height: 16.h),
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: Text('Custom Duration'),
@@ -212,7 +213,7 @@ class SmartSnoozeWidget extends StatelessWidget {
               _showCustomSnoozeDialog(context);
             },
           ),
-          SizedBox(height: 12),
+          SizedBox(height: 12.h),
           if (onDismiss != null)
             SizedBox(
               width: double.infinity,
@@ -342,23 +343,17 @@ class _DoNotDisturbPanelState extends State<DoNotDisturbPanel> {
                         if (settings.enabled)
                           Text(
                             'Active from ${settings.startTime.format(context)} to ${settings.endTime.format(context)}',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall?.copyWith(
-                              color: Colors.green,
-                            ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: Colors.green),
                           ),
                       ],
                     ),
-                    Switch(
-                      value: settings.enabled,
-                      onChanged: _toggleEnabled,
-                    ),
+                    Switch(value: settings.enabled, onChanged: _toggleEnabled),
                   ],
                 ),
 
                 if (settings.enabled) ...[
-                  SizedBox(height: 16),
+                  SizedBox(height: 16.h),
 
                   // Time range
                   Card(
@@ -400,7 +395,7 @@ class _DoNotDisturbPanelState extends State<DoNotDisturbPanel> {
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                  SizedBox(height: 16.h),
 
                   // Options
                   CheckboxListTile(
@@ -441,17 +436,17 @@ class ReminderActionSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: EdgeInsets.all(16.w),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(reminderTitle, style: Theme.of(context).textTheme.titleMedium),
-          SizedBox(height: 8),
+          SizedBox(height: 8.h),
           Text(
             'Scheduled: ${scheduledTime.hour}:${scheduledTime.minute.toString().padLeft(2, '0')}',
             style: Theme.of(context).textTheme.bodySmall,
           ),
-          SizedBox(height: 24),
+          SizedBox(height: 24.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [

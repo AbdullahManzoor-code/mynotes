@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart' show SizeExtension;
 
 /// Subtask entity for nested task management (SUB-001)
 class Subtask {
@@ -105,7 +106,7 @@ class _SubtaskListWidgetState extends State<SubtaskListWidget> {
 
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -159,7 +160,7 @@ class _SubtaskListWidgetState extends State<SubtaskListWidget> {
       background: Container(
         color: Colors.red.withOpacity(0.2),
         alignment: Alignment.centerRight,
-        padding: EdgeInsets.only(right: 16),
+        padding: EdgeInsets.only(right: 16.w),
         child: Icon(Icons.delete_outline, color: Colors.red),
       ),
       onDismissed: (_) => widget.onSubtaskDelete(subtask),
@@ -219,7 +220,7 @@ class _SubtaskCreatorWidgetState extends State<SubtaskCreatorWidget> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(12),
+      padding: EdgeInsets.all(12.w),
       child: Row(
         children: [
           Expanded(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Recurrence pattern for recurring tasks
 enum RecurrenceType { none, daily, weekly, monthly, yearly }
@@ -139,7 +140,7 @@ class _RecurrencePickerWidgetState extends State<RecurrencePickerWidget> {
   Widget build(BuildContext context) {
     return Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(16.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -232,7 +233,7 @@ class _RecurrencePickerWidgetState extends State<RecurrencePickerWidget> {
             SizedBox(height: 12),
             // Summary
             Container(
-              padding: EdgeInsets.all(12),
+              padding: EdgeInsets.all(12.w),
               decoration: BoxDecoration(
                 color: Colors.blue.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
@@ -288,7 +289,7 @@ class RecurrenceDisplay extends StatelessWidget {
     if (!pattern.isActive()) return SizedBox.shrink();
 
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: Colors.purple.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),

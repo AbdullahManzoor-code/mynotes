@@ -174,38 +174,31 @@ class _AlarmTriggerPopupState extends State<AlarmTriggerPopup>
                   // Action buttons (CANNOT BE DISMISSED WITHOUT THESE)
                   Column(
                     children: [
-                      // Snooze button
-                      _ActionButton(
-                        icon: Icons.pause_circle_filled,
-                        label: 'Snooze 5m',
-                        color: Colors.orange,
-                        onPressed: () {
-                          AppLogger.i('🔔 [ALARM-POPUP] Snooze action tapped');
-                          _stopAlarmEffects();
-
-                          final snoozeUntil = DateTime.now().add(
-                            const Duration(minutes: 5),
-                          );
-
-                          context.read<AlarmsBloc>().add(
-                            SnoozeAlarmEvent(
-                              alarmId: widget.alarm.alarmId,
-                              snoozeMinutes: 5,
-                            ),
-                          );
-
-                          widget.onDismiss();
-
-                          // Navigate to snooze confirmation screen
-                          Navigator.of(context).pushNamed(
-                            '/alarms/snooze-confirmation',
-                            arguments: {
-                              'alarm': widget.alarm,
-                              'snoozeUntil': snoozeUntil,
-                              'snoozeMinutes': 5,
-                            },
-                          );
-                        },
+                      // A006: Multiple snooze options (5, 10, 15 minutes)
+                      // Users can choose their preferred snooze duration
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _SnoozeButton(
+                            duration: 5,
+                            alarm: widget.alarm,
+                            onDismiss: widget.onDismiss,
+                            onStopAlarmEffects: _stopAlarmEffects,
+                          ),
+                          _SnoozeButton(
+                            duration: 10,
+                            alarm: widget.alarm,
+                            onDismiss: widget.onDismiss,
+                            onStopAlarmEffects: _stopAlarmEffects,
+                          ),
+                          _SnoozeButton(
+                            duration: 15,
+                            alarm: widget.alarm,
+                            onDismiss: widget.onDismiss,
+                            onStopAlarmEffects: _stopAlarmEffects,
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
 
@@ -296,6 +289,66 @@ class _AlarmTriggerPopupState extends State<AlarmTriggerPopup>
 
   String _formatTime(DateTime time) {
     return '${time.hour.toString().padLeft(2, '0')}:${time.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+/// [A006] Snooze button with configurable duration
+class _SnoozeButton extends StatelessWidget {
+  final int duration; // Duration in minutes (5, 10, 15)
+  final dynamic alarm;
+  final VoidCallback onDismiss;
+  final VoidCallback onStopAlarmEffects;
+
+  const _SnoozeButton({
+    required this.duration,
+    required this.alarm,
+    required this.onDismiss,
+    required this.onStopAlarmEffects,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: () {
+        AppLogger.i(
+          '🔔 [ALARM-POPUP] Snooze ${duration}m action tapped',
+        );
+        onStopAlarmEffects();
+
+        final snoozeUntil = DateTime.now().add(Duration(minutes: duration));
+
+        // Dispatch snooze event with specific duration
+        context.read<AlarmsBloc>().add(
+          SnoozeAlarmEvent(
+            alarmId: alarm.alarmId,
+            snoozeMinutes: duration,
+          ),
+        );
+
+        onDismiss();
+
+        // Navigate to snooze confirmation screen
+        Navigator.of(context).pushNamed(
+          '/alarms/snooze-confirmation',
+          arguments: {
+            'alarm': alarm,
+            'snoozeUntil': snoozeUntil,
+            'snoozeMinutes': duration,
+          },
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.orange,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        elevation: 3,
+      ),
+      child: Text(
+        '⏸️ ${duration}m',
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      ),
+    );
   }
 }
 

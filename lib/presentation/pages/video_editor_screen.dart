@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 import 'package:video_editor/video_editor.dart';
 import '../../domain/entities/media_item.dart';
 import '../bloc/video_editor/video_editor_bloc.dart';
@@ -161,7 +162,7 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
 
   Widget _buildTrimTimeline() {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(20.w),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -171,10 +172,10 @@ class _VideoEditorScreenState extends State<VideoEditorScreen> {
             horizontalMargin: 20,
             child: TrimTimeline(
               controller: _controller,
-              padding: const EdgeInsets.only(top: 10),
+              padding: EdgeInsets.only(top: 10.h),
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10.h),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [

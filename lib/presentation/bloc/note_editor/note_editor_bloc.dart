@@ -57,6 +57,7 @@ import 'package:mynotes/domain/entities/media_item.dart';
 import 'package:mynotes/core/services/media_processing_service.dart';
 import 'package:video_compress/video_compress.dart'; // M010/M011: VideoQuality enum
 import 'dart:io';
+import 'package:mynotes/core/services/app_logger.dart';
 
 import 'package:mynotes/presentation/widgets/note_template_selector.dart';
 
@@ -531,6 +532,9 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     }
   }
 
+  // ISSUE-007: Voice input fully integrated with BLoC state
+  // Previous: Used SpeechService callbacks directly
+  // Now: All voice state changes go through BLoC events and states
   Future<void> _onVoiceInputToggled(
     VoiceInputToggled event,
     Emitter<NoteEditorState> emit,
@@ -538,28 +542,57 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     if (state is NoteEditorLoaded) {
       final s = state as NoteEditorLoaded;
       if (s.isListening) {
-        await _speechService.stopListening();
-        emit(s.copyWith(isListening: false));
-        _feedbackService.recordingStopped();
-      } else {
+        // Stop listening and emit state through BLoC
         try {
-          final initialized = await _speechService.initialize();
-          if (initialized) {
-            emit(s.copyWith(isListening: true, errorCode: null));
-            await _feedbackService.recordingStarted();
-            _speechService.startListening(
-              onResult: (text) =>
-                  add(SpeechResultReceived(text, isFinal: true)),
-              onPartialResult: (text) =>
-                  add(SpeechResultReceived(text, isFinal: false)),
-            );
-          } else {
-            _feedbackService.errorOccurred();
-            emit(s.copyWith(errorCode: 'SPEECH_PERMISSION_DENIED'));
-          }
+          await _speechService.stopListening();
+          _feedbackService.recordingStopped();
+          emit(
+            s.copyWith(isListening: false, errorCode: null, lastVoiceInput: ''),
+          );
+          AppLogger.i('✅ [VOICE-INPUT] Voice input stopped via BLoC');
         } catch (e) {
+          AppLogger.e('Voice stop error: $e');
+          emit(s.copyWith(errorCode: 'VOICE_STOP_ERROR'));
+        }
+      } else {
+        // Start listening and emit state through BLoC
+        try {
+          emit(s.copyWith(isListening: true, errorCode: null));
+          await _feedbackService.recordingStarted();
+          AppLogger.i('✅ [VOICE-INPUT] Voice input initialized via BLoC');
+
+          final initialized = await _speechService.initialize();
+          if (!initialized) {
+            _feedbackService.errorOccurred();
+            emit(
+              s.copyWith(
+                isListening: false,
+                errorCode: 'SPEECH_PERMISSION_DENIED',
+              ),
+            );
+            AppLogger.w('Voice permission denied');
+            return;
+          }
+
+          // Start listening with proper BLoC integration
+          _speechService.startListening(
+            onResult: (text) {
+              AppLogger.i('🎤 [VOICE-INPUT] Final result: $text');
+              add(SpeechResultReceived(text, isFinal: true));
+            },
+            onPartialResult: (text) {
+              AppLogger.i('🎤 [VOICE-INPUT] Partial result: $text');
+              add(SpeechResultReceived(text, isFinal: false));
+            },
+            onDone: () {
+              AppLogger.i('✅ [VOICE-INPUT] Listening session completed');
+              add(const StopVoiceInputRequested());
+            },
+          );
+        } catch (e, stack) {
+          AppLogger.e('Voice input error: $e', e, stack);
           _feedbackService.errorOccurred();
-          emit(s.copyWith(errorCode: 'SPEECH_INIT_FAILED'));
+          emit(s.copyWith(isListening: false, errorCode: 'SPEECH_INIT_FAILED'));
         }
       }
     }
@@ -577,24 +610,55 @@ class NoteEditorBloc extends Bloc<NoteEditorEvent, NoteEditorState> {
     }
   }
 
+  // ISSUE-007: Enhanced voice result processing with proper BLoC state
   void _onSpeechResultReceived(
     SpeechResultReceived event,
     Emitter<NoteEditorState> emit,
   ) {
     if (state is NoteEditorLoaded) {
       final s = state as NoteEditorLoaded;
+
       if (event.isFinal) {
         try {
+          AppLogger.i(
+            '🎤 [VOICE-PROCESS] Processing final voice input: ${event.text}',
+          );
+
+          // Try to detect and execute voice commands
           final commandMatched = _commandService.detectAndExecute(event.text);
           if (commandMatched) {
             _feedbackService.commandRecognized();
+            AppLogger.i('✅ [VOICE-COMMAND] Command recognized and executed');
+          } else {
+            // No command matched, treat as content
+            AppLogger.i(
+              '📝 [VOICE-CONTENT] No command matched, adding as content',
+            );
+            final updatedContent = s.params.content + ' ' + event.text;
+            emit(
+              s.copyWith(
+                params: s.params.copyWith(content: updatedContent.trim()),
+                isListening: false,
+                lastVoiceInput: event.text,
+              ),
+            );
+            return;
           }
-          emit(s.copyWith(isListening: false));
-        } catch (e) {
+
+          // Emit state change indicating listening stopped
+          emit(s.copyWith(isListening: false, lastVoiceInput: event.text));
+          _feedbackService.recordingStopped();
+        } catch (e, stack) {
+          AppLogger.e('Voice processing error: $e', e, stack);
+          _feedbackService.errorOccurred();
           emit(
             s.copyWith(isListening: false, errorCode: 'SPEECH_PROCESS_ERROR'),
           );
         }
+      } else if (event.isFinal == false) {
+        // Partial result - update UI with partial text for user feedback
+        AppLogger.i('🎤 [VOICE-PARTIAL] Partial input: ${event.text}');
+        emit(s.copyWith(voicePartialResult: event.text, isListening: true));
       }
     }
   }

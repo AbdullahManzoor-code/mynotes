@@ -11,14 +11,25 @@ import 'package:mynotes/presentation/widgets/add_reminder_bottom_sheet.dart';
 /// Enhanced Smart Reminders List Screen
 /// Advanced reminders management with smart snooze and context awareness
 /// Based on reminders_list_with_smart_snooze template
-class EnhancedRemindersListScreen extends StatelessWidget {
+class EnhancedRemindersListScreen extends StatefulWidget {
   const EnhancedRemindersListScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Initial data load and timer start
-    _initScreen(context);
+  State<EnhancedRemindersListScreen> createState() =>
+      _EnhancedRemindersListScreenState();
+}
 
+class _EnhancedRemindersListScreenState
+    extends State<EnhancedRemindersListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Initial data load and timer start - FIXED: Moved from build() to initState()
+    _initScreen(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return BlocBuilder<AlarmsBloc, AlarmsState>(
       builder: (context, state) {
         List<AlarmParams> alarms = [];

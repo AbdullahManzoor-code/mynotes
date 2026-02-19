@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Task notes widget - Add description/notes to tasks (TD-008)
 class TaskNotesWidget extends StatefulWidget {
@@ -46,7 +47,7 @@ class _TaskNotesWidgetState extends State<TaskNotesWidget> {
             context,
           ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
         ),
-        SizedBox(height: 8),
+        SizedBox(height: 8.h),
         TextField(
           controller: _notesController,
           maxLines: 4,
@@ -64,7 +65,7 @@ class _TaskNotesWidgetState extends State<TaskNotesWidget> {
           ),
         ),
         if (widget.onSave != null) ...[
-          SizedBox(height: 12),
+          SizedBox(height: 12.h),
           ElevatedButton.icon(
             icon: Icon(Icons.save),
             label: Text('Save Notes'),
@@ -154,7 +155,7 @@ class TaskNotesDisplay extends StatelessWidget {
                 Row(
                   children: [
                     Icon(Icons.note_outlined, size: 18, color: Colors.grey),
-                    SizedBox(width: 8),
+                    SizedBox(width: 8.w),
                     Text(
                       'Notes',
                       style: Theme.of(
@@ -172,7 +173,7 @@ class TaskNotesDisplay extends StatelessWidget {
                   ),
               ],
             ),
-            SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Text(
               notes,
               style: Theme.of(context).textTheme.bodyMedium,

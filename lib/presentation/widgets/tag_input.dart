@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Tag entity
 class Tag {
@@ -138,7 +139,7 @@ class _TagInputState extends State<TagInput> {
         // Selected tags
         if (widget.selectedTags.isNotEmpty) ...[
           Text('Selected Tags', style: Theme.of(context).textTheme.labelMedium),
-          SizedBox(height: 8),
+          SizedBox(height: 8.h),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -151,7 +152,7 @@ class _TagInputState extends State<TagInput> {
                 )
                 .toList(),
           ),
-          SizedBox(height: 16),
+          SizedBox(height: 16.h),
         ],
 
         // Tag input field
@@ -182,7 +183,7 @@ class _TagInputState extends State<TagInput> {
         // Suggestions dropdown
         if (_suggestions.isNotEmpty)
           Container(
-            margin: EdgeInsets.only(top: 8),
+            margin: EdgeInsets.only(top: 8.h),
             decoration: BoxDecoration(
               border: Border.all(color: Theme.of(context).colorScheme.outline),
               borderRadius: BorderRadius.circular(8),
@@ -229,7 +230,7 @@ class _TagInputState extends State<TagInput> {
                       child: Row(
                         children: [
                           Icon(Icons.add, size: 20),
-                          SizedBox(width: 8),
+                          SizedBox(width: 8.w),
                           Text('Create "${_controller.text.trim()}"'),
                         ],
                       ),

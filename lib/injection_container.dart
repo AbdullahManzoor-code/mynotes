@@ -95,6 +95,7 @@ import 'package:mynotes/presentation/bloc/location_reminder/location_reminder_bl
 import 'package:mynotes/data/repositories/location_reminder_repository.dart';
 import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
 import 'package:mynotes/presentation/bloc/accessibility_features/accessibility_features_bloc.dart';
+import 'package:mynotes/presentation/bloc/localization/localization_bloc.dart';
 
 import 'package:mynotes/core/notifications/notification_service.dart';
 import 'package:mynotes/core/notifications/alarm_service.dart';
@@ -448,6 +449,9 @@ Future<void> setupServiceLocator() async {
   getIt.registerSingleton<AccessibilityFeaturesBloc>(
     AccessibilityFeaturesBloc(),
   );
+
+  /// Localization BLoC
+  getIt.registerSingleton<LocalizationBloc>(LocalizationBloc());
 }
 
 /// Get registered BLoCs

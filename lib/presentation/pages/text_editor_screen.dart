@@ -73,11 +73,11 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen> {
                         ? null
                         : () {
                             context.read<TextEditorBloc>().add(
-                                  SaveFileEvent(
-                                    filePath: widget.mediaItem.filePath,
-                                    content: _controller.text,
-                                  ),
-                                );
+                              SaveFileEvent(
+                                filePath: widget.mediaItem.filePath,
+                                content: _controller.text,
+                              ),
+                            );
                           },
                   ),
                 ],
@@ -85,7 +85,7 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen> {
               body: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : Padding(
-                      padding: const EdgeInsets.all(16.0),
+                      padding: EdgeInsets.all(16.w),
                       child: TextField(
                         controller: _controller,
                         maxLines: null,
@@ -99,9 +99,9 @@ class _SimpleTextEditorScreenState extends State<SimpleTextEditorScreen> {
                           hintText: 'Start writing...',
                         ),
                         onChanged: (value) {
-                          context
-                              .read<TextEditorBloc>()
-                              .add(UpdateContentEvent(value));
+                          context.read<TextEditorBloc>().add(
+                            UpdateContentEvent(value),
+                          );
                         },
                       ),
                     ),

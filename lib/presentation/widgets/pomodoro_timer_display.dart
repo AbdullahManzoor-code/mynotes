@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
 import 'package:mynotes/presentation/design_system/app_typography.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart';
 
 /// Simple Pomodoro timer display with visual countdown
 class PomodoroTimerDisplay extends StatefulWidget {
@@ -93,7 +94,7 @@ class _PomodoroTimerDisplayState extends State<PomodoroTimerDisplay> {
         // Session label
         if (widget.sessionLabel != null)
           Padding(
-            padding: const EdgeInsets.only(bottom: 24),
+            padding: EdgeInsets.only(bottom: 24.h),
             child: Text(
               widget.sessionLabel!,
               style: AppTypography.titleLarge(
@@ -145,7 +146,7 @@ class _PomodoroTimerDisplayState extends State<PomodoroTimerDisplay> {
           ],
         ),
 
-        const SizedBox(height: 40),
+        SizedBox(height: 40.h),
 
         // Control buttons
         Row(
@@ -156,13 +157,13 @@ class _PomodoroTimerDisplayState extends State<PomodoroTimerDisplay> {
               icon: const Icon(Icons.play_arrow),
               label: const Text('Start'),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12.w),
             OutlinedButton.icon(
               onPressed: _isRunning ? _pauseTimer : null,
               icon: const Icon(Icons.pause),
               label: const Text('Pause'),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12.w),
             OutlinedButton.icon(
               onPressed: _resetTimer,
               icon: const Icon(Icons.restart_alt),
@@ -171,7 +172,7 @@ class _PomodoroTimerDisplayState extends State<PomodoroTimerDisplay> {
           ],
         ),
 
-        const SizedBox(height: 24),
+        SizedBox(height: 24.h),
 
         // Info text
         Text(
