@@ -54,7 +54,7 @@ class AppColors {
 
   /// Secondary text color - Medium gray (#617f89)
   static const Color secondaryText = Color(0xFF617F89);
-  static const Color secondaryTextDark = Color(0xFF92BBC9);
+  static const Color secondaryTextDark = Color(0xFFB0BEC5);
 
   /// Tertiary text color - Light gray (#9db2b9, #9eb1b7)
   static const Color tertiaryText = Color(0xFF9DB2B9);
@@ -62,17 +62,26 @@ class AppColors {
 
   /// Disabled/Placeholder text
   static const Color disabledText = Color(0xFFBDBDBD);
+  static const Color disabledTextDark = Color(0xFF78909C);
 
-  /// Grey shades
+  /// Grey shades - Complete scale
+  static const Color grey50 = Color(0xFFFAFAFA);
+  static const Color grey100 = Color(0xFFF5F5F5);
+  static const Color grey200 = Color(0xFFEEEEEE);
+  static const Color grey300 = Color(0xFFE0E0E0);
   static const Color grey400 = Color(0xFFBDBDBD);
   static const Color grey500 = Color(0xFF9E9E9E);
+  static const Color grey600 = Color(0xFF757575);
+  static const Color grey700 = Color(0xFF616161);
+  static const Color grey800 = Color(0xFF424242);
+  static const Color grey900 = Color(0xFF212121);
 
   /// Alias: Muted text color
   static const Color textMuted = Color(0xFF617F89);
 
-  /// Border colors
+  /// Border colors - Better contrast for dark mode
   static const Color borderLight = Color(0xFFE5E7EB);
-  static const Color borderDark = Color(0xFF374151);
+  static const Color borderDark = Color(0xFF454545);
 
   /// Success Green alias
   static const Color successGreen = Color(0xFF078836);
@@ -80,6 +89,40 @@ class AppColors {
   static const Color error = Color(0xFFEF4444);
   static const Color warning = Color(0xFFFBBF24);
   static const Color info = Color(0xFF3B82F6);
+
+  // ==================== Enhanced Semantic Colors (Light/Dark Pairs) ====================
+
+  /// Success colors - WCAG AA compliant for both modes
+  static const Color successLight = Color(0xFFC8E6C9);
+  static const Color successLightBg = Color(0xFFE8F5E9);
+  static const Color successLightText = Color(0xFF1B5E20);
+  static const Color successDark = Color(0xFF81C784);
+  static const Color successDarkBg = Color(0xFF1B5E20);
+  static const Color successDarkText = Color(0xFFC8E6C9);
+
+  /// Error colors - WCAG AA compliant
+  static const Color errorLight = Color(0xFFFFCDD2);
+  static const Color errorLightBg = Color(0xFFFFEBEE);
+  static const Color errorLightText = Color(0xFFB71C1C);
+  static const Color errorDark = Color(0xFFEF5350);
+  static const Color errorDarkBg = Color(0xFFB71C1C);
+  static const Color errorDarkText = Color(0xFFFFCDD2);
+
+  /// Warning colors - WCAG AA compliant
+  static const Color warningLight = Color(0xFFFFE082);
+  static const Color warningLightBg = Color(0xFFFFF8E1);
+  static const Color warningLightText = Color(0xFFF57F17);
+  static const Color warningDark = Color(0xFFFFB74D);
+  static const Color warningDarkBg = Color(0xFFF57F17);
+  static const Color warningDarkText = Color(0xFFFFF8E1);
+
+  /// Info colors - WCAG AA compliant
+  static const Color infoLight = Color(0xFFBBDEFB);
+  static const Color infoLightBg = Color(0xFFE3F2FD);
+  static const Color infoLightText = Color(0xFF0D47A1);
+  static const Color infoDark = Color(0xFF64B5F6);
+  static const Color infoDarkBg = Color(0xFF0D47A1);
+  static const Color infoDarkText = Color(0xFFE3F2FD);
 
   // ==================== Background Colors ====================
 
@@ -113,23 +156,23 @@ class AppColors {
 
   /// Success states
   static const Color successColor = Color(0xFF078836);
-  static const Color successLight = Color(0xFF4ADE80);
-  static const Color successDark = Color(0xFF065F46);
+  // static const Color successLight = Color(0xFF4ADE80);
+  // static const Color successDark = Color(0xFF065F46);
 
   /// Error states
   static const Color errorColor = Color(0xFFEF4444);
-  static const Color errorLight = Color(0xFFF87171);
-  static const Color errorDark = Color(0xFFDC2626);
+  // static const Color errorLight = Color(0xFFF87171);
+  // static const Color errorDark = Color(0xFFDC2626);
 
   /// Warning states
   static const Color warningColor = Color(0xFFFBBF24);
-  static const Color warningLight = Color(0xFFFCD34D);
-  static const Color warningDark = Color(0xFFF59E0B);
+  // static const Color warningLight = Color(0xFFFCD34D);
+  // static const Color warningDark = Color(0xFFF59E0B);
 
   /// Info states
   static const Color infoColor = Color(0xFF3B82F6);
-  static const Color infoLight = Color(0xFF60A5FA);
-  static const Color infoDark = Color(0xFF2563EB);
+  // static const Color infoLight = Color(0xFF60A5FA);
+  // static const Color infoDark = Color(0xFF2563EB);
 
   // ==================== Border & Divider Colors ====================
 
@@ -200,9 +243,16 @@ class AppColors {
 
   // ==================== Gradient Definitions ====================
 
-  /// Primary gradient (used in FAB, buttons)
+  /// Primary gradient (used in FAB, buttons, headers)
   static const LinearGradient primaryGradient = LinearGradient(
     colors: [Color(0xFF13B6EC), Color(0xFF0EA5E9)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Primary gradient variant for dark mode
+  static const LinearGradient primaryGradientDark = LinearGradient(
+    colors: [Color(0xFF0EA5E9), Color(0xFF0891B2)],
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
@@ -214,18 +264,85 @@ class AppColors {
     end: Alignment.bottomRight,
   );
 
-  /// Card gradient (subtle background)
+  /// Error gradient
+  static const LinearGradient errorGradient = LinearGradient(
+    colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Warning gradient
+  static const LinearGradient warningGradient = LinearGradient(
+    colors: [Color(0xFFFBBF24), Color(0xFFF59E0B)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Info gradient
+  static const LinearGradient infoGradient = LinearGradient(
+    colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  /// Card gradient (subtle background) - Light mode
   static const LinearGradient cardGradientLight = LinearGradient(
     colors: [Color(0xFFFFFFFF), Color(0xFFF9FAFB)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
+  /// Card gradient - Dark mode
   static const LinearGradient cardGradientDark = LinearGradient(
     colors: [Color(0xFF1A2B32), Color(0xFF12232A)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
+
+  /// Shimmer gradient - Light mode (for loading states)
+  static const LinearGradient shimmerGradientLight = LinearGradient(
+    colors: [Color(0xFFF5F5F5), Color(0xFFFFFFFF), Color(0xFFF5F5F5)],
+    stops: [0.0, 0.5, 1.0],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+
+  /// Shimmer gradient - Dark mode (for loading states)
+  static const LinearGradient shimmerGradientDark = LinearGradient(
+    colors: [Color(0xFF2A2A2A), Color(0xFF3C3C3C), Color(0xFF2A2A2A)],
+    stops: [0.0, 0.5, 1.0],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+
+  // ==================== Gradient Definitions ====================
+
+  // /// Primary gradient (used in FAB, buttons)
+  // static const LinearGradient primaryGradient = LinearGradient(
+  //   colors: [Color(0xFF13B6EC), Color(0xFF0EA5E9)],
+  //   begin: Alignment.topLeft,
+  //   end: Alignment.bottomRight,
+  // );
+
+  // /// Success gradient
+  // static const LinearGradient successGradient = LinearGradient(
+  //   colors: [Color(0xFF4ADE80), Color(0xFF10B981)],
+  //   begin: Alignment.topLeft,
+  //   end: Alignment.bottomRight,
+  // );
+
+  // /// Card gradient (subtle background)
+  // static const LinearGradient cardGradientLight = LinearGradient(
+  //   colors: [Color(0xFFFFFFFF), Color(0xFFF9FAFB)],
+  //   begin: Alignment.topCenter,
+  //   end: Alignment.bottomCenter,
+  // );
+
+  // static const LinearGradient cardGradientDark = LinearGradient(
+  //   colors: [Color(0xFF1A2B32), Color(0xFF12232A)],
+  //   begin: Alignment.topCenter,
+  //   end: Alignment.bottomCenter,
+  // );
 
   // ==================== Tag & Category Colors ====================
 

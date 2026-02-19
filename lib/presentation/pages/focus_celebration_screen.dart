@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
-import '../design_system/design_system.dart';
+import '../design_system/design_system.dart' hide TextButton;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/focus/focus_bloc.dart';
 import 'focus_session_screen.dart';
@@ -410,3 +410,5 @@ class _FocusCelebrationScreenState extends State<FocusCelebrationScreen>
     );
   }
 }
+
+

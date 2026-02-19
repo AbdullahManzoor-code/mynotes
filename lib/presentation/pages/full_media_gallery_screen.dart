@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/media/media_gallery/media_gallery_bloc.dart';
-import '../design_system/design_system.dart';
+import '../design_system/design_system.dart' hide TextButton;
 import '../../domain/entities/media_item.dart';
 
 /// Full Media Gallery Screen
@@ -428,3 +428,5 @@ class _FullMediaGalleryScreenState extends State<FullMediaGalleryScreen> {
     );
   }
 }
+
+

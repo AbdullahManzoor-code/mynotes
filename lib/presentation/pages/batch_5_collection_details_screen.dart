@@ -468,3 +468,5 @@ class CollectionDetailsScreen extends StatelessWidget {
     );
   }
 }
+
+

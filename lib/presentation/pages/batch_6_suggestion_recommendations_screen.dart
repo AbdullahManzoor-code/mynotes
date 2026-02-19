@@ -341,3 +341,5 @@ class SuggestionRecommendationsScreen extends StatelessWidget {
     }
   }
 }
+
+

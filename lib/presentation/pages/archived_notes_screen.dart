@@ -6,7 +6,7 @@ import 'package:mynotes/presentation/bloc/note/note_state.dart';
 
 import '../../presentation/bloc/params/note_params.dart';
 import '../../domain/entities/note.dart';
-import '../design_system/design_system.dart';
+import '../design_system/design_system.dart' hide TextButton;
 import '../widgets/note_card_widget.dart';
 import '../../injection_container.dart' show getIt;
 
@@ -301,3 +301,5 @@ class ArchivedNotesScreen extends StatelessWidget {
     );
   }
 }
+
+

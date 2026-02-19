@@ -520,3 +520,5 @@ class _AdvancedSearchBodyState extends State<_AdvancedSearchBody> {
     Navigator.pushNamed(context, AppRoutes.searchResults, arguments: query);
   }
 }
+
+

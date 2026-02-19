@@ -346,3 +346,5 @@ class FilterOption {
 
   FilterOption(this.type, this.name, this.icon);
 }
+
+

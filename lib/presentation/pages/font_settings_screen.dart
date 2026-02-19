@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:mynotes/presentation/design_system/design_system.dart';
+import 'package:mynotes/presentation/design_system/design_system.dart'
+    hide TextButton;
 import 'package:mynotes/core/services/theme_customization_service.dart';
 import 'package:mynotes/presentation/bloc/settings/settings_bloc.dart';
 import 'package:mynotes/presentation/bloc/params/settings_params.dart';
@@ -344,3 +345,5 @@ class _FontSettingsView extends StatelessWidget {
     getIt<GlobalUiService>().showSuccess('Font settings reset to defaults');
   }
 }
+
+

@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import '../bloc/analytics/analytics_bloc.dart';
 import 'edit_daily_highlight_screen_new.dart';
-import '../design_system/design_system.dart';
+import '../design_system/design_system.dart' hide OutlinedButton;
 
 /// Daily Highlight Summary Screen
 /// Shows evening review with top 3 wins of the day
@@ -507,3 +507,5 @@ class _DailyHighlightSummaryScreenState
     );
   }
 }
+
+

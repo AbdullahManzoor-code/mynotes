@@ -5,7 +5,7 @@ import 'package:mynotes/core/design_system/app_colors.dart';
 import 'package:mynotes/core/design_system/app_spacing.dart';
 import 'package:mynotes/core/design_system/app_typography.dart';
 import 'package:mynotes/injection_container.dart';
-import '../design_system/design_system.dart';
+import '../design_system/design_system.dart' hide OutlinedButton;
 import '../../core/services/global_ui_service.dart';
 import '../bloc/filters/filters_bloc.dart';
 

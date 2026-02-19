@@ -454,3 +454,5 @@ class CollectionManagementScreen extends StatelessWidget {
     );
   }
 }
+
+

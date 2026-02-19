@@ -610,3 +610,5 @@ class _LocationLifecycleWrapperState extends State<_LocationLifecycleWrapper> {
   @override
   Widget build(BuildContext context) => widget.child;
 }
+
+

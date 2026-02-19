@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import '../bloc/drawing_canvas/drawing_canvas_bloc.dart';
-import '../design_system/design_system.dart';
+import '../design_system/design_system.dart' hide TextButton;
 
 /// Drawing Canvas Screen
 /// Freehand drawing capability with shapes, colors, and tools
@@ -384,3 +384,5 @@ class DrawingPainter extends CustomPainter {
     return oldDelegate.paths.length != paths.length;
   }
 }
+
+

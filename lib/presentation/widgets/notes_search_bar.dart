@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../domain/entities/note.dart';
-import '../design_system/design_system.dart';
+import '../design_system/design_system.dart' hide OutlinedButton;
 import '../bloc/note/note_bloc.dart';
 import '../bloc/note/note_event.dart';
 import '../bloc/note/note_state.dart';

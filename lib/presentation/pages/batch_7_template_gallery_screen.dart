@@ -465,3 +465,5 @@ class TemplateGalleryScreen extends StatelessWidget {
     }
   }
 }
+
+

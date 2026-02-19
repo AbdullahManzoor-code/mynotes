@@ -350,3 +350,5 @@ class _LocationPermissionBannerState extends State<LocationPermissionBanner> {
     super.dispose();
   }
 }
+
+

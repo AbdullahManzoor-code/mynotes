@@ -706,3 +706,5 @@ class _CreateSmartCollectionWizardState
     Navigator.pop(context);
   }
 }
+
+

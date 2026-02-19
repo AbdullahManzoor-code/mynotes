@@ -8,7 +8,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../bloc/audio_recorder/audio_recorder_bloc.dart';
-import '../design_system/design_system.dart';
+import '../design_system/design_system.dart' hide TextButton;
 
 /// Audio Recorder Screen
 /// Records voice notes with waveform visualization
@@ -667,3 +667,5 @@ class _WaveformPainter extends CustomPainter {
   @override
   bool shouldRepaint(_WaveformPainter oldDelegate) => true;
 }
+
+
