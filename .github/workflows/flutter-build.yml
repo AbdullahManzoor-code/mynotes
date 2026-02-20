@@ -99,3 +99,16 @@ jobs:
           name: ios-build-outputs
           path: build/ios/Release-iphoneos/
           retention-days: 7
+
+      - name: Create GitHub Release (iOS)
+        uses: softprops/action-gh-release@v2
+        if: github.ref == 'refs/heads/main'
+        with:
+          tag_name: latest-ios
+          name: "Latest iOS Release (Automated)"
+          draft: false
+          prerelease: false
+          files: |
+            build/ios/Release-iphoneos/
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

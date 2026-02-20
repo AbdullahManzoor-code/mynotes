@@ -617,7 +617,8 @@ class MyNotesApp extends StatelessWidget {
                           locale: selectedLocale,
                           // FIX: SET007 Use generated AppLocalizations for proper language support
                           supportedLocales: AppLocalizations.supportedLocales,
-                          localizationsDelegates: AppLocalizations.localizationsDelegates,
+                          localizationsDelegates:
+                              AppLocalizations.localizationsDelegates,
                           navigatorKey: AppRouter.navigatorKey,
                           scaffoldMessengerKey:
                               getIt<GlobalUiService>().messengerKey,
