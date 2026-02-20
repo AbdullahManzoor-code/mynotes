@@ -8,18 +8,17 @@ import '../constants/app_colors.dart';
 class AppTheme {
   AppTheme._(); // Private constructor
 
-  // Light Theme - Calm & Minimalist Design
-  static ThemeData get lightTheme {
+  // ==================== LIGHT THEME WITH CUSTOM PRIMARY COLOR ====================
+  static ThemeData buildLightTheme(Color customPrimaryColor) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      textTheme: GoogleFonts.interTextTheme(), // Inter font family
-      // Color Scheme
-      colorScheme: const ColorScheme.light(
-        primary: AppColors.primaryLight,
-        onPrimary: AppColors.onPrimary,
-        primaryContainer: AppColors.primaryContainer,
-        onPrimaryContainer: AppColors.onPrimaryContainer,
+      textTheme: GoogleFonts.interTextTheme(),
+      colorScheme: ColorScheme.light(
+        primary: customPrimaryColor,
+        onPrimary: Colors.white,
+        primaryContainer: customPrimaryColor.withOpacity(0.1),
+        onPrimaryContainer: customPrimaryColor,
         secondary: AppColors.secondaryLight,
         onSecondary: AppColors.onSecondary,
         secondaryContainer: AppColors.secondaryContainer,
@@ -42,69 +41,62 @@ class AppTheme {
         scrim: AppColors.scrim,
         inverseSurface: AppColors.inverseSurfaceLight,
         onInverseSurface: AppColors.inverseOnSurfaceLight,
-        inversePrimary: AppColors.inversePrimaryLight,
+        inversePrimary: customPrimaryColor,
       ),
-
-      // App Bar Theme
-      appBarTheme: const AppBarTheme(
+      scaffoldBackgroundColor: AppColors.backgroundLight,
+      appBarTheme: AppBarTheme(
         elevation: 0,
         centerTitle: true,
         backgroundColor: AppColors.surfaceLight,
-        foregroundColor: AppColors.onSurfaceLight,
+        foregroundColor: customPrimaryColor,
         systemOverlayStyle: SystemUiOverlayStyle.dark,
-        iconTheme: IconThemeData(color: AppColors.onSurfaceLight),
+        iconTheme: IconThemeData(color: customPrimaryColor),
         titleTextStyle: TextStyle(
-          color: AppColors.onSurfaceLight,
+          color: customPrimaryColor,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
       ),
-
-      // Card Theme - Subtle borders with very light shadows
       cardTheme: CardThemeData(
-        elevation: 0.5, // Very subtle shadow
+        elevation: 0.5,
         shadowColor: AppColors.shadow.withOpacity(0.05),
         color: Colors.white,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: AppColors.outlineVariantLight, width: 0.5),
+          side: BorderSide(
+            color: customPrimaryColor.withOpacity(0.3),
+            width: 0.5,
+          ),
         ),
         clipBehavior: Clip.antiAlias,
-        margin: const EdgeInsets.all(16), // Breathing room
+        margin: const EdgeInsets.all(16),
       ),
-
-      // Floating Action Button Theme - Muted Sage Green
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 2,
-        backgroundColor: AppColors.primaryLight, // Sage Green #8DAA91
+        backgroundColor: customPrimaryColor,
         foregroundColor: Colors.white,
-        shape: CircleBorder(),
+        shape: const CircleBorder(),
       ),
-
-      // Input Decoration Theme - Calm & breathable
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.outlineLight,
+          borderSide: BorderSide(
+            color: customPrimaryColor.withOpacity(0.3),
             width: 0.5,
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.outlineVariantLight,
+          borderSide: BorderSide(
+            color: customPrimaryColor.withOpacity(0.2),
             width: 0.5,
           ),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.primaryLight,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: customPrimaryColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -112,101 +104,107 @@ class AppTheme {
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
-          vertical: 20, // More padding for breathing room
+          vertical: 20,
         ),
+        labelStyle: TextStyle(color: customPrimaryColor),
+        hintStyle: const TextStyle(color: AppColors.onSurfaceVariantLight),
       ),
-
-      // Elevated Button Theme
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          elevation: 2,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          backgroundColor: customPrimaryColor,
+          foregroundColor: Colors.white,
+          side: BorderSide(color: customPrimaryColor),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
-
-      // Text Button Theme
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: customPrimaryColor,
+          side: BorderSide(color: customPrimaryColor, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
+          foregroundColor: customPrimaryColor,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
-
-      // Icon Button Theme
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
-
-      // Chip Theme
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariantLight,
         selectedColor: AppColors.primaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-
-      // Dialog Theme
       dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 4,
       ),
-
-      // Bottom Sheet Theme
       bottomSheetTheme: const BottomSheetThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
         clipBehavior: Clip.antiAlias,
       ),
-
-      // Divider Theme
       dividerTheme: const DividerThemeData(
         color: AppColors.outlineVariantLight,
         thickness: 1,
         space: 1,
       ),
-
-      // List Tile Theme - More breathing room
       listTileTheme: const ListTileThemeData(
         contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),
-
-      // Scaffold Background Color - Soft off-white
-      scaffoldBackgroundColor: AppColors.backgroundLight,
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? customPrimaryColor
+              : Colors.grey.shade400;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? customPrimaryColor.withOpacity(0.5)
+              : Colors.grey.shade400.withOpacity(0.3);
+        }),
+      ),
     );
   }
 
-  // Dark Theme - Calm & Minimalist Design
-  static ThemeData get darkTheme {
+  // ==================== DARK THEME WITH CUSTOM PRIMARY COLOR ====================
+  static ThemeData buildDarkTheme(Color customPrimaryColor) {
     return ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
-      textTheme: GoogleFonts.interTextTheme(
-        ThemeData.dark().textTheme,
-      ), // Inter font family
-      // Color Scheme
-      colorScheme: const ColorScheme.dark(
-        primary: AppColors.primaryDark,
-        onPrimary: AppColors.onPrimaryContainer,
-        primaryContainer: AppColors.onPrimaryContainer,
-        onPrimaryContainer: AppColors.primaryDark,
+      textTheme: GoogleFonts.interTextTheme(ThemeData.dark().textTheme),
+      colorScheme: ColorScheme.dark(
+        primary: customPrimaryColor,
+        onPrimary: Colors.black,
+        primaryContainer: customPrimaryColor.withOpacity(0.2),
+        onPrimaryContainer: customPrimaryColor.withOpacity(0.9),
         secondary: AppColors.secondaryDark,
-        onSecondary: AppColors.onSecondaryContainer,
-        secondaryContainer: AppColors.onSecondaryContainer,
-        onSecondaryContainer: AppColors.secondaryDark,
+        onSecondary: Colors.white,
+        secondaryContainer: AppColors.secondaryDarkContainer,
+        onSecondaryContainer: AppColors.onSecondaryDark,
         tertiary: AppColors.tertiaryDark,
-        onTertiary: AppColors.onTertiaryContainer,
-        tertiaryContainer: AppColors.onTertiaryContainer,
-        onTertiaryContainer: AppColors.tertiaryDark,
+        onTertiary: Colors.white,
+        tertiaryContainer: AppColors.tertiaryDarkContainer,
+        onTertiaryContainer: AppColors.onTertiaryDark,
         error: AppColors.errorDark,
-        onError: AppColors.onErrorContainer,
-        errorContainer: AppColors.onErrorContainer,
-        onErrorContainer: AppColors.errorDark,
+        onError: Colors.black,
+        errorContainer: AppColors.errorDarkContainer,
+        onErrorContainer: AppColors.onErrorDark,
         surface: AppColors.surfaceDark,
         onSurface: AppColors.onSurfaceDark,
         surfaceContainerHighest: AppColors.surfaceVariantDark,
@@ -217,53 +215,49 @@ class AppTheme {
         scrim: AppColors.scrim,
         inverseSurface: AppColors.inverseSurfaceDark,
         onInverseSurface: AppColors.inverseOnSurfaceDark,
-        inversePrimary: AppColors.inversePrimaryDark,
+        inversePrimary: customPrimaryColor,
       ),
-
-      // App Bar Theme
-      appBarTheme: const AppBarTheme(
+      scaffoldBackgroundColor: AppColors.backgroundDark,
+      appBarTheme: AppBarTheme(
         elevation: 0,
         centerTitle: true,
         backgroundColor: AppColors.surfaceDark,
-        foregroundColor: AppColors.onSurfaceDark,
+        foregroundColor: customPrimaryColor,
         systemOverlayStyle: SystemUiOverlayStyle.light,
-        iconTheme: IconThemeData(color: AppColors.onSurfaceDark),
+        iconTheme: IconThemeData(color: customPrimaryColor),
         titleTextStyle: TextStyle(
-          color: AppColors.onSurfaceDark,
+          color: customPrimaryColor,
           fontSize: 20,
           fontWeight: FontWeight.w600,
         ),
       ),
-
-      // Card Theme - Subtle borders with very light shadows
       cardTheme: CardThemeData(
-        elevation: 0.5, // Very subtle shadow
+        elevation: 0.5,
         shadowColor: AppColors.shadow.withOpacity(0.15),
-        color: Color(0xFF222222), // Slightly lighter than background
+        color: const Color(0xFF222222),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: AppColors.outlineVariantDark, width: 0.5),
+          side: BorderSide(
+            color: customPrimaryColor.withOpacity(0.3),
+            width: 0.5,
+          ),
         ),
         clipBehavior: Clip.antiAlias,
-        margin: const EdgeInsets.all(16), // Breathing room
+        margin: const EdgeInsets.all(16),
       ),
-
-      // Floating Action Button Theme - Muted Sage Green
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
         elevation: 2,
-        backgroundColor: AppColors.primaryDark, // Sage Green for dark mode
+        backgroundColor: customPrimaryColor,
         foregroundColor: Colors.white,
-        shape: CircleBorder(),
+        shape: const CircleBorder(),
       ),
-
-      // Input Decoration Theme - Calm & breathable
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Color(0xFF222222),
+        fillColor: const Color(0xFF222222),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.outlineDark,
+          borderSide: BorderSide(
+            color: customPrimaryColor.withOpacity(0.3),
             width: 0.5,
           ),
         ),
@@ -276,10 +270,7 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(
-            color: AppColors.primaryDark,
-            width: 1.5,
-          ),
+          borderSide: BorderSide(color: customPrimaryColor, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -287,77 +278,97 @@ class AppTheme {
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 20,
-          vertical: 20, // More padding for breathing room
+          vertical: 20,
         ),
+        labelStyle: TextStyle(color: customPrimaryColor),
+        hintStyle: const TextStyle(color: AppColors.onSurfaceVariantDark),
       ),
-
-      // Elevated Button Theme - Minimal elevation
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: customPrimaryColor,
+          foregroundColor: Colors.black,
+          side: BorderSide(color: customPrimaryColor),
           elevation: 0.5,
           shadowColor: AppColors.shadow.withOpacity(0.2),
-          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
-
-      // Text Button Theme
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          foregroundColor: customPrimaryColor,
+          side: BorderSide(color: customPrimaryColor, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        ),
+      ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
+          foregroundColor: customPrimaryColor,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
-
-      // Icon Button Theme
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         ),
       ),
-
-      // Chip Theme
       chipTheme: ChipThemeData(
         backgroundColor: AppColors.surfaceVariantDark,
         selectedColor: AppColors.onPrimaryContainer,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       ),
-
-      // Dialog Theme
       dialogTheme: DialogThemeData(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         elevation: 4,
       ),
-
-      // Bottom Sheet Theme
       bottomSheetTheme: const BottomSheetThemeData(
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
         ),
         clipBehavior: Clip.antiAlias,
       ),
-
-      // Divider Theme
       dividerTheme: const DividerThemeData(
         color: AppColors.outlineVariantDark,
         thickness: 1,
         space: 1,
       ),
-
-      // List Tile Theme - More breathing room
       listTileTheme: const ListTileThemeData(
         contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
       ),
-
-      // Scaffold Background Color - Deep charcoal
-      scaffoldBackgroundColor: AppColors.backgroundDark,
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? customPrimaryColor
+              : Colors.grey.shade600;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? customPrimaryColor.withOpacity(0.5)
+              : Colors.grey.shade600.withOpacity(0.3);
+        }),
+      ),
     );
   }
 
-  // FIX: SET005 High Contrast Light Theme
+  // ==================== DEFAULT THEME GETTERS ====================
+
+  /// Light Theme - Calm & Minimalist Design
+  static ThemeData get lightTheme => buildLightTheme(AppColors.primaryLight);
+
+  /// Dark Theme - Calm & Minimalist Design
+  static ThemeData get darkTheme => buildDarkTheme(AppColors.primaryDark);
+
+  // ==================== HIGH CONTRAST THEMES ====================
+
+  /// High Contrast Light Theme
   static ThemeData get highContrastLightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -414,7 +425,7 @@ class AppTheme {
     );
   }
 
-  // FIX: SET005 High Contrast Dark Theme
+  /// High Contrast Dark Theme
   static ThemeData get highContrastDarkTheme {
     return ThemeData(
       useMaterial3: true,

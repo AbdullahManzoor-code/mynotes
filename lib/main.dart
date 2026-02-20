@@ -4,11 +4,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:awesome_notifications/awesome_notifications.dart';
 import 'package:flutter_ringtone_player/flutter_ringtone_player.dart';
 import 'package:mynotes/presentation/bloc/command_palette/command_palette_bloc.dart';
 import 'package:vibration/vibration.dart';
+import 'package:mynotes/generated/l10n/app_localizations.dart';
 // import 'package:mynotes/domain/entities/alarm.dart';
 import 'package:mynotes/domain/repositories/alarm_repository.dart';
 import 'package:mynotes/presentation/bloc/reflection/reflection_event.dart';
@@ -571,11 +573,16 @@ class MyNotesApp extends StatelessWidget {
                           MediaQuery.of(context).platformBrightness ==
                               Brightness.dark);
 
+                  // FIX: USE CUSTOM COLOR FROM THEMEBLOC
+                  final primaryColor = themeState.params.primaryColor;
+
                   final themeData = useHighContrast
                       ? (isDark
                             ? AppTheme.highContrastDarkTheme
                             : AppTheme.highContrastLightTheme)
-                      : (isDark ? AppTheme.darkTheme : AppTheme.lightTheme);
+                      : (isDark
+                            ? AppTheme.buildDarkTheme(primaryColor)
+                            : AppTheme.buildLightTheme(primaryColor));
 
                   // FIX: SET006 Parse locale from LocalizationBloc
                   Locale? selectedLocale;
@@ -604,20 +611,13 @@ class MyNotesApp extends StatelessWidget {
                           theme: themeData,
                           darkTheme: themeData,
                           themeMode:
-                              ThemeMode.light, // Already selected correct theme
+                              _parseThemeMode(themeState.themeMode) ??
+                              ThemeMode.system,
                           // FIX: SET006 Apply selected locale
                           locale: selectedLocale,
-                          // FIX: SET006 Support multiple locales
-                          supportedLocales: const [
-                            Locale('en'),
-                            Locale('es'),
-                            Locale('fr'),
-                            Locale('de'),
-                            Locale('it'),
-                            Locale('pt'),
-                            Locale('ja'),
-                            Locale('zh'),
-                          ],
+                          // FIX: SET007 Use generated AppLocalizations for proper language support
+                          supportedLocales: AppLocalizations.supportedLocales,
+                          localizationsDelegates: AppLocalizations.localizationsDelegates,
                           navigatorKey: AppRouter.navigatorKey,
                           scaffoldMessengerKey:
                               getIt<GlobalUiService>().messengerKey,

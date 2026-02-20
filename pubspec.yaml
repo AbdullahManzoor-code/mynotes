@@ -277,6 +277,9 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Enable localization code generation
+  generate: true
+
   assets:
     - assets/svg/icons/
     - assets/animations/

@@ -1,0 +1,82 @@
+{
+  "@@locale": "en",
+  "appTitle": "My Notes",
+  "appDescription": "A comprehensive note-taking application",
+  "homeTitle": "My Notes",
+  "settingsTitle": "Settings",
+  "newNoteButton": "New Note",
+  "deleteButton": "Delete",
+  "editButton": "Edit",
+  "saveButton": "Save",
+  "cancelButton": "Cancel",
+  "shareButton": "Share",
+  "searchButton": "Search",
+  "backButton": "Back",
+  "yesButton": "Yes",
+  "noButton": "No",
+  "okButton": "OK",
+  "closeButton": "Close",
+  "themeSettings": "Theme",
+  "languageSettings": "Language",
+  "accessibilitySettings": "Accessibility",
+  "darkModeLabel": "Dark Mode",
+  "lightModeLabel": "Light Mode",
+  "systemModeLabel": "System Default",
+  "fontSizeLabel": "Font Size",
+  "primaryColorLabel": "Primary Color",
+  "contrastLabel": "High Contrast",
+  "screenReaderLabel": "Screen Reader Support",
+  "emptyNotesMessage": "No notes yet. Create your first note!",
+  "deleteConfirmation": "Are you sure you want to delete this note?",
+  "unsavedChangesWarning": "You have unsaved changes. Do you want to save them?",
+  "errorLoadingNotes": "Error loading notes",
+  "errorSavingNote": "Error saving note",
+  "successDeletedNote": "Note deleted successfully",
+  "successSavedNote": "Note saved successfully",
+  "successShareNote": "Note shared successfully",
+  "noteTitleHint": "Title",
+  "noteContentHint": "Start typing...",
+  "noteCreatedDate": "Created: {date}",
+  "@noteCreatedDate": {
+    "description": "Date when note was created",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLastModified": "Last modified: {date}",
+  "@noteLastModified": {
+    "description": "Date when note was last modified",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutApp": "About My Notes",
+  "version": "Version",
+  "privacyPolicy": "Privacy Policy",
+  "termsOfService": "Terms of Service",
+  "feedbackButton": "Send Feedback",
+  "noResultsFound": "No results found",
+  "searchHint": "Search notes...",
+  "sortBy": "Sort by",
+  "filterBy": "Filter by",
+  "allNotes": "All Notes",
+  "pinnedNotes": "Pinned Notes",
+  "archivedNotes": "Archived Notes",
+  "deletedNotes": "Deleted Notes",
+  "navigationHome": "Home",
+  "navigationSearch": "Search",
+  "navigationFavorites": "Favorites",
+  "navigationSettings": "Settings",
+  "confirmDeleteTitle": "Delete Note?",
+  "confirmDeleteMessage": "This action cannot be undone.",
+  "selectLanguage": "Select Language",
+  "syncStatus": "Sync Status",
+  "syncingNotes": "Syncing...",
+  "syncComplete": "Sync complete",
+  "offlineMode": "Offline Mode",
+  "onlineMode": "Online Mode"
+}

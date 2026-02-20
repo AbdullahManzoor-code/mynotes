@@ -1,0 +1,82 @@
+{
+  "@@locale": "fr",
+  "appTitle": "Mes Notes",
+  "appDescription": "Une application complète de prise de notes",
+  "homeTitle": "Mes Notes",
+  "settingsTitle": "Paramètres",
+  "newNoteButton": "Nouvelle Note",
+  "deleteButton": "Supprimer",
+  "editButton": "Modifier",
+  "saveButton": "Enregistrer",
+  "cancelButton": "Annuler",
+  "shareButton": "Partager",
+  "searchButton": "Rechercher",
+  "backButton": "Retour",
+  "yesButton": "Oui",
+  "noButton": "Non",
+  "okButton": "D'accord",
+  "closeButton": "Fermer",
+  "themeSettings": "Thème",
+  "languageSettings": "Langue",
+  "accessibilitySettings": "Accessibilité",
+  "darkModeLabel": "Mode Sombre",
+  "lightModeLabel": "Mode Clair",
+  "systemModeLabel": "Paramètre Système",
+  "fontSizeLabel": "Taille de Police",
+  "primaryColorLabel": "Couleur Primaire",
+  "contrastLabel": "Contraste Élevé",
+  "screenReaderLabel": "Support du Lecteur d'Écran",
+  "emptyNotesMessage": "Aucune note pour le moment. Créez votre première note!",
+  "deleteConfirmation": "Êtes-vous sûr de vouloir supprimer cette note?",
+  "unsavedChangesWarning": "Vous avez des modifications non enregistrées. Voulez-vous les enregistrer?",
+  "errorLoadingNotes": "Erreur lors du chargement des notes",
+  "errorSavingNote": "Erreur lors de l'enregistrement de la note",
+  "successDeletedNote": "Note supprimée avec succès",
+  "successSavedNote": "Note enregistrée avec succès",
+  "successShareNote": "Note partagée avec succès",
+  "noteTitleHint": "Titre",
+  "noteContentHint": "Commencez à taper...",
+  "noteCreatedDate": "Créée: {date}",
+  "@noteCreatedDate": {
+    "description": "Date de création de la note",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLastModified": "Dernière modification: {date}",
+  "@noteLastModified": {
+    "description": "Date de dernière modification de la note",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutApp": "À Propos de Mes Notes",
+  "version": "Version",
+  "privacyPolicy": "Politique de Confidentialité",
+  "termsOfService": "Conditions d'Utilisation",
+  "feedbackButton": "Envoyer des Commentaires",
+  "noResultsFound": "Aucun résultat trouvé",
+  "searchHint": "Rechercher des notes...",
+  "sortBy": "Trier par",
+  "filterBy": "Filtrer par",
+  "allNotes": "Toutes les Notes",
+  "pinnedNotes": "Notes Épinglées",
+  "archivedNotes": "Notes Archivées",
+  "deletedNotes": "Notes Supprimées",
+  "navigationHome": "Accueil",
+  "navigationSearch": "Rechercher",
+  "navigationFavorites": "Favoris",
+  "navigationSettings": "Paramètres",
+  "confirmDeleteTitle": "Supprimer la Note?",
+  "confirmDeleteMessage": "Cette action ne peut pas être annulée.",
+  "selectLanguage": "Sélectionnez la Langue",
+  "syncStatus": "État de la Synchronisation",
+  "syncingNotes": "Synchronisation...",
+  "syncComplete": "Synchronisation terminée",
+  "offlineMode": "Mode Hors Ligne",
+  "onlineMode": "Mode En Ligne"
+}

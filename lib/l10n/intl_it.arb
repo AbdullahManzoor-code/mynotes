@@ -1,0 +1,82 @@
+{
+  "@@locale": "it",
+  "appTitle": "Le Mie Note",
+  "appDescription": "Un'applicazione completa per prendere note",
+  "homeTitle": "Le Mie Note",
+  "settingsTitle": "Impostazioni",
+  "newNoteButton": "Nuova Nota",
+  "deleteButton": "Elimina",
+  "editButton": "Modifica",
+  "saveButton": "Salva",
+  "cancelButton": "Annulla",
+  "shareButton": "Condividi",
+  "searchButton": "Cerca",
+  "backButton": "Indietro",
+  "yesButton": "Sì",
+  "noButton": "No",
+  "okButton": "OK",
+  "closeButton": "Chiudi",
+  "themeSettings": "Tema",
+  "languageSettings": "Lingua",
+  "accessibilitySettings": "Accessibilità",
+  "darkModeLabel": "Modalità Scura",
+  "lightModeLabel": "Modalità Chiara",
+  "systemModeLabel": "Impostazione di Sistema",
+  "fontSizeLabel": "Dimensione Carattere",
+  "primaryColorLabel": "Colore Primario",
+  "contrastLabel": "Contrasto Alto",
+  "screenReaderLabel": "Supporto Lettore Schermo",
+  "emptyNotesMessage": "Nessuna nota per il momento. Crea la tua prima nota!",
+  "deleteConfirmation": "Sei sicuro di voler eliminare questa nota?",
+  "unsavedChangesWarning": "Hai modifiche non salvate. Vuoi salvarle?",
+  "errorLoadingNotes": "Errore nel caricamento delle note",
+  "errorSavingNote": "Errore nel salvataggio della nota",
+  "successDeletedNote": "Nota eliminata con successo",
+  "successSavedNote": "Nota salvata con successo",
+  "successShareNote": "Nota condivisa con successo",
+  "noteTitleHint": "Titolo",
+  "noteContentHint": "Inizia a digitare...",
+  "noteCreatedDate": "Creata: {date}",
+  "@noteCreatedDate": {
+    "description": "Data di creazione della nota",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLastModified": "Ultima modifica: {date}",
+  "@noteLastModified": {
+    "description": "Data dell'ultima modifica della nota",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutApp": "Informazioni su Le Mie Note",
+  "version": "Versione",
+  "privacyPolicy": "Politica sulla Privacy",
+  "termsOfService": "Condizioni di Servizio",
+  "feedbackButton": "Invia Feedback",
+  "noResultsFound": "Nessun risultato trovato",
+  "searchHint": "Cerca note...",
+  "sortBy": "Ordina per",
+  "filterBy": "Filtra per",
+  "allNotes": "Tutte le Note",
+  "pinnedNotes": "Note Fissate",
+  "archivedNotes": "Note Archiviate",
+  "deletedNotes": "Note Eliminate",
+  "navigationHome": "Home",
+  "navigationSearch": "Cerca",
+  "navigationFavorites": "Preferiti",
+  "navigationSettings": "Impostazioni",
+  "confirmDeleteTitle": "Elimina Nota?",
+  "confirmDeleteMessage": "Questa azione non può essere annullata.",
+  "selectLanguage": "Seleziona Lingua",
+  "syncStatus": "Stato Sincronizzazione",
+  "syncingNotes": "Sincronizzazione in corso...",
+  "syncComplete": "Sincronizzazione completata",
+  "offlineMode": "Modalità Offline",
+  "onlineMode": "Modalità Online"
+}

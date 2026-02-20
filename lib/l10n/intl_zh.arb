@@ -1,0 +1,82 @@
+{
+  "@@locale": "zh",
+  "appTitle": "我的笔记",
+  "appDescription": "一个全面的笔记应用程序",
+  "homeTitle": "我的笔记",
+  "settingsTitle": "设置",
+  "newNoteButton": "新建笔记",
+  "deleteButton": "删除",
+  "editButton": "编辑",
+  "saveButton": "保存",
+  "cancelButton": "取消",
+  "shareButton": "分享",
+  "searchButton": "搜索",
+  "backButton": "返回",
+  "yesButton": "是",
+  "noButton": "否",
+  "okButton": "确定",
+  "closeButton": "关闭",
+  "themeSettings": "主题",
+  "languageSettings": "语言",
+  "accessibilitySettings": "无障碍",
+  "darkModeLabel": "深色模式",
+  "lightModeLabel": "浅色模式",
+  "systemModeLabel": "系统默认",
+  "fontSizeLabel": "字体大小",
+  "primaryColorLabel": "主要颜色",
+  "contrastLabel": "高对比度",
+  "screenReaderLabel": "屏幕朗读器支持",
+  "emptyNotesMessage": "暂无笔记。创建您的第一条笔记!",
+  "deleteConfirmation": "确定要删除此笔记吗?",
+  "unsavedChangesWarning": "您有未保存的更改。要保存吗?",
+  "errorLoadingNotes": "加载笔记出错",
+  "errorSavingNote": "保存笔记出错",
+  "successDeletedNote": "笔记删除成功",
+  "successSavedNote": "笔记保存成功",
+  "successShareNote": "笔记分享成功",
+  "noteTitleHint": "标题",
+  "noteContentHint": "开始输入...",
+  "noteCreatedDate": "创建: {date}",
+  "@noteCreatedDate": {
+    "description": "笔记创建日期",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLastModified": "最后修改: {date}",
+  "@noteLastModified": {
+    "description": "笔记最后修改日期",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutApp": "关于我的笔记",
+  "version": "版本",
+  "privacyPolicy": "隐私政策",
+  "termsOfService": "服务条款",
+  "feedbackButton": "发送反馈",
+  "noResultsFound": "未找到结果",
+  "searchHint": "搜索笔记...",
+  "sortBy": "排序",
+  "filterBy": "筛选",
+  "allNotes": "所有笔记",
+  "pinnedNotes": "置顶笔记",
+  "archivedNotes": "归档笔记",
+  "deletedNotes": "已删除笔记",
+  "navigationHome": "首页",
+  "navigationSearch": "搜索",
+  "navigationFavorites": "收藏",
+  "navigationSettings": "设置",
+  "confirmDeleteTitle": "删除笔记?",
+  "confirmDeleteMessage": "此操作无法撤销。",
+  "selectLanguage": "选择语言",
+  "syncStatus": "同步状态",
+  "syncingNotes": "同步中...",
+  "syncComplete": "同步完成",
+  "offlineMode": "离线模式",
+  "onlineMode": "在线模式"
+}

@@ -1,0 +1,82 @@
+{
+  "@@locale": "ja",
+  "appTitle": "マイノート",
+  "appDescription": "包括的なノートテイキングアプリケーション",
+  "homeTitle": "マイノート",
+  "settingsTitle": "設定",
+  "newNoteButton": "新規ノート",
+  "deleteButton": "削除",
+  "editButton": "編集",
+  "saveButton": "保存",
+  "cancelButton": "キャンセル",
+  "shareButton": "共有",
+  "searchButton": "検索",
+  "backButton": "戻る",
+  "yesButton": "はい",
+  "noButton": "いいえ",
+  "okButton": "OK",
+  "closeButton": "閉じる",
+  "themeSettings": "テーマ",
+  "languageSettings": "言語",
+  "accessibilitySettings": "アクセシビリティ",
+  "darkModeLabel": "ダークモード",
+  "lightModeLabel": "ライトモード",
+  "systemModeLabel": "システムデフォルト",
+  "fontSizeLabel": "フォントサイズ",
+  "primaryColorLabel": "プライマリカラー",
+  "contrastLabel": "高コントラスト",
+  "screenReaderLabel": "スクリーンリーダーサポート",
+  "emptyNotesMessage": "ノートはまだありません。最初のノートを作成してください!",
+  "deleteConfirmation": "このノートを削除してもよろしいですか?",
+  "unsavedChangesWarning": "保存されていない変更があります。保存しますか?",
+  "errorLoadingNotes": "ノートの読み込みエラー",
+  "errorSavingNote": "ノートの保存エラー",
+  "successDeletedNote": "ノートが正常に削除されました",
+  "successSavedNote": "ノートが正常に保存されました",
+  "successShareNote": "ノートが正常に共有されました",
+  "noteTitleHint": "タイトル",
+  "noteContentHint": "入力を開始してください...",
+  "noteCreatedDate": "作成: {date}",
+  "@noteCreatedDate": {
+    "description": "ノートの作成日時",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLastModified": "最終更新: {date}",
+  "@noteLastModified": {
+    "description": "ノートの最終更新日時",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutApp": "マイノートについて",
+  "version": "バージョン",
+  "privacyPolicy": "プライバシーポリシー",
+  "termsOfService": "利用規約",
+  "feedbackButton": "フィードバックを送信",
+  "noResultsFound": "結果が見つかりません",
+  "searchHint": "ノートを検索...",
+  "sortBy": "並べ替え",
+  "filterBy": "フィルター",
+  "allNotes": "すべてのノート",
+  "pinnedNotes": "ピン留めされたノート",
+  "archivedNotes": "アーカイブされたノート",
+  "deletedNotes": "削除されたノート",
+  "navigationHome": "ホーム",
+  "navigationSearch": "検索",
+  "navigationFavorites": "お気に入り",
+  "navigationSettings": "設定",
+  "confirmDeleteTitle": "ノートを削除しますか?",
+  "confirmDeleteMessage": "このアクションは元に戻すことができません。",
+  "selectLanguage": "言語を選択",
+  "syncStatus": "同期ステータス",
+  "syncingNotes": "同期中...",
+  "syncComplete": "同期が完了しました",
+  "offlineMode": "オフラインモード",
+  "onlineMode": "オンラインモード"
+}

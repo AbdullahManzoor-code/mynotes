@@ -1,0 +1,82 @@
+{
+  "@@locale": "de",
+  "appTitle": "Meine Notizen",
+  "appDescription": "Eine umfassende Notizen-Anwendung",
+  "homeTitle": "Meine Notizen",
+  "settingsTitle": "Einstellungen",
+  "newNoteButton": "Neue Notiz",
+  "deleteButton": "Löschen",
+  "editButton": "Bearbeiten",
+  "saveButton": "Speichern",
+  "cancelButton": "Abbrechen",
+  "shareButton": "Teilen",
+  "searchButton": "Suchen",
+  "backButton": "Zurück",
+  "yesButton": "Ja",
+  "noButton": "Nein",
+  "okButton": "OK",
+  "closeButton": "Schließen",
+  "themeSettings": "Design",
+  "languageSettings": "Sprache",
+  "accessibilitySettings": "Barrierefreiheit",
+  "darkModeLabel": "Dunkler Modus",
+  "lightModeLabel": "Heller Modus",
+  "systemModeLabel": "Systemeinstellung",
+  "fontSizeLabel": "Schriftgröße",
+  "primaryColorLabel": "Primärfarbe",
+  "contrastLabel": "Hoher Kontrast",
+  "screenReaderLabel": "Bildschirmlesegerät-Unterstützung",
+  "emptyNotesMessage": "Keine Notizen vorhanden. Erstellen Sie Ihre erste Notiz!",
+  "deleteConfirmation": "Möchten Sie diese Notiz wirklich löschen?",
+  "unsavedChangesWarning": "Sie haben ungespeicherte Änderungen. Möchten Sie diese speichern?",
+  "errorLoadingNotes": "Fehler beim Laden von Notizen",
+  "errorSavingNote": "Fehler beim Speichern der Notiz",
+  "successDeletedNote": "Notiz erfolgreich gelöscht",
+  "successSavedNote": "Notiz erfolgreich gespeichert",
+  "successShareNote": "Notiz erfolgreich geteilt",
+  "noteTitleHint": "Titel",
+  "noteContentHint": "Beginnen Sie zu tippen...",
+  "noteCreatedDate": "Erstellt: {date}",
+  "@noteCreatedDate": {
+    "description": "Erstellungsdatum der Notiz",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "noteLastModified": "Zuletzt bearbeitet: {date}",
+  "@noteLastModified": {
+    "description": "Datum der letzten Änderung der Notiz",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "aboutApp": "Über Meine Notizen",
+  "version": "Version",
+  "privacyPolicy": "Datenschutzrichtlinie",
+  "termsOfService": "Nutzungsbedingungen",
+  "feedbackButton": "Feedback geben",
+  "noResultsFound": "Keine Ergebnisse gefunden",
+  "searchHint": "Notizen durchsuchen...",
+  "sortBy": "Sortieren nach",
+  "filterBy": "Filtern nach",
+  "allNotes": "Alle Notizen",
+  "pinnedNotes": "Angeheftete Notizen",
+  "archivedNotes": "Archivierte Notizen",
+  "deletedNotes": "Gelöschte Notizen",
+  "navigationHome": "Startseite",
+  "navigationSearch": "Suchen",
+  "navigationFavorites": "Favoriten",
+  "navigationSettings": "Einstellungen",
+  "confirmDeleteTitle": "Notiz löschen?",
+  "confirmDeleteMessage": "Diese Aktion kann nicht rückgängig gemacht werden.",
+  "selectLanguage": "Sprache wählen",
+  "syncStatus": "Synchronisierungsstatus",
+  "syncingNotes": "Synchronisierung läuft...",
+  "syncComplete": "Synchronisierung abgeschlossen",
+  "offlineMode": "Offline-Modus",
+  "onlineMode": "Online-Modus"
+}
