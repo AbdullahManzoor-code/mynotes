@@ -306,7 +306,7 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
       case MediaType.image:
         return _buildImageView(media);
       case MediaType.video:
-        return _buildVideoView(media);
+      // return _buildVideoView(media);
       case MediaType.audio:
         return _buildAudioView(media);
       case MediaType.document:
@@ -334,20 +334,20 @@ class _MediaViewerScreenState extends State<MediaViewerScreen> {
     );
   }
 
-  Widget _buildVideoView(MediaItem media) {
-    return Center(
-      child: VideoPlayerWidget(
-        video: VideoMetadata(
-          filePath: media.filePath,
-          fileName: media.name,
-          fileSize: media.size,
-          duration: Duration(milliseconds: media.durationMs),
-          thumbnailPath: media.thumbnailPath,
-          createdAt: media.createdAt,
-        ),
-      ),
-    );
-  }
+  // Widget _buildVideoView(MediaItem media) {
+  //   return Center(
+  //     child: VideoPlayerWidget(
+  //       video: VideoMetadata(
+  //         filePath: media.filePath,
+  //         fileName: media.name,
+  //         fileSize: media.size,
+  //         duration: Duration(milliseconds: media.durationMs),
+  //         thumbnailPath: media.thumbnailPath,
+  //         createdAt: media.createdAt,
+  //       ),
+  //     ),
+  //   );
+  // }
 
   Widget _buildDocumentView(MediaItem media) {
     return Center(
