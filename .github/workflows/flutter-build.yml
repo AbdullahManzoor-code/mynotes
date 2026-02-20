@@ -90,8 +90,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build iOS
-        run: flutter build ios --release --no-pub
+      - name: Build iOS (Simulator)
+        run: flutter build ios --release --simulator --no-pub
 
       - name: Upload iOS Build Artifacts
         uses: actions/upload-artifact@v4
