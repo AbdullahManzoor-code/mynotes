@@ -13,6 +13,12 @@ if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
 }
 
+val localProperties = Properties()
+val localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localProperties.load(localPropertiesFile.inputStream())
+}
+
 android {
     namespace = "com.abdullahmanzoor.mynotes"
     compileSdk = flutter.compileSdkVersion
@@ -39,6 +45,23 @@ android {
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        val mapsApiKey =
+            (project.findProperty("MAPS_API_KEY") as String?)
+                ?: localProperties.getProperty("MAPS_API_KEY")
+                ?: System.getenv("MAPS_API_KEY")
+                ?: ""
+
+        val isReleaseBuild = gradle.startParameter.taskNames.any {
+            it.contains("release", ignoreCase = true)
+        }
+        if (isReleaseBuild && mapsApiKey.isBlank()) {
+            throw GradleException(
+                "Missing MAPS_API_KEY for release build. Set MAPS_API_KEY in android/local.properties or as an environment variable.",
+            )
+        }
+
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     }
 
     signingConfigs {

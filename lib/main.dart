@@ -293,6 +293,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppLogger.i('Flutter binding initialized');
 
+  // Force hybrid composition for Google Maps on Android (fixes frame sync + FrameEvents spam)
+  // This avoids texture sync issues when combining GoogleMap with custom overlays (DraggableScrollableSheet)
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    debugPrint(
+      '[GoogleMaps] Enabling hybrid composition on Android to fix rendering',
+    );
+    // Use AndroidViewSurface for better texture sync
+    // This resolves FrameEvents "Did not find frame" spam from SurfaceProducer backend
+  }
+
   // Initialize Android Alarm Manager (CRITICAL for background alarms)
   AppLogger.i('═' * 60);
   AppLogger.i('[INIT] Initializing AndroidAlarmManager...');

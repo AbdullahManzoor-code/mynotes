@@ -1,4 +1,5 @@
 import Flutter
+import GoogleMaps
 import UIKit
 
 @main
@@ -33,6 +34,12 @@ import UIKit
       default:
         result(FlutterMethodNotImplemented)
       }
+    }
+
+    if let mapsApiKey = Bundle.main.object(forInfoDictionaryKey: "GMSApiKey") as? String,
+      !mapsApiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    {
+      GMSServices.provideAPIKey(mapsApiKey)
     }
 
     GeneratedPluginRegistrant.register(with: self)

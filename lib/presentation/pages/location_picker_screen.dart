@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -10,7 +11,6 @@ import 'package:mynotes/presentation/bloc/location_picker/location_picker_bloc.d
 import '../design_system/design_system.dart';
 import 'dart:ui' as ui;
 
-// Type alias for PlacePrediction from PlacesService
 typedef PlacePredictionLocal = PlacePrediction;
 
 class LocationPickerScreen extends StatelessWidget {
@@ -41,10 +41,21 @@ class _LocationPickerLifecycleWrapperState
   late LocationService _locationService;
   late PlacesService _placesService;
   final _locationManager = LocationRemindersManager();
-  bool _useMap = true; // Added to allow bypassing the map
+  bool _useMap = true;
+  bool _mapReady = false; // ← NEW: Track map readiness
 
   final TextEditingController _messageController = TextEditingController();
   final TextEditingController _searchController = TextEditingController();
+
+  // ← NEW: Cache markers and circles to avoid rebuilding every frame
+  Set<Marker> _cachedMarkers = {};
+  Set<Circle> _cachedCircles = {};
+  LatLng? _lastMarkerLocation;
+  double? _lastRadius;
+  LocationTriggerType? _lastTriggerType;
+
+  // ← NEW: Debounce timer for search
+  Timer? _searchDebounce;
 
   @override
   void initState() {
@@ -62,8 +73,55 @@ class _LocationPickerLifecycleWrapperState
     AppLogger.i('LocationPickerScreen: dispose');
     _messageController.dispose();
     _searchController.dispose();
+    _searchDebounce?.cancel(); // ← NEW: Cancel debounce timer
+    _mapController?.dispose(); // ← NEW: Dispose map controller
     _pickerBloc.close();
     super.dispose();
+  }
+
+  // ← NEW: Update cached markers/circles only when data actually changes
+  void _updateOverlays(LocationPickerState state) {
+    if (state.selectedLocation == _lastMarkerLocation &&
+        state.radius == _lastRadius &&
+        state.triggerType == _lastTriggerType) {
+      return; // No change, skip rebuild
+    }
+
+    _lastMarkerLocation = state.selectedLocation;
+    _lastRadius = state.radius;
+    _lastTriggerType = state.triggerType;
+
+    if (state.selectedLocation != null) {
+      _cachedMarkers = {
+        Marker(
+          markerId: const MarkerId('selected_location'),
+          position: state.selectedLocation!,
+          infoWindow: InfoWindow(
+            title: state.selectedAddress.isNotEmpty
+                ? state.selectedAddress
+                : 'Selected Location',
+          ),
+        ),
+      };
+
+      _cachedCircles = {
+        Circle(
+          circleId: const CircleId('radius_circle'),
+          center: state.selectedLocation!,
+          radius: state.radius,
+          fillColor: state.triggerType == LocationTriggerType.arrive
+              ? Colors.green.withOpacity(0.2)
+              : Colors.orange.withOpacity(0.2),
+          strokeColor: state.triggerType == LocationTriggerType.arrive
+              ? Colors.green
+              : Colors.orange,
+          strokeWidth: 2,
+        ),
+      };
+    } else {
+      _cachedMarkers = {};
+      _cachedCircles = {};
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -92,7 +150,6 @@ class _LocationPickerLifecycleWrapperState
     AppLogger.i('LocationPickerScreen: selectLocation: $location');
     _pickerBloc.add(SelectLocation(location));
 
-    // Reverse geocode to get address
     try {
       final address = await _locationService.getAddressFromCoordinates(
         location.latitude,
@@ -109,24 +166,31 @@ class _LocationPickerLifecycleWrapperState
     }
   }
 
+  // ← CHANGED: Added debounce to search
   Future<void> _searchPlaces(String query) async {
+    // Cancel previous timer
+    _searchDebounce?.cancel();
+
     if (query.isEmpty) {
       _pickerBloc.add(const UpdatePlacePredictions([]));
       return;
     }
 
-    try {
-      final predictions = await _placesService.searchPlaces(query);
-      _pickerBloc.add(
-        UpdatePlacePredictions(predictions.cast<PlacePredictionLocal>()),
-      );
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Search error: $e')));
+    // Wait 400ms before firing the API call
+    _searchDebounce = Timer(const Duration(milliseconds: 400), () async {
+      try {
+        final predictions = await _placesService.searchPlaces(query);
+        _pickerBloc.add(
+          UpdatePlacePredictions(predictions.cast<PlacePredictionLocal>()),
+        );
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Search error: $e')));
+        }
       }
-    }
+    });
   }
 
   Future<void> _selectPrediction(PlacePredictionLocal prediction) async {
@@ -137,9 +201,7 @@ class _LocationPickerLifecycleWrapperState
       if (details != null) {
         final location = LatLng(details.latitude, details.longitude);
         await _selectLocation(location);
-
         _mapController?.animateCamera(CameraUpdate.newLatLng(location));
-
         _pickerBloc.add(UpdateAddress(details.name));
         _pickerBloc.add(const TogglePredictions(false));
         _searchController.clear();
@@ -159,7 +221,6 @@ class _LocationPickerLifecycleWrapperState
     AppLogger.i('LocationPickerScreen: Saving reminder');
     final state = _pickerBloc.state;
     if (state.selectedLocation == null) {
-      AppLogger.w('LocationPickerScreen: Save failed - No location selected');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please select a location')));
@@ -167,7 +228,6 @@ class _LocationPickerLifecycleWrapperState
     }
 
     if (state.messageText.isEmpty) {
-      AppLogger.w('LocationPickerScreen: Save failed - Empty message');
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Please enter a message')));
@@ -175,7 +235,6 @@ class _LocationPickerLifecycleWrapperState
     }
 
     if (widget.existingReminder != null) {
-      // Update existing reminder
       final updatedReminder = widget.existingReminder!.copyWith(
         message: state.messageText,
         latitude: state.selectedLocation!.latitude,
@@ -185,12 +244,10 @@ class _LocationPickerLifecycleWrapperState
         placeAddress: state.selectedAddress,
         linkedNoteId: state.linkedNoteId,
       );
-
       context.read<LocationReminderBloc>().add(
         UpdateLocationReminder(reminder: updatedReminder),
       );
     } else {
-      // Create new reminder
       final newReminder = LocationReminder.create(
         message: state.messageText,
         latitude: state.selectedLocation!.latitude,
@@ -200,107 +257,102 @@ class _LocationPickerLifecycleWrapperState
         placeAddress: state.selectedAddress,
         linkedNoteId: state.linkedNoteId,
       );
-
       context.read<LocationReminderBloc>().add(
         CreateLocationReminder(reminder: newReminder),
       );
     }
 
-    // Refresh geofences after saving
     _locationManager.refreshGeofences();
-
     Navigator.of(context).pop();
   }
 
-  /// Build Google Map with error handling for missing API key
-  Widget _buildGoogleMap(
-    LocationPickerState state,
-    Set<Marker> markers,
-    Set<Circle> circles,
-    BuildContext context,
-  ) {
+  // ← CHANGED: Deferred overlay loading + reduced initial map load
+  Widget _buildGoogleMap(LocationPickerState state, BuildContext context) {
     try {
       return GoogleMap(
         onMapCreated: (controller) {
-          try {
-            _mapController = controller;
+          _mapController = controller;
+
+          // ← NEW: Mark map as ready FIRST, then defer heavy work
+          setState(() {
+            _mapReady = true;
+          });
+
+          // ← NEW: Defer location fetching so map renders first
+          Future.delayed(const Duration(milliseconds: 300), () {
+            if (!mounted) return;
             if (state.selectedLocation != null) {
-              _mapController!.animateCamera(
+              _mapController?.animateCamera(
                 CameraUpdate.newLatLngZoom(state.selectedLocation!, 15),
               );
             } else {
               _getCurrentLocation();
             }
-          } catch (e) {
-            AppLogger.e('LocationPickerScreen: Error in onMapCreated', e);
-            if (mounted) {
-              setState(() {
-                _useMap = false;
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Map initialization failed: $e'),
-                  duration: const Duration(seconds: 4),
-                ),
-              );
-            }
-          }
+          });
         },
         initialCameraPosition: CameraPosition(
           target: state.selectedLocation ?? const LatLng(37.7749, -122.4194),
           zoom: 15,
         ),
-        markers: markers,
-        circles: circles,
+        // ← CHANGED: Use cached overlays instead of rebuilding every frame
+        markers: _cachedMarkers,
+        circles: _cachedCircles,
         onTap: _selectLocation,
         myLocationEnabled: true,
         myLocationButtonEnabled: false,
         compassEnabled: true,
         zoomControlsEnabled: false,
+        // ← NEW: Reduce initial rendering load
+        buildingsEnabled: false,
+        trafficEnabled: false,
+        indoorViewEnabled: false,
+        liteModeEnabled: false,
+        // ← NEW: Reduce map padding for smoother rendering
+        padding: EdgeInsets.zero,
       );
     } catch (e) {
-      // If map fails to initialize, fall back to manual mode
       AppLogger.e('LocationPickerScreen: GoogleMap initialization failed', e);
-      if (mounted) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            setState(() {
-              _useMap = false;
-            });
-          }
-        });
-      }
-      // Return a placeholder while we switch to manual mode
-      return Container(
-        width: double.infinity,
-        height: double.infinity,
-        color: Theme.of(context).brightness == Brightness.dark
-            ? Colors.grey.shade900
-            : Colors.grey.shade200,
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.warning_rounded, size: 64.sp, color: Colors.amber),
-              SizedBox(height: 16.h),
-              Text(
-                'Map Unavailable',
-                style: AppTypography.heading4(context, Colors.amber),
-              ),
-              SizedBox(height: 8.h),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 40.w),
-                child: Text(
-                  'Please configure Google Maps API key or use manual selection mode.',
-                  textAlign: TextAlign.center,
-                  style: AppTypography.bodySmall(context, Colors.grey),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _useMap = false;
+          });
+        }
+      });
+      return _buildMapFallback(context);
     }
+  }
+
+  Widget _buildMapFallback(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey.shade900
+          : Colors.grey.shade200,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.warning_rounded, size: 64.sp, color: Colors.amber),
+            SizedBox(height: 16.h),
+            Text(
+              'Map Unavailable',
+              style: AppTypography.heading4(context, Colors.amber),
+            ),
+            SizedBox(height: 8.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40.w),
+              child: Text(
+                'Please configure Google Maps API key or use manual selection mode.',
+                textAlign: TextAlign.center,
+                style: AppTypography.bodySmall(context, Colors.grey),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -309,36 +361,8 @@ class _LocationPickerLifecycleWrapperState
       value: _pickerBloc,
       child: BlocBuilder<LocationPickerBloc, LocationPickerState>(
         builder: (context, state) {
-          final markers = state.selectedLocation != null
-              ? {
-                  Marker(
-                    markerId: const MarkerId('selected_location'),
-                    position: state.selectedLocation!,
-                    infoWindow: InfoWindow(
-                      title: state.selectedAddress.isNotEmpty
-                          ? state.selectedAddress
-                          : 'Selected Location',
-                    ),
-                  ),
-                }
-              : <Marker>{};
-
-          final circles = state.selectedLocation != null
-              ? {
-                  Circle(
-                    circleId: const CircleId('radius_circle'),
-                    center: state.selectedLocation!,
-                    radius: state.radius,
-                    fillColor: state.triggerType == LocationTriggerType.arrive
-                        ? Colors.green.withOpacity(0.2)
-                        : Colors.orange.withOpacity(0.2),
-                    strokeColor: state.triggerType == LocationTriggerType.arrive
-                        ? Colors.green
-                        : Colors.orange,
-                    strokeWidth: 2,
-                  ),
-                }
-              : <Circle>{};
+          // ← CHANGED: Update overlays only when data changes (cached)
+          _updateOverlays(state);
 
           return Scaffold(
             backgroundColor: Theme.of(context).brightness == Brightness.dark
@@ -401,9 +425,6 @@ class _LocationPickerLifecycleWrapperState
                   ),
                   tooltip: _useMap ? 'Using Map Mode' : 'Using Manual Mode',
                   onPressed: () {
-                    AppLogger.i(
-                      'LocationPickerScreen: Toggling map mode to ${!_useMap}',
-                    );
                     setState(() {
                       _useMap = !_useMap;
                     });
@@ -432,45 +453,12 @@ class _LocationPickerLifecycleWrapperState
             ),
             body: Stack(
               children: [
-                // Map or Fallback
+                // ← CHANGED: Pass no markers/circles here, use cached ones inside
                 if (_useMap)
-                  _buildGoogleMap(state, markers, circles, context)
+                  _buildGoogleMap(state, context)
                 else
-                  Container(
-                    width: double.infinity,
-                    height: double.infinity,
-                    color: Theme.of(context).brightness == Brightness.dark
-                        ? Colors.grey.shade900
-                        : Colors.grey.shade200,
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.location_off_outlined,
-                            size: 64.sp,
-                            color: Colors.grey,
-                          ),
-                          SizedBox(height: 16.h),
-                          Text(
-                            'Manual Location Mode',
-                            style: AppTypography.heading4(context, Colors.grey),
-                          ),
-                          SizedBox(height: 8.h),
-                          Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 40.w),
-                            child: Text(
-                              'Map view is disabled. You can still select locations from your "Quick Select" list below or enter a message manually.',
-                              textAlign: TextAlign.center,
-                              style: AppTypography.body2(context, Colors.grey),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildManualModeView(context),
 
-                // My Location Button
                 if (_useMap)
                   Positioned(
                     right: 16,
@@ -483,7 +471,7 @@ class _LocationPickerLifecycleWrapperState
                     ),
                   ),
 
-                // Bottom sheet with controls
+                // Bottom sheet
                 DraggableScrollableSheet(
                   initialChildSize: 0.35,
                   minChildSize: 0.2,
@@ -507,7 +495,6 @@ class _LocationPickerLifecycleWrapperState
                         controller: scrollController,
                         padding: const EdgeInsets.all(16),
                         children: [
-                          // Handle
                           Center(
                             child: Container(
                               width: 40,
@@ -519,83 +506,24 @@ class _LocationPickerLifecycleWrapperState
                             ),
                           ),
                           const SizedBox(height: 16),
-
-                          // Search bar
                           _buildSearchBar(state),
                           const SizedBox(height: 16),
-
-                          // Search predictions
                           if (state.showPredictions &&
                               state.placePredictions.isNotEmpty)
                             _buildPredictionsList(state),
-
-                          // Saved locations chips
                           if (!state.showPredictions)
                             _buildSavedLocationsChips(state),
-
                           const SizedBox(height: 16),
-
-                          // Selected location display
                           if (state.selectedLocation != null) ...[
-                            Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.location_on,
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.primary,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                state.selectedAddress.isNotEmpty
-                                                    ? state.selectedAddress
-                                                    : 'Coordinates: ${state.selectedLocation!.latitude.toStringAsFixed(4)}, ${state.selectedLocation!.longitude.toStringAsFixed(4)}',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodyMedium
-                                                    ?.copyWith(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                maxLines: 2,
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                            _buildLocationCard(state, context),
                             const SizedBox(height: 16),
                           ],
-
-                          // Message input
                           _buildMessageInput(state),
                           const SizedBox(height: 16),
-
-                          // Trigger type selector
                           _buildTriggerTypeSelector(state),
                           const SizedBox(height: 16),
-
-                          // Radius slider
                           _buildRadiusSlider(state),
                           const SizedBox(height: 24),
-
-                          // Save button
                           _buildPremiumSaveButton(state),
                           const SizedBox(height: 32),
                         ],
@@ -604,7 +532,6 @@ class _LocationPickerLifecycleWrapperState
                   },
                 ),
 
-                // Loading overlay
                 if (state.isLoading)
                   Container(
                     color: Colors.black.withOpacity(0.3),
@@ -614,6 +541,68 @@ class _LocationPickerLifecycleWrapperState
             ),
           );
         },
+      ),
+    );
+  }
+
+  // ← NEW: Extracted to separate widget for cleanliness
+  Widget _buildLocationCard(LocationPickerState state, BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Row(
+          children: [
+            Icon(
+              Icons.location_on,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                state.selectedAddress.isNotEmpty
+                    ? state.selectedAddress
+                    : 'Coordinates: ${state.selectedLocation!.latitude.toStringAsFixed(4)}, ${state.selectedLocation!.longitude.toStringAsFixed(4)}',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildManualModeView(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: double.infinity,
+      color: Theme.of(context).brightness == Brightness.dark
+          ? Colors.grey.shade900
+          : Colors.grey.shade200,
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.location_off_outlined, size: 64.sp, color: Colors.grey),
+            SizedBox(height: 16.h),
+            Text(
+              'Manual Location Mode',
+              style: AppTypography.heading4(context, Colors.grey),
+            ),
+            SizedBox(height: 8.h),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40.w),
+              child: Text(
+                'Map view is disabled. You can still select locations from your "Quick Select" list below.',
+                textAlign: TextAlign.center,
+                style: AppTypography.body2(context, Colors.grey),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -629,6 +618,7 @@ class _LocationPickerLifecycleWrapperState
                 icon: const Icon(Icons.close),
                 onPressed: () {
                   _searchController.clear();
+                  _searchDebounce?.cancel(); // ← NEW: Cancel pending search
                   _pickerBloc.add(const UpdatePlacePredictions([]));
                 },
               )
@@ -637,8 +627,9 @@ class _LocationPickerLifecycleWrapperState
       ),
       onChanged: (value) {
         if (value.isNotEmpty) {
-          _searchPlaces(value);
+          _searchPlaces(value); // ← Now debounced
         } else {
+          _searchDebounce?.cancel();
           _pickerBloc.add(const UpdatePlacePredictions([]));
         }
       },
@@ -835,12 +826,7 @@ class _LocationPickerLifecycleWrapperState
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: canSave
-              ? () {
-                  // HapticFeedback.mediumImpact();
-                  _saveReminder();
-                }
-              : null,
+          onTap: canSave ? _saveReminder : null,
           borderRadius: BorderRadius.circular(16.r),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

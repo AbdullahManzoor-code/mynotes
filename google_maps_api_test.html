@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Google Maps API Key Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+            margin: 20px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .instructions {
+            background-color: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+            border: 1px solid #4caf50;
+        }
+        .error {
+            background-color: #ffcdd2;
+            color: #c62828;
+            border: 1px solid #f44336;
+        }
+        .loading {
+            background-color: #fff9c4;
+            color: #f57f17;
+            border: 1px solid #fbc02d;
+        }
+        code {
+            background-color: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Google Maps API Key Test</h1>
+        
+        <div class="instructions">
+            <h3>Instructions:</h3>
+            <ol>
+                <li>Replace <code>YOUR_API_KEY</code> in the script tag below with your actual Google Maps API key</li>
+                <li>Save the file</li>
+                <li>Open this HTML file in your web browser</li>
+                <li>Check the status message below and browser console for any errors</li>
+            </ol>
+        </div>
+
+        <div id="status" class="status loading">Loading...</div>
+
+        <h2>Map:</h2>
+        <div id="map"></div>
+
+        <h2>Console Output:</h2>
+        <pre id="console" style="background-color: #f5f5f5; padding: 10px; border-radius: 4px; overflow-x: auto; max-height: 300px; border: 1px solid #ddd;"></pre>
+    </div>
+
+    <script>
+        // Store console logs
+        let logs = [];
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        console.log = function(...args) {
+            logs.push('LOG: ' + args.join(' '));
+            updateConsole();
+            originalLog.apply(console, args);
+        };
+
+        console.error = function(...args) {
+            logs.push('ERROR: ' + args.join(' '));
+            updateConsole();
+            originalError.apply(console, args);
+        };
+
+        console.warn = function(...args) {
+            logs.push('WARN: ' + args.join(' '));
+            updateConsole();
+            originalWarn.apply(console, args);
+        };
+
+        function updateConsole() {
+            document.getElementById('console').textContent = logs.join('\n');
+        }
+
+        async function initMap() {
+            console.log('initMap() called - Google Maps API loaded successfully!');
+            
+            const mapElement = document.getElementById('map');
+            const options = {
+                zoom: 12,
+                center: {lat: 37.7749, lng: -122.4194}, // San Francisco
+                mapId: 'DEMO_MAP_ID'
+            };
+
+            const map = new google.maps.Map(mapElement, options);
+            console.log('Map initialized with center at San Francisco');
+
+            const { AdvancedMarkerElement } = await google.maps.importLibrary('marker');
+            const marker = new AdvancedMarkerElement({
+                position: options.center,
+                map: map,
+                title: 'Test Location'
+            });
+            console.log('Marker added to map');
+
+            updateStatus('success', '✓ Google Maps API Key is valid and working!');
+        }
+
+        function updateStatus(type, message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = 'status ' + type;
+            statusDiv.textContent = message;
+        }
+
+        // Handle API loading errors
+        window.addEventListener('error', function(event) {
+            if (event.message && event.message.includes('YOUR_API_KEY')) {
+                updateStatus('error', '✗ Error: Replace YOUR_API_KEY with your actual API key');
+                console.error('API Key placeholder not replaced!');
+            } else if (event.message) {
+                updateStatus('error', '✗ Error: ' + event.message);
+                console.error('Error:', event.message);
+            }
+        });
+
+        // Check if API key has been replaced
+        const scripts = document.querySelectorAll('script');
+        let apiKeyReplaced = false;
+        scripts.forEach(script => {
+            if (script.src && script.src.includes('maps.googleapis.com')) {
+                if (script.src.includes('YOUR_API_KEY')) {
+                    updateStatus('error', '✗ Error: Replace YOUR_API_KEY with your actual API key in the script tag');
+                    console.error('API Key not replaced - please update the script src attribute');
+                } else if (script.src.includes('key=')) {
+                    apiKeyReplaced = true;
+                }
+            }
+        });
+    </script>
+
+    <!-- IMPORTANT: Replace YOUR_API_KEY with your actual Google Maps API key -->
+    <script async
+        src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&loading=async&libraries=marker">
+    </script>
+</body>
+</html>

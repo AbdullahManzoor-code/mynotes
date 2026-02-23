@@ -46,6 +46,7 @@ app.*.map.json
 
 # Security and Keys
 android/key.properties
+ios/Flutter/MapsConfig.xcconfig
 *.jks
 *.keystore
 *.p12

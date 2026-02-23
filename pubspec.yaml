@@ -130,7 +130,7 @@ dependencies:
   # 🔔 NOTIFICATIONS
   # ══════════════════════════════════════
   flutter_local_notifications: ^18.0.1
-  awesome_notifications: ^0.10.1
+  awesome_notifications: ^0.11.0
   android_alarm_manager_plus: ^5.0.0
   timezone: ^0.9.4
   flutter_timezone: ^5.0.1

@@ -45,6 +45,10 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>GMSApiKey</key>
+	<string>AIzaSyC3LdxNlGw6oxkSJSjzpqXMmSk5mEI91kk</string>
+
+	<!-- <string>$(MAPS_API_KEY)</string> -->
 	
 	<!-- ========== CAMERA PERMISSIONS ========== -->
 	<key>NSCameraUsageDescription</key>

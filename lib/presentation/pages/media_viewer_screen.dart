@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:mynotes/presentation/design_system/app_colors.dart';
-import 'package:mynotes/presentation/widgets/video_player_widget.dart';
+// import 'package:mynotes/presentation/widgets/video_player_widget.dart';
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import '../../domain/entities/media_item.dart';
