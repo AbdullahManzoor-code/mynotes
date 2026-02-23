@@ -11,7 +11,6 @@ import 'package:mynotes/core/services/ocr_service.dart';
 import 'package:mynotes/core/utils/context_scanner.dart';
 import 'package:mynotes/presentation/pages/graph_view_page.dart'
     show GraphViewPage;
-import 'package:share_plus/share_plus.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/services.dart';

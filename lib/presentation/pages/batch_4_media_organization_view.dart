@@ -4,7 +4,6 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:mynotes/presentation/bloc/media/media_organization/media_organization_bloc.dart';
 import 'package:mynotes/core/utils/app_logger.dart';
 import '../../injection_container.dart';
-import '../../domain/repositories/media_repository.dart';
 import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
 import '../design_system/app_spacing.dart';

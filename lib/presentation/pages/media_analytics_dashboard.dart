@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../injection_container.dart';
 import '../bloc/media/media_analytics/media_analytics_bloc.dart';
-import '../../domain/repositories/media_repository.dart';
 import '../design_system/app_colors.dart';
 import '../design_system/app_typography.dart';
 import '../../core/services/global_ui_service.dart';

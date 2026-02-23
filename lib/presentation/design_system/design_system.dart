@@ -6,6 +6,8 @@ library;
 // Core Design System
 // Re-export flutter_screenutil so files importing the design system
 // have access to the `.h/.w/.r/.sp` extension getters.
+export 'package:flutter/material.dart'
+    show TextButton, OutlinedButton, ElevatedButton;
 export 'package:flutter_screenutil/flutter_screenutil.dart';
 export 'app_colors.dart';
 export 'app_typography.dart';

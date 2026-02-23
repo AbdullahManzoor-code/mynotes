@@ -4,7 +4,6 @@
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import '../presentation/widgets/task_notes_widget.dart';
 import '../presentation/widgets/subtask_widget.dart';
 import '../presentation/widgets/recurrence_widget.dart';
