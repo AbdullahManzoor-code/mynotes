@@ -1,0 +1,322 @@
+name: Integration Tests - BrowserStack (Android & iOS)
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: 'Platforms to test (comma-separated: android, ios)'
+        required: false
+        default: 'android,ios'
+      devices:
+        description: 'Devices to test on (comma-separated)'
+        required: false
+        default: 'Google Pixel 7-13.0,iPhone 14-17.4'
+
+jobs:
+  setup:
+    name: Setup Test Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.set-matrix.outputs.android }}
+      ios: ${{ steps.set-matrix.outputs.ios }}
+    steps:
+      - name: Set Test Matrix
+        id: set-matrix
+        run: |
+          android=false
+          ios=false
+          platforms="${{ github.event.inputs.platforms || 'android,ios' }}"
+          
+          if [[ "$platforms" == *"android"* ]]; then
+            android=true
+          fi
+          if [[ "$platforms" == *"ios"* ]]; then
+            ios=true
+          fi
+          
+          echo "android=$android" >> $GITHUB_OUTPUT
+          echo "ios=$ios" >> $GITHUB_OUTPUT
+
+  android-tests:
+    name: Android - Build & Run Integration Tests
+    needs: setup
+    if: needs.setup.outputs.android == 'true'
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+      
+      - name: 🔧 Setup Android SDK
+        uses: android-actions/setup-android@v2
+        with:
+          api-level: 34
+          build-tools: 34.0.0
+      
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+          cache: true
+      
+      - name: 📦 Get Flutter dependencies
+        run: flutter pub get
+      
+      - name: 🏗️ Build app debug APK
+        run: |
+          cd android
+          ./gradlew app:assembleDebug -Ptarget="../integration_test/app_test.dart"
+          cd ..
+      
+      - name: 🏗️ Build test APK
+        run: |
+          cd android
+          ./gradlew app:assembleAndroidTest
+          cd ..
+      
+      - name: 📤 Upload app APK to BrowserStack
+        id: upload-app
+        run: |
+          APP_APK="android/build/app/outputs/apk/debug/app-debug.apk"
+          echo "Uploading app APK..."
+          response=$(curl -s -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_API_KEY }}" \
+            -X POST "https://api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/app" \
+            -F "file=@$APP_APK")
+          
+          app_url=$(echo "$response" | grep -o '"app_url":"[^"]*' | cut -d'"' -f4)
+          if [ -z "$app_url" ]; then
+            echo "❌ Failed to upload app APK"
+            echo "Response: $response"
+            exit 1
+          fi
+          echo "APP_URL=$app_url" >> $GITHUB_OUTPUT
+          echo "✅ Android App uploaded: $app_url"
+      
+      - name: 📤 Upload test APK to BrowserStack
+        id: upload-test
+        run: |
+          TEST_APK="android/build/app/outputs/apk/androidTest/debug/app-debug-androidTest.apk"
+          echo "Uploading test APK..."
+          response=$(curl -s -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_API_KEY }}" \
+            -X POST "https://api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/test-suite" \
+            -F "file=@$TEST_APK")
+          
+          test_suite_url=$(echo "$response" | grep -o '"test_suite_url":"[^"]*' | cut -d'"' -f4)
+          if [ -z "$test_suite_url" ]; then
+            echo "❌ Failed to upload test APK"
+            echo "Response: $response"
+            exit 1
+          fi
+          echo "TEST_SUITE_URL=$test_suite_url" >> $GITHUB_OUTPUT
+          echo "✅ Android Test Suite uploaded: $test_suite_url"
+      
+      - name: 🚀 Run Android integration tests on BrowserStack
+        id: run-tests
+        run: |
+          devices="${{ github.event.inputs.devices || 'Google Pixel 7-13.0' }}"
+          android_devices=$(echo "$devices" | grep -Eo '[a-zA-Z0-9 ]+-[0-9.]+' | head -1)
+          
+          if [ -z "$android_devices" ]; then
+            android_devices="Google Pixel 7-13.0"
+          fi
+          
+          # Build devices JSON array
+          devices_json="[\"$android_devices\"]"
+          
+          payload="{\"app\": \"${{ steps.upload-app.outputs.APP_URL }}\", \"testSuite\": \"${{ steps.upload-test.outputs.TEST_SUITE_URL }}\", \"devices\": $devices_json}"
+          
+          echo "Payload: $payload"
+          response=$(curl -s -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_API_KEY }}" \
+            -X POST "https://api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/build" \
+            -d "$payload" \
+            -H "Content-Type: application/json")
+          
+          echo "Response: $response"
+          build_id=$(echo "$response" | grep -o '"build_id":"[^"]*' | cut -d'"' -f4)
+          
+          if [ -z "$build_id" ]; then
+            echo "❌ Failed to start tests"
+            echo "Full response: $response"
+            exit 1
+          fi
+          
+          echo "BUILD_ID=$build_id" >> $GITHUB_OUTPUT
+          echo "✅ Android Tests started with build ID: $build_id"
+      
+      - name: ⏳ Poll for Android test results
+        run: |
+          build_id="${{ steps.run-tests.outputs.BUILD_ID }}"
+          max_attempts=120  # 120 * 10 = 1200 seconds = 20 minutes
+          attempt=0
+          
+          echo "🔄 Polling for test results (Build ID: $build_id)..."
+          
+          while [ $attempt -lt $max_attempts ]; do
+            response=$(curl -s -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_API_KEY }}" \
+              -X GET "https://api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/android/builds/$build_id")
+            
+            status=$(echo "$response" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+            
+            if [ "$status" = "completed" ] || [ "$status" = "failed" ]; then
+              echo "✅ Tests completed with status: $status"
+              echo "Full response: $response"
+              break
+            fi
+            
+            attempt=$((attempt + 1))
+            echo "⏳ Attempt $attempt/$max_attempts - Status: $status"
+            sleep 10
+          done
+          
+          echo "📊 Full test results available at: https://app-automate.browserstack.com"
+      
+      - name: 📊 Generate Android test report
+        if: always()
+        run: |
+          echo "## Android Integration Test Results 📊" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build ID**: ${{ steps.run-tests.outputs.BUILD_ID }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: [View on BrowserStack Dashboard](https://app-automate.browserstack.com)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### APKs Uploaded" >> $GITHUB_STEP_SUMMARY
+          echo "- App: ${{ steps.upload-app.outputs.APP_URL }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Test Suite: ${{ steps.upload-test.outputs.TEST_SUITE_URL }}" >> $GITHUB_STEP_SUMMARY
+
+  ios-tests:
+    name: iOS - Build & Run Integration Tests
+    needs: setup
+    if: needs.setup.outputs.ios == 'true'
+    runs-on: macos-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔧 Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 'stable'
+          cache: true
+      
+      - name: 📦 Get Flutter dependencies
+        run: flutter pub get
+      
+      - name: 🏗️ Build iOS test package
+        run: |
+          mkdir -p build/ios_integration
+          cd ios
+          xcodebuild \
+            -workspace Runner.xcworkspace \
+            -scheme Runner \
+            -config Flutter/Release.xcconfig \
+            -derivedDataPath ../build/ios_integration \
+            -sdk iphoneos \
+            build-for-testing
+          cd ..
+      
+      - name: 📦 Create iOS test package zip
+        run: |
+          cd build/ios_integration/Build/Products
+          xctestrun_file=$(find . -name "*.xctestrun" | head -1)
+          if [ -z "$xctestrun_file" ]; then
+            echo "Error: xctestrun file not found"
+            exit 1
+          fi
+          zip -r "ios_test_package.zip" "Release-iphoneos" "$xctestrun_file"
+          cd ../../../../
+      
+      - name: 📤 Upload iOS test package to BrowserStack
+        id: upload-test
+        run: |
+          TEST_PACKAGE="build/ios_integration/Build/Products/ios_test_package.zip"
+          echo "Uploading iOS test package..."
+          response=$(curl -s -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_API_KEY }}" \
+            -X POST "https://api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/ios/test-package" \
+            -F "file=@$TEST_PACKAGE")
+          
+          test_package_url=$(echo "$response" | grep -o '"test_package_url":"[^"]*' | cut -d'"' -f4)
+          if [ -z "$test_package_url" ]; then
+            echo "❌ Failed to upload iOS test package"
+            echo "Response: $response"
+            exit 1
+          fi
+          echo "TEST_PACKAGE_URL=$test_package_url" >> $GITHUB_OUTPUT
+          echo "✅ iOS Test Package uploaded: $test_package_url"
+      
+      - name: 🚀 Run iOS integration tests on BrowserStack
+        id: run-tests
+        run: |
+          devices="${{ github.event.inputs.devices || 'iPhone 14-17.4' }}"
+          ios_device=$(echo "$devices" | grep -Eio '(iphone|ipad)[^ ,]*-[0-9.]+' | head -1)
+          
+          if [ -z "$ios_device" ]; then
+            ios_device="iPhone 14-17.4"
+          fi
+          
+          payload="{\"testPackage\": \"${{ steps.upload-test.outputs.TEST_PACKAGE_URL }}\", \"devices\": [\"$ios_device\"], \"networkLogs\": \"true\", \"deviceLogs\": \"true\"}"
+          
+          echo "Payload: $payload"
+          response=$(curl -s -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_API_KEY }}" \
+            -X POST "https://api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/ios/build" \
+            -d "$payload" \
+            -H "Content-Type: application/json")
+          
+          echo "Response: $response"
+          build_id=$(echo "$response" | grep -o '"build_id":"[^"]*' | cut -d'"' -f4)
+          
+          if [ -z "$build_id" ]; then
+            echo "❌ Failed to start iOS tests"
+            echo "Full response: $response"
+            exit 1
+          fi
+          
+          echo "BUILD_ID=$build_id" >> $GITHUB_OUTPUT
+          echo "✅ iOS Tests started with build ID: $build_id"
+      
+      - name: ⏳ Poll for iOS test results
+        run: |
+          build_id="${{ steps.run-tests.outputs.BUILD_ID }}"
+          max_attempts=120  # 120 * 10 = 1200 seconds = 20 minutes
+          attempt=0
+          
+          echo "🔄 Polling for test results (Build ID: $build_id)..."
+          
+          while [ $attempt -lt $max_attempts ]; do
+            response=$(curl -s -u "${{ secrets.BROWSERSTACK_USERNAME }}:${{ secrets.BROWSERSTACK_API_KEY }}" \
+              -X GET "https://api-cloud.browserstack.com/app-automate/flutter-integration-tests/v2/ios/builds/$build_id")
+            
+            status=$(echo "$response" | grep -o '"status":"[^"]*' | cut -d'"' -f4)
+            
+            if [ "$status" = "completed" ] || [ "$status" = "failed" ]; then
+              echo "✅ Tests completed with status: $status"
+              echo "Full response: $response"
+              break
+            fi
+            
+            attempt=$((attempt + 1))
+            echo "⏳ Attempt $attempt/$max_attempts - Status: $status"
+            sleep 10
+          done
+          
+          echo "📊 Full test results available at: https://app-automate.browserstack.com"
+      
+      - name: 📊 Generate iOS test report
+        if: always()
+        run: |
+          echo "## iOS Integration Test Results 📊" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build ID**: ${{ steps.run-tests.outputs.BUILD_ID }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: [View on BrowserStack Dashboard](https://app-automate.browserstack.com)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Package Uploaded" >> $GITHUB_STEP_SUMMARY
+          echo "- iOS Test Package: ${{ steps.upload-test.outputs.TEST_PACKAGE_URL }}" >> $GITHUB_STEP_SUMMARY
