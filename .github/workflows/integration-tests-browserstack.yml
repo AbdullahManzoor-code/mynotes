@@ -74,6 +74,9 @@ jobs:
           flutter --version
           dart --version
           echo "Dart SDK version must be >= 3.8.1"
+
+      - name: 🧹 Clean Flutter build
+        run: flutter clean
       
       - name: 📦 Get Flutter dependencies
         run: flutter pub get
@@ -219,6 +222,9 @@ jobs:
           flutter --version
           dart --version
           echo "Dart SDK version must be >= 3.8.1"
+
+      - name: 🧹 Clean Flutter build
+        run: flutter clean
       
       - name: 📦 Get Flutter dependencies
         run: flutter pub get
