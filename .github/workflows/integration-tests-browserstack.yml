@@ -63,16 +63,17 @@ jobs:
           api-level: 34
           build-tools: 34.0.0
       
-      - name: 🔧 Setup Flutter (with retry)
+      - name: 🔧 Setup Flutter (matches Dart 3.8.1+)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0'
+          flutter-version: '3.24.0'
           cache: true
       
       - name: 🔧 Verify Flutter installation
         run: |
           flutter --version
           dart --version
+          echo "Dart SDK version must be >= 3.8.1"
       
       - name: 📦 Get Flutter dependencies
         run: flutter pub get
@@ -207,19 +208,26 @@ jobs:
       - name: 📥 Checkout code
         uses: actions/checkout@v4
       
-      - name: 🔧 Setup Flutter (with retry)
+      - name: 🔧 Setup Flutter (matches Dart 3.8.1+)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0'
+          flutter-version: '3.24.0'
           cache: true
       
       - name: 🔧 Verify Flutter installation
         run: |
           flutter --version
           dart --version
+          echo "Dart SDK version must be >= 3.8.1"
       
       - name: 📦 Get Flutter dependencies
         run: flutter pub get
+      
+      - name: 🔧 Setup CocoaPods
+        run: |
+          cd ios
+          pod install --repo-update
+          cd ..
       
       - name: 🏗️ Build iOS test package
         run: |
@@ -231,6 +239,7 @@ jobs:
             -config Flutter/Release.xcconfig \
             -derivedDataPath ../build/ios_integration \
             -sdk iphoneos \
+            -parallelizeTargets \
             build-for-testing
           cd ..
       
